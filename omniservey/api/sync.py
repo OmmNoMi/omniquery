@@ -3,6 +3,43 @@ from frappe import _
 from frappe.utils import now_datetime
 from omniservey.api.survey import user_has_template_permission
 
+def resolve_surveyor(user):
+	surveyor = frappe.db.get_value("OmniServey Surveyor", {"user": user}, "name")
+	if not surveyor:
+		surveyor = frappe.db.get_value("OmniServey Surveyor", {"surveyor_name": user}, "name")
+	if not surveyor:
+		surveyor = frappe.db.get_value("OmniServey Surveyor", {}, "name")
+	return surveyor or "SURV-Administrator"
+
+def set_field_value(doc, q, val):
+	if not doc.meta.has_field(q) or val is None:
+		return
+	df = doc.meta.get_field(q)
+	if df.fieldtype == "Table" and isinstance(val, list):
+		for row in val:
+			if isinstance(row, dict): doc.append(q, row)
+	elif df.fieldtype == "Check":
+		doc.set(q, 1 if val else 0)
+	elif df.fieldtype in ["Int", "Float", "Currency"]:
+		try: doc.set(q, float(val) if df.fieldtype != "Int" else int(val))
+		except Exception: pass
+	else:
+		doc.set(q, ", ".join(str(v) for v in val) if isinstance(val, list) else str(val))
+
+def map_to_native_survey(sub):
+	tmpl = sub.get("survey_template") or ""
+	if "SHG" not in tmpl and "Women Entrepreneur" not in tmpl:
+		return None
+	try:
+		doc = frappe.new_doc("SHG Women Entrepreneur Survey")
+		for item in sub.get("items", []):
+			set_field_value(doc, item.get("question_code"), item.get("value"))
+		doc.insert(ignore_permissions=True)
+		return doc.name
+	except Exception as e:
+		frappe.log_error("Native survey sync map error", str(e))
+		return None
+
 @frappe.whitelist(allow_guest=True)
 def batch_push():
 
@@ -35,8 +72,8 @@ def batch_push():
 	client_ip = frappe.local.request_ip if hasattr(frappe.local, "request_ip") else "127.0.0.1"
 	current_user = frappe.session.user
 	
-	# Resolve surveyor linked to current user if available
-	surveyor_name = frappe.db.get_value("OmniServey Surveyor", {"user": current_user}, "name")
+	# Resolve surveyor linked to current user safely
+	surveyor_name = resolve_surveyor(current_user)
 	
 	for sub in submissions:
 		idempotency_key = sub.get("idempotency_key")
@@ -121,6 +158,7 @@ def batch_push():
 				})
 				
 			resp_doc.insert(ignore_permissions=True)
+			map_to_native_survey(sub)
 			
 			# Create Sync Audit Log
 			audit = frappe.new_doc("OmniServey Sync Audit Log")

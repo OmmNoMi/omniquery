@@ -1,7 +1,7 @@
 const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
 
 // 1. IndexedDB Initialization via Dexie.js (ACID WAL Engine)
-const db = new Dexie('OmniServeyDB');
+const db = new Dexie('OmniQueryDB');
 db.version(1).stores({
   templates: 'name, title, project, version, schema_hash_sha256',
   translations: '[survey_template+language_code], survey_template, language_code',
@@ -371,9 +371,50 @@ const BUILTIN_TRANSLATIONS = {
     "Export & Backup": "Export & Backup",
     "Send Data to Admin": "Send Data to Admin",
     "e.g. 2020": "e.g. 2020",
-    "Enter year (e.g. 2020)": "Enter year (e.g. 2020)"
+    "Enter year (e.g. 2020)": "Enter year (e.g. 2020)",
+    "All": "All",
+    "Select All": "Select All",
+    "Select Group": "Select Group",
+    "Clear": "Clear",
+    "selected": "selected",
+    "selected across": "selected across",
+    "categories": "categories",
+    "Select in this category": "Select in this category",
+    "Select options below": "Select options below",
+    "Selected": "Selected",
+    "in": "in",
+    "Cleared": "Cleared",
+    "Cleared all selections": "Cleared all selections",
+    "Single Choice (Select 1)": "Single Choice (Select 1)",
+    "Multi-Select (Choose 1 or more)": "Multi-Select (Choose 1 or more)"
   },
   "hi": {
+    "Single Choice (Select 1)": "एकल चयन (1 चुनें)",
+    "एकल चयन (1 चुनें)": "एकल चयन (1 चुनें)",
+    "Multi-Select (Choose 1 or more)": "बहु-विकल्प (1 या अधिक चुनें)",
+    "बहु-विकल्प (1 या अधिक चुनें)": "बहु-विकल्प (1 या अधिक चुनें)",
+    "All": "सभी",
+    "सभी": "सभी",
+    "Select All": "सभी चुनें",
+    "सभी चुनें": "सभी चुनें",
+    "Select Group": "ग्रुप चुनें",
+    "ग्रुप चुनें": "ग्रुप चुनें",
+    "Clear": "हटाएं",
+    "हटाएं": "हटाएं",
+    "selected": "चयनित",
+    "चयनित": "चयनित",
+    "selected across": "चयनित कुल",
+    "चयनित कुल": "चयनित कुल",
+    "categories": "श्रेणियों में",
+    "श्रेणियों में": "श्रेणियों में",
+    "Select in this category": "इस श्रेणी में चुनें",
+    "इस श्रेणी में चुनें": "इस श्रेणी में चुनें",
+    "Select options below": "नीचे दिए गए विकल्प चुनें",
+    "नीचे दिए गए विकल्प चुनें": "नीचे दिए गए विकल्प चुनें",
+    "Selected": "चयनित",
+    "in": "में",
+    "Cleared": "हटाया गया",
+    "Cleared all selections": "सभी चयन हटाए गए",
     "OmniServey": "ओमनीसर्वे",
     "ओमनीसर्वे": "ओमनीसर्वे",
     "Online": "ऑनलाइन",
@@ -4682,12 +4723,61 @@ const app = createApp({
 
     
 
+    const MULTI_SELECT_CODES = new Set([
+      'business_type',
+      'main_business_activities',
+      'registrations_documents',
+      'family_income_sources',
+      'reasons_for_starting',
+      'marketing_methods',
+      'selling_channels',
+      'shg_assistance_types',
+      'funding_experience',
+      'financial_help_impacts',
+      'husband_response',
+      'current_challenges',
+      'competitor_advantages',
+      'holding_back_reasons',
+      'crp_contributions',
+      'scheme_expectations',
+      'social_media_platforms',
+      'reasons_for_scaling_down_closing',
+      'support_needed_to_manage'
+    ]);
+
     // Universal Robust Field Category Classifier
     function getFieldCategory(q) {
       if (!q) return 'text';
       const rawType = (q.field_type || '').trim().toLowerCase();
+      const code = (q.question_code || '').trim();
+      const labelEn = (q.label_en || '').toLowerCase();
+      const labelHi = (q.label_hi || '').toLowerCase();
 
-      // 1. Single Choice / Radio / Select / Options
+      // 0. Range / Slider (e.g. 0 to 7 years)
+      if (
+        rawType.includes('range') ||
+        rawType.includes('slider') ||
+        rawType.includes('scale') ||
+        code === 'years_of_shg_membership'
+      ) {
+        return 'range';
+      }
+
+      // 1. Multiple Choice / Multiselect / Checkboxes (Enforced: No single values for multiselect)
+      if (
+        MULTI_SELECT_CODES.has(code) ||
+        rawType.includes('multi') ||
+        rawType.includes('check') ||
+        labelEn.includes('multiselect') ||
+        labelEn.includes('multi-select') ||
+        labelEn.includes('(multiselect)') ||
+        labelHi.includes('मल्टीसेलेक्ट') ||
+        labelHi.includes('बहु-विकल्प')
+      ) {
+        return 'multiselect';
+      }
+
+      // 2. Single Choice / Radio / Select / Options
       if (
         (q.options && q.options.length > 0) ||
         rawType.includes('choice') ||
@@ -4774,6 +4864,93 @@ const app = createApp({
 
       // 10. Guaranteed Fallback: ALWAYS 'text' (Ensures EVERY question is always fillable!)
       return 'text';
+    }
+
+    function isCurrencyField(q) {
+      if (!q) return false;
+      const type = (q.field_type || '').toLowerCase();
+      const label = (q.label_en || '').toLowerCase();
+      const code = (q.question_code || '').toLowerCase();
+      // If it is year, age, count, days, months, percent, duration - NEVER currency!
+      if (label.includes('year') || code.includes('year') || 
+          label.includes('age') || code.includes('age') ||
+          label.includes('month') || code.includes('month') ||
+          label.includes('count') || code.includes('count') ||
+          label.includes('percent') || code.includes('percent')) {
+        return false;
+      }
+      return type.includes('curr') || label.includes('inr') || label.includes('rs') || label.includes('₹');
+    }
+
+    function getRangeMin(q) {
+      if (!q) return 0;
+      if (q.validation_rules && q.validation_rules.min !== undefined) return Number(q.validation_rules.min);
+      if (q.validation_rules_json) {
+        try {
+          const v = typeof q.validation_rules_json === 'string' ? JSON.parse(q.validation_rules_json) : q.validation_rules_json;
+          if (v && v.min !== undefined) return Number(v.min);
+        } catch (e) {}
+      }
+      if (Array.isArray(q.options) && q.options.length > 0) {
+        const nums = q.options.map(Number).filter(n => !isNaN(n));
+        if (nums.length > 0) return Math.min(...nums);
+      }
+      return 0;
+    }
+
+    function getRangeMax(q) {
+      if (!q) return 7;
+      if (q.validation_rules && q.validation_rules.max !== undefined) return Number(q.validation_rules.max);
+      if (q.validation_rules_json) {
+        try {
+          const v = typeof q.validation_rules_json === 'string' ? JSON.parse(q.validation_rules_json) : q.validation_rules_json;
+          if (v && v.max !== undefined) return Number(v.max);
+        } catch (e) {}
+      }
+      if (Array.isArray(q.options) && q.options.length > 0) {
+        const nums = q.options.map(Number).filter(n => !isNaN(n));
+        if (nums.length > 0) return Math.max(...nums);
+      }
+      return 7;
+    }
+
+    function getRangeStep(q) {
+      if (!q) return 1;
+      if (q.validation_rules && q.validation_rules.step !== undefined) return Number(q.validation_rules.step);
+      if (q.validation_rules_json) {
+        try {
+          const v = typeof q.validation_rules_json === 'string' ? JSON.parse(q.validation_rules_json) : q.validation_rules_json;
+          if (v && v.step !== undefined) return Number(v.step);
+        } catch (e) {}
+      }
+      return 1;
+    }
+
+    function getRangeSteps(q) {
+      const min = getRangeMin(q);
+      const max = getRangeMax(q);
+      const step = getRangeStep(q) || 1;
+      const steps = [];
+      for (let i = min; i <= max; i += step) {
+        steps.push(i);
+      }
+      return steps;
+    }
+
+    function getRangeUnit(q) {
+      if (!q) return '';
+      if (q.validation_rules && q.validation_rules.unit) return q.validation_rules.unit;
+      if (q.validation_rules_json) {
+        try {
+          const v = typeof q.validation_rules_json === 'string' ? JSON.parse(q.validation_rules_json) : q.validation_rules_json;
+          if (v && v.unit) return v.unit;
+        } catch (e) {}
+      }
+      const label = (q.label_en || '').toLowerCase();
+      if (label.includes('year')) return 'Years';
+      if (label.includes('month')) return 'Months';
+      if (label.includes('day')) return 'Days';
+      return '';
     }
 
     function announce(msg) {
@@ -4925,6 +5102,443 @@ const app = createApp({
       });
     }
 
+    // Multi-Select Option Handlers
+    function isMultiOptionSelected(questionCode, optionVal) {
+      const val = formData[questionCode];
+      if (!val) return false;
+      if (Array.isArray(val)) return val.includes(optionVal);
+      if (typeof val === 'string') {
+        try {
+          const parsed = JSON.parse(val);
+          if (Array.isArray(parsed)) return parsed.includes(optionVal);
+        } catch (e) {}
+        return val.split(',').map(s => s.trim()).includes(optionVal);
+      }
+      return false;
+    }
+
+    function toggleMultiOption(questionCode, optionVal) {
+      let current = formData[questionCode];
+      if (!current) {
+        current = [];
+      } else if (typeof current === 'string') {
+        try {
+          const parsed = JSON.parse(current);
+          current = Array.isArray(parsed) ? parsed : current.split(',').map(s => s.trim());
+        } catch (e) {
+          current = current.split(',').map(s => s.trim());
+        }
+      } else if (!Array.isArray(current)) {
+        current = [current];
+      }
+
+      const idx = current.indexOf(optionVal);
+      if (idx > -1) {
+        current.splice(idx, 1);
+      } else {
+        current.push(optionVal);
+      }
+      formData[questionCode] = [...current];
+    }
+
+    function getMultiOptionStyle(questionCode, optionVal) {
+      const isSelected = isMultiOptionSelected(questionCode, optionVal);
+      if (isSelected) {
+        return 'bg-indigo-600 border-indigo-700 text-white font-black shadow-md scale-[1.01] ring-4 ring-indigo-200';
+      }
+      return 'bg-white border-slate-300 text-slate-900 hover:bg-slate-50 hover:border-indigo-300 font-semibold';
+    }
+
+    // Dynamic Options Filter (e.g. Q17 main_business_activities powered by Q16 business_type)
+    function getFilteredOptions(q) {
+      if (!q || !q.options) return [];
+      if (q.question_code === 'main_business_activities') {
+        const typesVal = formData['business_type'];
+        let selectedTypes = [];
+        if (Array.isArray(typesVal)) {
+          selectedTypes = typesVal;
+        } else if (typeof typesVal === 'string' && typesVal.trim()) {
+          try {
+            const p = JSON.parse(typesVal);
+            selectedTypes = Array.isArray(p) ? p : [typesVal];
+          } catch (e) {
+            selectedTypes = typesVal.split(',').map(s => s.trim());
+          }
+        }
+
+        // If no business type selected yet, show all options
+        if (!selectedTypes || selectedTypes.length === 0) {
+          return q.options;
+        }
+
+        const hasTrading = selectedTypes.some(t => String(t).toLowerCase().includes('trading'));
+        const hasService = selectedTypes.some(t => String(t).toLowerCase().includes('service'));
+        const hasProduction = selectedTypes.some(t => String(t).toLowerCase().includes('manufactur') || String(t).toLowerCase().includes('production'));
+
+        return q.options.filter(opt => {
+          const lower = opt.toLowerCase();
+          if (lower === 'any other' || lower.includes('any other') || lower === 'other') return true;
+          if (hasTrading && lower.startsWith('trading:')) return true;
+          if (hasService && lower.startsWith('service:')) return true;
+          if (hasProduction && lower.startsWith('production:')) return true;
+          return false;
+        });
+      }
+      return q.options;
+    }
+
+    // Semantic Option Groups for Heterogeneous Long Lists
+    const QUESTION_OPTION_GROUPS = {
+      family_income_sources: [
+        {
+          name: '🌾 Farm & Allied',
+          name_hi: '🌾 कृषि व संबद्ध',
+          options: ['Agricultural income', 'Dairying', 'Sale of animals', 'Animal products', 'NTFP sale']
+        },
+        {
+          name: '💼 Wages & Salary',
+          name_hi: '💼 मजदूरी व वेतन',
+          options: ['Fixed Salary', 'Wages', 'MNREGA']
+        },
+        {
+          name: '🏪 Enterprises',
+          name_hi: '🏪 व्यवसाय व उद्यम',
+          options: ['Self employed', 'Family/husband’s enterprise', 'Respondent’s enterprise']
+        },
+        {
+          name: '📋 Other & Govt',
+          name_hi: '📋 अन्य व पेंशन',
+          options: ['Pension', 'Rent from properties', 'Any other, specify']
+        }
+      ],
+      registrations_documents: [
+        {
+          name: '🪪 Identity & Social',
+          name_hi: '🪪 पहचान व सामाजिक',
+          options: ['PAN card', 'Aadhar card', 'Caste certificate', 'Income certificate']
+        },
+        {
+          name: '🏢 Trade & Business',
+          name_hi: '🏢 व्यापार व उद्यम',
+          options: ['Udyam Aadhar', 'Shop and Establishment registration', 'FSSAI']
+        }
+      ],
+      selling_channels: [
+        {
+          name: '🏪 Local & Direct Market',
+          name_hi: '🏪 स्थानीय व प्रत्यक्ष बाजार',
+          options: [
+            'I visit local traders/shopkeepers with my products and do door to door selling',
+            'I take orders from my usual clients few weeks prior to production/peak season and then sell',
+            'I sell in local haat/weekly market',
+            'I sell in Saras fair'
+          ]
+        },
+        {
+          name: '📱 Digital & Online',
+          name_hi: '📱 डिजिटल व ऑनलाइन',
+          options: [
+            'I get orders via instagram',
+            'I get orders via whatsapp',
+            'I use online platforms like Amazon',
+            'I use online platform like Meesho',
+            'I use any other online platform',
+            'I use RAJEEVIKA website'
+          ]
+        },
+        {
+          name: '📦 Other / N/A',
+          name_hi: '📦 अन्य / लागू नहीं',
+          options: [
+            'Not relevant',
+            'In case of production related business, I produce slightly more than last year sales and wait for orders',
+            'Any other, specify'
+          ]
+        }
+      ],
+      marketing_methods: [
+        {
+          name: '🏬 Premises & Signage',
+          name_hi: '🏬 दुकान व बोर्ड',
+          options: [
+            'My shop is the only place where I talk about my products/services',
+            'I have name board outside my premises with details of my products/services'
+          ]
+        },
+        {
+          name: '🗣️ Personal & Meetings',
+          name_hi: '🗣️ व्यक्तिगत व बैठकें',
+          options: [
+            'I talk about my products/services in SHG meetings',
+            'I visit local traders/shopkeepers with my samples',
+            'I visit local traders/shopkeepers with samples of my products'
+          ]
+        },
+        {
+          name: '📲 Social Media',
+          name_hi: '📲 सोशल मीडिया',
+          options: [
+            'I market actively on instagram and whatsapp'
+          ]
+        },
+        {
+          name: '⏳ Passive & Other',
+          name_hi: '⏳ निष्क्रिय व अन्य',
+          options: [
+            'I wait for people to make enquiries',
+            'I do not know how to market my products/services',
+            'I don\'t feel the need to market my products/services',
+            'Any other, specify'
+          ]
+        }
+      ],
+      shg_assistance_types: [
+        {
+          name: '🎓 Training & Guidance',
+          name_hi: '🎓 प्रशिक्षण व मार्गदर्शन',
+          options: [
+            'Attended the skill training offered by SHG',
+            'Got information about the scope of business from SHG meetings',
+            'OSF/SVEP CRP guided me in setting up the business'
+          ]
+        },
+        {
+          name: '💰 Loans & Finance',
+          name_hi: '💰 ऋण व वित्त',
+          options: [
+            'Took loan from SHG to buy material to initiate the business',
+            'Take loans from SHG regularly as per business requirements',
+            'OSF/SVEP CRP helped me to get Mudra loan',
+            'OSF/SVEP CRP helped me to get bank loan',
+            'Got subsidy/grant due to SHG'
+          ]
+        },
+        {
+          name: '📋 Documentation',
+          name_hi: '📋 दस्तावेज',
+          options: [
+            'Got required registration/documents made'
+          ]
+        }
+      ],
+      reasons_for_starting: [
+        {
+          name: '💡 Family Need & Income',
+          name_hi: '💡 पारिवारिक जरूरत व आय',
+          options: [
+            'My family faced a financial setback, and I needed to earn',
+            'Our expenses were rising, and my family needed an alternate source of income'
+          ]
+        },
+        {
+          name: '🚀 Personal Ambition & Skill',
+          name_hi: '🚀 व्यक्तिगत आकांक्षा व कौशल',
+          options: [
+            'I always wanted to own/run my own business',
+            'I learnt the skill and wanted to start my own venture',
+            'I was doing the same work as wage labour and later decided to start own venture'
+          ]
+        },
+        {
+          name: '🤝 SHG & Project Motivation',
+          name_hi: '🤝 एसएचजी व परियोजना प्रोत्साहन',
+          options: [
+            'All SHG members were getting loans for enterprise so I also decided to take and start enterprise',
+            'The OSF/SVEP CRP encouraged me to start the enterprise',
+            'The CLF encouraged me to start the enterprise',
+            'Any other (Specify)'
+          ]
+        }
+      ]
+    };
+
+    const activeOptionGroups = reactive({});
+    const optionSearchQueries = reactive({});
+
+    function getQuestionGroups(q) {
+      if (!q) return [];
+      const qCode = q.question_code;
+      const availableOptions = getFilteredOptions(q);
+      if (!availableOptions || availableOptions.length <= 4) return [];
+
+      // 1. Explicitly configured groups
+      if (QUESTION_OPTION_GROUPS[qCode]) {
+        const rawGroups = QUESTION_OPTION_GROUPS[qCode];
+        const groups = [];
+        rawGroups.forEach(grp => {
+          const matching = grp.options.filter(opt => availableOptions.includes(opt));
+          if (matching.length > 0) {
+            groups.push({
+              name: grp.name,
+              name_hi: grp.name_hi || grp.name,
+              options: matching
+            });
+          }
+        });
+        if (groups.length > 0) return groups;
+      }
+
+      // 2. Prefix-based auto-detection (e.g. "Trading: ...", "Service: ...", "Production: ...")
+      const prefixMap = {};
+      const prefixCounts = {};
+      availableOptions.forEach(opt => {
+        const str = String(opt);
+        const colonIdx = str.indexOf(':');
+        if (colonIdx > 1 && colonIdx < 25) {
+          const prefix = str.substring(0, colonIdx).trim();
+          prefixCounts[prefix] = (prefixCounts[prefix] || 0) + 1;
+          if (!prefixMap[prefix]) prefixMap[prefix] = [];
+          prefixMap[prefix].push(opt);
+        }
+      });
+
+      const prefixKeys = Object.keys(prefixCounts);
+      if (prefixKeys.length >= 2) {
+        const groups = [];
+        prefixKeys.forEach(p => {
+          let icon = '🏷️';
+          const pLower = p.toLowerCase();
+          if (pLower.includes('trading')) icon = '🛒';
+          else if (pLower.includes('service')) icon = '🔧';
+          else if (pLower.includes('production') || pLower.includes('manufactur')) icon = '🏭';
+          groups.push({
+            name: `${icon} ${p}`,
+            name_hi: `${icon} ${p}`,
+            options: prefixMap[p]
+          });
+        });
+        const allPrefixed = [].concat(...Object.values(prefixMap));
+        const remaining = availableOptions.filter(opt => !allPrefixed.includes(opt));
+        if (remaining.length > 0) {
+          groups.push({
+            name: '✨ Other',
+            name_hi: '✨ अन्य',
+            options: remaining
+          });
+        }
+        return groups;
+      }
+
+      return [];
+    }
+
+    function getActiveGroup(q) {
+      if (!q) return 'All';
+      return activeOptionGroups[q.question_code] || 'All';
+    }
+
+    function setActiveGroup(q, groupName) {
+      if (!q) return;
+      activeOptionGroups[q.question_code] = groupName;
+    }
+
+    function getGroupSelectedCount(q, groupName) {
+      if (!q) return 0;
+      const qCode = q.question_code;
+      const cat = getFieldCategory(q);
+      const selected = formData[qCode];
+
+      if (cat === 'radio') {
+        if (!selected) return 0;
+        if (groupName === 'All') return 1;
+        const groups = getQuestionGroups(q);
+        const grp = groups.find(g => g.name === groupName);
+        return (grp && grp.options.includes(selected)) ? 1 : 0;
+      }
+
+      if (!Array.isArray(selected)) return 0;
+      if (groupName === 'All') {
+        return selected.length;
+      }
+      const groups = getQuestionGroups(q);
+      const grp = groups.find(g => g.name === groupName);
+      if (!grp) return 0;
+      return selected.filter(val => grp.options.includes(val)).length;
+    }
+
+    function getDisplayOptions(q) {
+      if (!q) return [];
+      const cat = getFieldCategory(q);
+      let opts = cat === 'multiselect' ? getFilteredOptions(q) : (q.options || []);
+
+      const activeGrp = getActiveGroup(q);
+      if (activeGrp !== 'All') {
+        const groups = getQuestionGroups(q);
+        const grp = groups.find(g => g.name === activeGrp);
+        if (grp) {
+          opts = opts.filter(opt => grp.options.includes(opt));
+        }
+      }
+
+      const query = (optionSearchQueries[q.question_code] || '').trim().toLowerCase();
+      if (query) {
+        opts = opts.filter(opt => String(opt).toLowerCase().includes(query));
+      }
+      return opts;
+    }
+
+    function selectAllInCurrentGroup(q) {
+      if (!q) return;
+      const qCode = q.question_code;
+      if (!formData[qCode] || !Array.isArray(formData[qCode])) {
+        formData[qCode] = [];
+      }
+      const optsToSelect = getDisplayOptions(q);
+      optsToSelect.forEach(opt => {
+        if (!formData[qCode].includes(opt)) {
+          formData[qCode].push(opt);
+        }
+      });
+      formData[qCode] = [...formData[qCode]];
+      const activeGrp = getActiveGroup(q);
+      const label = activeGrp === 'All' ? 'options' : activeGrp;
+      showToast(`✓ ${t('Selected')} ${optsToSelect.length} ${t('in')} ${label}`, 'info');
+      announce(`Selected all options in ${label}`);
+    }
+
+    function clearCurrentGroup(q) {
+      if (!q) return;
+      const qCode = q.question_code;
+      if (!formData[qCode] || !Array.isArray(formData[qCode])) {
+        return;
+      }
+      const activeGrp = getActiveGroup(q);
+      if (activeGrp === 'All') {
+        formData[qCode] = [];
+        showToast(t('Cleared all selections'), 'info');
+        announce('Cleared all selections');
+        return;
+      }
+      const groups = getQuestionGroups(q);
+      const grp = groups.find(g => g.name === activeGrp);
+      if (grp) {
+        formData[qCode] = formData[qCode].filter(val => !grp.options.includes(val));
+        showToast(`✕ ${t('Cleared')} ${grp.name}`, 'info');
+        announce(`Cleared selections in ${grp.name}`);
+      }
+    }
+
+    function getSelectionSummary(q) {
+      if (!q) return '';
+      const qCode = q.question_code;
+      const selected = formData[qCode];
+      if (!Array.isArray(selected) || selected.length === 0) return '';
+      const groups = getQuestionGroups(q);
+      if (groups.length === 0) {
+        return `${selected.length} ${t('selected')}`;
+      }
+      let groupsWithSelections = 0;
+      groups.forEach(g => {
+        if (g.options.some(opt => selected.includes(opt))) {
+          groupsWithSelections++;
+        }
+      });
+      if (groupsWithSelections > 1) {
+        return `${selected.length} ${t('selected across')} ${groupsWithSelections} ${t('categories')}`;
+      }
+      return `${selected.length} ${t('selected')}`;
+    }
+
     function selectOption(questionCode, optionVal, qIndex) {
       formData[questionCode] = optionVal;
       autoScrollToNextQuestion(qIndex);
@@ -4954,17 +5568,100 @@ const app = createApp({
       return 'bg-white border-slate-300 text-slate-900 hover:bg-slate-50 hover:border-indigo-300 font-semibold';
     }
 
-    function addGridRow(questionCode) {
-      if (!formData[questionCode] || !Array.isArray(formData[questionCode])) {
-        formData[questionCode] = [];
+    const GRID_CONFIGS = {
+      seasonal_turnovers: {
+        type: 'seasons',
+        defaultRows: [
+          { season: 'Peak season', label: '☀️ Peak season / चरम मौसम', duration_months: 3, monthly_sales: '', monthly_profit: '' },
+          { season: 'Average', label: '⛅ Average / सामान्य मौसम', duration_months: 6, monthly_sales: '', monthly_profit: '' },
+          { season: 'Lean', label: '🌧️ Lean / मंदा मौसम', duration_months: 3, monthly_sales: '', monthly_profit: '' }
+        ]
+      },
+      activity_involvements: {
+        type: 'activities',
+        defaultRows: [
+          { activity: 'Purchase of material', label: '1. Purchase of material / सामग्री खरीद', involvement: 'Regular', family_members_count: 0, hired_help_count: 0, amount_paid_last_year: 'Not relevant' },
+          { activity: 'Production', label: '2. Production / उत्पादन व निर्माण', involvement: 'Regular', family_members_count: 0, hired_help_count: 0, amount_paid_last_year: 'Not relevant' },
+          { activity: 'Servicing', label: '3. Servicing / सर्विसिंग व मरम्मत', involvement: 'Regular', family_members_count: 0, hired_help_count: 0, amount_paid_last_year: 'Not relevant' },
+          { activity: 'Social media marketing', label: '4. Social media marketing / सोशल मीडिया', involvement: 'Occasional', family_members_count: 0, hired_help_count: 0, amount_paid_last_year: 'Not relevant' },
+          { activity: 'Sale (from shop/door to door/Saras fair/haat)', label: '5. Sale / बिक्री (दुकान/हाट/मेला)', involvement: 'Regular', family_members_count: 0, hired_help_count: 0, amount_paid_last_year: 'Not relevant' },
+          { activity: 'Record keeping', label: '6. Record keeping / हिसाब-किताब', involvement: 'Regular', family_members_count: 0, hired_help_count: 0, amount_paid_last_year: 'Not relevant' }
+        ]
+      },
+      capital_sources: {
+        type: 'capital',
+        defaultRows: [
+          '1. Own Savings', '2. Financed by family member', '3. Profit from business',
+          '4. Mortgaged gold/silver', '5. Sold gold/silver', '6. Loan from family',
+          '7. Loan from moneylender', '8. Loan from SHG', '9. Loan from OSF/SVEP',
+          '10. Subsidy/grant under OSF/SVEP', '11. Loan from private saving groups/BC',
+          '12. Loan from NBFC', '13. Mudra loan', '14. Loan from banks'
+        ].map(s => ({ source: s, first_year_amount: '', years_in_between_amount: '', current_year_amount: '', current_year_pending: '' }))
+      },
+      loan_usages: {
+        type: 'loan_usage',
+        defaultRows: [
+          '1. Own Savings', '2. Financed by family member', '3. Profit from business',
+          '4. Mortgaged gold/silver', '5. Sold gold/silver', '6. Loan from family',
+          '7. Loan from moneylender', '8. Loan from SHG', '9. Loan from OSF/SVEP',
+          '10. Subsidy/grant under OSF/SVEP', '11. Loan from private saving groups/BC',
+          '12. Loan from NBFC', '13. Mudra loan', '14. Loan from banks'
+        ].map(s => ({ source: s, usage_in_business: 'Not used the source', usage_other_specify: '' }))
+      },
+      business_metric_changes: {
+        type: 'metrics',
+        defaultRows: [
+          { metric: '1. Average sales/month', label: '1. Average sales/month (औसत बिक्री/माह)', first_year_status: "Don't remember", first_year_amount: '', current_year_amount: '' },
+          { metric: '2. Average monthly income', label: '2. Average monthly income (औसत आय/माह)', first_year_status: "Don't remember", first_year_amount: '', current_year_amount: '' },
+          { metric: '3. Value of stock/finished goods', label: '3. Value of stock/finished goods (स्टॉक/माल मूल्य)', first_year_status: "Don't remember", first_year_amount: '', current_year_amount: '' },
+          { metric: '4. In case of servicing, value of enterprise related assets', label: '4. Enterprise related assets (उद्यम संपत्ति मूल्य)', first_year_status: "Don't remember", first_year_amount: '', current_year_amount: '' }
+        ]
       }
-      formData[questionCode].push({ item_name: '', quantity: '', approx_value: '' });
+    };
+
+    function getGridType(code) {
+      return GRID_CONFIGS[code]?.type || 'generic';
     }
 
-    function removeGridRow(questionCode, rIdx) {
-      if (formData[questionCode] && Array.isArray(formData[questionCode])) {
-        formData[questionCode].splice(rIdx, 1);
-      }
+    function cloneGridDefaults(cfg) {
+      return cfg.defaultRows.map(r => ({ ...r }));
+    }
+
+    function isGridValid(rows, cfg) {
+      if (!Array.isArray(rows) || rows.length === 0) return false;
+      return cfg.type !== 'seasons' || !('item_name' in (rows[0] || {}));
+    }
+
+    function ensureGridRows(code) {
+      const cfg = GRID_CONFIGS[code];
+      if (!cfg) return formData[code] || (formData[code] = []);
+      if (!isGridValid(formData[code], cfg)) formData[code] = cloneGridDefaults(cfg);
+      return formData[code];
+    }
+
+    function focusNewGridRow(code) {
+      nextTick(() => {
+        const el = document.querySelector(`[data-grid-code="${code}"] .generic-grid-row:last-child input`);
+        if (el) el.focus();
+        announce('New item row added. Focus shifted to first input.');
+      });
+    }
+
+    function addGridRow(code) {
+      const rows = ensureGridRows(code);
+      rows.push({ item_name: '', quantity: '', approx_value: '' });
+      focusNewGridRow(code);
+    }
+
+    function removeGridRow(code, idx) {
+      const rows = ensureGridRows(code);
+      if (Array.isArray(rows)) rows.splice(idx, 1);
+    }
+
+    function initAllGrids() {
+      Object.keys(GRID_CONFIGS).forEach(code => {
+        ensureGridRows(code);
+      });
     }
 
     const categories = computed(() => {
@@ -5232,6 +5929,7 @@ const app = createApp({
         fetchGPS();
       }
 
+      initAllGrids();
       currentView.value = 'form';
       announce(`Started survey: ${templateDoc.title}`);
 
@@ -5551,64 +6249,97 @@ const app = createApp({
       }
     }
 
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^|;\\s*)(' + name + ')=([^;]*)'));
+      return match ? decodeURIComponent(match[3]) : '';
+    }
+
+    function getCsrfToken() {
+      return (window.frappe && window.frappe.csrf_token) || getCookie('csrf_token') || '';
+    }
+
+    function buildSyncHeaders() {
+      const headers = { 'Content-Type': 'application/json' };
+      const token = getCsrfToken();
+      if (token) headers['X-Frappe-CSRF-Token'] = token;
+      return headers;
+    }
+
+    function buildSyncPayload(sub) {
+      return {
+        idempotency_key: sub.idempotency_key,
+        survey_template: sub.survey_template,
+        template_version: sub.template_version,
+        gps_latitude: sub.gps_latitude,
+        gps_longitude: sub.gps_longitude,
+        gps_accuracy: sub.gps_accuracy,
+        captured_at_local: sub.captured_at_local,
+        items: sub.items
+      };
+    }
+
+    async function postSubmissions(submissions) {
+      return fetch('/api/method/omniservey.api.sync.batch_push', {
+        method: 'POST',
+        headers: buildSyncHeaders(),
+        body: JSON.stringify({ submissions })
+      });
+    }
+
+    async function handleSyncSuccess(sub, res) {
+      sub.status = 'SYNCED';
+      sub.synced_at = new Date().toISOString();
+      sub.server_doc_name = res.doc_name;
+      await db.wal.put(JSON.parse(JSON.stringify(sub)));
+    }
+
+    async function handleSyncFailure(sub, err) {
+      sub.retry_count = (sub.retry_count || 0) + 1;
+      sub.last_error = err || 'Sync failed';
+      await db.wal.put(JSON.parse(JSON.stringify(sub)));
+    }
+
+    async function syncSingleSubmission(sub) {
+      try {
+        const resp = await postSubmissions([buildSyncPayload(sub)]);
+        if (!resp.ok) return { ok: false, error: `HTTP ${resp.status}` };
+        const data = await resp.json();
+        const res = data.message?.results?.[0] || {};
+        const success = res.status === 'SUCCESS' || res.status === 'DUPLICATE_SKIPPED';
+        return { ok: success, doc_name: res.doc_name, error: res.error };
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    }
+
+    async function processPendingSyncs(pending) {
+      let okCount = 0, failCount = 0;
+      for (const sub of pending) {
+        const outcome = await syncSingleSubmission(sub);
+        outcome.ok ? (await handleSyncSuccess(sub, outcome), okCount++) : (await handleSyncFailure(sub, outcome.error), failCount++);
+      }
+      return { okCount, failCount };
+    }
+
+    function reportSyncResults(okCount, failCount) {
+      if (okCount > 0 && failCount === 0) {
+        showToast(`All ${okCount} survey(s) synced successfully ✓`, 'success');
+      } else if (failCount > 0 && okCount > 0) {
+        showToast(`Synced ${okCount}, ${failCount} failed. Check connection`, 'warning');
+      } else if (failCount > 0) {
+        showToast(`Sync failed for ${failCount} survey(s). Retrying later`, 'error');
+      }
+    }
+
     async function autoSync() {
       if (isSyncing.value || !isOnline.value) return;
       isSyncing.value = true;
-
       try {
         const pending = await db.wal.where('status').equals('PENDING_SYNC').toArray();
-        if (pending.length === 0) {
-          isSyncing.value = false;
-          return;
-        }
-
-        showToast(`Syncing ${pending.length} survey(s) with server...`, 'info');
-
-        for (const sub of pending) {
-          const payload = {
-            idempotency_key: sub.idempotency_key,
-            survey_template: sub.survey_template,
-            template_version: sub.template_version,
-            gps_latitude: sub.gps_latitude,
-            gps_longitude: sub.gps_longitude,
-            gps_accuracy: sub.gps_accuracy,
-            captured_at_local: sub.captured_at_local,
-            items: sub.items
-          };
-
-          const csrfToken = (window.frappe && window.frappe.csrf_token) || '';
-          const headers = { 'Content-Type': 'application/json' };
-          if (csrfToken) headers['X-Frappe-CSRF-Token'] = csrfToken;
-
-          const resp = await fetch('/api/method/omniservey.api.sync.batch_push', {
-            method: 'POST',
-            headers: headers,
-            body: JSON.stringify({ submissions: [payload] })
-          });
-
-          if (resp.ok) {
-            const data = await resp.json();
-            const res = (data.message && data.message.results && data.message.results[0]) || {};
-            if (res.status === 'SUCCESS' || res.status === 'DUPLICATE_SKIPPED') {
-              sub.status = 'SYNCED';
-              sub.synced_at = new Date().toISOString();
-              sub.server_doc_name = res.doc_name;
-              await db.wal.put(JSON.parse(JSON.stringify(sub)));
-            } else {
-              sub.retry_count = (sub.retry_count || 0) + 1;
-              sub.last_error = res.error || 'Sync rejected';
-              await db.wal.put(JSON.parse(JSON.stringify(sub)));
-            }
-          } else {
-            sub.retry_count = (sub.retry_count || 0) + 1;
-            await db.wal.put(JSON.parse(JSON.stringify(sub)));
-          }
-        }
+        if (pending.length === 0) return;
+        const { okCount, failCount } = await processPendingSyncs(pending);
         await loadWALFromDB();
-        showToast('Sync complete ✓', 'success');
-        announce('Background sync complete');
-      } catch (err) {
-        console.warn('[Sync] Background sync paused (offline/network error)', err);
+        reportSyncResults(okCount, failCount);
       } finally {
         isSyncing.value = false;
       }
@@ -5645,7 +6376,7 @@ const app = createApp({
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(walSubmissions.value, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `OmniServey_Backup_${new Date().toISOString().slice(0, 10)}.json`);
+      downloadAnchor.setAttribute("download", `OmniQuery_Backup_${new Date().toISOString().slice(0, 10)}.json`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
@@ -5661,7 +6392,7 @@ const app = createApp({
       const url = URL.createObjectURL(blob);
       const downloadAnchor = document.createElement('a');
       downloadAnchor.setAttribute("href", url);
-      downloadAnchor.setAttribute("download", `OmniServey_Responses_${new Date().toISOString().slice(0, 10)}.csv`);
+      downloadAnchor.setAttribute("download", `OmniQuery_Responses_${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
@@ -5726,13 +6457,13 @@ const app = createApp({
 
       if (navigator.share && navigator.canShare) {
         try {
-          const jsonFile = new File([jsonText], `OmniServey_Data_${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
-          const csvFile = new File([csvText], `OmniServey_Responses_${new Date().toISOString().slice(0, 10)}.csv`, { type: 'text/csv' });
+          const jsonFile = new File([jsonText], `OmniQuery_Data_${new Date().toISOString().slice(0, 10)}.json`, { type: 'application/json' });
+          const csvFile = new File([csvText], `OmniQuery_Responses_${new Date().toISOString().slice(0, 10)}.csv`, { type: 'text/csv' });
           
           if (navigator.canShare({ files: [jsonFile, csvFile] })) {
             await navigator.share({
-              title: `OmniServey Data Backup - ${currentUser.value}`,
-              text: `OmniServey field backup. Records: ${walSubmissions.value.length}. Note: ${emergencyNote.value || 'N/A'}`,
+              title: `OmniQuery Data Backup - ${currentUser.value}`,
+              text: `OmniQuery field backup. Records: ${walSubmissions.value.length}. Note: ${emergencyNote.value || 'N/A'}`,
               files: [jsonFile, csvFile]
             });
             showToast('Shared successfully ✓', 'success');
@@ -5747,9 +6478,9 @@ const app = createApp({
       downloadCSVBackup();
 
       const recipient = adminEmailInput.value.trim() || 'admin@ommnomi.local';
-      const subject = encodeURIComponent(`[OmniServey Data Backup] Surveyor: ${currentUser.value} (${new Date().toLocaleDateString()})`);
+      const subject = encodeURIComponent(`[OmniQuery Data Backup] Surveyor: ${currentUser.value} (${new Date().toLocaleDateString()})`);
       const bodyText = encodeURIComponent(
-        `OmniServey Field Backup Summary:\n` +
+        `OmniQuery Field Backup Summary:\n` +
         `--------------------------------\n` +
         `Surveyor: ${currentUser.value}\n` +
         `Total Records: ${walSubmissions.value.length}\n` +
@@ -5783,10 +6514,129 @@ const app = createApp({
       lastScrollY = currentScrollY;
     }
 
+    // Accessibility: Rapid Numeric Option Picker (1 up to dual digits 10, 11, etc.)
+    let numberKeyBuffer = '';
+    let numberKeyTimer = null;
+
+    function getActiveScreenQuestion() {
+      if (!activeQuestions.value || activeQuestions.value.length === 0) return null;
+      // 1. If active element is inside a question card, use that question
+      const activeEl = document.activeElement;
+      if (activeEl) {
+        const card = activeEl.closest('.elder-card');
+        if (card && card.id && card.id.startsWith('q_wrapper_')) {
+          const code = card.id.replace('q_wrapper_', '');
+          const q = activeQuestions.value.find(item => item.question_code === code);
+          if (q) return q;
+        }
+      }
+
+      // 2. Otherwise find the question card closest to the vertical center of screen
+      const cards = document.querySelectorAll('.elder-card');
+      const midY = window.innerHeight / 2;
+      let closestQ = null;
+      let minDistance = Infinity;
+
+      cards.forEach(card => {
+        const rect = card.getBoundingClientRect();
+        if (rect.bottom > 80 && rect.top < window.innerHeight - 40) {
+          const cardCenter = rect.top + rect.height / 2;
+          const dist = Math.abs(cardCenter - midY);
+          if (dist < minDistance) {
+            minDistance = dist;
+            if (card.id && card.id.startsWith('q_wrapper_')) {
+              const code = card.id.replace('q_wrapper_', '');
+              closestQ = activeQuestions.value.find(item => item.question_code === code);
+            }
+          }
+        }
+      });
+
+      return closestQ || activeQuestions.value[0];
+    }
+
+    function handleGlobalNumericHotkeys(e) {
+      if (currentView.value !== 'form') return;
+      const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+      if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) {
+        return;
+      }
+
+      if (e.key >= '0' && e.key <= '9') {
+        const digit = e.key;
+        numberKeyBuffer += digit;
+        if (numberKeyTimer) clearTimeout(numberKeyTimer);
+
+        const targetQ = getActiveScreenQuestion();
+        if (!targetQ) {
+          numberKeyBuffer = '';
+          return;
+        }
+
+        const cat = getFieldCategory(targetQ);
+        if (cat !== 'radio' && cat !== 'multiselect' && cat !== 'range') {
+          numberKeyBuffer = '';
+          return;
+        }
+
+        const options = getDisplayOptions(targetQ);
+        const maxOptions = cat === 'range' ? getRangeMax(targetQ) : options.length;
+
+        const processBuffer = () => {
+          const num = parseInt(numberKeyBuffer, 10);
+          numberKeyBuffer = '';
+          if (isNaN(num)) return;
+
+          if (cat === 'range') {
+            if (num >= getRangeMin(targetQ) && num <= getRangeMax(targetQ)) {
+              formData[targetQ.question_code] = num;
+              showToast(`${t(targetQ.label_en)}: ${num} ${t(getRangeUnit(targetQ))}`, 'info');
+            }
+            return;
+          }
+
+          if (num >= 1 && num <= options.length) {
+            const chosen = options[num - 1];
+            if (cat === 'radio') {
+              selectOption(targetQ.question_code, chosen, activeQuestions.value.indexOf(targetQ));
+              showToast(`${num}. ${t(chosen)}`, 'info');
+            } else if (cat === 'multiselect') {
+              toggleMultiOption(targetQ.question_code, chosen);
+              const isSelected = isMultiOptionSelected(targetQ.question_code, chosen);
+              showToast(`${isSelected ? '✓ Added' : '✕ Removed'}: ${t(chosen)}`, 'info');
+            }
+          }
+        };
+
+        // Dual digit buffering logic:
+        // If single digit entered, and total options >= 10, and typed number * 10 <= maxOptions,
+        // wait 450ms for a possible second digit; otherwise trigger immediately
+        if (numberKeyBuffer.length === 1 && maxOptions >= 10 && parseInt(numberKeyBuffer, 10) * 10 <= maxOptions + 9) {
+          numberKeyTimer = setTimeout(processBuffer, 450);
+        } else {
+          processBuffer();
+        }
+      }
+    }
+
+    async function migrateLegacyDB() {
+      try {
+        if (await Dexie.exists('OmniServeyDB')) {
+          const oldDb = new Dexie('OmniServeyDB');
+          oldDb.version(1).stores({ wal: 'idempotency_key, status' });
+          const rows = await oldDb.table('wal').toArray();
+          if (rows.length > 0) await db.wal.bulkPut(rows);
+        }
+      } catch (e) {
+        console.warn('DB migration notice:', e);
+      }
+    }
+
     onMounted(async () => {
       try {
         applyTextSize(textSize.value);
         await db.open();
+        await migrateLegacyDB();
         await loadTemplatesFromDB();
         await loadWALFromDB();
         if (isOnline.value) {
@@ -5810,6 +6660,7 @@ const app = createApp({
       });
 
       window.addEventListener('scroll', handleScroll, { passive: true });
+      window.addEventListener('keydown', handleGlobalNumericHotkeys);
 
       window.addEventListener('online', () => {
         isOnline.value = true;
@@ -5900,9 +6751,31 @@ const app = createApp({
       speakQuestion,
       selectOption,
       getOptionStyle,
+      isMultiOptionSelected,
+      toggleMultiOption,
+      getMultiOptionStyle,
+      getFilteredOptions,
+      getDisplayOptions,
+      activeOptionGroups,
+      getQuestionGroups,
+      getActiveGroup,
+      setActiveGroup,
+      getGroupSelectedCount,
+      selectAllInCurrentGroup,
+      clearCurrentGroup,
+      getSelectionSummary,
+      optionSearchQueries,
       addGridRow,
       removeGridRow,
+      ensureGridRows,
+      getGridType,
       getFieldCategory,
+      isCurrencyField,
+      getRangeMin,
+      getRangeMax,
+      getRangeStep,
+      getRangeSteps,
+      getRangeUnit,
       t
     };
   },
@@ -6064,7 +6937,7 @@ const app = createApp({
           </div>
           <div>
             <div class="text-lg sm:text-xl font-black tracking-tight leading-tight flex items-center space-x-2">
-              <span>OmniServey</span>
+              <span><span style="font-family:'Roboto',sans-serif;font-weight:900;"><span style="color:#4285f4;">Omm</span><span style="color:#34a853;">No</span><span style="color:#ea4335;">M</span><span style="color:#fbbc05;">i</span></span> OmniQuery</span>
               <span class="text-[11px] bg-slate-800 text-indigo-300 font-bold px-2 py-0.5 rounded-full border border-slate-700">v16</span>
             </div>
             <div class="text-xs flex items-center space-x-1.5 font-bold" :class="isOnline ? 'text-emerald-400' : 'text-amber-400'">
@@ -6140,7 +7013,7 @@ const app = createApp({
                 Ω
               </div>
               <div>
-                <div class="text-lg font-black leading-tight">OmniServey</div>
+                <div class="text-lg font-black leading-tight"><span style="font-family:'Roboto',sans-serif;font-weight:900;"><span style="color:#4285f4;">Omm</span><span style="color:#34a853;">No</span><span style="color:#ea4335;">M</span><span style="color:#fbbc05;">i</span></span> OmniQuery</div>
                 <div class="text-xs text-indigo-300 font-semibold">{{ currentUser }}</div>
               </div>
             </div>
@@ -6291,7 +7164,7 @@ const app = createApp({
 
           <!-- Drawer Footer -->
           <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center text-xs text-slate-500 font-semibold shrink-0">
-            <span>OmniServey v16 · PWA</span>
+            <span>OmniQuery v16 · PWA</span>
             <button type="button" @click="menuOpen = false" class="font-bold text-slate-700 underline px-2 py-1">
               {{ t('Close') }}
             </button>
@@ -6728,12 +7601,22 @@ const app = createApp({
               <!-- Question Header (Number + Label + Voice Assistant Speaker) -->
               <div class="flex items-start justify-between gap-3">
                 <div class="space-y-1 flex-1">
-                  <div class="flex items-center space-x-2">
+                  <div class="flex items-center flex-wrap gap-2">
                     <span class="w-7 h-7 rounded-full bg-slate-900 text-white flex items-center justify-center text-xs font-black shrink-0">
                       {{ qIndex + 1 }}
                     </span>
                     <span v-if="q.is_mandatory" class="text-xs font-extrabold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md">
                       * Required
+                    </span>
+                    <span v-if="getFieldCategory(q) === 'radio'"
+                          class="text-[11px] font-bold text-slate-700 bg-slate-100 border border-slate-300 px-2.5 py-0.5 rounded-full flex items-center space-x-1 shadow-2xs">
+                      <span>🔘</span>
+                      <span>{{ t('Single Choice (Select 1)') }}</span>
+                    </span>
+                    <span v-else-if="getFieldCategory(q) === 'multiselect'"
+                          class="text-[11px] font-black text-indigo-700 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-lg flex items-center space-x-1 shadow-2xs">
+                      <span>☑️</span>
+                      <span>{{ t('Multi-Select (Choose 1 or more)') }}</span>
                     </span>
                   </div>
 
@@ -6762,26 +7645,270 @@ const app = createApp({
               <!-- 1. Large Radio / Single Choice Touch Cards -->
               <div v-if="getFieldCategory(q) === 'radio'"
                    role="radiogroup" :aria-label="t(q.label_en)"
-                   class="grid grid-cols-1 gap-2.5 pt-1">
-                <div v-for="(opt, optIdx) in q.options" :key="optIdx"
-                     role="radio"
-                     :aria-checked="formData[q.question_code] === opt"
-                     tabindex="0"
-                     @click="selectOption(q.question_code, opt, qIndex)"
-                     @keydown.enter.space.prevent="selectOption(q.question_code, opt, qIndex)"
-                     :class="getOptionStyle(q.question_code, opt)"
-                     class="min-h-[56px] p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer touch-press transition-all text-base sm:text-lg">
-                  <span>{{ t(opt) }}</span>
-                  <div class="w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0 ml-3"
-                       :class="formData[q.question_code] === opt ? 'border-white bg-white' : 'border-slate-400'">
-                    <div v-if="formData[q.question_code] === opt" class="w-3 h-3 rounded-full bg-indigo-600"></div>
+                   class="space-y-2.5 pt-1">
+
+                <!-- Category / Group Filter Tabs (for Single Choice) -->
+                <div v-if="getQuestionGroups(q).length > 0" class="mb-2">
+                  <div class="flex items-center space-x-2 overflow-x-auto pb-1.5 cv-scrollbar no-scrollbar">
+                    <button type="button"
+                            @click="setActiveGroup(q, 'All')"
+                            :class="getActiveGroup(q) === 'All' 
+                                     ? 'bg-indigo-600 text-white border-indigo-700 shadow-md font-black ring-2 ring-indigo-200' 
+                                     : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 font-bold'"
+                            class="px-3 py-1.5 rounded-xl border text-xs flex items-center space-x-1.5 shrink-0 transition-all cursor-pointer">
+                      <span>{{ t('All') }}</span>
+                      <span class="text-[10px] opacity-80">({{ (q.options || []).length }})</span>
+                    </button>
+                    <button v-for="(grp, gIdx) in getQuestionGroups(q)" :key="gIdx"
+                            type="button"
+                            @click="setActiveGroup(q, grp.name)"
+                            :class="getActiveGroup(q) === grp.name 
+                                     ? 'bg-indigo-600 text-white border-indigo-700 shadow-md font-black ring-2 ring-indigo-200' 
+                                     : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 font-bold'"
+                            class="px-3 py-1.5 rounded-xl border text-xs flex items-center space-x-1.5 shrink-0 transition-all cursor-pointer">
+                      <span>{{ currentLang === 'hi' ? grp.name_hi : grp.name }}</span>
+                      <span v-if="getGroupSelectedCount(q, grp.name) > 0"
+                            :class="getActiveGroup(q) === grp.name ? 'bg-white text-indigo-700' : 'bg-emerald-600 text-white'"
+                            class="w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-black shadow-sm">
+                        ✓
+                      </span>
+                      <span v-else class="text-[10px] opacity-80">({{ grp.options.length }})</span>
+                    </button>
                   </div>
+                </div>
+
+                <!-- In-Card Search Box for > 7 options -->
+                <div v-if="(q.options && q.options.length > 7)" class="relative mb-2">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input type="text"
+                         v-model="optionSearchQueries[q.question_code]"
+                         :placeholder="t('Filter options... (type to search)')"
+                         class="w-full text-sm font-semibold pl-10 pr-9 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:bg-white outline-none transition-all">
+                  <button v-if="optionSearchQueries[q.question_code]"
+                          type="button"
+                          @click="optionSearchQueries[q.question_code] = ''"
+                          class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 font-bold">
+                    ✕
+                  </button>
+                </div>
+
+                <div :class="(q.options && q.options.length > 7) ? 'max-h-[380px] overflow-y-auto pr-1 space-y-2.5 cv-scrollbar' : 'grid grid-cols-1 gap-2.5'">
+                  <div v-if="optionSearchQueries[q.question_code]" class="text-[11px] font-black text-indigo-600 px-1 pb-1">
+                    {{ t('Showing') }} {{ getDisplayOptions(q).length }} {{ t('of') }} {{ (q.options || []).length }} {{ t('options') }}
+                  </div>
+                  <div v-for="(opt, optIdx) in getDisplayOptions(q)" :key="optIdx"
+                       role="radio"
+                       :aria-checked="formData[q.question_code] === opt"
+                       tabindex="0"
+                       @click="selectOption(q.question_code, opt, qIndex)"
+                       @keydown.enter.space.prevent="selectOption(q.question_code, opt, qIndex)"
+                       :class="getOptionStyle(q.question_code, opt)"
+                       class="min-h-[56px] p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer touch-press transition-all text-base sm:text-lg">
+                    <div class="flex items-center space-x-3 min-w-0 pr-2">
+                      <!-- Single Choice: Distinct CIRCLE Index Badge -->
+                      <span class="w-8 h-8 rounded-full text-xs font-black flex items-center justify-center shrink-0 border transition-all shadow-sm"
+                            :class="formData[q.question_code] === opt ? 'bg-white/20 text-white border-white/40' : 'bg-slate-100 text-slate-700 border-slate-300'">
+                        {{ optIdx + 1 }}
+                      </span>
+                      <span class="font-bold sm:text-lg leading-snug">{{ t(opt) }}</span>
+                    </div>
+                    <!-- Single Choice: Distinct CIRCLE Radio Indicator -->
+                    <div class="w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 ml-3 transition-all"
+                         :class="formData[q.question_code] === opt ? 'border-white bg-white shadow-sm ring-2 ring-indigo-300/40' : 'border-slate-400 bg-white shadow-xs'">
+                      <div v-if="formData[q.question_code] === opt" class="w-3.5 h-3.5 rounded-full bg-indigo-600"></div>
+                    </div>
+                  </div>
+                  <div v-if="getDisplayOptions(q).length === 0" class="p-4 text-center text-sm font-bold text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+                    {{ t('No matching options found') }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- 1b. Multiple Choice / Multiselect Touch Cards (Checkboxes) -->
+              <div v-else-if="getFieldCategory(q) === 'multiselect'"
+                   class="space-y-2.5 pt-1">
+                <div v-if="q.question_code === 'main_business_activities' && (!formData['business_type'] || (Array.isArray(formData['business_type']) && formData['business_type'].length === 0))" 
+                     class="text-xs text-indigo-800 font-bold bg-indigo-50 p-3 rounded-xl border border-indigo-200">
+                  ℹ️ {{ t('Showing all activities. Select Type of Business in Q16 above to auto-filter this list.') }}
+                </div>
+
+                <!-- Group / Category Tabs & Multi-Select Batch Actions -->
+                <div v-if="getQuestionGroups(q).length > 0" class="mb-3 space-y-2">
+                  <!-- Horizontal Scrollable Group Chips -->
+                  <div class="flex items-center space-x-2 overflow-x-auto pb-1.5 cv-scrollbar no-scrollbar">
+                    <button type="button"
+                            @click="setActiveGroup(q, 'All')"
+                            :class="getActiveGroup(q) === 'All' 
+                                     ? 'bg-indigo-600 text-white border-indigo-700 shadow-md font-black ring-2 ring-indigo-200' 
+                                     : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 font-bold'"
+                            class="px-3 py-1.5 rounded-xl border text-xs flex items-center space-x-1.5 shrink-0 transition-all cursor-pointer">
+                      <span>{{ t('All') }}</span>
+                      <span v-if="getGroupSelectedCount(q, 'All') > 0"
+                            :class="getActiveGroup(q) === 'All' ? 'bg-white text-indigo-700' : 'bg-indigo-600 text-white'"
+                            class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-sm ml-1">
+                        {{ getGroupSelectedCount(q, 'All') }}
+                      </span>
+                      <span v-else class="text-[10px] opacity-75 ml-1">({{ getFilteredOptions(q).length }})</span>
+                    </button>
+
+                    <button v-for="(grp, gIdx) in getQuestionGroups(q)" :key="gIdx"
+                            type="button"
+                            @click="setActiveGroup(q, grp.name)"
+                            :class="getActiveGroup(q) === grp.name 
+                                     ? 'bg-indigo-600 text-white border-indigo-700 shadow-md font-black ring-2 ring-indigo-200' 
+                                     : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50 font-bold'"
+                            class="px-3 py-1.5 rounded-xl border text-xs flex items-center space-x-1.5 shrink-0 transition-all cursor-pointer">
+                      <span>{{ currentLang === 'hi' ? grp.name_hi : grp.name }}</span>
+                      <span v-if="getGroupSelectedCount(q, grp.name) > 0"
+                            :class="getActiveGroup(q) === grp.name ? 'bg-white text-indigo-700' : 'bg-emerald-600 text-white'"
+                            class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black shadow-sm ml-1">
+                        {{ getGroupSelectedCount(q, grp.name) }}
+                      </span>
+                      <span v-else class="text-[10px] opacity-75 ml-1">({{ grp.options.length }})</span>
+                    </button>
+                  </div>
+
+                  <!-- Category Quick Action Strip -->
+                  <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 shadow-xs">
+                    <div class="flex items-center space-x-2 text-xs font-bold text-slate-700 min-w-0">
+                      <span v-if="getSelectionSummary(q)" class="text-indigo-700 font-black flex items-center space-x-1 truncate">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
+                        <span class="truncate">{{ getSelectionSummary(q) }}</span>
+                      </span>
+                      <span v-else class="text-slate-500 truncate">
+                        {{ getActiveGroup(q) === 'All' ? t('Select options below') : t('Select in this category') }}
+                      </span>
+                    </div>
+
+                    <div class="flex items-center space-x-1.5 shrink-0 ml-2">
+                      <button type="button"
+                              @click="selectAllInCurrentGroup(q)"
+                              class="px-2.5 py-1 rounded-lg text-xs font-black bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 active:scale-95 transition-all flex items-center space-x-1 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span>{{ getActiveGroup(q) === 'All' ? t('Select All') : t('Select Group') }}</span>
+                      </button>
+
+                      <button v-if="getGroupSelectedCount(q, getActiveGroup(q)) > 0"
+                              type="button"
+                              @click="clearCurrentGroup(q)"
+                              class="px-2 py-1 rounded-lg text-xs font-bold bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 active:scale-95 transition-all flex items-center space-x-0.5 cursor-pointer">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                        <span>{{ t('Clear') }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- In-Card Search Box for > 7 options -->
+                <div v-if="getFilteredOptions(q).length > 7" class="relative mb-2">
+                  <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <input type="text"
+                         v-model="optionSearchQueries[q.question_code]"
+                         :placeholder="t('Filter options... (type to search)')"
+                         class="w-full text-sm font-semibold pl-10 pr-9 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl focus:border-indigo-600 focus:bg-white outline-none transition-all">
+                  <button v-if="optionSearchQueries[q.question_code]"
+                          type="button"
+                          @click="optionSearchQueries[q.question_code] = ''"
+                          class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 font-bold">
+                    ✕
+                  </button>
+                </div>
+
+                <div :class="getFilteredOptions(q).length > 7 ? 'max-h-[380px] overflow-y-auto pr-1 space-y-2.5 cv-scrollbar' : 'grid grid-cols-1 gap-2.5'">
+                  <div v-if="optionSearchQueries[q.question_code]" class="text-[11px] font-black text-indigo-600 px-1 pb-1">
+                    {{ t('Showing') }} {{ getDisplayOptions(q).length }} {{ t('of') }} {{ getFilteredOptions(q).length }} {{ t('options') }}
+                  </div>
+                  <div v-for="(opt, optIdx) in getDisplayOptions(q)" :key="optIdx"
+                       role="checkbox"
+                       :aria-checked="isMultiOptionSelected(q.question_code, opt)"
+                       tabindex="0"
+                       @click="toggleMultiOption(q.question_code, opt)"
+                       @keydown.enter.space.prevent="toggleMultiOption(q.question_code, opt)"
+                       :class="getMultiOptionStyle(q.question_code, opt)"
+                       class="min-h-[56px] p-4 rounded-2xl border-2 flex items-center justify-between cursor-pointer touch-press transition-all text-base sm:text-lg">
+                    <div class="flex items-center space-x-3 min-w-0 pr-2">
+                      <!-- Multiselect: Distinct SQUARE Index Badge -->
+                      <span class="w-8 h-8 rounded-lg text-xs font-black flex items-center justify-center shrink-0 border transition-all shadow-sm"
+                            :class="isMultiOptionSelected(q.question_code, opt) ? 'bg-white/20 text-white border-white/40' : 'bg-slate-100 text-slate-700 border-slate-300'">
+                        {{ optIdx + 1 }}
+                      </span>
+                      <span class="font-bold sm:text-lg leading-snug">{{ t(opt) }}</span>
+                    </div>
+                    <!-- Multiselect: Distinct SQUARE Checkbox with checkmark -->
+                    <div class="w-7 h-7 rounded-lg border-2 flex items-center justify-center shrink-0 ml-2 transition-all"
+                         :class="isMultiOptionSelected(q.question_code, opt) ? 'border-white bg-white shadow-sm ring-2 ring-indigo-300/40' : 'border-slate-400 bg-white shadow-xs'">
+                      <svg v-if="isMultiOptionSelected(q.question_code, opt)" class="w-5 h-5 text-indigo-600 stroke-[3.5]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div v-if="getDisplayOptions(q).length === 0" class="p-4 text-center text-sm font-bold text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+                    {{ t('No matching options found') }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- 1b. Range Slider Control (e.g. 0 to 7 Years, with quick touch pills) -->
+              <div v-else-if="getFieldCategory(q) === 'range'" class="space-y-4 pt-1">
+                <!-- Big Badge Displaying Selected Value -->
+                <div class="flex items-center justify-between bg-indigo-50 border-2 border-indigo-200 rounded-2xl px-5 py-3.5">
+                  <span class="text-xs font-black text-indigo-700 uppercase tracking-wider">{{ t('Selected Value') }}</span>
+                  <div class="flex items-baseline space-x-1.5">
+                    <span class="text-2xl sm:text-3xl font-black text-indigo-900">
+                      {{ formData[q.question_code] !== undefined && formData[q.question_code] !== null && formData[q.question_code] !== '' ? formData[q.question_code] : getRangeMin(q) }}
+                    </span>
+                    <span class="text-sm sm:text-base font-black text-indigo-600">
+                      {{ t(getRangeUnit(q)) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Smooth Range Slider Input -->
+                <div class="px-2 pt-1">
+                  <input type="range"
+                         :id="'q_input_' + q.question_code"
+                         :min="getRangeMin(q)"
+                         :max="getRangeMax(q)"
+                         :step="getRangeStep(q)"
+                         v-model.number="formData[q.question_code]"
+                         class="range-slider-input w-full">
+                  <div class="flex justify-between text-xs font-black text-slate-500 mt-2 px-1">
+                    <span v-for="val in getRangeSteps(q)" :key="val"
+                          @click="formData[q.question_code] = val"
+                          class="cursor-pointer hover:text-indigo-600 font-bold">
+                      {{ val }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Fast Touch Tap Pills for one-tap mobile entry -->
+                <div class="grid grid-flow-col auto-cols-fr gap-1 sm:gap-2 pt-1">
+                  <button type="button"
+                          v-for="val in getRangeSteps(q)"
+                          :key="val"
+                          @click="formData[q.question_code] = val"
+                          :class="formData[q.question_code] == val ? 'bg-indigo-600 text-white font-black shadow-md border-indigo-600 scale-105' : 'bg-white text-slate-700 font-bold border-slate-300 hover:border-indigo-400'"
+                          class="py-2.5 sm:py-3 text-center rounded-xl border-2 text-sm sm:text-base touch-press transition-all">
+                    {{ val }}
+                  </button>
                 </div>
               </div>
 
               <!-- 2. Number / Integer / Currency / Decimal Input -->
               <div v-else-if="getFieldCategory(q) === 'number'" class="relative">
-                <span v-if="(q.field_type || '').toLowerCase().includes('curr') || (q.label_en || '').includes('INR') || (q.label_en || '').includes('Rs')"
+                <span v-if="isCurrencyField(q)"
                       class="absolute left-4 top-1/2 -translate-y-1/2 text-xl sm:text-2xl font-black text-slate-400 pointer-events-none">
                   ₹
                 </span>
@@ -6790,45 +7917,185 @@ const app = createApp({
                        v-model="formData[q.question_code]"
                        :required="q.is_mandatory"
                        :placeholder="(q.field_type || '').toLowerCase().includes('year') || (q.label_en || '').toLowerCase().includes('year') ? t('e.g. 2020') : t('Enter number...')"
-                       :class="(q.field_type || '').toLowerCase().includes('curr') || (q.label_en || '').includes('INR') || (q.label_en || '').includes('Rs') ? 'pl-11 pr-4' : 'px-4'"
+                       :class="isCurrencyField(q) ? 'pl-11 pr-4' : 'px-4'"
                        class="w-full min-h-[56px] text-xl sm:text-2xl font-black py-3.5 bg-slate-50 border-2 border-slate-300 focus:border-indigo-600 focus:bg-white rounded-2xl outline-none shadow-inner transition-all">
               </div>
 
-              <!-- 3. Dynamic Asset / Equipment Table Grid -->
-              <div v-else-if="getFieldCategory(q) === 'grid'" class="space-y-3">
-                <div v-for="(row, rIdx) in (formData[q.question_code] || [])" :key="rIdx"
-                     class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-3">
-                  <div class="flex items-center justify-between text-xs font-black text-slate-500">
-                    <span>{{ t('Item') }} #{{ rIdx + 1 }}</span>
-                    <button type="button" @click="removeGridRow(q.question_code, rIdx)" class="text-rose-600 hover:text-rose-800 font-black">
-                      ✕ {{ t('Remove') }}
-                    </button>
-                  </div>
-
-                  <div>
-                    <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Equipment / Asset Name') }}</label>
-                    <input type="text" v-model="row.item_name" :placeholder="t('e.g. Tractor, Water Pump, Sewing Machine')"
-                           class="w-full min-h-[48px] text-base font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-600">
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Quantity') }}</label>
-                      <input type="number" v-model="row.quantity" placeholder="1"
-                             class="w-full min-h-[48px] text-base font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-600">
+              <!-- 3. Dynamic Matrix & Table Grids -->
+              <div v-else-if="getFieldCategory(q) === 'grid'" :data-grid-code="q.question_code" class="space-y-4">
+                
+                <!-- 3a. Seasonal Turnovers (Fixed 3 Seasons) -->
+                <div v-if="getGridType(q.question_code) === 'seasons'" class="space-y-4">
+                  <div v-for="(row, rIdx) in ensureGridRows(q.question_code)" :key="rIdx"
+                       class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-3 shadow-sm">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-black text-slate-800">{{ row.label || row.season }}</span>
+                      <span class="text-xs font-bold px-2.5 py-1 bg-indigo-100 text-indigo-800 rounded-full border border-indigo-200">
+                        {{ row.duration_months }} {{ t('Months') }}
+                      </span>
                     </div>
-                    <div>
-                      <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Approx Value (₹)') }}</label>
-                      <input type="number" v-model="row.approx_value" placeholder="₹"
-                             class="w-full min-h-[48px] text-base font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-600">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Monthly Sales (₹)') }}</label>
+                        <input type="number" v-model="row.monthly_sales" placeholder="₹"
+                               class="w-full min-h-[48px] text-base font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-600 shadow-inner">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Monthly Net Profit (₹)') }}</label>
+                        <input type="number" v-model="row.monthly_profit" placeholder="₹"
+                               class="w-full min-h-[48px] text-base font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-600 shadow-inner">
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <button type="button" @click="addGridRow(q.question_code)"
-                        class="w-full min-h-[48px] border-2 border-dashed border-indigo-400 bg-indigo-50/50 hover:bg-indigo-100 text-indigo-900 font-black text-sm sm:text-base py-3 rounded-2xl touch-press flex items-center justify-center space-x-2">
-                  <span>{{ t('+ Add Item / Asset') }}</span>
-                </button>
+                <!-- 3b. Activity Involvements (Fixed 6 Enterprise Activities) -->
+                <div v-else-if="getGridType(q.question_code) === 'activities'" class="space-y-4">
+                  <div v-for="(row, rIdx) in ensureGridRows(q.question_code)" :key="rIdx"
+                       class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-3">
+                    <div class="text-sm font-black text-slate-800">{{ row.label || row.activity }}</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Involvement') }}</label>
+                        <select v-model="row.involvement" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
+                          <option value="Regular">{{ t('Regular') }}</option>
+                          <option value="Occasional">{{ t('Occasional') }}</option>
+                          <option value="Only respondent">{{ t('Only respondent') }}</option>
+                          <option value="Not relevant">{{ t('Not relevant') }}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Amount Paid Last Year') }}</label>
+                        <select v-model="row.amount_paid_last_year" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
+                          <option value="Not relevant">{{ t('Not relevant') }}</option>
+                          <option value="Upto Rs 5000">Upto Rs 5000</option>
+                          <option value="Rs 5001 to Rs 10000">Rs 5001 to Rs 10000</option>
+                          <option value="Rs 10001 to Rs 20000">Rs 10001 to Rs 20000</option>
+                          <option value="Above Rs 20000">Above Rs 20000</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Family Helpers') }}</label>
+                        <input type="number" v-model="row.family_members_count" placeholder="0" class="w-full min-h-[44px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Hired Help') }}</label>
+                        <input type="number" v-model="row.hired_help_count" placeholder="0" class="w-full min-h-[44px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3c. Capital Sources (14 Sources) -->
+                <div v-else-if="getGridType(q.question_code) === 'capital'" class="space-y-4">
+                  <div v-for="(row, rIdx) in ensureGridRows(q.question_code)" :key="rIdx"
+                       class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-3">
+                    <div class="text-sm font-black text-slate-800">{{ row.source }}</div>
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="block text-[11px] font-black text-slate-600 mb-1">{{ t('First Year (₹)') }}</label>
+                        <input type="number" v-model="row.first_year_amount" placeholder="₹" class="w-full min-h-[44px] text-sm font-bold px-2 py-1.5 bg-white border border-slate-300 rounded-xl outline-none">
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-black text-slate-600 mb-1">{{ t('Years In-Between (₹)') }}</label>
+                        <input type="number" v-model="row.years_in_between_amount" placeholder="₹" class="w-full min-h-[44px] text-sm font-bold px-2 py-1.5 bg-white border border-slate-300 rounded-xl outline-none">
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-black text-slate-600 mb-1">{{ t('Current Year (₹)') }}</label>
+                        <input type="number" v-model="row.current_year_amount" placeholder="₹" class="w-full min-h-[44px] text-sm font-bold px-2 py-1.5 bg-white border border-slate-300 rounded-xl outline-none">
+                      </div>
+                      <div>
+                        <label class="block text-[11px] font-black text-slate-600 mb-1">{{ t('Current Pending (₹)') }}</label>
+                        <input type="number" v-model="row.current_year_pending" placeholder="₹" class="w-full min-h-[44px] text-sm font-bold px-2 py-1.5 bg-white border border-slate-300 rounded-xl outline-none">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3d. Loan Usages (14 Sources) -->
+                <div v-else-if="getGridType(q.question_code) === 'loan_usage'" class="space-y-4">
+                  <div v-for="(row, rIdx) in ensureGridRows(q.question_code)" :key="rIdx"
+                       class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-3">
+                    <div class="text-sm font-black text-slate-800">{{ row.source }}</div>
+                    <div>
+                      <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Usage in Business') }}</label>
+                      <select v-model="row.usage_in_business" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
+                        <option value="Not used the source">{{ t('Not used the source') }}</option>
+                        <option value="Fully for business">{{ t('Fully for business') }}</option>
+                        <option value="Partly for business and partly for household/other">{{ t('Partly for business, partly household') }}</option>
+                        <option value="Fully for household/other">{{ t('Fully for household/other') }}</option>
+                      </select>
+                    </div>
+                    <div v-if="row.usage_in_business && row.usage_in_business.includes('household')">
+                      <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Specify Other Usage') }}</label>
+                      <input type="text" v-model="row.usage_other_specify" :placeholder="t('Specify details...')" class="w-full min-h-[44px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3e. Business Metric Changes (4 Metrics) -->
+                <div v-else-if="getGridType(q.question_code) === 'metrics'" class="space-y-4">
+                  <div v-for="(row, rIdx) in ensureGridRows(q.question_code)" :key="rIdx"
+                       class="p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-3">
+                    <div class="text-sm font-black text-slate-800">{{ row.label || row.metric }}</div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('First Year Status') }}</label>
+                        <select v-model="row.first_year_status" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
+                          <option value="Don't remember">{{ t("Don't remember") }}</option>
+                          <option value="Enter Amount">{{ t('Enter Amount') }}</option>
+                        </select>
+                      </div>
+                      <div v-if="row.first_year_status === 'Enter Amount'">
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('First Year Amount (₹)') }}</label>
+                        <input type="number" v-model="row.first_year_amount" placeholder="₹" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Current Year Amount (₹)') }}</label>
+                        <input type="number" v-model="row.current_year_amount" placeholder="₹" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 3f. Generic Equipment / Asset Add-Row Grid -->
+                <div v-else class="space-y-3">
+                  <div v-for="(row, rIdx) in ensureGridRows(q.question_code)" :key="rIdx"
+                       class="generic-grid-row p-4 bg-slate-50 rounded-2xl border-2 border-slate-200 space-y-3">
+                    <div class="flex items-center justify-between text-xs font-black text-slate-500">
+                      <span>{{ t('Item') }} #{{ rIdx + 1 }}</span>
+                      <button type="button" @click="removeGridRow(q.question_code, rIdx)" class="text-rose-600 hover:text-rose-800 font-black">
+                        ✕ {{ t('Remove') }}
+                      </button>
+                    </div>
+
+                    <div>
+                      <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Equipment / Asset Name') }}</label>
+                      <input type="text" v-model="row.item_name" :placeholder="t('e.g. Tractor, Water Pump, Sewing Machine')"
+                             class="w-full min-h-[48px] text-base font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-600">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Quantity') }}</label>
+                        <input type="number" v-model="row.quantity" placeholder="1"
+                               class="w-full min-h-[48px] text-base font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-600">
+                      </div>
+                      <div>
+                        <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Approx Value (₹)') }}</label>
+                        <input type="number" v-model="row.approx_value" placeholder="₹"
+                               class="w-full min-h-[48px] text-base font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none focus:border-indigo-600">
+                      </div>
+                    </div>
+                  </div>
+
+                  <button type="button" @click="addGridRow(q.question_code)"
+                          class="w-full min-h-[48px] border-2 border-dashed border-indigo-400 bg-indigo-50/50 hover:bg-indigo-100 text-indigo-900 font-black text-sm sm:text-base py-3 rounded-2xl touch-press flex items-center justify-center space-x-2">
+                    <span>{{ t('+ Add Item / Asset') }}</span>
+                  </button>
+                </div>
               </div>
 
               <!-- 4. GPS Location Fix Field -->
