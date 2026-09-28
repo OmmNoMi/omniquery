@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64" fill="none">
+  <defs>
+    <linearGradient id="oqOliveGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8FA915"/>
+      <stop offset="50%" stop-color="#78900A"/>
+      <stop offset="100%" stop-color="#556604"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Frappe Desk Squircle Base (rx=14) -->
+  <rect width="64" height="64" rx="14" fill="url(#oqOliveGrad)"/>
+
+  <!-- Q Body / Survey Inspection Lens -->
+  <circle cx="30" cy="29" r="15.5" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" fill="none"/>
+
+  <!-- Q Tail / Magnifier Handle -->
+  <path d="M 40.5 39.5 L 48.5 47.5" stroke="#FFFFFF" stroke-width="4.8" stroke-linecap="round"/>
+
+  <!-- Analytics Rising Bars (Survey Data Ingestion) -->
+  <rect x="21" y="32.5" width="3.5" height="7.5" rx="1.2" fill="#FFFFFF" fill-opacity="0.45"/>
+  <rect x="27" y="27" width="3.5" height="13" rx="1.2" fill="#FFFFFF" fill-opacity="0.75"/>
+  <rect x="33" y="21.5" width="3.5" height="18.5" rx="1.2" fill="#FFFFFF" fill-opacity="0.95"/>
+
+  <!-- Trendline Path (Growth & Predictive Query) -->
+  <path d="M 20 33 L 26.5 26 L 33 22.5 L 42 13" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Crisp Arrowhead (Solid Modern Motif) -->
+  <polygon points="45,10 37.5,12 43,17.5" fill="#FFFFFF"/>
+</svg>

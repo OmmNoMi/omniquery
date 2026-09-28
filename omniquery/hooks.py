@@ -4,22 +4,22 @@ app_publisher = "OmmNoMi Automation LLP"
 app_description = "Next-Gen Dynamic Survey Engine, Zero-Data-Loss Offline PWA & Frappe Insights Platform"
 app_email = "info@ommnomi.in"
 app_license = "mit"
+app_logo_url = "/assets/omniquery/icons/desktop_icons/solid/omniquery.svg?v=oq_v1"
+app_icon = "/assets/omniquery/icons/desktop_icons/solid/omniquery.svg?v=oq_v1"
+app_color = "#8FA915"
 
 # Apps
 # ------------------
 
-# required_apps = []
-
 # Each item in the list will be shown as an app in the apps page
-# add_to_apps_screen = [
-# 	{
-# 		"name": "omniservey",
-# 		"logo": "/assets/omniservey/logo.png",
-# 		"title": "OmniServey",
-# 		"route": "/omniservey",
-# 		"has_permission": "omniservey.api.permission.has_app_permission"
-# 	}
-# ]
+add_to_apps_screen = [
+	{
+		"name": "omniquery",
+		"logo": "/assets/omniquery/icons/desktop_icons/solid/omniquery.svg?v=oq_v1",
+		"title": "OmniQuery",
+		"route": "/omniquery"
+	}
+]
 
 # Includes in <head>
 # ------------------
