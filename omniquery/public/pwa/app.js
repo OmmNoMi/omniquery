@@ -1,4 +1,4 @@
-const { createApp, ref, reactive, computed, onMounted, watch, nextTick } = Vue;
+const { createApp, ref, reactive, computed, onMounted, onUnmounted, watch, nextTick } = Vue;
 
 // 1. IndexedDB Initialization via Dexie.js (ACID WAL Engine)
 const db = new Dexie('OmniQueryDB');
@@ -4695,8 +4695,197 @@ async function compressImage(file, gpsCoords = null) {
   });
 }
 
+// 3. Reusable Accessible Custom Combobox Component (Zero Browser Default Select)
+const FCombobox = {
+  name: 'FCombobox',
+  props: {
+    modelValue: [String, Number, Object],
+    options: {
+      type: Array,
+      default: () => []
+    },
+    placeholder: {
+      type: String,
+      default: 'Select an option...'
+    },
+    disabled: {
+      type: Boolean,
+      default: false
+    },
+    clearable: {
+      type: Boolean,
+      default: false
+    },
+    ariaLabel: {
+      type: String,
+      default: 'Select option'
+    },
+    id: {
+      type: String,
+      default: () => 'combo_' + Math.random().toString(36).slice(2, 9)
+    }
+  },
+  emits: ['update:modelValue', 'change'],
+  setup(props, { emit }) {
+    const isOpen = ref(false);
+    const highlightedIdx = ref(-1);
+    const containerRef = ref(null);
+    const triggerRef = ref(null);
+    const listboxId = computed(() => `${props.id}_listbox`);
+
+    const normalizedOptions = computed(() => {
+      return (props.options || []).map(opt => {
+        if (typeof opt === 'object' && opt !== null) {
+          return { value: opt.value, label: opt.label || opt.value };
+        }
+        return { value: opt, label: String(opt) };
+      });
+    });
+
+    const selectedLabel = computed(() => {
+      const match = normalizedOptions.value.find(o => o.value === props.modelValue);
+      return match ? match.label : '';
+    });
+
+    function toggle() {
+      if (props.disabled) return;
+      isOpen.value = !isOpen.value;
+      if (isOpen.value) {
+        const curIdx = normalizedOptions.value.findIndex(o => o.value === props.modelValue);
+        highlightedIdx.value = curIdx >= 0 ? curIdx : 0;
+      }
+    }
+
+    function close() {
+      isOpen.value = false;
+      highlightedIdx.value = -1;
+    }
+
+    function selectOption(opt) {
+      emit('update:modelValue', opt.value);
+      emit('change', opt.value, opt);
+      close();
+      if (triggerRef.value) triggerRef.value.focus();
+    }
+
+    function handleTriggerKeydown(e) {
+      if (props.disabled) return;
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!isOpen.value) {
+          isOpen.value = true;
+          const curIdx = normalizedOptions.value.findIndex(o => o.value === props.modelValue);
+          highlightedIdx.value = curIdx >= 0 ? curIdx : 0;
+        } else if (e.key === 'ArrowDown') {
+          highlightedIdx.value = (highlightedIdx.value + 1) % normalizedOptions.value.length;
+        } else if (e.key === 'ArrowUp') {
+          highlightedIdx.value = (highlightedIdx.value - 1 + normalizedOptions.value.length) % normalizedOptions.value.length;
+        } else if (['Enter', ' '].includes(e.key) && highlightedIdx.value >= 0) {
+          selectOption(normalizedOptions.value[highlightedIdx.value]);
+        }
+      } else if (e.key === 'Escape' && isOpen.value) {
+        e.preventDefault();
+        e.stopPropagation();
+        close();
+      } else if (e.key === 'Tab' && isOpen.value) {
+        close();
+      }
+    }
+
+    function handleOutsideClick(e) {
+      if (containerRef.value && !containerRef.value.contains(e.target)) {
+        close();
+      }
+    }
+
+    onMounted(() => {
+      document.addEventListener('click', handleOutsideClick, true);
+    });
+
+    onUnmounted(() => {
+      document.removeEventListener('click', handleOutsideClick, true);
+    });
+
+    return {
+      isOpen,
+      highlightedIdx,
+      containerRef,
+      triggerRef,
+      listboxId,
+      normalizedOptions,
+      selectedLabel,
+      toggle,
+      close,
+      selectOption,
+      handleTriggerKeydown
+    };
+  },
+  template: `
+    <div ref="containerRef" class="relative w-full">
+      <button type="button"
+              ref="triggerRef"
+              :id="id"
+              role="combobox"
+              aria-haspopup="listbox"
+              :aria-expanded="isOpen"
+              :aria-controls="listboxId"
+              :aria-label="ariaLabel"
+              :disabled="disabled"
+              @click="toggle"
+              @keydown="handleTriggerKeydown"
+              class="w-full min-h-[48px] px-3.5 py-2.5 text-left bg-white border-2 rounded-xl flex items-center justify-between text-sm font-bold transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-600 cursor-pointer shadow-xs"
+              :class="isOpen ? 'border-indigo-600 ring-2 ring-indigo-100 shadow-md' : 'border-slate-300 hover:border-slate-400'">
+        <span class="truncate" :class="selectedLabel ? 'text-slate-800' : 'text-slate-400'">
+          {{ selectedLabel || placeholder }}
+        </span>
+        <svg class="w-4 h-4 ml-2 text-slate-500 transition-transform duration-200 shrink-0" :class="{ 'rotate-180 text-indigo-600': isOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      <!-- Custom Floating Dropdown Menu (Zero Native Browser Select) -->
+      <transition enter-active-class="transition ease-out duration-100"
+                  enter-from-class="transform opacity-0 scale-95"
+                  enter-to-class="transform opacity-100 scale-100"
+                  leave-active-class="transition ease-in duration-75"
+                  leave-from-class="transform opacity-100 scale-100"
+                  leave-to-class="transform opacity-0 scale-95">
+        <ul v-if="isOpen"
+            :id="listboxId"
+            role="listbox"
+            tabindex="-1"
+            class="absolute z-50 w-full mt-1.5 bg-white border-2 border-slate-200 rounded-xl shadow-2xl max-h-60 overflow-y-auto py-1.5 text-sm focus:outline-none">
+          <li v-for="(opt, idx) in normalizedOptions"
+              :key="opt.value"
+              role="option"
+              :id="id + '_opt_' + idx"
+              :aria-selected="opt.value === modelValue"
+              @click="selectOption(opt)"
+              @mouseenter="highlightedIdx = idx"
+              class="px-3.5 py-2.5 flex items-center justify-between cursor-pointer font-bold transition-colors select-none"
+              :class="[
+                idx === highlightedIdx ? 'bg-indigo-50 text-indigo-900' : 'text-slate-700 hover:bg-slate-50',
+                opt.value === modelValue ? 'text-indigo-600 font-black bg-indigo-50/70' : ''
+              ]">
+            <span class="truncate">{{ opt.label }}</span>
+            <svg v-if="opt.value === modelValue" class="w-4 h-4 text-indigo-600 shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+            </svg>
+          </li>
+        </ul>
+      </transition>
+    </div>
+  `
+};
+
 // 4. Main Vue 3 Application
 const app = createApp({
+  components: {
+    FCombobox,
+    'f-combobox': FCombobox,
+    'f-select': FCombobox
+  },
   setup() {
     const currentView = ref('dashboard'); // 'dashboard' | 'templates' | 'form' | 'queue'
     const isOnline = ref(navigator.onLine);
@@ -4952,6 +5141,33 @@ const app = createApp({
       if (label.includes('day')) return 'Days';
       return '';
     }
+
+    const involvementOptions = computed(() => [
+      { value: 'Regular', label: t('Regular') },
+      { value: 'Occasional', label: t('Occasional') },
+      { value: 'Only respondent', label: t('Only respondent') },
+      { value: 'Not relevant', label: t('Not relevant') }
+    ]);
+
+    const amountPaidOptions = computed(() => [
+      { value: 'Not relevant', label: t('Not relevant') },
+      { value: 'Upto Rs 5000', label: 'Upto Rs 5000' },
+      { value: 'Rs 5001 to Rs 10000', label: 'Rs 5001 to Rs 10000' },
+      { value: 'Rs 10001 to Rs 20000', label: 'Rs 10001 to Rs 20000' },
+      { value: 'Above Rs 20000', label: 'Above Rs 20000' }
+    ]);
+
+    const loanUsageOptions = computed(() => [
+      { value: 'Not used the source', label: t('Not used the source') },
+      { value: 'Fully for business', label: t('Fully for business') },
+      { value: 'Partly for business and partly for household/other', label: t('Partly for business, partly household') },
+      { value: 'Fully for household/other', label: t('Fully for household/other') }
+    ]);
+
+    const metricStatusOptions = computed(() => [
+      { value: "Don't remember", label: t("Don't remember") },
+      { value: 'Enter Amount', label: t('Enter Amount') }
+    ]);
 
     function getRangeFormat(q) {
       if (!q) return 'both';
@@ -6829,6 +7045,10 @@ const app = createApp({
       getRangeTabIndex,
       selectRangeValue,
       handleRangeKeydown,
+      involvementOptions,
+      amountPaidOptions,
+      loanUsageOptions,
+      metricStatusOptions,
       t
     };
   },
@@ -8018,22 +8238,19 @@ const app = createApp({
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Involvement') }}</label>
-                        <select v-model="row.involvement" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
-                          <option value="Regular">{{ t('Regular') }}</option>
-                          <option value="Occasional">{{ t('Occasional') }}</option>
-                          <option value="Only respondent">{{ t('Only respondent') }}</option>
-                          <option value="Not relevant">{{ t('Not relevant') }}</option>
-                        </select>
+                        <f-combobox v-model="row.involvement"
+                                    :options="involvementOptions"
+                                    :placeholder="t('Select involvement...')"
+                                    :aria-label="(row.label || row.activity) + ' ' + t('Involvement')">
+                        </f-combobox>
                       </div>
                       <div>
                         <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Amount Paid Last Year') }}</label>
-                        <select v-model="row.amount_paid_last_year" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
-                          <option value="Not relevant">{{ t('Not relevant') }}</option>
-                          <option value="Upto Rs 5000">Upto Rs 5000</option>
-                          <option value="Rs 5001 to Rs 10000">Rs 5001 to Rs 10000</option>
-                          <option value="Rs 10001 to Rs 20000">Rs 10001 to Rs 20000</option>
-                          <option value="Above Rs 20000">Above Rs 20000</option>
-                        </select>
+                        <f-combobox v-model="row.amount_paid_last_year"
+                                    :options="amountPaidOptions"
+                                    :placeholder="t('Select amount paid...')"
+                                    :aria-label="(row.label || row.activity) + ' ' + t('Amount Paid Last Year')">
+                        </f-combobox>
                       </div>
                     </div>
                     <div class="grid grid-cols-2 gap-3">
@@ -8082,12 +8299,11 @@ const app = createApp({
                     <div class="text-sm font-black text-slate-800">{{ row.source }}</div>
                     <div>
                       <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Usage in Business') }}</label>
-                      <select v-model="row.usage_in_business" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
-                        <option value="Not used the source">{{ t('Not used the source') }}</option>
-                        <option value="Fully for business">{{ t('Fully for business') }}</option>
-                        <option value="Partly for business and partly for household/other">{{ t('Partly for business, partly household') }}</option>
-                        <option value="Fully for household/other">{{ t('Fully for household/other') }}</option>
-                      </select>
+                      <f-combobox v-model="row.usage_in_business"
+                                  :options="loanUsageOptions"
+                                  :placeholder="t('Select usage in business...')"
+                                  :aria-label="row.source + ' ' + t('Usage in Business')">
+                      </f-combobox>
                     </div>
                     <div v-if="row.usage_in_business && row.usage_in_business.includes('household')">
                       <label class="block text-xs font-black text-slate-700 mb-1">{{ t('Specify Other Usage') }}</label>
@@ -8104,10 +8320,11 @@ const app = createApp({
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label class="block text-xs font-black text-slate-700 mb-1">{{ t('First Year Status') }}</label>
-                        <select v-model="row.first_year_status" class="w-full min-h-[48px] text-sm font-bold px-3 py-2 bg-white border border-slate-300 rounded-xl outline-none">
-                          <option value="Don't remember">{{ t("Don't remember") }}</option>
-                          <option value="Enter Amount">{{ t('Enter Amount') }}</option>
-                        </select>
+                        <f-combobox v-model="row.first_year_status"
+                                    :options="metricStatusOptions"
+                                    :placeholder="t('Select status...')"
+                                    :aria-label="(row.label || row.metric) + ' ' + t('First Year Status')">
+                        </f-combobox>
                       </div>
                       <div v-if="row.first_year_status === 'Enter Amount'">
                         <label class="block text-xs font-black text-slate-700 mb-1">{{ t('First Year Amount (₹)') }}</label>

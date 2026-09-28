@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omniquery-cache-v2';
+const CACHE_NAME = 'omniquery-cache-v3';
 const STATIC_ASSETS = [
   '/omniquery',
   '/assets/omniquery/pwa/index.html',
