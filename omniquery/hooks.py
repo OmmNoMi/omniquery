@@ -2,7 +2,7 @@ app_name = "omniquery"
 app_title = "OmniQuery"
 app_publisher = "OmmNoMi Automation LLP"
 app_description = "Next-Gen Dynamic Survey Engine, Zero-Data-Loss Offline PWA & Frappe Insights Platform"
-app_email = "info@ommnomi.in"
+app_email = "omniquery@ommnomi.com"
 app_license = "mit"
 app_logo_url = "/assets/omniquery/icons/desktop_icons/solid/omniquery.svg?v=oq_v1"
 app_icon = "/assets/omniquery/icons/desktop_icons/solid/omniquery.svg?v=oq_v1"
@@ -17,7 +17,7 @@ add_to_apps_screen = [
 		"name": "omniquery",
 		"logo": "/assets/omniquery/icons/desktop_icons/solid/omniquery.svg?v=oq_v1",
 		"title": "OmniQuery",
-		"route": "/omniquery"
+		"route": "/omniquery",
 	}
 ]
 
@@ -25,15 +25,15 @@ add_to_apps_screen = [
 # ------------------
 
 # include js, css files in header of desk.html
-# app_include_css = "/assets/omniservey/css/omniservey.css"
-# app_include_js = "/assets/omniservey/js/omniservey.js"
+# app_include_css = "/assets/omniquery/css/omniquery.css"
+# app_include_js = "/assets/omniquery/js/omniquery.js"
 
 # include js, css files in header of web template
-# web_include_css = "/assets/omniservey/css/omniservey.css"
-# web_include_js = "/assets/omniservey/js/omniservey.js"
+# web_include_css = "/assets/omniquery/css/omniquery.css"
+# web_include_js = "/assets/omniquery/js/omniquery.js"
 
 # include custom scss in every website theme (without file extension ".scss")
-# website_theme_scss = "omniservey/public/scss/website"
+# website_theme_scss = "omniquery/public/scss/website"
 
 # include js, css files in header of web form
 # webform_include_js = {"doctype": "public/js/doctype.js"}
@@ -51,7 +51,7 @@ add_to_apps_screen = [
 # Svg Icons
 # ------------------
 # include app icons in desk
-# app_include_icons = "omniservey/public/icons.svg"
+# app_include_icons = "omniquery/public/icons.svg"
 
 # Home Pages
 # ----------
@@ -78,8 +78,8 @@ add_to_apps_screen = [
 
 # add methods and filters to jinja environment
 # jinja = {
-# 	"methods": "omniservey.utils.jinja_methods",
-# 	"filters": "omniservey.utils.jinja_filters"
+# 	"methods": "omniquery.utils.jinja_methods",
+# 	"filters": "omniquery.utils.jinja_filters"
 # }
 
 # Installation
@@ -91,36 +91,36 @@ after_migrate = "omniquery.install.after_migrate"
 # Uninstallation
 # ------------
 
-# before_uninstall = "omniservey.uninstall.before_uninstall"
-# after_uninstall = "omniservey.uninstall.after_uninstall"
+# before_uninstall = "omniquery.uninstall.before_uninstall"
+# after_uninstall = "omniquery.uninstall.after_uninstall"
 
 # Integration Setup
 # ------------------
 # To set up dependencies/integrations with other apps
 # Name of the app being installed is passed as an argument
 
-# before_app_install = "omniservey.utils.before_app_install"
-# after_app_install = "omniservey.utils.after_app_install"
+# before_app_install = "omniquery.utils.before_app_install"
+# after_app_install = "omniquery.utils.after_app_install"
 
 # Integration Cleanup
 # -------------------
 # To clean up dependencies/integrations with other apps
 # Name of the app being uninstalled is passed as an argument
 
-# before_app_uninstall = "omniservey.utils.before_app_uninstall"
-# after_app_uninstall = "omniservey.utils.after_app_uninstall"
+# before_app_uninstall = "omniquery.utils.before_app_uninstall"
+# after_app_uninstall = "omniquery.utils.after_app_uninstall"
 
 # Build
 # ------------------
 # To hook into the build process
 
-# after_build = "omniservey.build.after_build"
+# after_build = "omniquery.build.after_build"
 
 # Desk Notifications
 # ------------------
 # See frappe.core.notifications.get_notification_config
 
-# notification_config = "omniservey.notifications.get_notification_config"
+# notification_config = "omniquery.notifications.get_notification_config"
 
 # Permissions
 # -----------
@@ -151,47 +151,47 @@ after_migrate = "omniquery.install.after_migrate"
 
 # scheduler_events = {
 # 	"all": [
-# 		"omniservey.tasks.all"
+# 		"omniquery.tasks.all"
 # 	],
 # 	"daily": [
-# 		"omniservey.tasks.daily"
+# 		"omniquery.tasks.daily"
 # 	],
 # 	"hourly": [
-# 		"omniservey.tasks.hourly"
+# 		"omniquery.tasks.hourly"
 # 	],
 # 	"weekly": [
-# 		"omniservey.tasks.weekly"
+# 		"omniquery.tasks.weekly"
 # 	],
 # 	"monthly": [
-# 		"omniservey.tasks.monthly"
+# 		"omniquery.tasks.monthly"
 # 	],
 # }
 
 # Testing
 # -------
 
-# before_tests = "omniservey.install.before_tests"
+# before_tests = "omniquery.install.before_tests"
 
 # Extend DocType Class
 # ------------------------------
 #
 # Specify custom mixins to extend the standard doctype controller.
 # extend_doctype_class = {
-# 	"Task": "omniservey.custom.task.CustomTaskMixin"
+# 	"Task": "omniquery.custom.task.CustomTaskMixin"
 # }
 
 # Overriding Methods
 # ------------------------------
 #
 # override_whitelisted_methods = {
-# 	"frappe.desk.doctype.event.event.get_events": "omniservey.event.get_events"
+# 	"frappe.desk.doctype.event.event.get_events": "omniquery.event.get_events"
 # }
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
 # along with any modifications made in other Frappe apps
 # override_doctype_dashboards = {
-# 	"Task": "omniservey.task.get_dashboard_data"
+# 	"Task": "omniquery.task.get_dashboard_data"
 # }
 
 # exempt linked doctypes from being automatically cancelled
@@ -205,13 +205,13 @@ after_migrate = "omniquery.install.after_migrate"
 
 # Request Events
 # ----------------
-# before_request = ["omniservey.utils.before_request"]
-# after_request = ["omniservey.utils.after_request"]
+# before_request = ["omniquery.utils.before_request"]
+# after_request = ["omniquery.utils.after_request"]
 
 # Job Events
 # ----------
-# before_job = ["omniservey.utils.before_job"]
-# after_job = ["omniservey.utils.after_job"]
+# before_job = ["omniquery.utils.before_job"]
+# after_job = ["omniquery.utils.after_job"]
 
 # User Data Protection
 # --------------------
@@ -241,7 +241,7 @@ after_migrate = "omniquery.install.after_migrate"
 # --------------------------------
 
 # auth_hooks = [
-# 	"omniservey.auth.validate"
+# 	"omniquery.auth.validate"
 # ]
 
 # Automatically update python controller files with type annotations for this app.
@@ -265,5 +265,3 @@ permission_query_conditions = {
 has_permission = {
 	"OmniServey Template": "omniquery.api.survey.has_template_doc_permission",
 }
-
-

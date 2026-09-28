@@ -4953,6 +4953,53 @@ const app = createApp({
       return '';
     }
 
+    function getRangeFormat(q) {
+      if (!q) return 'both';
+      const r = q.validation_rules || {};
+      const fmt = q.field_format || r.format || r.representation;
+      return ['slider_only', 'buttons_only', 'both'].includes(fmt) ? fmt : 'both';
+    }
+
+    function getRangeTabIndex(qCode, val, steps) {
+      const cur = formData[qCode];
+      if (cur === val) return 0;
+      if ((cur === undefined || cur === null || cur === '') && val === steps[0]) return 0;
+      return -1;
+    }
+
+    function focusRangeButton(qCode, val) {
+      nextTick(() => {
+        const el = document.getElementById(`range_btn_${qCode}_${val}`);
+        if (el) el.focus();
+      });
+    }
+
+    function selectRangeValue(q, val) {
+      formData[q.question_code] = val;
+      const unit = getRangeUnit(q);
+      announce(`${val} ${unit ? t(unit) : ''} selected`);
+      focusRangeButton(q.question_code, val);
+    }
+
+    function handleRangeKeydown(e, q, currentVal) {
+      const steps = getRangeSteps(q);
+      const idx = steps.indexOf(currentVal);
+      if (idx === -1) return;
+      if (['ArrowRight', 'ArrowDown'].includes(e.key) && idx < steps.length - 1) {
+        e.preventDefault();
+        selectRangeValue(q, steps[idx + 1]);
+      } else if (['ArrowLeft', 'ArrowUp'].includes(e.key) && idx > 0) {
+        e.preventDefault();
+        selectRangeValue(q, steps[idx - 1]);
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        selectRangeValue(q, steps[0]);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        selectRangeValue(q, steps[steps.length - 1]);
+      }
+    }
+
     function announce(msg) {
       liveAnnouncement.value = msg;
     }
@@ -5871,10 +5918,7 @@ const app = createApp({
 
     async function fetchServerTemplates() {
       try {
-        let resp = await fetch('/api/method/omniquery.api.survey.get_bootstrap_data');
-        if (!resp.ok) {
-          resp = await fetch('/api/method/omniservey.api.survey.get_bootstrap_data');
-        }
+        const resp = await fetch('/api/method/omniquery.api.survey.get_bootstrap_data');
         if (!resp.ok) return;
         const data = await resp.json();
         const msg = data.message || {};
@@ -6282,19 +6326,11 @@ const app = createApp({
     }
 
     async function postSubmissions(submissions) {
-      const resp = await fetch('/api/method/omniquery.api.sync.batch_push', {
+      return fetch('/api/method/omniquery.api.sync.batch_push', {
         method: 'POST',
         headers: buildSyncHeaders(),
         body: JSON.stringify({ submissions })
       });
-      if (!resp.ok) {
-        return fetch('/api/method/omniservey.api.sync.batch_push', {
-          method: 'POST',
-          headers: buildSyncHeaders(),
-          body: JSON.stringify({ submissions })
-        });
-      }
-      return resp;
     }
 
     async function handleSyncSuccess(sub, res) {
@@ -6446,13 +6482,6 @@ const app = createApp({
           headers: emailHeaders,
           body: JSON.stringify(emailPayload)
         });
-        if (!resp.ok) {
-          resp = await fetch('/api/method/omniservey.api.survey.email_surveyor_backup', {
-            method: 'POST',
-            headers: emailHeaders,
-            body: JSON.stringify(emailPayload)
-          });
-        }
 
         const resData = await resp.json();
         if (resp.ok && resData.message && resData.message.status === 'SUCCESS') {
@@ -6796,6 +6825,10 @@ const app = createApp({
       getRangeStep,
       getRangeSteps,
       getRangeUnit,
+      getRangeFormat,
+      getRangeTabIndex,
+      selectRangeValue,
+      handleRangeKeydown,
       t
     };
   },
@@ -7880,7 +7913,7 @@ const app = createApp({
                 </div>
               </div>
 
-              <!-- 1b. Range Slider Control (e.g. 0 to 7 Years, with quick touch pills) -->
+              <!-- 1b. Range Slider Control (Configurable Representation: slider_only, buttons_only, or both) -->
               <div v-else-if="getFieldCategory(q) === 'range'" class="space-y-4 pt-1">
                 <!-- Big Badge Displaying Selected Value -->
                 <div class="flex items-center justify-between bg-indigo-50 border-2 border-indigo-200 rounded-2xl px-5 py-3.5">
@@ -7895,8 +7928,8 @@ const app = createApp({
                   </div>
                 </div>
 
-                <!-- Smooth Range Slider Input -->
-                <div class="px-2 pt-1">
+                <!-- Smooth Range Slider Input (visible when format is 'both' or 'slider_only') -->
+                <div v-if="getRangeFormat(q) !== 'buttons_only'" class="px-2 pt-1">
                   <input type="range"
                          :id="'q_input_' + q.question_code"
                          :min="getRangeMin(q)"
@@ -7906,20 +7939,28 @@ const app = createApp({
                          class="range-slider-input w-full">
                   <div class="flex justify-between text-xs font-black text-slate-500 mt-2 px-1">
                     <span v-for="val in getRangeSteps(q)" :key="val"
-                          @click="formData[q.question_code] = val"
+                          @click="selectRangeValue(q, val)"
                           class="cursor-pointer hover:text-indigo-600 font-bold">
                       {{ val }}
                     </span>
                   </div>
                 </div>
 
-                <!-- Fast Touch Tap Pills for one-tap mobile entry -->
-                <div class="grid grid-flow-col auto-cols-fr gap-1 sm:gap-2 pt-1">
+                <!-- Fast Touch Tap Pills (Single Tab Group / WAI-ARIA Roving Tabindex with Left/Right Arrow Navigation) -->
+                <div v-if="getRangeFormat(q) !== 'slider_only'"
+                     role="radiogroup"
+                     :aria-label="getQuestionLabel(q)"
+                     class="grid grid-flow-col auto-cols-fr gap-1 sm:gap-2 pt-1">
                   <button type="button"
                           v-for="val in getRangeSteps(q)"
                           :key="val"
-                          @click="formData[q.question_code] = val"
-                          :class="formData[q.question_code] == val ? 'bg-indigo-600 text-white font-black shadow-md border-indigo-600 scale-105' : 'bg-white text-slate-700 font-bold border-slate-300 hover:border-indigo-400'"
+                          :id="'range_btn_' + q.question_code + '_' + val"
+                          role="radio"
+                          :aria-checked="formData[q.question_code] == val"
+                          :tabindex="getRangeTabIndex(q.question_code, val, getRangeSteps(q))"
+                          @click="selectRangeValue(q, val)"
+                          @keydown="handleRangeKeydown($event, q, val)"
+                          :class="formData[q.question_code] == val ? 'bg-indigo-600 text-white font-black shadow-md border-indigo-600 scale-105 ring-2 ring-indigo-400 ring-offset-2' : 'bg-white text-slate-700 font-bold border-slate-300 hover:border-indigo-400 focus:ring-2 focus:ring-slate-900 focus:outline-none'"
                           class="py-2.5 sm:py-3 text-center rounded-xl border-2 text-sm sm:text-base touch-press transition-all">
                     {{ val }}
                   </button>

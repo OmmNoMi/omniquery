@@ -1,5 +1,8 @@
-import frappe, hashlib
+import hashlib
+
+import frappe
 from frappe import _
+
 
 @frappe.whitelist(allow_guest=False)
 def get_manifest(district=None, block=None, respondent_type=None):
@@ -14,7 +17,7 @@ def get_manifest(district=None, block=None, respondent_type=None):
 		filters["block"] = block
 	if respondent_type:
 		filters["respondent_type"] = respondent_type
-		
+
 	respondents = frappe.get_all(
 		"OmniServey Respondent",
 		filters=filters,
@@ -27,25 +30,23 @@ def get_manifest(district=None, block=None, respondent_type=None):
 			"village_city",
 			"block",
 			"district",
-			"state"
+			"state",
 		],
-		limit=5000
+		limit=5000,
 	)
-	return {
-		"count": len(respondents),
-		"respondents": respondents
-	}
+	return {"count": len(respondents), "respondents": respondents}
+
 
 @frappe.whitelist(allow_guest=False)
 def register_respondent(payload):
 	"""Registers a new generic respondent with automatic PII encryption & search hashing."""
 	if isinstance(payload, str):
 		payload = frappe.parse_json(payload)
-		
+
 	uid = payload.get("respondent_uid")
 	if not uid:
 		frappe.throw(_("Respondent UID is mandatory"), frappe.ValidationError)
-		
+
 	doc = frappe.new_doc("OmniServey Respondent")
 	doc.respondent_uid = uid
 	doc.primary_name = payload.get("primary_name")
@@ -63,15 +64,11 @@ def register_respondent(payload):
 	doc.gps_longitude = payload.get("gps_longitude")
 	doc.custom_attributes_json = payload.get("custom_attributes_json")
 	doc.notes = payload.get("notes")
-	
+
 	if payload.get("id_number"):
 		doc.id_number_encrypted = payload.get("id_number")
-		
+
 	doc.insert(ignore_permissions=True)
 	frappe.db.commit()
-	
-	return {
-		"name": doc.name,
-		"respondent_uid": doc.respondent_uid,
-		"phone_hash": doc.phone_hash
-	}
+
+	return {"name": doc.name, "respondent_uid": doc.respondent_uid, "phone_hash": doc.phone_hash}

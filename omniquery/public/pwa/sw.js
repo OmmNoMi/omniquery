@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omniquery-cache-v1';
+const CACHE_NAME = 'omniquery-cache-v2';
 const STATIC_ASSETS = [
   '/omniquery',
   '/assets/omniquery/pwa/index.html',
@@ -7,14 +7,7 @@ const STATIC_ASSETS = [
   '/assets/omniquery/pwa/manifest.json',
   '/assets/omniquery/pwa/vendor/tailwindcss.js',
   '/assets/omniquery/pwa/vendor/vue.global.prod.js',
-  '/assets/omniquery/pwa/vendor/dexie.min.js',
-  '/assets/omniservey/pwa/index.html',
-  '/assets/omniservey/pwa/style.css',
-  '/assets/omniservey/pwa/app.js',
-  '/assets/omniservey/pwa/manifest.json',
-  '/assets/omniservey/pwa/vendor/tailwindcss.js',
-  '/assets/omniservey/pwa/vendor/vue.global.prod.js',
-  '/assets/omniservey/pwa/vendor/dexie.min.js'
+  '/assets/omniquery/pwa/vendor/dexie.min.js'
 ];
 
 self.addEventListener('install', event => {
@@ -64,7 +57,7 @@ self.addEventListener('fetch', event => {
       return caches.match(event.request).then(cached => {
         if (cached) return cached;
         if (event.request.mode === 'navigate') {
-          return caches.match('/assets/omniquery/pwa/index.html') || caches.match('/assets/omniservey/pwa/index.html') || caches.match('/omniquery');
+          return caches.match('/assets/omniquery/pwa/index.html') || caches.match('/omniquery');
         }
       });
     })

@@ -22,7 +22,7 @@ OmniQuery is an enterprise offline-first survey and dynamic form platform design
                                ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │             Frappe v16 Backend (OmniQuery Core)                │
-│  - API Whitelist: `omniservey.api.sync.batch_push`              │
+│  - API Whitelist: `omniquery.api.sync.batch_push`              │
 │  - Session & CSRF Token Validation                             │
 │  - Atomic MariaDB Savepoints (`sp_sync_<uuid>`)                │
 │  - OmniQuery Sync Audit Log (Deduplication Cache)              │

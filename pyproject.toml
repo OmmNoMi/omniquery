@@ -1,7 +1,7 @@
 [project]
 name = "omniquery"
 authors = [
-    { name = "OmmNoMi Automation LLP", email = "info@ommnomi.in"}
+    { name = "OmmNoMi Automation LLP", email = "omniquery@ommnomi.com"}
 ]
 description = "Next-Gen Dynamic Survey Engine, Zero-Data-Loss Offline PWA & Frappe Insights Platform"
 requires-python = ">=3.10"
@@ -10,6 +10,10 @@ dynamic = ["version"]
 dependencies = [
     # "frappe~=16.0.0" # Installed and managed by bench.
 ]
+
+[project.urls]
+Homepage = "https://omniquery.ommnomi.com"
+Repository = "https://github.com/OmmNoMi/omniquery"
 
 [tool.bench.frappe-dependencies]
 frappe = ">=15.0.0,<17.0.0"

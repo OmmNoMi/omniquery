@@ -1,0 +1,66 @@
+name: "🐛 Bug Report"
+description: "Report a bug or reproducible error in OmniQuery"
+title: "[Bug]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting an issue in OmniQuery! Please provide as much context as possible to help us diagnose and fix the problem quickly.
+  - type: input
+    id: version
+    attributes:
+      label: OmniQuery & Frappe Version
+      description: What version of OmniQuery and Frappe are you running? (e.g. Frappe v16.0.0, OmniQuery develop)
+      placeholder: "Frappe v16.x / OmniQuery develop"
+    validations:
+      required: true
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment / Client
+      description: Where did this bug occur?
+      options:
+        - "PWA Mobile (Android / Chrome)"
+        - "PWA Mobile (iOS / Safari)"
+        - "Desktop Browser (Chrome / Edge / Firefox)"
+        - "Frappe Desk Backend / Workstation"
+        - "Offline Sync / Batch Push API"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Detailed steps to reproduce the issue.
+      placeholder: |
+        1. Open /omniquery
+        2. Select survey template '...'
+        3. Fill section 1 and go offline
+        4. Attempt batch push...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior / Error Logs
+      description: What actually happened? Please paste browser console logs, Frappe Error Logs, or screenshots.
+      render: shell
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Validation Checklist
+      options:
+        - label: "I have verified that this issue has not already been reported."
+          required: true
+        - label: "I am using the latest commit on the `develop` branch."
+          required: false

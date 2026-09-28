@@ -1,5 +1,8 @@
-import frappe, hashlib
+import hashlib
+
+import frappe
 from frappe.model.document import Document
+
 
 class OmniServeyRespondent(Document):
 	def before_save(self):

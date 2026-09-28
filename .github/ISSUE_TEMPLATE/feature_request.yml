@@ -1,0 +1,44 @@
+name: "✨ Feature Request"
+description: "Suggest an idea, control enhancement, or architectural improvement for OmniQuery"
+title: "[Feature]: "
+labels: ["enhancement", "proposal"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We appreciate suggestions for improving OmniQuery! Please describe the proposed functionality clearly.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Is your feature request related to a problem?
+      description: A clear description of what the problem or operational limitation is.
+      placeholder: "I am always frustrated when field researchers need to..."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative solutions or workarounds you have considered.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Architectural Area
+      options:
+        - "PWA UI / Field Controls"
+        - "Offline Storage / Dexie WAL"
+        - "Idempotent Sync Pipeline"
+        - "Frappe Desk Visual Designer"
+        - "Surveyor Workstation / Geo-Telematics"
+        - "Data Export / Frappe Insights"
+    validations:
+      required: true

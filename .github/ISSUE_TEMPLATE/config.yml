@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: "💬 OmniQuery Community & Support"
+    url: "https://omniquery.ommnomi.com"
+    about: "Visit our official website and documentation portal."
+  - name: "📧 Security & Enterprise Inquiries"
+    url: "mailto:omniquery@ommnomi.com"
+    about: "For enterprise inquiries, private disclosures, or custom field research deployments."

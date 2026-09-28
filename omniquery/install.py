@@ -1,10 +1,13 @@
 import frappe
 
+
 def after_migrate():
 	ensure_desktop_icon()
 
+
 def after_install():
 	ensure_desktop_icon()
+
 
 def get_icon_payload():
 	return {
@@ -20,8 +23,9 @@ def get_icon_payload():
 		"bg_color": "blue",
 		"standard": 1,
 		"hidden": 0,
-		"restrict_removal": 0
+		"restrict_removal": 0,
 	}
+
 
 def ensure_desktop_icon():
 	if not frappe.db.exists("DocType", "Desktop Icon"):
