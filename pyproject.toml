@@ -1,5 +1,5 @@
 [project]
-name = "omniservey"
+name = "omniquery"
 authors = [
     { name = "OmmNoMi Automation LLP", email = "info@ommnomi.in"}
 ]

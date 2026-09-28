@@ -1,7 +1,7 @@
 app_name = "omniservey"
-app_title = "OmniServey"
+app_title = "OmniQuery"
 app_publisher = "OmmNoMi Automation LLP"
-app_description = "Women Entrepreneurs Project Collaboration Platform (WE-CAP) & Dynamic Survey Engine"
+app_description = "Next-Gen Dynamic Survey Engine, Zero-Data-Loss Offline PWA & Frappe Insights Platform"
 app_email = "info@ommnomi.in"
 app_license = "mit"
 
