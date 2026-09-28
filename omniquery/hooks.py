@@ -85,8 +85,8 @@ add_to_apps_screen = [
 # Installation
 # ------------
 
-# before_install = "omniservey.install.before_install"
-# after_install = "omniservey.install.after_install"
+after_install = "omniquery.install.after_install"
+after_migrate = "omniquery.install.after_migrate"
 
 # Uninstallation
 # ------------
