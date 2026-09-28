@@ -1,5 +1,8 @@
 import frappe, unittest, uuid, json
-from omniservey.api.sync import batch_push
+try:
+	from omniquery.api.sync import batch_push
+except ImportError:
+	from omniservey.api.sync import batch_push
 
 class TestIdempotentSync(unittest.TestCase):
 	def setUp(self):

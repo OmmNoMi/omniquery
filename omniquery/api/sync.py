@@ -1,7 +1,7 @@
 import frappe, json, hashlib
 from frappe import _
 from frappe.utils import now_datetime
-from omniservey.api.survey import user_has_template_permission
+from .survey import user_has_template_permission
 
 def resolve_surveyor(user):
 	surveyor = frappe.db.get_value("OmniServey Surveyor", {"user": user}, "name")

@@ -4676,7 +4676,7 @@ async function compressImage(file, gpsCoords = null) {
         // Watermark with GPS and Timestamp
         const now = new Date();
         const timeStr = now.toISOString().replace('T', ' ').substring(0, 19);
-        let stampText = `OmniServey · ${timeStr}`;
+        let stampText = `OmniQuery · ${timeStr}`;
         if (gpsCoords && gpsCoords.latitude && gpsCoords.longitude) {
           stampText += ` · Lat: ${gpsCoords.latitude.toFixed(5)}, Lng: ${gpsCoords.longitude.toFixed(5)} (±${gpsCoords.accuracy ? gpsCoords.accuracy.toFixed(0) : 0}m)`;
         }
@@ -4701,7 +4701,7 @@ const app = createApp({
     const currentView = ref('dashboard'); // 'dashboard' | 'templates' | 'form' | 'queue'
     const isOnline = ref(navigator.onLine);
     const isSyncing = ref(false);
-    const currentLang = ref(localStorage.getItem('omniservey_lang') || 'en');
+    const currentLang = ref(localStorage.getItem('omniquery_lang') || localStorage.getItem('omniservey_lang') || 'en');
     const menuOpen = ref(false);
     const dashboardFilter = ref('all'); // 'all' | 'drafts' | 'pending' | 'synced'
 
@@ -4983,7 +4983,7 @@ const app = createApp({
 
     function setLanguage(langCode) {
       currentLang.value = langCode;
-      localStorage.setItem('omniservey_lang', langCode);
+      localStorage.setItem('omniquery_lang', langCode);
       const lObj = languages.find(l => l.code === langCode);
       const lName = lObj ? lObj.name : langCode;
       announce('Language changed to ' + lName);
@@ -4991,11 +4991,11 @@ const app = createApp({
       menuOpen.value = false;
     }
 
-    const textSize = ref(localStorage.getItem('omniservey_text_size') || 'md');
+    const textSize = ref(localStorage.getItem('omniquery_text_size') || localStorage.getItem('omniservey_text_size') || 'md');
 
     function applyTextSize(size) {
       textSize.value = size;
-      localStorage.setItem('omniservey_text_size', size);
+      localStorage.setItem('omniquery_text_size', size);
       if (typeof document !== 'undefined' && document.documentElement) {
         document.documentElement.classList.remove('text-scale-sm', 'text-scale-md', 'text-scale-lg');
         document.documentElement.classList.add(`text-scale-${size}`);
@@ -5044,7 +5044,7 @@ const app = createApp({
     const currentUUID = ref('');
     const speakingQuestionCode = ref(null);
     const emergencyModalOpen = ref(false);
-    const adminEmailInput = ref(localStorage.getItem('omniservey_admin_email') || 'admin@ommnomi.local');
+    const adminEmailInput = ref(localStorage.getItem('omniquery_admin_email') || localStorage.getItem('omniservey_admin_email') || 'admin@ommnomi.local');
     const emergencyNote = ref('');
     const isSendingEmail = ref(false);
     const recentErrors = ref([]);
@@ -5871,7 +5871,10 @@ const app = createApp({
 
     async function fetchServerTemplates() {
       try {
-        const resp = await fetch('/api/method/omniservey.api.survey.get_bootstrap_data');
+        let resp = await fetch('/api/method/omniquery.api.survey.get_bootstrap_data');
+        if (!resp.ok) {
+          resp = await fetch('/api/method/omniservey.api.survey.get_bootstrap_data');
+        }
         if (!resp.ok) return;
         const data = await resp.json();
         const msg = data.message || {};
@@ -6279,11 +6282,19 @@ const app = createApp({
     }
 
     async function postSubmissions(submissions) {
-      return fetch('/api/method/omniservey.api.sync.batch_push', {
+      const resp = await fetch('/api/method/omniquery.api.sync.batch_push', {
         method: 'POST',
         headers: buildSyncHeaders(),
         body: JSON.stringify({ submissions })
       });
+      if (!resp.ok) {
+        return fetch('/api/method/omniservey.api.sync.batch_push', {
+          method: 'POST',
+          headers: buildSyncHeaders(),
+          body: JSON.stringify({ submissions })
+        });
+      }
+      return resp;
     }
 
     async function handleSyncSuccess(sub, res) {
@@ -6406,7 +6417,7 @@ const app = createApp({
         showToast('Please enter a valid Admin Email', 'error');
         return;
       }
-      localStorage.setItem('omniservey_admin_email', adminEmailInput.value.trim());
+      localStorage.setItem('omniquery_admin_email', adminEmailInput.value.trim());
 
       if (!isOnline.value) {
         showToast('Device is offline: opening mail app...', 'info');
@@ -6419,20 +6430,29 @@ const app = createApp({
         const dataJson = JSON.stringify(walSubmissions.value, null, 2);
         const dataCsv = generateCSVFromWAL();
 
-        const resp = await fetch('/api/method/omniservey.api.survey.email_surveyor_backup', {
+        const emailPayload = {
+          recipient_email: adminEmailInput.value.trim(),
+          surveyor_name: currentUser.value,
+          note: emergencyNote.value,
+          data_json: dataJson,
+          data_csv: dataCsv
+        };
+        const emailHeaders = {
+          'Content-Type': 'application/json',
+          'X-Frappe-CSRF-Token': (window.frappe && window.frappe.csrf_token) || ''
+        };
+        let resp = await fetch('/api/method/omniquery.api.survey.email_surveyor_backup', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Frappe-CSRF-Token': (window.frappe && window.frappe.csrf_token) || ''
-          },
-          body: JSON.stringify({
-            recipient_email: adminEmailInput.value.trim(),
-            surveyor_name: currentUser.value,
-            note: emergencyNote.value,
-            data_json: dataJson,
-            data_csv: dataCsv
-          })
+          headers: emailHeaders,
+          body: JSON.stringify(emailPayload)
         });
+        if (!resp.ok) {
+          resp = await fetch('/api/method/omniservey.api.survey.email_surveyor_backup', {
+            method: 'POST',
+            headers: emailHeaders,
+            body: JSON.stringify(emailPayload)
+          });
+        }
 
         const resData = await resp.json();
         if (resp.ok && resData.message && resData.message.status === 'SUCCESS') {

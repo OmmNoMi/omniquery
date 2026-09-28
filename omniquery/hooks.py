@@ -1,4 +1,4 @@
-app_name = "omniservey"
+app_name = "omniquery"
 app_title = "OmniQuery"
 app_publisher = "OmmNoMi Automation LLP"
 app_description = "Next-Gen Dynamic Survey Engine, Zero-Data-Loss Offline PWA & Frappe Insights Platform"
@@ -259,11 +259,11 @@ app_license = "mit"
 # Permissions & RBAC
 # ------------------
 permission_query_conditions = {
-	"OmniServey Template": "omniservey.api.survey.get_template_permission_query_conditions",
+	"OmniServey Template": "omniquery.api.survey.get_template_permission_query_conditions",
 }
 
 has_permission = {
-	"OmniServey Template": "omniservey.api.survey.has_template_doc_permission",
+	"OmniServey Template": "omniquery.api.survey.has_template_doc_permission",
 }
 
 

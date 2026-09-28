@@ -1,20 +1,20 @@
 {
-  "name": "OmniServey Field Client",
-  "short_name": "OmniServey",
+  "name": "OmniQuery Field Client",
+  "short_name": "OmniQuery",
   "description": "Zero-Data-Loss Offline Survey Engine & Field Intelligence",
-  "start_url": "/pwa",
+  "start_url": "/omniquery",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#1e293b",
   "icons": [
     {
-      "src": "/assets/omniservey/pwa/icon-192.png",
+      "src": "/assets/omniquery/pwa/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/omniservey/pwa/icon-512.png",
+      "src": "/assets/omniquery/pwa/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"

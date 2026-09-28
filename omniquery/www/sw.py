@@ -1,7 +1,10 @@
 import frappe, os
 
 def get_context(context):
-	sw_path = os.path.join(frappe.get_app_path("omniservey"), "public", "pwa", "sw.js")
+	try:
+		sw_path = os.path.join(frappe.get_app_path("omniquery"), "public", "pwa", "sw.js")
+	except Exception:
+		sw_path = os.path.join(frappe.get_app_path("omniservey"), "public", "pwa", "sw.js")
 	try:
 		with open(sw_path, "r", encoding="utf-8") as f:
 			content = f.read()
