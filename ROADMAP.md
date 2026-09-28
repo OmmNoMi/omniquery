@@ -88,3 +88,47 @@
 - IndexedDB Write-Ahead Log (WAL) backed by Dexie.js.
 - CSRF validation with automatic session binding (`X-Frappe-CSRF-Token`).
 - Honest status reporting: toast messages must never claim "Sync complete" if any transaction in the batch failed or remains in `PENDING_SYNC`.
+
+---
+
+## 🚀 Phase-Wise Stability & Frappe Native Execution Plan
+
+To eliminate single-point failures, streamline developer onboarding, and guarantee enterprise stability, the roadmap is executed across 5 focused phases:
+
+### Phase 1: Native Schema Normalization & Zero Raw SQL Enforcement
+- **Goal**: Align all backend models with standard Frappe DocType design.
+- **Deliverables**:
+  1. Audit every query in `api/` and `seed_shg_survey.py` to ensure 100% compliance with `frappe.get_doc`, `frappe.get_all`, `frappe.db.get_value`, and `frappe.qb`.
+  2. Implement native DocType child tables for question options and grid matrices (`OmniQuery Option`, `OmniQuery Grid Spec`).
+  3. Validate schema compilation strictly via `frappe.get_meta()`.
+
+### Phase 2: Native Multilingual Migration (`frappe.translate`)
+- **Goal**: De-bloat JavaScript bundle by migrating 4,000+ lines of inlined dictionaries to native Frappe translation catalogs.
+- **Deliverables**:
+  1. Export survey terminology into standard CSV files in `omniquery/locale/` (`hi.csv`, `gu.csv`, `mr.csv`, etc.).
+  2. Expose a light cached translation endpoint (`api.survey.get_translations?lang=...`) using Frappe's native `frappe.translate.get_full_dict()`.
+  3. PWA caches translations in IndexedDB (`dexie.translations`), fetching language packs on demand with instantaneous offline fallback.
+
+### Phase 3: Modular Client Architecture & PWA Stability
+- **Goal**: Refactor the 8,300-line monolithic `app.js` into decoupled, reusable ES composables.
+- **Deliverables**:
+  1. Break `app.js` into focused composables adhering to the $\le 10$ line function rule:
+     - `composables/useWAL.js`: IndexedDB queue management, idempotent sync, exponential backoff.
+     - `composables/useFormState.js`: Reactive answers, question skipping, validation rules.
+     - `composables/useGridRenderer.js`: Pre-populated grid matrices, auto-sum calculations.
+     - `composables/useSensors.js`: Geolocation bounding, canvas photo compression, EXIF watermarking.
+  2. Integrate standard asset compilation via Frappe's native `esbuild` / Vite pipeline, ensuring clean asset versioning and zero browser caching glitches.
+
+### Phase 4: Native Document Lifecycle, File Security & Idempotency
+- **Goal**: Persist all survey responses through Frappe's native Document API with atomic transaction guarantees.
+- **Deliverables**:
+  1. Replace raw dictionary inserts with `frappe.new_doc("OmniQuery Response")` and standard controller hooks (`validate`, `on_submit`).
+  2. Store all captured photos through native `File` documents with private permissions (`/private/files/`).
+  3. Implement atomic MariaDB savepoints during batch synchronization to prevent partial sync corruptions.
+
+### Phase 5: Automated Testing & Continuous Verification Pipeline
+- **Goal**: Protect against regressions with automated characterization tests.
+- **Deliverables**:
+  1. Backend unit tests using `frappe.tests.utils.FrappeTestCase` with automated database rollback in `tearDown()`, strictly avoiding database pollution.
+  2. End-to-end headless PWA sync verification simulating offline network disconnections, localStorage recovery, and duplicate batch submissions.
+  3. Automated linter rules in `.pre-commit-config.yaml` preventing functions $> 10$ lines and banning `frappe.db.sql`.
