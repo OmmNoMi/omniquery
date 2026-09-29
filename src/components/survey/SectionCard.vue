@@ -1,47 +1,22 @@
 <template>
   <div class="space-y-4">
     <!-- Section Introduction Card -->
-    <div class="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs border-l-4 border-l-emerald-600">
-      <div class="flex items-center justify-between mb-1.5 flex-wrap gap-2">
-        <span class="text-xs font-bold tracking-wider uppercase text-emerald-700">
+    <div class="bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-200/80 dark:border-slate-800 shadow-xs border-l-4 border-l-emerald-600">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-bold tracking-wider uppercase text-emerald-700 dark:text-emerald-400">
           {{ __('Section') }} {{ currentIndex + 1 }} {{ __('of') }} {{ totalSections }}
         </span>
-        <div class="flex items-center gap-1.5">
-          <button
-            type="button"
-            @click="$emit('open-focus-mode')"
-            class="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 hover:bg-emerald-100 active:scale-95 transition flex items-center gap-1"
-            :title="__('Open One-by-One Focus Popup Form')"
-          >
-            <span>🎯</span>
-            <span>{{ __('Auto Form') }}</span>
-          </button>
-          <button
-            type="button"
-            @click="$emit('toggle-auto-advance')"
-            :class="[
-              'px-2 py-1 rounded-lg text-xs font-bold border transition flex items-center gap-1',
-              autoAdvance
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                : 'bg-slate-100 text-slate-600 border-slate-200'
-            ]"
-            :title="__('Toggle Auto Advance (AppSheet Style)')"
-          >
-            <span>⚡</span>
-            <span class="hidden sm:inline">{{ __('Auto Advance') }}</span>
-          </button>
-          <span
-            v-if="isComplete"
-            class="px-2 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"
-          >
-            ✓ {{ __('Completed') }}
-          </span>
-        </div>
+        <span
+          v-if="isComplete"
+          class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+        >
+          ✓ {{ __('Completed') }}
+        </span>
       </div>
-      <h2 class="text-lg sm:text-xl font-extrabold text-slate-900">
+      <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-snug">
         {{ sectionTitle }}
       </h2>
-      <p v-if="sectionDescription" class="text-xs sm:text-sm text-slate-600 mt-1">
+      <p v-if="sectionDescription" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
         {{ sectionDescription }}
       </p>
     </div>
@@ -58,24 +33,49 @@
     </div>
 
     <!-- Fixed Native Mobile Bottom Action Bar (Soft Grayish Sage Green) -->
-    <div class="fixed bottom-0 inset-x-0 z-50 bg-[#e2ebe4] dark:bg-[#18261e] border-t border-[#cbdcd0] dark:border-[#25392e] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-4 py-3 pb-safe">
+    <div class="fixed bottom-0 inset-x-0 z-50 bg-[#e2ebe4] dark:bg-[#18261e] border-t border-[#cbdcd0] dark:border-[#25392e] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 sm:px-4 py-2.5 pb-safe">
       <div class="max-w-2xl mx-auto flex items-center justify-between gap-2">
         <!-- Previous Page Button -->
         <button
           v-if="currentIndex > 0"
           type="button"
           @click="$emit('prev')"
-          class="px-3.5 py-2.5 rounded-xl border border-[#cbdcd0] dark:border-[#334d3f] bg-[#f0f5f1] dark:bg-[#25392e] font-bold text-slate-900 dark:text-emerald-100 hover:bg-white active:scale-95 transition text-xs sm:text-sm shrink-0 flex items-center gap-1"
+          class="px-3 py-2 rounded-xl border border-[#cbdcd0] dark:border-[#334d3f] bg-[#f0f5f1] dark:bg-[#25392e] font-bold text-slate-900 dark:text-emerald-100 hover:bg-white dark:hover:bg-[#2d4538] active:scale-95 transition text-xs sm:text-sm shrink-0 flex items-center gap-1"
         >
           <span>←</span>
           <span>{{ __('Previous') }}</span>
         </button>
-        <div v-else class="w-12"></div>
+        <div v-else class="w-12 sm:w-16"></div>
 
-        <!-- Current Page / Total Pages Indicator -->
-        <span class="text-xs font-bold text-slate-800 dark:text-emerald-200">
-          {{ currentIndex + 1 }} / {{ totalSections }}
-        </span>
+        <!-- Center Utility Controls: Auto Advance & Auto Form -->
+        <div class="flex items-center gap-1.5 sm:gap-2">
+          <!-- Auto Advance Toggle Button -->
+          <button
+            type="button"
+            @click="$emit('toggle-auto-advance')"
+            :class="[
+              'px-2.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1 active:scale-95 shadow-2xs cursor-pointer',
+              autoAdvance
+                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                : 'bg-[#f0f5f1] dark:bg-[#25392e] text-slate-700 dark:text-slate-200 border-[#cbdcd0] dark:border-[#334d3f] hover:bg-white dark:hover:bg-[#2d4538]'
+            ]"
+            :title="__('Toggle Auto Advance (advance automatically when answered)')"
+          >
+            <span>⚡</span>
+            <span class="text-[11px] sm:text-xs font-bold">{{ __('Auto') }}</span>
+          </button>
+
+          <!-- Focus Form Mode Button -->
+          <button
+            type="button"
+            @click="$emit('open-focus-mode')"
+            class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#f0f5f1] dark:bg-[#25392e] border border-[#cbdcd0] dark:border-[#334d3f] text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-[#2d4538] active:scale-95 transition flex items-center gap-1 shadow-2xs cursor-pointer"
+            :title="__('Open One-by-One Focus Popup Form')"
+          >
+            <span>🎯</span>
+            <span class="text-[11px] sm:text-xs font-bold">{{ __('Focus') }}</span>
+          </button>
+        </div>
 
         <!-- Right: Next / Submit Page Controls -->
         <div>
@@ -83,7 +83,7 @@
             v-if="currentIndex < totalSections - 1"
             type="button"
             @click="$emit('next')"
-            class="px-4 sm:px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5"
+            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 cursor-pointer"
           >
             <span>{{ __('Next') }}</span>
             <span>→</span>
@@ -93,7 +93,7 @@
             type="button"
             @click="$emit('submit')"
             :disabled="isSubmitting"
-            class="px-4 sm:px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 disabled:opacity-50"
+            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <span>{{ isSubmitting ? __('Submitting...') : __('Submit Survey') }}</span>
           </button>
