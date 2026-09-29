@@ -7,7 +7,8 @@ __pycache__/
 *.so
 
 # Distribution / packaging
-dist/
+/dist/
+!omniquery/public/dist/
 build/
 *.egg-info/
 .eggs/

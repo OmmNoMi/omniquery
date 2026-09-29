@@ -9,6 +9,25 @@ export function useSurvey() {
   const validationErrors = ref({});
   const isSubmitting = ref(false);
   const isSubmitted = ref(false);
+  const currentDraftId = ref(null);
+  const activeDrafts = ref({});
+
+  async function loadActiveDrafts() {
+    try {
+      const drafts = await db.responses.where("status").equals("Draft").toArray();
+      const draftMap = {};
+      for (const d of drafts) {
+        if (d.template_name) {
+          draftMap[d.template_name] = d;
+        }
+      }
+      activeDrafts.value = draftMap;
+      return draftMap;
+    } catch (e) {
+      activeDrafts.value = {};
+      return {};
+    }
+  }
 
   async function loadAvailableTemplates() {
     try {
@@ -16,11 +35,13 @@ export function useSurvey() {
       if (response.ok) {
         const data = await response.json();
         availableTemplates.value = data.message || [];
+        await loadActiveDrafts();
         return availableTemplates.value;
       }
     } catch (e) {
       console.warn("Failed to load active templates:", e);
     }
+    await loadActiveDrafts();
     return [];
   }
 
@@ -56,7 +77,7 @@ export function useSurvey() {
     }
   }
 
-  async function loadTemplate(surveyId) {
+  async function loadTemplate(surveyId, resumeExisting = true) {
     if (!surveyId) return null;
     const cached = await getCachedTemplate(surveyId);
     if (cached) {
@@ -72,7 +93,84 @@ export function useSurvey() {
       activeSectionIndex.value = 0;
       await cacheTemplateLocally(surveyId, schema, payload);
     }
+
+    if (resumeExisting) {
+      try {
+        const draft = await db.responses
+          .where("template_name")
+          .equals(surveyId)
+          .and((d) => d.status === "Draft")
+          .first();
+
+        if (draft && draft.responses && Object.keys(draft.responses).length > 0) {
+          currentDraftId.value = draft.response_uid;
+          responses.value = { ...draft.responses };
+          activeSectionIndex.value = draft.active_section_index || 0;
+        } else {
+          currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          responses.value = {};
+          activeSectionIndex.value = 0;
+        }
+      } catch (e) {
+        currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        responses.value = {};
+        activeSectionIndex.value = 0;
+      }
+    } else {
+      currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      responses.value = {};
+      activeSectionIndex.value = 0;
+    }
+
     return activeTemplate.value;
+  }
+
+  async function saveDraftLocally(progress = 0) {
+    if (!activeTemplate.value || isSubmitted.value) return;
+    const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
+    if (!tmplName) return;
+
+    if (!currentDraftId.value) {
+      currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    }
+
+    try {
+      await db.responses.put({
+        response_uid: currentDraftId.value,
+        template_name: tmplName,
+        responses: JSON.parse(JSON.stringify(responses.value)),
+        active_section_index: activeSectionIndex.value,
+        progress_percent: progress,
+        status: "Draft",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        synced: false,
+      });
+      await loadActiveDrafts();
+    } catch (e) {
+      console.warn("Failed to save draft locally:", e);
+    }
+  }
+
+  async function discardDraft(surveyId) {
+    if (!surveyId) return;
+    try {
+      await db.responses
+        .where("template_name")
+        .equals(surveyId)
+        .and((d) => d.status === "Draft")
+        .delete();
+
+      const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name;
+      if (tmplName === surveyId) {
+        responses.value = {};
+        activeSectionIndex.value = 0;
+        currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      }
+      await loadActiveDrafts();
+    } catch (e) {
+      console.warn("Failed to discard draft:", e);
+    }
   }
 
   const sections = computed(() => {
@@ -163,8 +261,13 @@ export function useSurvey() {
     validationErrors,
     isSubmitting,
     isSubmitted,
+    currentDraftId,
+    activeDrafts,
+    loadActiveDrafts,
     loadAvailableTemplates,
     loadTemplate,
+    saveDraftLocally,
+    discardDraft,
     isQuestionVisible,
     isSectionComplete,
     validateCurrentSection,

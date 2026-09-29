@@ -7,7 +7,23 @@ def after_migrate():
 	ensure_desktop_icon()
 	ensure_workspace()
 	ensure_workspace_sidebar()
+	ensure_default_surveyor()
 	sync_app_fixtures()
+
+
+def ensure_default_surveyor():
+	if not frappe.db.exists("DocType", "OmniQuery Surveyor"):
+		return
+	if not frappe.db.exists("OmniQuery Surveyor", "SURV-Administrator"):
+		try:
+			frappe.get_doc({
+				"doctype": "OmniQuery Surveyor",
+				"surveyor_name": "Administrator",
+				"user": "Administrator",
+				"status": "Active",
+			}).insert(ignore_permissions=True)
+		except Exception:
+			pass
 
 
 def after_install():

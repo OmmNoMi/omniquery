@@ -65,7 +65,7 @@
           @open-focus-mode="openFocusMode"
           @toggle-auto-advance="autoAdvance = !autoAdvance"
           @toggle-audio="toggleAudio"
-          @prev="prevSection"
+          @prev="handlePrevSection"
           @next="handleNextSection"
           @submit="submitForm"
         >
@@ -186,14 +186,23 @@
           :key="tmpl.name"
           class="p-5 bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-500/80 shadow-xs hover:shadow-md transition space-y-3"
         >
-          <!-- Category Pill & Version -->
+          <!-- Category Pill, Version & Draft Badge -->
           <div class="flex items-center justify-between gap-2">
             <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">
               {{ tmpl.target_category || 'Survey' }}
             </span>
-            <span class="text-xs font-medium text-slate-400">
-              v{{ tmpl.version }}.0
-            </span>
+            <div class="flex items-center gap-2">
+              <span
+                v-if="activeDrafts[tmpl.name]"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs"
+              >
+                <span>📝</span>
+                <span>{{ __('Draft') }}: {{ activeDrafts[tmpl.name].progress_percent || 0 }}%</span>
+              </span>
+              <span class="text-xs font-medium text-slate-400">
+                v{{ tmpl.version }}.0
+              </span>
+            </div>
           </div>
 
           <!-- Clean Survey Title -->
@@ -214,16 +223,26 @@
               <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
               {{ __('Offline Ready') }}
             </span>
-            <button
-              type="button"
-              @click="selectSurvey(tmpl.name)"
-              :disabled="loadingSurveyId === tmpl.name"
-              class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
-            >
-              <span v-if="loadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
-              <span>{{ loadingSurveyId === tmpl.name ? __('Loading...') : __('Start Survey') }}</span>
-              <span v-if="loadingSurveyId !== tmpl.name">→</span>
-            </button>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="activeDrafts[tmpl.name]"
+                type="button"
+                @click.stop="onDiscardDraft(tmpl.name)"
+                class="px-3 py-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs font-bold transition active:scale-95"
+              >
+                {{ __('Discard Draft') }}
+              </button>
+              <button
+                type="button"
+                @click="selectSurvey(tmpl.name)"
+                :disabled="loadingSurveyId === tmpl.name"
+                class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+              >
+                <span v-if="loadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
+                <span>{{ loadingSurveyId === tmpl.name ? __('Loading...') : (activeDrafts[tmpl.name] ? __('Resume Draft') : __('Start Survey')) }}</span>
+                <span v-if="loadingSurveyId !== tmpl.name">→</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -347,8 +366,13 @@ const {
   validationErrors,
   isSubmitting,
   isSubmitted,
+  currentDraftId,
+  activeDrafts,
+  loadActiveDrafts,
   loadAvailableTemplates,
   loadTemplate,
+  saveDraftLocally,
+  discardDraft,
   isSectionComplete,
   validateCurrentSection,
   nextSection,
@@ -612,7 +636,87 @@ function confirmExit() {
   goHome();
 }
 
+let draftSyncTimer = null;
+const isSyncingDraft = ref(false);
+
+async function syncDraftToServer() {
+  if (!isOnline.value || !activeTemplate.value || !currentDraftId.value || isSubmitted.value) return;
+
+  const qList = (activeTemplate.value && activeTemplate.value.questions) || [];
+  const items = Object.entries(responses.value)
+    .filter(([_, val]) => val !== undefined && val !== null && String(val).trim() !== "")
+    .map(([code, val]) => {
+      const q = qList.find((item) => item.question_code === code);
+      return {
+        question_code: code,
+        question_label: q ? (q.label_en || q.label || code) : code,
+        value: val,
+      };
+    });
+
+  if (items.length === 0) return;
+
+  const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
+  const draftPayload = {
+    idempotency_key: currentDraftId.value,
+    survey_template: tmplName,
+    template_version: activeTemplate.value.version || 1,
+    respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
+    surveyor: (window.frappe && window.frappe.session && window.frappe.session.user) || "Administrator",
+    captured_at_local: new Date().toISOString(),
+    gps_latitude: gpsCoords.value?.latitude || null,
+    gps_longitude: gpsCoords.value?.longitude || null,
+    gps_accuracy: gpsCoords.value?.accuracy || null,
+    items: items,
+  };
+
+  try {
+    isSyncingDraft.value = true;
+    const res = await fetch("/api/method/omniquery.api.sync.sync_draft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Frappe-CSRF-Token": (window.frappe && window.frappe.csrf_token) || "",
+      },
+      body: JSON.stringify({ draft: draftPayload }),
+    });
+    if (res.ok) {
+      try {
+        await db.responses.update(currentDraftId.value, { synced: true });
+      } catch (e) {}
+    }
+  } catch (e) {
+    console.warn("In-flight draft sync non-critical warning:", e);
+  } finally {
+    isSyncingDraft.value = false;
+  }
+}
+
+function scheduleDraftSaveAndSync() {
+  if (!activeTemplate.value || isSubmitted.value) return;
+  saveDraftLocally(progressPercent.value);
+  if (draftSyncTimer) clearTimeout(draftSyncTimer);
+  draftSyncTimer = setTimeout(() => {
+    syncDraftToServer();
+  }, 1200);
+}
+
+watch(
+  responses,
+  () => {
+    scheduleDraftSaveAndSync();
+  },
+  { deep: true }
+);
+
+async function onDiscardDraft(templateName) {
+  if (confirm(__("Discard saved draft for this survey?"))) {
+    await discardDraft(templateName);
+  }
+}
+
 async function goHome() {
+  scheduleDraftSaveAndSync();
   activeTemplate.value = null;
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
@@ -632,6 +736,7 @@ async function selectSurvey(surveyName) {
 }
 
 async function saveOfflineRecord() {
+  if (draftSyncTimer) clearTimeout(draftSyncTimer);
   const qList = (activeTemplate.value && activeTemplate.value.questions) || [];
   const items = Object.entries(responses.value)
     .filter(([_, val]) => val !== undefined && val !== null && String(val).trim() !== "")
@@ -645,11 +750,13 @@ async function saveOfflineRecord() {
     });
 
   const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
+  const draftKey = currentDraftId.value || `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
   const payload = {
-    idempotency_key: `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+    idempotency_key: draftKey,
     survey_template: tmplName,
     template_version: activeTemplate.value.version || 1,
-    respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "Respondent",
+    respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
     surveyor: (window.frappe && window.frappe.session && window.frappe.session.user) || "Administrator",
     captured_at_local: new Date().toISOString(),
     gps_latitude: gpsCoords.value?.latitude || null,
@@ -657,6 +764,20 @@ async function saveOfflineRecord() {
     gps_accuracy: gpsCoords.value?.accuracy || null,
     items: items,
   };
+
+  try {
+    await db.responses.put({
+      response_uid: draftKey,
+      template_name: tmplName,
+      responses: JSON.parse(JSON.stringify(responses.value)),
+      active_section_index: activeSectionIndex.value,
+      progress_percent: 100,
+      status: "Submitted",
+      updated_at: new Date().toISOString(),
+      synced: false,
+    });
+    await loadActiveDrafts();
+  } catch (e) {}
 
   await queueWAL("OmniQuery Response", payload);
   if (isOnline.value) {
@@ -680,7 +801,13 @@ function scrollToFirstPendingQuestion() {
   }
 }
 
+function handlePrevSection() {
+  scheduleDraftSaveAndSync();
+  prevSection();
+}
+
 function handleNextSection() {
+  scheduleDraftSaveAndSync();
   const ok = nextSection();
   if (!ok) {
     scrollToFirstPendingQuestion();
@@ -703,6 +830,7 @@ function resetSurvey() {
   responses.value = {};
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
+  currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
 function triggerSync() {
