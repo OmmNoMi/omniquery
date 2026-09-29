@@ -62,11 +62,29 @@
           <button
             type="button"
             @click.stop="isModeMenuOpen = !isModeMenuOpen"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none bg-[#e6efe8] dark:bg-[#1c2c22] text-slate-800 dark:text-emerald-100 border-[#b8cdbf] dark:border-[#2a4033] hover:bg-white dark:hover:bg-[#253a2d] focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-emerald-600"
+            :class="[
+              (autoAdvance || isFullForm)
+                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border-emerald-500/60 dark:border-emerald-500/50 ring-1 ring-emerald-500/20'
+                : 'bg-[#e6efe8] dark:bg-[#1c2c22] text-slate-800 dark:text-emerald-100 border-[#b8cdbf] dark:border-[#2a4033] hover:bg-white dark:hover:bg-[#253a2d]'
+            ]"
+            :title="__('Survey Mode')"
           >
-            <span>⚙️</span>
-            <span>{{ __('Mode') }}</span>
-            <span class="text-[10px] opacity-70">▾</span>
+            <!-- Active Indicator Dot -->
+            <span
+              class="w-2 h-2 rounded-full shrink-0"
+              :class="(autoAdvance || isFullForm) ? 'bg-emerald-600 dark:bg-emerald-400 animate-pulse' : 'bg-slate-400'"
+            ></span>
+            <span>{{ activeModeIcon }}</span>
+            <span class="font-extrabold tracking-tight">{{ activeModeLabel }}</span>
+            <svg
+              class="w-3.5 h-3.5 opacity-60 transition-transform duration-200 shrink-0"
+              :class="{ 'rotate-180': isModeMenuOpen }"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
           </button>
 
           <!-- Dropdown Popover Menu (Upward) -->
@@ -290,5 +308,24 @@ const sectionTitle = computed(() => getSectionTitle(props.section));
 const sectionDescription = computed(() => {
   if (props.section.description_translated) return props.section.description_translated;
   return props.section.description ? __(props.section.description) : "";
+});
+
+const activeModeLabel = computed(() => {
+  if (props.isFullForm && props.autoAdvance) {
+    return __('Full (Auto)');
+  }
+  if (props.isFullForm) {
+    return __('Full Form');
+  }
+  if (props.autoAdvance) {
+    return __('Auto Advance');
+  }
+  return __('Standard');
+});
+
+const activeModeIcon = computed(() => {
+  if (props.autoAdvance) return '⚡';
+  if (props.isFullForm) return '📋';
+  return '📝';
 });
 </script>

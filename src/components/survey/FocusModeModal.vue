@@ -78,34 +78,51 @@
           <button
             type="button"
             @click.stop="isModeMenuOpen = !isModeMenuOpen"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-slate-400"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            :class="[
+              autoAdvance
+                ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 ring-1 ring-emerald-500/30'
+                : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+            ]"
+            :title="__('Survey Mode')"
           >
-            <span>⚙️</span>
-            <span>{{ __('Mode') }}</span>
-            <span class="text-[10px] opacity-70">▾</span>
+            <!-- Active Indicator Dot -->
+            <span class="w-2 h-2 rounded-full bg-emerald-400 shrink-0" :class="{ 'animate-pulse': autoAdvance }"></span>
+            <span>{{ autoAdvance ? '⚡' : '🎯' }}</span>
+            <span class="font-extrabold tracking-tight">{{ activeModeTitle }}</span>
+            <svg
+              class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
+              :class="{ 'rotate-180': isModeMenuOpen }"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+            </svg>
           </button>
 
           <!-- Dropdown Popover Menu (Upward) -->
           <div
             v-if="isModeMenuOpen"
             @click.stop
-            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 space-y-1 z-50 animate-fade-in text-white"
+            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 space-y-1.5 z-50 animate-fade-in text-white"
           >
-            <div class="text-[10px] font-extrabold text-slate-400 uppercase px-2.5 py-1 tracking-wider">
-              {{ __('Survey Options') }}
+            <div class="text-[10px] font-extrabold text-slate-400 uppercase px-2.5 py-1 tracking-wider flex items-center justify-between">
+              <span>{{ __('Mode & Navigation') }}</span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
             </div>
 
             <!-- 1. Auto Advance Toggle -->
             <button
               type="button"
               @click="$emit('toggle-auto-advance')"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              :class="autoAdvance ? 'bg-emerald-950/60 border border-emerald-500/40 text-emerald-200' : 'hover:bg-slate-800 text-slate-200'"
             >
               <div class="flex items-center gap-2">
                 <span class="text-sm">⚡</span>
                 <div>
-                  <div class="text-xs font-bold text-slate-100">{{ __('Auto Advance') }}</div>
-                  <div class="text-[10px] text-slate-400">{{ __('Next question on answer') }}</div>
+                  <div class="text-xs font-bold">{{ __('Auto Advance') }}</div>
+                  <div class="text-[10px] text-slate-400">{{ __('Next question automatically on answer') }}</div>
                 </div>
               </div>
               <span
@@ -133,7 +150,7 @@
                 <span class="text-sm">📋</span>
                 <div>
                   <div class="text-xs font-bold text-slate-100">{{ __('Section View') }}</div>
-                  <div class="text-[10px] text-slate-400">{{ __('Return to all questions in section') }}</div>
+                  <div class="text-[10px] text-slate-400">{{ __('Switch to all questions in section') }}</div>
                 </div>
               </div>
               <span class="text-xs font-bold text-slate-400">✕</span>
@@ -215,6 +232,13 @@ function handleOutsideClick(event) {
 
 const currentQuestion = computed(() => {
   return props.questions[props.currentIndex] || null;
+});
+
+const activeModeTitle = computed(() => {
+  if (props.autoAdvance) {
+    return __('Auto Advance');
+  }
+  return __('Focus Mode');
 });
 
 const progressPercent = computed(() => {
