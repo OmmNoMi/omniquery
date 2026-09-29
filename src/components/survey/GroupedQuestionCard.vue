@@ -135,12 +135,23 @@
       </div>
     </div>
 
-    <!-- Bottom-Right Corner Status Badge -->
-    <div v-if="isGroupCompleted && !isInputFocused" class="flex justify-end mt-2 pt-1 border-t border-slate-100/80 dark:border-slate-800/60">
-      <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full">
-        <span>✓</span>
-        <span>{{ __('All items filled') }}</span>
+    <!-- Card Footer: Left = Type (Table), Right = Status Badge -->
+    <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+      <!-- Input Type Badge (Bottom-Left) -->
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shrink-0">
+        {{ __('Table') }}
       </span>
+
+      <!-- Bottom-Right Status Badge -->
+      <div class="min-h-[22px] flex items-center">
+        <span
+          v-if="isGroupCompleted && !isInputFocused"
+          class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full"
+        >
+          <span>✓</span>
+          <span>{{ __('All items filled') }}</span>
+        </span>
+      </div>
     </div>
   </div>
 </template>

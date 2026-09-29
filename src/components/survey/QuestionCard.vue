@@ -42,14 +42,6 @@
           <span v-if="question.is_mandatory" class="text-rose-500 font-extrabold ml-0.5">*</span>
         </label>
       </div>
-
-      <!-- Multiple Select Badge (Only shown for multi-select, no badge for single-select) -->
-      <span
-        v-if="isChoiceControl && isMultiSelect"
-        class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-bold bg-blue-50 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0"
-      >
-        <span>{{ __('Multi-select') }}</span>
-      </span>
     </div>
 
     <!-- Description / Subtitle -->
@@ -220,7 +212,18 @@
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
 
-      <!-- 9. Default Text Input -->
+      <!-- 9. Date Input -->
+      <input
+        v-else-if="isDateControl"
+        type="date"
+        :value="modelValue"
+        @input="$emit('update:modelValue', $event.target.value)"
+        @keydown.enter="onInputEnter"
+        @keydown.esc.stop="focusCard"
+        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
+      />
+
+      <!-- 10. Default Text Input -->
       <input
         v-else
         type="text"
@@ -238,12 +241,23 @@
       {{ __(errorMessage) }}
     </p>
 
-    <!-- Right-Hand Bottom Corner Status Badge -->
-    <div v-if="isCompleted && !isInputFocused" class="flex justify-end mt-2 pt-1 border-t border-slate-100/80 dark:border-slate-800/60">
-      <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full">
-        <span>✓</span>
-        <span>{{ __('Answered') }}</span>
+    <!-- Card Footer: Left = Input Type Badge, Right = Answered Badge -->
+    <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+      <!-- Input Type Badge (Bottom-Left) -->
+      <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shrink-0">
+        {{ inputTypeLabel }}
       </span>
+
+      <!-- Status Badge (Bottom-Right) -->
+      <div class="min-h-[22px] flex items-center">
+        <span
+          v-if="isCompleted && !isInputFocused"
+          class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full"
+        >
+          <span>✓</span>
+          <span>{{ __('Answered') }}</span>
+        </span>
+      </div>
     </div>
 
     <!-- Question Configuration & Info Teleport Modal -->
@@ -587,16 +601,21 @@ function onCardKeydown(e) {
   }
 }
 
-function formatFieldType() {
-  if (isSwitchControl.value) return __("Yes / No Toggle");
-  if (isRangeControl.value) return __("Numeric Range / Slider");
-  if (isRatingControl.value) return __("Star Rating");
-  if (isCurrencyControl.value) return __("Currency (INR ₹)");
-  if (isChoiceControl.value) return isMultiSelect.value ? __("Multiple Choice") : __("Single Choice");
-  if (isYearControl.value) return __("Year Selector");
-  if (isGeolocationControl.value) return __("GPS Coordinates");
+const inputTypeLabel = computed(() => {
+  if (isSwitchControl.value) return __("Yes / No");
+  if (isRangeControl.value) return __("Slider");
+  if (isRatingControl.value) return __("Rating");
+  if (isCurrencyControl.value) return __("Currency");
+  if (isYearControl.value) return __("Year");
+  if (isGeolocationControl.value) return __("GPS");
+  if (isChoiceControl.value) return isMultiSelect.value ? __("Multi-select") : __("Select");
+  if (isDateControl.value) return __("Date");
   if (isNumberControl.value) return __("Number");
-  return __("Text Input");
+  return __("Text");
+});
+
+function formatFieldType() {
+  return inputTypeLabel.value;
 }
 
 const validationRuleSummary = computed(() => {
@@ -884,6 +903,11 @@ const isGeolocationControl = computed(() => {
 const isNumberControl = computed(() => {
   const type = props.question.field_type || "";
   return type === "Int" || type === "Float" || type === "Number";
+});
+
+const isDateControl = computed(() => {
+  const type = (props.question.field_type || "").toLowerCase();
+  return type.includes("date");
 });
 
 function formatCoords(coords) {
