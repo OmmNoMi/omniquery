@@ -27,7 +27,7 @@ With an embedded Progressive Web App (PWA) running on Dexie.js (IndexedDB Write-
 
 ## 🚀 Key Features
 
-* **🌊 Submittable Template Waves (`is_submittable: 1`)**: Published templates become permanently immutable documents (`docstatus = 1`). Modifying a survey creates an amended version wave (`TMPL-SHG-1` &rarr; `TMPL-SHG-2`) guaranteeing **zero offline rejection** for field surveyors working in remote villages.
+* **🌊 Survey Versions (v1, v2) (`is_submittable: 1`)**: Published templates become permanently immutable documents (`docstatus = 1`). Modifying a survey creates an new survey version (`TMPL-SHG-1` &rarr; `TMPL-SHG-2`) guaranteeing **zero offline rejection** for field surveyors working in remote villages.
 * **🛡️ Zero-Data-Loss Offline PWA**: Dual-tier storage with in-memory reactive state and persistent IndexedDB Write-Ahead Log (WAL) powered by Dexie.js. Forms survive battery depletion, browser crashes, background app eviction, and accidental navigation.
 * **📡 Continuous In-Flight Live Sync (`sync_draft`)**: While working online, partial responses stream asynchronously to MariaDB as `Draft` records without mandatory field blocking, providing central supervisors live monitoring at `/desk/omniquery-workstation`.
 * **🚨 Instantaneous Client Error Reporting Beacon**: Any client-side evaluation error or stuck question fires an asynchronous beacon (`navigator.sendBeacon`) logging directly to `OmniQuery Field Error Log` for immediate Project Admin triage.
@@ -37,7 +37,7 @@ With an embedded Progressive Web App (PWA) running on Dexie.js (IndexedDB Write-
   * Unified governance across **`Platform`**, **`Workspace`**, **`Project`**, and **`Survey`** scopes.
   * Common questions (Yes/No, Likert 5-point, Full Name, Phone, Age, District, GPS) can be promoted to `Platform` scope.
   * 100% native Frappe Translation catalogs (`locale/*.csv`) and `Translation` DocType without inlined JavaScript dictionaries.
-  * Flexible per-survey mandatory configuration (`is_mandatory` is defined per survey wave).
+  * Flexible per-survey mandatory configuration (`is_mandatory` is defined per survey version).
 * **🎛️ Rich UI-Configurable Field Types (Pure Configuration, Zero CSS Hacks)**:
   * **Choice (Single & Multi)**: Radio, Buttons, Switch (ON/OFF), Chips, Rating (Stars, Sentiment Faces, Hearts, Thumbs with configurable 5/10 max and 1.0/0.5 step precision), Searchable Combobox (`f-combobox`).
   * **Numerical**: Integer, Decimal (default precision `0`), Currency (₹/$/€), Signed (+/-), Range Sliders.

@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned & Architecture Specifications
-* **🌊 Submittable Template Waves (`is_submittable: 1`)**:
+* **🌊 Survey Versions (v1, v2) (`is_submittable: 1`)**:
   * Published survey templates lock permanently (`docstatus = 1`) to eliminate mid-campaign schema drift.
-  * Amendments create sequential waves (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from` ensuring zero offline rejection.
+  * Amendments create sequential versions (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from` ensuring zero offline rejection.
 * **🌍 4-Tier Scope Hierarchy & Reusable Option Sets**:
   * Question and Option Set scoping: `Platform`, `Workspace`, `Project`, `Survey`.
   * 100% Frappe Native Translations via `locale/*.csv` and `Translation` DocType (`frappe._()`).

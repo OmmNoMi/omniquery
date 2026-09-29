@@ -1,6 +1,6 @@
 # <span style="font-family:'Roboto',sans-serif;font-weight:900;"><span style="color:#4285f4;">Omm</span><span style="color:#34a853;">No</span><span style="color:#ea4335;">M</span><span style="color:#fbbc05;">i</span></span> OmniQuery — Product & Architecture Roadmap
 
-> **Platform Mission**: End-to-End Enterprise Survey Design, Multilingual Field Collection, Zero-Loss Offline Sync, Submittable Versioned Waves, and Downstream Business Intelligence Engine. Built natively on Frappe v16 and Frappe UI standards, completely aligned with the OmmNoMi design philosophy.
+> **Platform Mission**: End-to-End Enterprise Survey Design, Multilingual Field Collection, Zero-Loss Offline Sync, Survey Versions (v1, v2), and Downstream Business Intelligence Engine. Built natively on Frappe v16 and Frappe UI standards, completely aligned with the OmmNoMi design philosophy.
 
 ---
 
@@ -13,15 +13,15 @@
 
 ---
 
-## 🌊 Submittable Template Waves & Version Immutability (`is_submittable: 1`)
+## 🌊 Survey Versions (v1, v2) & Version Immutability (`is_submittable: 1`)
 
 ### 1. The Immutability Guarantee
 - Published survey templates have `"is_submittable": 1` and lock permanently upon submission (`docstatus = 1`).
 - Eliminates mid-campaign schema drift where surveyors in the field submit responses against modified question definitions.
 
-### 2. Native Wave Versioning (`amended_from`)
-- Any update to a published survey creates an amended version wave (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from`.
-- **Zero Offline Rejection**: Field surveyors working offline in remote villages without connectivity continue collecting responses against Wave 1. When returning online, both Wave 1 and Wave 2 responses are ingested cleanly without rejection.
+### 2. Survey Versioning (`amended_from`)
+- Any update to a published survey creates an new survey version (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from`.
+- **Zero Offline Rejection**: Field surveyors working offline in remote villages without connectivity continue collecting responses against Version 1. When returning online, both Version 1 and Version 2 responses are ingested cleanly without rejection.
 
 ---
 
@@ -32,12 +32,12 @@ Questions and Option Sets are decoupled from monolithic surveys and governed by 
 1. **`Platform`**: Universal global questions (Full Name, Phone, Age, Gender, District, GPS, Yes/No, Likert 5-point). Pre-translated and available to all tenants.
 2. **`Workspace`**: Organization-level standards shared across all projects within a tenant workspace.
 3. **`Project`**: Scoped strictly to one project within the workspace.
-4. **`Survey`**: Private, bespoke questions created for a specific survey wave.
+4. **`Survey`**: Private, bespoke questions created for a specific survey.
 
 * **Platform Promotion**: When system administrators notice common questions across workspaces, they can promote them to `Platform` scope.
 * **Active Status Filtering**: Every Question and Option Set carries a `status` (`Active`, `Inactive`, `Draft`). Inactive records are suppressed from survey builders.
 * **100% Frappe Native Translation**: Questions, option sets, and instructions use Frappe's native `locale/*.csv` and `Translation` DocType (`frappe._()`).
-* **Per-Survey Mandatory Flexibility**: `is_mandatory` is defined per survey wave in the linking table (`OmniQuery Template Question Reference`), not hardcoded on Master question.
+* **Per-Survey Mandatory Flexibility**: `is_mandatory` is defined per survey version in the linking table (`OmniQuery Template Question Reference`), not hardcoded on Master question.
 
 ---
 
@@ -114,7 +114,7 @@ OmniQuery adopts a clean **Raven-style in-app membership architecture**: instead
   - `user` (Link: `User`), `workspace_role` (`Workspace Admin`, `Workspace Manager`, `Workspace Member`).
 - **`OmniQuery Project Member`**:
   - `user` (Link: `User`), `project_role`:
-    - **`Project Admin`**: Full technical control; authors questions, configures scripts, tunes validation formulas, and publishes submittable waves.
+    - **`Project Admin`**: Full technical control; authors questions, configures scripts, tunes validation formulas, and publishes survey versions.
     - **`Project Manager`**: Operations lead; inspects survey structures in **read-only mode** with **continuous commenting & feedback privileges** on questions and sections; manages quotas, surveyor allocations, and collection pacing.
     - **`Project Analyst`**: Data researcher; read-only access to response data and telemetry for charts, Frappe Insights dashboards, and dataset exports (zero schema modification rights).
     - **`Project Viewer`**: Client executive observer; clean UI watching overall project KPIs, completion stats, and formal milestone reports.
@@ -124,7 +124,7 @@ OmniQuery adopts a clean **Raven-style in-app membership architecture**: instead
 
 ## 🚀 Phase-Wise Implementation Roadmap
 
-### Phase 1: Submittable Waves, Master Scoping & 3 Global Roles
+### Phase 1: Survey Versions, Master Scoping & 3 Global Roles
 - [ ] Upgrade `OmniQuery Template` to `is_submittable: 1` with `amended_from` and `is_public_citizen_link`.
 - [ ] Refactor `OmniQuery Question` to master DocType with 4-tier `scope`, `status`, `field_category`, `control_variant`, and `behaviour_script`.
 - [ ] Create `OmniQuery Template Question Reference` child table with per-survey `is_mandatory`.
@@ -150,7 +150,7 @@ OmniQuery adopts a clean **Raven-style in-app membership architecture**: instead
 - [ ] Native Frappe Insights tabular mapping for downstream business intelligence.
 
 ### Phase 5: Automated Dual-Layer Testing & Verification
-- [ ] Server test suite (`test_template_waves.py`, `test_question_scope.py`, `test_mandatory_rules.py`, `test_in_flight_sync.py`, `test_permissions.py`).
+- [ ] Server test suite (`test_survey_versions.py`, `test_question_scope.py`, `test_mandatory_rules.py`, `test_in_flight_sync.py`, `test_permissions.py`).
 - [ ] Client test suite via Vitest (`npm test`) covering UI controls, accessibility, audio recorder state transitions, and ZIP generation.
 - [ ] Automated teardown assertions ensuring zero dev database pollution.
 

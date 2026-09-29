@@ -1,6 +1,6 @@
 # <span style="font-family:'Roboto',sans-serif;font-weight:900;"><span style="color:#4285f4;">Omm</span><span style="color:#34a853;">No</span><span style="color:#ea4335;">M</span><span style="color:#fbbc05;">i</span></span> OmniQuery — System Architecture & Developer Guide
 
-> **Scope**: System architecture, submittable template wave lifecycle, 4-tier question master scoping, pure-configuration field taxonomy, continuous audio recording, in-flight live synchronization, Raven-style in-app SaaS role governance, disaster recovery, and engineering invariants for OmniQuery developers.
+> **Scope**: System architecture, survey version lifecycle, 4-tier question master scoping, pure-configuration field taxonomy, continuous audio recording, in-flight live synchronization, Raven-style in-app SaaS role governance, disaster recovery, and engineering invariants for OmniQuery developers.
 
 ---
 
@@ -29,7 +29,7 @@ OmniQuery is an enterprise-grade, offline-first survey engine, dynamic inspectio
 │                     Frappe v16 Backend (OmniQuery Core)                         │
 │  - Endpoints: `sync_draft` (Live Drafts) & `batch_push` (Atomic Finalization)  │
 │  - Telemetry Endpoint: `log_field_error` (Instant Field Error Logging)          │
-│  - Submittable Template Wave Engine (is_submittable: 1, Immutability Lock)      │
+│  - Survey Version Engine (is_submittable: 1, Immutability Lock)      │
 │  - 4-Tier Scope Hierarchy (Platform, Workspace, Project, Survey)                │
 │  - 100% Frappe Native Translation (locale/*.csv & Translation DocType)          │
 │  - Raven-Style In-App Contextual Membership (3 Global Frappe Roles)             │
@@ -40,29 +40,29 @@ OmniQuery is an enterprise-grade, offline-first survey engine, dynamic inspectio
 
 ---
 
-## 2. Submittable Template Waves & Version Lifecycle (`is_submittable: 1`)
+## 2. Survey Versions (v1, v2) & Version Lifecycle (`is_submittable: 1`)
 
 To prevent offline data corruption and schema divergence during multi-month field campaigns, survey templates adopt Frappe's native **Submittable Document Lifecycle**:
 
 ```mermaid
 flowchart LR
-    Draft["Draft Template<br/>docstatus = 0"] -->|Publish| Wave1["Published Wave 1<br/>docstatus = 1 (Locked)"]
-    Wave1 -->|Amend| Wave2Draft["Amended Draft<br/>docstatus = 0"]
-    Wave2Draft -->|Publish| Wave2["Published Wave 2<br/>docstatus = 1 (Locked)"]
+    Draft["Draft Template<br/>docstatus = 0"] -->|Publish| Version1["Published Version 1<br/>docstatus = 1 (Locked)"]
+    Version1 -->|Amend| Version2Draft["Amended Draft<br/>docstatus = 0"]
+    Version2Draft -->|Publish| Version2["Published Version 2<br/>docstatus = 1 (Locked)"]
 
-    Wave1 -.-> FieldResp1["Surveyor Offline in Village A<br/>Submits against Wave 1 (Accepted)"]
-    Wave2 -.-> FieldResp2["Surveyor Online in Village B<br/>Submits against Wave 2 (Accepted)"]
+    Version1 -.-> FieldResp1["Surveyor Offline in Village A<br/>Submits against Version 1 (Accepted)"]
+    Version2 -.-> FieldResp2["Surveyor Online in Village B<br/>Submits against Version 2 (Accepted)"]
 ```
 
 1. **Permanent Template Immutability**:
    - Setting `"is_submittable": 1` ensures that once a survey template is published (`docstatus = 1`), its schema, sections, and linked questions are permanently locked in MariaDB.
    - Any attempt to directly alter a published template raises `frappe.ValidationError`.
-2. **Native Version Waves (`amended_from`)**:
+2. **Survey Versioning (`amended_from`)**:
    - When survey questions, options, or scripts need updates during an active enumeration campaign, the Project Admin clicks **Amend**.
-   - Frappe generates a sequential wave (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from`.
+   - Frappe generates a sequential version (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from`.
 3. **Zero Offline Rejection Guarantee**:
-   - Field surveyors offline in remote villages without network access continue collecting responses against Wave 1.
-   - When returning to connectivity, their responses are ingested cleanly without rejection or version mismatch errors. Both Wave 1 and Wave 2 responses coexist harmoniously in MariaDB.
+   - Field surveyors offline in remote villages without network access continue collecting responses against Version 1.
+   - When returning to connectivity, their responses are ingested cleanly without rejection or version mismatch errors. Both Version 1 and Version 2 responses coexist harmoniously in MariaDB.
 
 ---
 
@@ -75,7 +75,7 @@ flowchart TD
     Tier1["Tier 1: Platform<br/>Universal standards: Yes/No, Likert 5-point, Full Name, Phone, Age, GPS<br/>Pre-translated in Frappe native Translation"]
     Tier2["Tier 2: Workspace<br/>Organization-level standards shared across workspace projects"]
     Tier3["Tier 3: Project<br/>Restricted to a specific project within workspace"]
-    Tier4["Tier 4: Survey<br/>Bespoke questions private to single survey wave"]
+    Tier4["Tier 4: Survey<br/>Bespoke questions private to single survey"]
 
     Tier1 --> Tier2
     Tier2 --> Tier3
@@ -85,7 +85,7 @@ flowchart TD
 * **Platform Promotion**: System Administrators can promote widely used questions or option sets to `Platform` scope so no future tenant or project has to reinvent or re-translate them.
 * **Active Status Filtering**: Every Question and Option Set carries a `status` (`Active`, `Inactive`, `Draft`). Inactive records are automatically filtered out from survey designer pickers.
 * **100% Frappe Native Translation**: Questions, option labels, and instructions use Frappe's standard `locale/*.csv` and the native `Translation` DocType (`frappe._()`), completely eliminating hardcoded 4,000-line translation dictionaries.
-* **Per-Survey Mandatory Flexibility**: `is_mandatory` is defined per survey wave in the linking child table (`OmniQuery Template Question Reference`), allowing question `phone` to be optional in Wave 1 and mandatory in Wave 2.
+* **Per-Survey Mandatory Flexibility**: `is_mandatory` is defined per survey version in the linking child table (`OmniQuery Template Question Reference`), allowing question `phone` to be optional in Version 1 and mandatory in Version 2.
 
 ---
 
@@ -149,7 +149,7 @@ flowchart TD
   - `user` (Link: `User`), `workspace_role` (`Workspace Admin`, `Workspace Manager`, `Workspace Member`).
 - **`OmniQuery Project Member`**:
   - `user` (Link: `User`), `project_role`:
-    - **`Project Admin`**: Full technical control; authors questions, configures scripts, tunes validation formulas, and publishes submittable waves.
+    - **`Project Admin`**: Full technical control; authors questions, configures scripts, tunes validation formulas, and publishes survey versions.
     - **`Project Manager`**: Operations lead; inspects survey structures in **read-only mode** with **continuous commenting & feedback privileges** on questions and sections; manages quotas, surveyor allocations, and collection pacing.
     - **`Project Analyst`**: Data researcher; read-only access to response data and telemetry for charts, Frappe Insights dashboards, and dataset exports (zero schema modification rights).
     - **`Project Viewer`**: Client executive observer; clean UI watching overall project KPIs, completion stats, and formal milestone reports.
@@ -197,7 +197,7 @@ flowchart LR
     Stuck["Field Surveyor Experiences Error or Freeze"] --> Beacon["PWA Error Beacon"]
     Beacon --> ServerLog[("OmniQuery Field Error Log")]
     ServerLog --> Alert["Real-Time Desk Notification to Project Admin"]
-    Alert --> Fix["Admin fixes script and Publishes Wave 2"]
+    Alert --> Fix["Admin fixes script and Publishes Version 2"]
 ```
 
 1. **Zero-Latency Error Capture**:
@@ -207,7 +207,7 @@ flowchart LR
    - Stored on the server: `survey_template`, `template_version`, `question_code` (exact question where error happened), `surveyor`, `error_message`, `stack_trace`, and `device_info`.
 3. **Rapid Triage & Patching**:
    - Project Admins see real-time field error logs directly in `/desk/omniquery-workstation`.
-   - Admin can amend the template, fix the question script/options, and publish Wave 2. The surveyor's PWA automatically picks up the fix on its next heartbeat.
+   - Admin can amend the template, fix the question script/options, and publish Version 2. The surveyor's PWA automatically picks up the fix on its next heartbeat.
 
 ---
 
