@@ -1,6 +1,12 @@
 import { ref, computed } from "vue";
 import { db } from "../services/db";
 
+export function generateSurveyId(templateName) {
+  const cleanId = (templateName || "SURVEY").replace(/^OQS-/, "");
+  const rand = Math.random().toString(36).substring(2, 8);
+  return `OQS-${cleanId}-${rand}`;
+}
+
 export function useSurvey() {
   const activeTemplate = ref(null);
   const activeSectionIndex = ref(0);
@@ -107,17 +113,17 @@ export function useSurvey() {
           responses.value = { ...draft.responses };
           activeSectionIndex.value = draft.active_section_index || 0;
         } else {
-          currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          currentDraftId.value = generateSurveyId(surveyId);
           responses.value = {};
           activeSectionIndex.value = 0;
         }
       } catch (e) {
-        currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        currentDraftId.value = generateSurveyId(surveyId);
         responses.value = {};
         activeSectionIndex.value = 0;
       }
     } else {
-      currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      currentDraftId.value = generateSurveyId(surveyId);
       responses.value = {};
       activeSectionIndex.value = 0;
     }
@@ -131,7 +137,7 @@ export function useSurvey() {
     if (!tmplName) return;
 
     if (!currentDraftId.value) {
-      currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      currentDraftId.value = generateSurveyId(tmplName);
     }
 
     try {
@@ -165,7 +171,7 @@ export function useSurvey() {
       if (tmplName === surveyId) {
         responses.value = {};
         activeSectionIndex.value = 0;
-        currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        currentDraftId.value = generateSurveyId(surveyId);
       }
       await loadActiveDrafts();
     } catch (e) {
@@ -268,6 +274,7 @@ export function useSurvey() {
     loadTemplate,
     saveDraftLocally,
     discardDraft,
+    generateSurveyId,
     isQuestionVisible,
     isSectionComplete,
     validateCurrentSection,

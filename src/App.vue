@@ -373,6 +373,7 @@ const {
   loadTemplate,
   saveDraftLocally,
   discardDraft,
+  generateSurveyId,
   isSectionComplete,
   validateCurrentSection,
   nextSection,
@@ -750,7 +751,7 @@ async function saveOfflineRecord() {
     });
 
   const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
-  const draftKey = currentDraftId.value || `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  const draftKey = currentDraftId.value || generateSurveyId(tmplName);
 
   const payload = {
     idempotency_key: draftKey,
@@ -830,7 +831,7 @@ function resetSurvey() {
   responses.value = {};
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
-  currentDraftId.value = `OQ-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+  currentDraftId.value = generateSurveyId(activeTemplate.value?.name || activeTemplate.value?.template_name || "");
 }
 
 function triggerSync() {

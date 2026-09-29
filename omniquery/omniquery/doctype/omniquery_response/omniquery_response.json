@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "OSERV-RESP-.YYYY.-.#####",
+ "autoname": "prompt",
  "creation": "2026-09-10 01:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -142,7 +142,7 @@
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Response",
- "naming_rule": "By \"Naming Series\" field",
+ "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {

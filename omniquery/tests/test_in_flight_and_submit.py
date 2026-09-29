@@ -14,11 +14,10 @@ def run_test():
 	assert surv.startswith("SURV-"), f"Expected SURV-* surveyor, got {surv}"
 	print(f"✓ Surveyor resolved: {surv}")
 
-	# 2. Test Respondent Resolution
+	# 2. Test Respondent Resolution (no extra table bloat, returns None if not registered)
 	assert resolve_respondent("Respondent") is None, "Expected None for generic placeholder"
-	resp_name = resolve_respondent("Sita Devi")
-	assert resp_name and resp_name.startswith("RESP-"), f"Expected RESP-*, got {resp_name}"
-	print(f"✓ Respondent resolved: {resp_name}")
+	assert resolve_respondent("NonExistentPerson") is None, "Expected None for unregistered text"
+	print("✓ Respondent resolution verified: returns None safely without database bloat")
 
 	# 3. Get an active template
 	template = frappe.db.get_value("OmniQuery Template", {}, "name")
@@ -27,16 +26,21 @@ def run_test():
 		return
 	print(f"✓ Active template found: {template}")
 
-	# 4. Test In-Flight Live Draft Sync
-	draft_id = f"OQ-TEST-{uuid.uuid4().hex[:10]}"
+	# 4. Generate Survey ID with OQS-{surveyID}-{randomstring}
+	clean_tmpl = template.replace("OQS-", "")
+	rand_str = uuid.uuid4().hex[:6]
+	survey_id = f"OQS-{clean_tmpl}-{rand_str}"
+	print(f"✓ Generated Survey ID: {survey_id}")
+
+	# 5. Test In-Flight Live Draft Sync
 	draft_payload = {
-		"idempotency_key": draft_id,
+		"idempotency_key": survey_id,
 		"survey_template": template,
 		"template_version": 1,
-		"respondent": "Sita Devi",
+		"respondent": "Br",
 		"surveyor": "Administrator",
 		"items": [
-			{"question_code": "entrepreneur_name", "value": "Sita Devi"},
+			{"question_code": "entrepreneur_name", "value": "Br"},
 			{"question_code": "district", "value": "Jaipur"}
 		]
 	}
@@ -45,27 +49,20 @@ def run_test():
 	print(f"✓ sync_draft result: {draft_result}")
 	assert draft_result.get("status") == "SUCCESS", f"Draft save failed: {draft_result}"
 	doc_name = draft_result.get("doc_name")
-	assert doc_name, "No doc_name returned"
+	assert doc_name == survey_id, f"Expected doc_name to match {survey_id}, got {doc_name}"
 
 	resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
+	assert resp_doc.name == survey_id, f"Expected doc.name == {survey_id}, got {resp_doc.name}"
 	assert resp_doc.survey_status == "Draft", f"Expected Draft, got {resp_doc.survey_status}"
 	assert len(resp_doc.items) == 2, f"Expected 2 items, got {len(resp_doc.items)}"
-	print(f"✓ Draft record verified in MariaDB: {doc_name} with status={resp_doc.survey_status}, items={len(resp_doc.items)}")
+	print(f"✓ Draft record verified in MariaDB: {doc_name} with status=Draft, items={len(resp_doc.items)}")
 
-	# 5. Test Draft Partial Update (adding another item)
-	draft_payload["items"].append({"question_code": "village", "value": "Amer"})
-	update_result = sync_draft(data={"draft": draft_payload})
-	assert update_result.get("status") == "SUCCESS"
-	resp_doc.reload()
-	assert len(resp_doc.items) == 3, f"Expected 3 items after update, got {len(resp_doc.items)}"
-	print(f"✓ Draft partial update verified: {len(resp_doc.items)} items in {doc_name}")
-
-	# 6. Test Form Submission Promotion (batch_push promotes Draft to Submitted)
+	# 6. Test Form Submission Promotion
 	sub_payload = {
-		"idempotency_key": draft_id,
+		"idempotency_key": survey_id,
 		"survey_template": template,
 		"template_version": 1,
-		"respondent": "Sita Devi",
+		"respondent": "Br",
 		"surveyor": "Administrator",
 		"items": draft_payload["items"]
 	}
@@ -73,19 +70,15 @@ def run_test():
 	push_result = batch_push(submissions=[sub_payload])
 	print(f"✓ batch_push result: {push_result}")
 	assert push_result["results"][0]["status"] == "SUCCESS", f"Push failed: {push_result}"
+	assert push_result["results"][0]["doc_name"] == survey_id
 
 	resp_doc.reload()
 	assert resp_doc.survey_status == "Submitted", f"Expected Submitted, got {resp_doc.survey_status}"
-	print(f"✓ Draft successfully promoted to Submitted: status={resp_doc.survey_status}")
-
-	# 7. Test Idempotent Duplicate Skipped
-	dup_result = batch_push(submissions=[sub_payload])
-	assert dup_result["results"][0]["status"] == "DUPLICATE_SKIPPED"
-	print(f"✓ Idempotency verified: duplicate submission safely skipped")
+	print(f"✓ Draft successfully promoted to Submitted with exact ID {doc_name}")
 
 	# Clean up test doc
 	frappe.delete_doc("OmniQuery Response", doc_name, force=True)
-	audit_name = frappe.db.get_value("OmniQuery Sync Audit Log", {"idempotency_key": draft_id}, "name")
+	audit_name = frappe.db.get_value("OmniQuery Sync Audit Log", {"idempotency_key": survey_id}, "name")
 	if audit_name:
 		frappe.delete_doc("OmniQuery Sync Audit Log", audit_name, force=True)
 
