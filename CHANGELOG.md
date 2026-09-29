@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2026-09-29
 
 ### Added
+* **📦 Rajivika Survey Fixtures & Benchmark Suite**:
+  * Exported native Frappe fixtures (`1_omniservey_project.json`, `2_omniservey_template.json`) for the Rajivika SHG Women Entrepreneurs Study (9 sections, 101 questions, compiled SHA-256 schema).
+  * Automated fixture synchronization on app install and migration (`after_install`, `after_migrate`) for seamless Frappe Cloud deployment.
+  * Dedicated benchmark test suite (`test_rajivika_benchmark.py`) covering fixture integrity, section hierarchies, sub-50ms schema compilation, API responsiveness, and idempotent sync.
 * **🛡️ Zero-Data-Loss Offline PWA**:
   * Persistent IndexedDB Write-Ahead Logging (WAL) powered by Dexie.js (`OmniQueryDB`).
   * Dedicated service worker (`sw.js`) pre-caching static assets for complete offline capability at `/omniquery`.

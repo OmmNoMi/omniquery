@@ -88,6 +88,23 @@ add_to_apps_screen = [
 after_install = "omniquery.install.after_install"
 after_migrate = "omniquery.install.after_migrate"
 
+# Fixtures
+# --------
+fixture_auto_order = True
+fixtures = [
+	{
+		"doctype": "OmniServey Project",
+		"filters": [["name", "in", ["PROJ-SHG Rajasthan Women Entrepreneurs Study"]]],
+	},
+	{
+		"doctype": "OmniServey Template",
+		"filters": [
+			["name", "in", ["TMPL-Study on Performance of SHG-led Women Entrepreneurs in Rajasthan-1"]]
+		],
+	},
+]
+
+
 # Uninstallation
 # ------------
 

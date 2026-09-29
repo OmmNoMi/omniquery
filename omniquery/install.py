@@ -3,10 +3,21 @@ import frappe
 
 def after_migrate():
 	ensure_desktop_icon()
+	sync_app_fixtures()
 
 
 def after_install():
 	ensure_desktop_icon()
+	sync_app_fixtures()
+
+
+def sync_app_fixtures():
+	from frappe.utils.fixtures import sync_fixtures
+
+	try:
+		sync_fixtures("omniquery")
+	except Exception as e:
+		frappe.log_error("OmniQuery Fixture Sync Error", str(e))
 
 
 def get_icon_payload():
