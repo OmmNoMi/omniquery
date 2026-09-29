@@ -50,7 +50,7 @@
       </div>
 
       <!-- Top-Aligned Question Area: Mobile Keyboard-Friendly (no jumping/squishing) -->
-      <div class="max-w-2xl w-full mx-auto flex-1 pt-3 pb-3 overflow-y-auto">
+      <div ref="scrollAreaRef" class="max-w-2xl w-full mx-auto flex-1 pt-3 pb-3 overflow-y-auto">
         <QuestionCard
           ref="questionCardRef"
           :key="currentQuestion?.question_code || currentIndex"
@@ -227,6 +227,7 @@ const { __ } = useTranslation();
 const isModeMenuOpen = ref(false);
 const modeMenuRef = ref(null);
 const questionCardRef = ref(null);
+const scrollAreaRef = ref(null);
 
 function focusCurrentQuestion() {
   if (!props.isOpen) return;
@@ -296,6 +297,9 @@ function onClose() {
 watch(
   () => props.currentIndex,
   () => {
+    if (scrollAreaRef.value) {
+      scrollAreaRef.value.scrollTop = 0;
+    }
     focusCurrentQuestion();
   }
 );

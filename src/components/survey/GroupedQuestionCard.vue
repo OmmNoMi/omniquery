@@ -70,10 +70,10 @@
 
         <!-- Sub-Question Input Control -->
         <div class="shrink-0 w-full sm:w-auto">
-          <!-- Choice Radio/Percent Pills -->
+          <!-- Choice Radio/Percent Pills (Clean wrap, ZERO horizontal scroll) -->
           <div
             v-if="isChoiceQuestion(q)"
-            class="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5"
+            class="flex flex-wrap items-center gap-1.5 py-1"
           >
             <button
               v-for="opt in getQuestionOptions(q)"
@@ -81,10 +81,10 @@
               type="button"
               @click="onUpdateValue(q.question_code, opt.value)"
               :class="[
-                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition shrink-0 border',
+                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95',
                 responses[q.question_code] === opt.value
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                  : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100'
+                  : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600'
               ]"
             >
               {{ opt.label }}

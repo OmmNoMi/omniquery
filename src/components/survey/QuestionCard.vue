@@ -117,6 +117,7 @@
                 v-model="gridSearchQuery"
                 type="text"
                 :placeholder="__('Search options...')"
+                @keydown.stop
                 @keydown.enter.prevent="onSearchInputEnter"
                 @keydown.down.prevent="focusFirstOption"
                 class="w-full text-xs sm:text-sm pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-[#4285F4]/20 focus:border-[#4285F4] transition shadow-2xs"
@@ -170,28 +171,28 @@
               <span
                 v-if="isMultiSelect"
                 :class="[
-                  'w-6 h-6 rounded-[4px] border-2 flex items-center justify-center text-xs font-mono font-bold transition shrink-0',
+                  'w-6 h-6 rounded-[4px] border-2 flex items-center justify-center text-[11px] font-mono font-bold transition shrink-0',
                   isOptionSelected(option.value)
                     ? 'bg-blue-600 border-blue-600 text-white'
                     : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-blue-400 group-hover:text-blue-600'
                 ]"
               >
                 <span v-if="isOptionSelected(option.value)">✓</span>
-                <span v-else-if="index < 9">{{ index + 1 }}</span>
+                <span v-else>{{ index + 1 }}</span>
               </span>
 
               <!-- Single-select: Circle with hint/dot -->
               <span
                 v-else
                 :class="[
-                  'w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-mono font-bold transition shrink-0',
+                  'w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] font-mono font-bold transition shrink-0',
                   isOptionSelected(option.value)
                     ? 'border-white bg-white/20 text-white'
                     : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-blue-400 group-hover:text-blue-600'
                 ]"
               >
-                <span v-if="index < 9">{{ index + 1 }}</span>
-                <span v-else-if="isOptionSelected(option.value)" class="w-2 h-2 rounded-full bg-white"></span>
+                <span v-if="isOptionSelected(option.value)" class="w-2 h-2 rounded-full bg-white"></span>
+                <span v-else>{{ index + 1 }}</span>
               </span>
 
               <!-- Option Text & Description: Full Width, No Crowding -->
@@ -604,18 +605,8 @@ let touchTimer = null;
 let touchStartX = 0;
 let touchStartY = 0;
 
-function scrollCardIfObscured() {
-  if (!cardRef.value || typeof window === "undefined") return;
-  const rect = cardRef.value.getBoundingClientRect();
-  const bottomBarHeight = 85;
-  const headerHeight = 60;
-  if (rect.top < headerHeight + 5 || rect.bottom > window.innerHeight - bottomBarHeight) {
-    cardRef.value.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-}
-
 function onCardClick() {
-  scrollCardIfObscured();
+  // Intentional no-op: preserve user scroll position when tapping anywhere inside card
 }
 
 function onFocusIn(e) {
@@ -624,7 +615,6 @@ function onFocusIn(e) {
   if (tag === "input" || tag === "textarea" || e?.target?.isContentEditable) {
     isInputFocused.value = true;
   }
-  scrollCardIfObscured();
 }
 
 function onFocusOut(e) {
@@ -681,7 +671,9 @@ function openConfigModal() {
 }
 
 function onCardKeydown(e) {
-  if (e.key === "c" || e.key === "C" || (e.key === "Enter" && document.activeElement === cardRef.value)) {
+  const tag = (e.target?.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea") return;
+  if (document.activeElement === cardRef.value && (e.key === "c" || e.key === "C")) {
     e.preventDefault();
     openConfigModal();
   }
@@ -969,10 +961,10 @@ function onOptionEnter(e) {
 
 function focusFirstOption() {
   if (optionButtonRefs.value[0]) {
-    optionButtonRefs.value[0].focus();
+    optionButtonRefs.value[0].focus({ preventScroll: true });
   } else if (cardRef.value) {
     const btn = cardRef.value.querySelector("button[role=radio], button[role=checkbox]");
-    if (btn) btn.focus();
+    if (btn) btn.focus({ preventScroll: true });
   }
 }
 
@@ -1014,7 +1006,7 @@ function handleOptionArrowNav(e, curIdx) {
     targetBtn = allBtns[nextIdx];
   }
   if (targetBtn) {
-    targetBtn.focus();
+    targetBtn.focus({ preventScroll: true });
     if (!isMultiSelect.value) {
       emit("update:modelValue", displayedGridOptions.value[nextIdx].value);
     }
@@ -1107,39 +1099,39 @@ function focusPrimaryInput() {
     // 1. Standard text / number / date input or textarea (exclude quick search inputs)
     const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]):not([data-search-input]), textarea:not([disabled])");
     if (input) {
-      input.focus();
+      input.focus({ preventScroll: true });
       return;
     }
     // 2. Combobox trigger button: [role="combobox"] (Multi-select or single-select combobox dropdown)
     const comboboxBtn = cardRef.value.querySelector("button[role=combobox]:not([disabled])");
     if (comboboxBtn) {
-      comboboxBtn.focus();
+      comboboxBtn.focus({ preventScroll: true });
       return;
     }
     // 3. Option buttons grid: focus selected option button or first option button
     const checkedOptionBtn = cardRef.value.querySelector("button[role=radio][aria-checked=true], button[role=checkbox][aria-checked=true]");
     if (checkedOptionBtn) {
-      checkedOptionBtn.focus();
+      checkedOptionBtn.focus({ preventScroll: true });
       return;
     }
     const firstOptionBtn = cardRef.value.querySelector("button[role=radio], button[role=checkbox]");
     if (firstOptionBtn) {
-      firstOptionBtn.focus();
+      firstOptionBtn.focus({ preventScroll: true });
       return;
     }
     // 4. Binary switch control
     const switchBtn = cardRef.value.querySelector("button[role=switch]");
     if (switchBtn) {
-      switchBtn.focus();
+      switchBtn.focus({ preventScroll: true });
       return;
     }
     // 5. Any interactive button inside control area
     const anyBtn = cardRef.value.querySelector("button:not([disabled])");
     if (anyBtn) {
-      anyBtn.focus();
+      anyBtn.focus({ preventScroll: true });
       return;
     }
-    cardRef.value.focus();
+    cardRef.value.focus({ preventScroll: true });
   });
 }
 
