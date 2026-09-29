@@ -1,248 +1,159 @@
 # <span style="font-family:'Roboto',sans-serif;font-weight:900;"><span style="color:#4285f4;">Omm</span><span style="color:#34a853;">No</span><span style="color:#ea4335;">M</span><span style="color:#fbbc05;">i</span></span> OmniQuery — Product & Architecture Roadmap
 
-> **Platform Mission**: End-to-End Enterprise Survey Design, Multilingual Field Collection, Zero-Loss Offline Sync, and Downstream Business Intelligence Engine. Built natively on Frappe v16 and Frappe UI standards, completely aligned with the OmmNoMi design philosophy (like OmniTrack).
+> **Platform Mission**: End-to-End Enterprise Survey Design, Multilingual Field Collection, Zero-Loss Offline Sync, Submittable Versioned Waves, and Downstream Business Intelligence Engine. Built natively on Frappe v16 and Frappe UI standards, completely aligned with the OmmNoMi design philosophy.
 
 ---
 
 ## 🏛️ Executive Identity & Brand Alignment
 
 ### 1. Correct Nomenclature & Brand Wordmark
-- **Name Correction**: Migration from legacy `OmniServey` to **`OmniQuery`** (URL: `/omniquery`).
+- **Name**: **`OmniQuery`** (URL: `/omniquery` for PWA, `/desk/` for administrative views).
 - **Brand Standards**: Follows strict OmmNoMi brand guidelines (`OmmNoMi Automation LLP`, Vibrant Palette: `#4285F4`, `#34A853`, `#EA4335`, `#FBBC05`, `#673AB7`).
-- **Frappe Native UI Invariants**: Follows the OmniTrack architectural paradigm—utilizing pure Frappe native design tokens, standard Frappe CardView layouts, zero conflicting CSS hacks, and clean accessible component contracts.
+- **Frappe Native UI Invariants**: Pure Frappe native design tokens, standard Frappe CardView layouts, zero conflicting CSS hacks, clean accessible component contracts, and `/desk/` navigation on Frappe v16.
 
 ---
 
-## ♿ Accessibility & Rapid Field Entry (WCAG 2.2 AAA Focused)
+## 🌊 Submittable Template Waves & Version Immutability (`is_submittable: 1`)
 
-### [Implemented] Dynamic Table / Asset Row Focus Invariant
-- **Problem**: In repeating grid structures (Equipment, Assets, Seasonal Turnovers), pressing `+ Add Item / Asset` created a DOM element but left keyboard/screen-reader focus on the button. The surveyor had to manually tab or reach across the screen to find the newly inserted row.
-- **Solution**:
-  - `focusNewGridRow(code)` programmatically shifts DOM focus to the first actionable control (`input`, `select`) of the newly appended row inside `Vue.nextTick()`.
-  - WAI-ARIA live region immediately announces: *"New item row added. Focus shifted to first input."*
+### 1. The Immutability Guarantee
+- Published survey templates have `"is_submittable": 1` and lock permanently upon submission (`docstatus = 1`).
+- Eliminates mid-campaign schema drift where surveyors in the field submit responses against modified question definitions.
 
-### [Implemented] Pre-Populated Grid Governance (Zero-Omission Design)
-- **Problem**: Fixed survey matrices (e.g. Seasonal Turnovers with Peak, Average, and Lean seasons; Activity Involvements across 6 standard activities) rendered as blank item-adder grids, risking surveyor omission.
-- **Solution**:
-  - Strict configuration-driven tables (`GRID_CONFIGS`) automatically pre-populate mandatory rows:
-    - **☀️ Peak Season** (Duration: 3 months, Monthly Sales ₹, Monthly Net Profit ₹)
-    - **⛅ Average / Normal Season** (Duration: 6 months, Monthly Sales ₹, Monthly Net Profit ₹)
-    - **🌧️ Lean Season** (Duration: 3 months, Monthly Sales ₹, Monthly Net Profit ₹)
-    - **Activity Involvements**: 6 standard enterprise activities pre-populated.
-    - **Capital Sources & Loan Usages**: 14 standard institutional & non-institutional sources pre-populated.
-    - **Business Metric Changes**: 4 core financial metrics pre-populated.
-
-### [Implemented] Numeric Hotkey Selection for Rapid Enumeration (1–99)
-- Rapid single and dual-digit keyboard selection for single-choice and multi-select options.
-- 450ms multi-digit accumulator with high-contrast hotkey badges and input focus shielding.
-
-### [Implemented] Adaptive Long-List Search & Responsive Option Containment (>7 Options)
-- Automatic search filter box whenever a question has >7 options or is displayed on compact mobile viewports.
-- Real-time substring matching, scroll containment (`max-h-[380px]`), and dynamic hotkey re-indexing `[1]`, `[2]`, `[3]`.
-
-### [Implemented] Semantic Option Grouping & Group-Level Multi-Select
-- Horizontal swipeable group chips for heterogeneous lists (e.g., Farm vs Wages vs Enterprise income).
-- Live selection counters per category chip and batch group selection/clear controls.
+### 2. Native Wave Versioning (`amended_from`)
+- Any update to a published survey creates an amended version wave (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from`.
+- **Zero Offline Rejection**: Field surveyors working offline in remote villages without connectivity continue collecting responses against Wave 1. When returning online, both Wave 1 and Wave 2 responses are ingested cleanly without rejection.
 
 ---
 
-## 🛠️ Desk Survey Designer & Admin Governance (Frappe Native)
+## 🌍 4-Tier Scope Hierarchy & Question Masters
 
-### 1. Visual Form & Survey Designer in Frappe Desk (`/app/omniquery-designer`)
-- **Tri-Pane Layout Architecture**:
-  1. **Left Component Palette**: Draggable / clickable question widgets organized by category (Choice, Financial, Matrix, Sensors, Multimedia).
-  2. **Center Canvas**: Interactive survey flow with live preview, drag-and-drop question reordering, section cards, and page break markers.
-  3. **Right Properties Inspector**: Deep configuration panel for the currently selected question or section.
-- **Comprehensive Control Palette**:
-  - `Single Select`: Radio cards, pill chips, or dropdown with search threshold.
-  - `Multi Select`: Checkbox lists with category groupings and batch toggles.
-  - `Numeric / Currency`: Formatted inputs with Indian currency masking (₹), min/max constraints, and auto-computed step increments.
-  - `Range Slider`: Visual sliders with dual endpoints and stepped tick marks.
-  - `Matrix / Grid Table`: Repeating or fixed tabular rows with row-level calculations (e.g. Sales, Costs, Net Profit).
-  - `Geolocation & Geo-fence`: High-precision GPS capture with accuracy circle indicators and geofence boundary warnings.
-  - `Watermarked Camera`: Image upload control with client-side canvas GPS/timestamp stamping and private file upload.
-  - `Digital Signature`: HTML5 canvas signature pad with clear, undo, and stroke smoothening.
-  - `Barcode / QR Scanner`: Camera-based rapid barcode and QR code decoding.
-  - `Computed Formula`: Read-only expression fields evaluated reactively (e.g., `profit = sales - expenses`).
-- **Interactive Logic & Skip Builder**:
-  - Visual conditional rule builder generating standard Frappe `depends_on` and `mandatory_depends_on` expressions without custom javascript injection.
-  - Support for multi-clause conditions (`AND` / `OR`), numerical comparisons (`>`, `<`, `==`), and list memberships (`in`, `not in`).
-- **Pre-Populated Grid Configurator**:
-  - In-designer table row preset manager (e.g. defining default rows for Peak, Average, and Lean seasons; Activity Involvements; Loan Usages).
-  - Column aggregation settings (Auto-Sum, Average, Weighted Total) rendering directly in table footers.
+Questions and Option Sets are decoupled from monolithic surveys and governed by a 4-tier hierarchy:
 
-### 2. Centralized Multilingual Translation Studio
-- **Frappe Translation Console**: Side-by-side translation grid embedded directly within the survey designer.
-- **Dialect Coverage**: Native support for 11 scheduled Indian languages (Hindi, Gujarati, Marathi, Punjabi, Bengali, Tamil, Telugu, Kannada, Malayalam, Urdu, and English).
-- **Auto-Sync to Frappe Catalogs**: Updates automatically compile into `omniquery/locale/*.csv` and sync to the `Translation` DocType, eliminating manual CSV editing.
-- **Missing Translation Highlights**: Visual warning badges on questions lacking translations for active project languages.
+1. **`Platform`**: Universal global questions (Full Name, Phone, Age, Gender, District, GPS, Yes/No, Likert 5-point). Pre-translated and available to all tenants.
+2. **`Workspace`**: Organization-level standards shared across all projects within a tenant workspace.
+3. **`Project`**: Scoped strictly to one project within the workspace.
+4. **`Survey`**: Private, bespoke questions created for a specific survey wave.
+
+* **Platform Promotion**: When system administrators notice common questions across workspaces, they can promote them to `Platform` scope.
+* **Active Status Filtering**: Every Question and Option Set carries a `status` (`Active`, `Inactive`, `Draft`). Inactive records are suppressed from survey builders.
+* **100% Frappe Native Translation**: Questions, option sets, and instructions use Frappe's native `locale/*.csv` and `Translation` DocType (`frappe._()`).
+* **Per-Survey Mandatory Flexibility**: `is_mandatory` is defined per survey wave in the linking table (`OmniQuery Template Question Reference`), not hardcoded on Master question.
 
 ---
 
-## 🎨 OmmNoMi Standard Desk UI Controls & Design System
+## 🎛️ Pure Configuration Field Type Taxonomy (Zero CSS Hacks)
 
-To ensure seamless brand cohesion and accessibility, all Desk views in OmniQuery strictly comply with **OmmNoMi Desk Design Standards**:
+All UI elements are driven deterministically by schema metadata:
 
-### 1. OmmNoMi Brand Tokens & Palette
-- **Ethical Blue**: `#4285F4` (Primary actions, active tab borders, information badges).
-- **Ecological Green**: `#34A853` (Success indicators, synced status pills, positive financial metrics).
-- **Entrepreneurial Red**: `#EA4335` (Validation errors, flagged anomalies, delete actions).
-- **Enthusiasm Yellow**: `#FBBC05` (Pending sync, draft items, warning notices).
-- **Empowerment Purple**: `#673AB7` (Analytics cards, administrative tools, supervisor audit workflows).
-- **Neutral Dark / Light**: Standard high-contrast slate surfaces (`#0f172a` dark, `#f8fafc` light) with zero uncontrolled purple bleed.
-
-### 2. Zero Native Select Invariant (`f-combobox`)
-- **Strict Prohibition**: Native HTML `<select>` elements are strictly forbidden across all OmniQuery Desk forms and dialogs.
-- **Accessible Searchable Combobox (`f-combobox`)**:
-  - Live substring filtering with ARIA `combobox`, `listbox`, and `option` roles.
-  - Programmatic focus shifting and deterministic keyboard navigation:
-    - <kbd>↓</kbd> / <kbd>↑</kbd>: Move highlight between options.
-    - <kbd>Enter</kbd>: Select highlighted option and close listbox.
-    - <kbd>Escape</kbd>: Dismiss dropdown and restore focus to combobox trigger.
-  - Overlay keyboard shielding: Arrow keys inside combobox overlays must call `e.stopPropagation()` to prevent scrolling the parent page container.
-
-### 3. WCAG 2.2 AAA Accessibility Standards
-- **Focus Rings**: High-contrast outline (`box-shadow: 0 0 0 2px var(--text-color) !important;` or 3px left border on table rows) ensuring complete keyboard visibility.
-- **Screen Reader Announcements**: Dynamic mutations (adding rows, validation failures, sync status changes) announce immediately via `#omniquery-live-region` (`aria-live="polite"`).
-- **Accessible Text**: No visual icon buttons without accompanied `<span class="sr-only">` accessible labels.
-
-### 4. Universal Desk Keyboard Shortcuts
-- <kbd>`</kbd> (Bare Backtick): Focus active sidebar item on any Desk route.
-- <kbd>/</kbd>: Instant in-page screen filter (jump to first search or field control).
-- <kbd>Ctrl + K</kbd> / <kbd>⌘ + K</kbd>: Native Frappe Awesomebar global search.
-- <kbd>Shift + `</kbd>: Toggle Workspace Panel and User dropdown.
+| Category | UI Variants & Capabilities | Schema Controls |
+| :--- | :--- | :--- |
+| **Choice (Single)** | Radio, Buttons, Switch (ON/OFF), Chips, Rating (Stars, Faces, Hearts, Thumbs with configurable 5/10 max and 1.0 or 0.5 step precision), Searchable Combobox (`f-combobox`) | `control_variant`, `options_set`, `rating_icon`, `rating_max`, `rating_step`, `default_value` |
+| **Choice (Multi)** | Checkbox list, Multi-select chips, Grouped / Hierarchical category tags | `min_selections`, `max_selections`, `options_set` |
+| **Numerical** | Integer, Decimal, Currency (with prefix ₹/$/€), Signed (+/-), Percentage, Range Slider with custom steps | `decimal_precision` (default `0`), `min_value`, `max_value`, `step`, `currency_symbol`, `allow_negative` |
+| **Temporal** | Date, Time, DateTime, **Month-Year** (e.g. "Jan 2024"), **Year Only** (e.g. "2021"), **Day Only** | `temporal_granularity` (Date, Month-Year, Year, Day), `anchor_date_rule` (`First Day` e.g. `2024-01-01` or `Last Day` e.g. `2024-01-31` for seamless time-series chart plotting) |
+| **Duration** | Hours:Minutes, Elapsed stopwatch timer, Days | `format`, `auto_stop` |
+| **Geographic** | Latitude, Longitude, Pinpoint Map (Lat/Long + Accuracy), Polygon boundary capture | `precision`, `require_gps_accuracy_meters` |
+| **Text Input** | Single-line Text, Small Text, Multi-line Textarea, Markdown / Rich text | `max_length`, `regex_pattern`, `placeholder` |
+| **SubTable / Grid** | Tabular dynamic grid with child rows & columns, with support for nested sub-columns (e.g. Peak/Lean seasonal turnover breakdown) | `columns_schema_json`, `min_rows`, `max_rows` |
+| **Media & Audio Interview** | Camera/Gallery Photo (`.webp`), Compressed Video (`.mp4`/`.webm`), and **Continuous Background Survey Audio Recording** (Floating header bar: `[🎙️ Record | ⏸ Pause / ▶ Resume | ⏹ Stop]` with automatic finalization & stop on survey submission) | `media_type` (Audio, Video, Photo), `media_source` (Live Camera/Mic or Gallery), `compression_quality`, `enable_interview_audio` |
 
 ---
 
-## 🕵️ Desk Response Auditor & Review Workstation (`/app/omniquery-workstation`)
+## 🎙️ Ambient Audio Interview Recording & Stream Finalization
 
-A dedicated high-density review interface for Project Managers, Field Supervisors, and Data Auditors:
-
-### 1. CardView Queue & Triage Lane
-- **Status Columns**: `📥 Unaudited Syncs` $\rightarrow$ `⚠️ Flagged Outliers` $\rightarrow$ `✅ Approved Submissions` $\rightarrow$ `🔄 Re-Survey Requested`.
-- **Card Telemetry**: Each card displays Surveyor Name, Village/City, Timestamp, GPS Accuracy ($\pm$ meters), and Outlier Score.
-
-### 2. Dual-Pane Inspection Console
-- **Left Pane (Geospatial & Device Telemetry)**:
-  - Satellite map pin (OpenStreetMap / Leaflet) showing coordinates of interview capture.
-  - Geofence verification badge (Inside vs Outside target cluster polygon).
-  - Time-drift audit (comparing device local clock against server UTC timestamp).
-  - High-resolution watermarked photo evidence with zoom modal.
-- **Right Pane (Dynamic Survey View)**:
-  - Full read-only rendered survey form matching the exact structure completed in the field.
-  - Automated anomaly callouts (e.g. Monthly Net Profit > Monthly Sales, Zero Family Members).
-  - Auditor inline notes and supervisor stamp.
-
-### 3. One-Click Batch Actions
-- Batch `Approve & Lock` (transitions responses to immutable submitted state).
-- Batch `Export GeoJSON` for GIS / QGIS spatial analysis.
-- Batch `Export SPSS / CSV` for academic and statistical reporting.
+- **Floating Audio Header Control**:
+  - `[🎙️ Record Interview | ⏸ Pause / ▶ Resume | ⏹ Stop]`.
+  - Surveyors can conduct interviews while the device records ambient audio in low-bitrate Opus chunks (`.opus`/`.webm`).
+  - Recorded chunks stream directly into IndexedDB (`OmniQueryDB.audio_blobs`) without interrupting response synchronization.
+  - Automatically finalizes and locks the audio recording upon survey submission.
 
 ---
 
-## 📊 Frappe Insights & Downstream BI Integration
+## 💾 Universal Disaster Recovery & Out-of-Band Sharing
 
-OmniQuery responses plug directly into Frappe v16's reporting and analytics stack without bespoke middleware:
+To guarantee **zero data loss under any technical failure** (server downtime, corrupted cache, device hardware issues):
 
-### 1. Native Data Source Mapping
-- `OmniQuery Response` and normalized item tables automatically registered as verified Data Sources in Frappe Insights (`frappe_insights`).
-- Dynamic flattening: Nested question/value pairs are exposed as relational tabular views for instant drag-and-drop charting.
-
-### 2. Pre-Built Operational Dashboards
-- **Field Enumeration Progress**: Daily submission counts per surveyor, active hours, and sync lag.
-- **Socioeconomic KPI Cross-Tabs**: Average enterprise revenue by sector, capital source dependency distributions, and working capital deficit heatmaps.
-- **Geographic Coverage Heatmap**: GIS point clusters indicating enumeration density across districts, blocks, and gram panchayats.
-
----
-
-## 📐 Technical DocType Blueprint & Data Contracts
-
-All data entities are modeled strictly as native Frappe DocTypes adhering to zero raw SQL standards:
-
-```
-┌───────────────────────────┐         1:N         ┌───────────────────────────┐
-│     OmniQuery Project     │────────────────────▶│    OmniQuery Template     │
-└───────────────────────────┘                     └─────────────┬─────────────┘
-                                                                │ 1:N
-                                                  ┌─────────────┴─────────────┐
-                                                  │                           │
-                                                  ▼                           ▼
-                                      ┌───────────────────────┐   ┌───────────────────────┐
-                                      │   OmniQuery Section   │   │  OmniQuery Question   │
-                                      │     (Child Table)     │   │     (Child Table)     │
-                                      └───────────────────────┘   └───────────┬───────────┘
-                                                                              │ 1:N
-                                                                              ▼
-                                                                  ┌───────────────────────┐
-                                                                  │   OmniQuery Option    │
-                                                                  │     (Child Table)     │
-                                                                  └───────────────────────┘
-```
-
-### 1. Core DocTypes
-1. **`OmniQuery Project`**: Parent grouping for survey campaigns, target beneficiary counts, start/end dates, and assigned managers.
-2. **`OmniQuery Template`**: Versioned questionnaire master, status (`Draft`, `Published`, `Archived`), schema hash, default language.
-3. **`OmniQuery Section`** (Child Table): `section_code`, `title`, `description`, `sort_order`, `page_break`.
-4. **`OmniQuery Question`** (Child Table): `question_code`, `label`, `field_type`, `reqd`, `depends_on`, `mandatory_depends_on`, `min_value`, `max_value`, `is_grid`, `grid_config_json`.
-5. **`OmniQuery Option`** (Child Table): `option_code`, `label`, `group_category`, `sort_order`.
-6. **`OmniQuery Surveyor`**: Field agent record, linked `User`, mobile phone hash, assigned projects, status (`Active`, `Suspended`).
-7. **`OmniQuery Response`**: Primary submission header, `survey_template`, `surveyor`, `idempotency_key`, `gps_latitude`, `gps_longitude`, `gps_accuracy`, `captured_at_local`, `status` (`Draft`, `Submitted`, `Audited`, `Rejected`).
-8. **`OmniQuery Response Item`** (Child Table): `question_code`, `value_data`, `value_numeric`, `value_json`, `attachment_file`.
-9. **`OmniQuery Sync Audit Log`**: Dedicated deduplication record preventing replay attacks and tracking synchronization latency.
-
-### 2. Role-Based Access Control (RBAC) Matrix
-- **`OmniQuery Administrator`**: Full schema creation, project setup, user assignments, template publishing.
-- **`OmniQuery Manager`**: Project-level response review, auditor assignment, analytics dashboard access.
-- **`OmniQuery Auditor`**: Response inspection, validation override, audit approval / re-survey request.
-- **`OmniQuery Surveyor`**: Field collection only via PWA, restricted strictly to active assigned projects via Frappe User Permissions.
+1. **PWA Local Recovery Drawer**: Accessible via the top status pill at any time, even when completely offline.
+2. **Multi-Format Export Options**:
+   - **`JSON Export`**: Complete, cryptographic raw dump of IndexedDB (WAL, draft state, schema hashes).
+   - **`XLSX Export`**: Formatted tabular workbook containing all responses, sections, and answered columns ready for Excel.
+   - **`Comprehensive Forensic ZIP Bundle`**:
+     - `survey_database_dump.json`: Raw IndexedDB WAL state.
+     - `responses_spreadsheet.xlsx`: Tabular survey data.
+     - `media/`: All captured photos (`.webp`), compressed videos (`.webm`/`.mp4`), and interview audio blobs (`.opus`).
+     - `diagnostics/console_logs.txt`: Complete in-memory circular ring buffer of client console logs & errors.
+     - `diagnostics/device_telemetry.json`: OS, browser engine, screen DPI, battery level, online/offline transition history, and storage quota utilization.
+3. **Out-of-Band Sharing**: Web Share API / File Saver enabling surveyors to send the ZIP directly to supervisors via WhatsApp, Telegram, Google Drive, or Bluetooth.
 
 ---
 
-### 3. Idempotent Offline Sync & Anti-Loss Invariants
-- IndexedDB Write-Ahead Log (WAL) backed by Dexie.js.
-- CSRF validation with automatic session binding (`X-Frappe-CSRF-Token`).
-- Honest status reporting: toast messages must never claim "Sync complete" if any transaction in the batch failed or remains in `PENDING_SYNC`.
+## 📡 Continuous In-Flight Live Sync & Instant Error Beacon
+
+1. **In-Flight Live Sync (`sync_draft`)**:
+   - Keystrokes save instantly to local WAL (0ms).
+   - When online, debounced background worker posts partial state to `sync_draft`.
+   - Server updates `OmniQuery Response` as `Draft` in MariaDB without failing on mandatory fields, giving central supervisors real-time visibility at `/desk/omniquery-workstation`.
+2. **Instant Error Beacon (`log_field_error`)**:
+   - PWA catches unhandled promise rejections, script evaluation errors, or input parsing issues instantaneously.
+   - Dispatches an asynchronous non-blocking error beacon (`navigator.sendBeacon('/api/method/omniquery.api.telemetry.log_field_error')`).
+   - Stored in `OmniQuery Field Error Log` for real-time Project Admin triage.
 
 ---
 
-## 🚀 Phase-Wise Stability & Frappe Native Execution Plan
+## 🔐 SaaS Role Governance & Raven-Style In-App Contextual Membership
 
-To eliminate single-point failures, streamline developer onboarding, and guarantee enterprise stability, the roadmap is executed across 5 focused phases:
+OmniQuery adopts a clean **Raven-style in-app membership architecture**: instead of polluting Frappe's global role namespace with dozens of granular roles, OmniQuery defines **only 3 global Frappe Roles**, while granular project permissions are governed by built-in Workspace & Project membership tables:
 
-### Phase 1: Native Schema Normalization & Zero Raw SQL Enforcement
-- **Goal**: Align all backend models with standard Frappe DocType design.
-- **Deliverables**:
-  1. Audit every query in `api/` and `seed_shg_survey.py` to ensure 100% compliance with `frappe.get_doc`, `frappe.get_all`, `frappe.db.get_value`, and `frappe.qb`.
-  2. Implement native DocType child tables for question options and grid matrices (`OmniQuery Option`, `OmniQuery Grid Spec`).
-  3. Validate schema compilation strictly via `frappe.get_meta()`.
+### 1. Global Frappe Permissions (`DocPerm` &mdash; 3 Roles Only)
+- **`OmniQuery Admin`**: Platform super-admin; manages global settings, platform questions, fixtures, and tenant billing.
+- **`OmniQuery Manager`**: Standard Frappe Desk role encompassing all Desk-based stakeholders.
+- **`OmniQuery User`**: Mobile / Field role assigned to users who fill in survey forms in the PWA (`/omniquery`).
 
-### Phase 2: Native Multilingual Migration (`frappe.translate`)
-- **Goal**: De-bloat JavaScript bundle by migrating 4,000+ lines of inlined dictionaries to native Frappe translation catalogs.
-- **Deliverables**:
-  1. Export survey terminology into standard CSV files in `omniquery/locale/` (`hi.csv`, `gu.csv`, `mr.csv`, etc.).
-  2. Expose a light cached translation endpoint (`api.survey.get_translations?lang=...`) using Frappe's native `frappe.translate.get_full_dict()`.
-  3. PWA caches translations in IndexedDB (`dexie.translations`), fetching language packs on demand with instantaneous offline fallback.
+### 2. In-App Contextual Membership Model
+- **`OmniQuery Workspace Member`**:
+  - `user` (Link: `User`), `workspace_role` (`Workspace Admin`, `Workspace Manager`, `Workspace Member`).
+- **`OmniQuery Project Member`**:
+  - `user` (Link: `User`), `project_role`:
+    - **`Project Admin`**: Full technical control; authors questions, configures scripts, tunes validation formulas, and publishes submittable waves.
+    - **`Project Manager`**: Operations lead; inspects survey structures in **read-only mode** with **continuous commenting & feedback privileges** on questions and sections; manages quotas, surveyor allocations, and collection pacing.
+    - **`Project Analyst`**: Data researcher; read-only access to response data and telemetry for charts, Frappe Insights dashboards, and dataset exports (zero schema modification rights).
+    - **`Project Viewer`**: Client executive observer; clean UI watching overall project KPIs, completion stats, and formal milestone reports.
+    - **`Project User`**: Field enumerator collecting survey data in PWA.
 
-### Phase 3: Modular Client Architecture & PWA Stability
-- **Goal**: Refactor the 8,300-line monolithic `app.js` into decoupled, reusable ES composables.
-- **Deliverables**:
-  1. Break `app.js` into focused composables adhering to the $\le 10$ line function rule:
-     - `composables/useWAL.js`: IndexedDB queue management, idempotent sync, exponential backoff.
-     - `composables/useFormState.js`: Reactive answers, question skipping, validation rules.
-     - `composables/useGridRenderer.js`: Pre-populated grid matrices, auto-sum calculations.
-     - `composables/useSensors.js`: Geolocation bounding, canvas photo compression, EXIF watermarking.
-  2. Integrate standard asset compilation via Frappe's native `esbuild` / Vite pipeline, ensuring clean asset versioning and zero browser caching glitches.
+---
 
-### Phase 4: Native Document Lifecycle, File Security & Idempotency
-- **Goal**: Persist all survey responses through Frappe's native Document API with atomic transaction guarantees.
-- **Deliverables**:
-  1. Replace raw dictionary inserts with `frappe.new_doc("OmniQuery Response")` and standard controller hooks (`validate`, `on_submit`).
-  2. Store all captured photos through native `File` documents with private permissions (`/private/files/`).
-  3. Implement atomic MariaDB savepoints during batch synchronization to prevent partial sync corruptions.
+## 🚀 Phase-Wise Implementation Roadmap
 
-### Phase 5: Automated Testing & Continuous Verification Pipeline
-- **Goal**: Protect against regressions with automated characterization tests.
-- **Deliverables**:
-  1. Backend unit tests using `frappe.tests.utils.FrappeTestCase` with automated database rollback in `tearDown()`, strictly avoiding database pollution.
-  2. End-to-end headless PWA sync verification simulating offline network disconnections, localStorage recovery, and duplicate batch submissions.
-  3. Automated linter rules in `.pre-commit-config.yaml` preventing functions $> 10$ lines and banning `frappe.db.sql`.
+### Phase 1: Submittable Waves, Master Scoping & 3 Global Roles
+- [ ] Upgrade `OmniQuery Template` to `is_submittable: 1` with `amended_from` and `is_public_citizen_link`.
+- [ ] Refactor `OmniQuery Question` to master DocType with 4-tier `scope`, `status`, `field_category`, `control_variant`, and `behaviour_script`.
+- [ ] Create `OmniQuery Template Question Reference` child table with per-survey `is_mandatory`.
+- [ ] Create `OmniQuery Option Set` master DocType with 4-tier scope.
+- [ ] Implement `OmniQuery Workspace Member` and `OmniQuery Project Member` contextual tables.
+- [ ] Define 3 Global Frappe Roles (`OmniQuery Admin`, `OmniQuery Manager`, `OmniQuery User`) in `DocPerm` with native `has_permission` hooks.
+
+### Phase 2: In-Flight Live Sync, Audio Recording & Error Telemetry
+- [ ] Implement `sync_draft` endpoint in `omniquery.api.sync` (partial upserts, bypassing mandatory constraints).
+- [ ] Implement `log_field_error` telemetry beacon in `omniquery.api.telemetry` saving to `OmniQuery Field Error Log`.
+- [ ] Integrate continuous Opus audio interview recorder in PWA header with `[🎙️ Record | ⏸ Pause / ▶ Resume | ⏹ Stop]`.
+- [ ] Add session telemetry (`started_at`, `completed_at`, `active_filling_time_seconds`) and question pacing metrics.
+
+### Phase 3: Universal Disaster Recovery Drawer & Multi-Format Exports
+- [ ] Implement PWA local recovery drawer with instant JSON export of Dexie WAL.
+- [ ] Implement XLSX export using SheetJS.
+- [ ] Implement Comprehensive Forensic ZIP bundle using JSZip (raw WAL JSON + Excel + media blobs + console logs + device telemetry).
+- [ ] Support out-of-band sharing via Web Share API.
+
+### Phase 4: Desk Survey Designer (`/desk/omniquery-designer`) & Workstation
+- [ ] Visual tri-pane survey designer on `/desk/omniquery-designer` with drag-and-drop questions and logic builder.
+- [ ] High-density review console at `/desk/omniquery-workstation` with live draft monitoring and geospatial map inspection.
+- [ ] Native Frappe Insights tabular mapping for downstream business intelligence.
+
+### Phase 5: Automated Dual-Layer Testing & Verification
+- [ ] Server test suite (`test_template_waves.py`, `test_question_scope.py`, `test_mandatory_rules.py`, `test_in_flight_sync.py`, `test_permissions.py`).
+- [ ] Client test suite via Vitest (`npm test`) covering UI controls, accessibility, audio recorder state transitions, and ZIP generation.
+- [ ] Automated teardown assertions ensuring zero dev database pollution.
+
+---
+
+<small>© 2026 OmmNoMi Automation LLP · Mahunag · Karsog · Mandi, HP, India</small>

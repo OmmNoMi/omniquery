@@ -27,16 +27,27 @@ With an embedded Progressive Web App (PWA) running on Dexie.js (IndexedDB Write-
 
 ## 🚀 Key Features
 
-* **🛡️ Zero-Data-Loss Offline PWA**: Dual-tier storage with in-memory state and persistent IndexedDB Write-Ahead Log (WAL). Forms survive battery depletion, background app eviction, and accidental navigation.
-* **🔁 Client-Side Idempotency**: Every survey submission generates a cryptographically random UUIDv4 token with an atomic MariaDB savepoint (`sp_sync_<uuid>`), completely eliminating duplicate responses on spotty 2G/3G connections.
-* **♿ WCAG 2.2 AA Keyboard & Screen Reader Accessibility**:
-  * Single-tab-group range controls with WAI-ARIA roving tabindex (`role="radiogroup"`, `role="radio"`).
-  * Smooth keyboard navigation via <kbd>ArrowLeft</kbd>, <kbd>ArrowRight</kbd>, <kbd>Home</kbd>, and <kbd>End</kbd>.
-  * Live status announcements via non-interactive `#cv-live-region`.
-* **🌐 Dynamic Multilingual Engine**: Instant client-side switching between English, Hindi, and regional dialects with instant UI re-rendering and fallback mechanisms.
-* **📍 GIS Geo-fencing & Surveyor Telemetry**: Captures high-accuracy GPS coordinates, accuracy radii, device battery level, and timestamp signatures at submission time.
-* **⚙️ Declarative Schema Engine**: Dynamic rendering of over 25+ question formats including numeric sliders, rating pills, multi-select action grids, cascading parent-child lookups, date/time pickers, and signature pads.
-* **📊 Frappe Native ORM & Insights**: 100% Frappe native ORM queries without raw SQL, providing automatic role-based permission query conditions (RBAC) and clean Frappe Insights readiness.
+* **🌊 Submittable Template Waves (`is_submittable: 1`)**: Published templates become permanently immutable documents (`docstatus = 1`). Modifying a survey creates an amended version wave (`TMPL-SHG-1` &rarr; `TMPL-SHG-2`) guaranteeing **zero offline rejection** for field surveyors working in remote villages.
+* **🛡️ Zero-Data-Loss Offline PWA**: Dual-tier storage with in-memory reactive state and persistent IndexedDB Write-Ahead Log (WAL) powered by Dexie.js. Forms survive battery depletion, browser crashes, background app eviction, and accidental navigation.
+* **📡 Continuous In-Flight Live Sync (`sync_draft`)**: While working online, partial responses stream asynchronously to MariaDB as `Draft` records without mandatory field blocking, providing central supervisors live monitoring at `/desk/omniquery-workstation`.
+* **🚨 Instantaneous Client Error Reporting Beacon**: Any client-side evaluation error or stuck question fires an asynchronous beacon (`navigator.sendBeacon`) logging directly to `OmniQuery Field Error Log` for immediate Project Admin triage.
+* **🎙️ Ambient Audio Interview Recording**: Persistent floating header control (`[🎙️ Record | ⏸ Pause / ▶ Resume | ⏹ Stop]`) recording ambient interview audio into low-bitrate Opus chunks (`.opus`/`.webm`) with automatic finalization on survey submission.
+* **💾 Universal Disaster Recovery**: Built-in recovery drawer for offline field data rescue with one-click downloads of **JSON** (raw WAL dump), **XLSX** (tabular spreadsheet), and a **Comprehensive Forensic ZIP** (WAL JSON, XLSX, media blobs, client console logs, and device telemetry) for sharing via WhatsApp or Drive.
+* **🌍 4-Tier Scope Hierarchy & 100% Frappe Native Translations**:
+  * Unified governance across **`Platform`**, **`Workspace`**, **`Project`**, and **`Survey`** scopes.
+  * Common questions (Yes/No, Likert 5-point, Full Name, Phone, Age, District, GPS) can be promoted to `Platform` scope.
+  * 100% native Frappe Translation catalogs (`locale/*.csv`) and `Translation` DocType without inlined JavaScript dictionaries.
+  * Flexible per-survey mandatory configuration (`is_mandatory` is defined per survey wave).
+* **🎛️ Rich UI-Configurable Field Types (Pure Configuration, Zero CSS Hacks)**:
+  * **Choice (Single & Multi)**: Radio, Buttons, Switch (ON/OFF), Chips, Rating (Stars, Sentiment Faces, Hearts, Thumbs with configurable 5/10 max and 1.0/0.5 step precision), Searchable Combobox (`f-combobox`).
+  * **Numerical**: Integer, Decimal (default precision `0`), Currency (₹/$/€), Signed (+/-), Range Sliders.
+  * **Temporal**: Date, Time, DateTime, Month-Year (e.g. "Jan 2024"), Year Only, Day Only with anchor date rules (`First Day` vs `Last Day` for seamless time-series chart plotting).
+  * **Duration, Geographic (GPS/Polygon), Text Input, SubTables / Grids, and Watermarked Media**.
+* **🌐 Public Citizen Mode (`is_public_citizen_link`)**: Standalone direct survey route (`/survey/{slug}`) allowing one-time unauthenticated public submission without PWA surveyor dashboard clutter.
+* **⏱️ Session & Friction Telemetry**: Tracks active filling time vs idle pauses, and time-spent-per-question to help administrators identify friction and optimize survey pacing.
+* **🔐 Raven-Style In-App SaaS Governance (Only 3 Global Frappe Roles)**:
+  * **3 Global Frappe Roles**: `OmniQuery Admin` (platform super-admin), `OmniQuery Manager` (all Desk stakeholders), `OmniQuery User` (field surveyors filling forms in PWA).
+  * **Contextual In-App Memberships**: Dedicated Workspace and Project membership tables governing **`Project Admin`** (technical architect), **`Project Manager`** (operations lead with read-only survey structure and continuous commenting feedback), **`Project Analyst`** (data & insights), **`Project Viewer`** (client executive observer), and **`Project User`** (field surveyor).
 
 ---
 
@@ -44,35 +55,39 @@ With an embedded Progressive Web App (PWA) running on Dexie.js (IndexedDB Write-
 
 ```mermaid
 flowchart TD
-    subgraph Client ["Client Device (Browser / Offline PWA)"]
-        UI["Vue 3 + Tailwind PWA UI (/omniquery)"]
-        Form["Reactive Form Engine"]
+    subgraph Client ["Client Device (Browser / Offline PWA: /omniquery)"]
+        UI["Vue 3 + Tailwind PWA UI"]
+        Form["Reactive Form & Control Dispatcher"]
         WAL[("Dexie.js IndexedDB: OmniQueryDB\n(Write-Ahead Log)")]
-        SW["Service Worker (sw.js Cache)"]
-        
+        AudioRec["Opus Audio Recorder (MediaStream)"]
+        Beacon["Error Reporting Beacon (sendBeacon)"]
+        Recovery["Universal Recovery Drawer\n(JSON, XLSX, Forensic ZIP)"]
+
         UI <--> Form
-        Form -->|Every Keystroke / Tap| WAL
-        SW -.->|Offline Assets & Shell| UI
+        Form -->|Every Input / Keystroke (0ms)| WAL
+        AudioRec -->|Opus Blobs| WAL
+        UI -.->|Disaster Export| Recovery
     end
 
     subgraph Network ["Transport Layer"]
-        SyncPush["Batch Push Request\n(UUIDv4 Idempotency Key)"]
+        DraftSync["In-Flight sync_draft\n(Debounced 750ms, Partial)"]
+        FinalPush["Batch Push Request\n(UUIDv4 Idempotency Key)"]
+        ErrStream["Error Beacon Stream"]
     end
 
     subgraph Backend ["Frappe v16 Backend"]
-        Endpoint["omniquery.api.sync.batch_push"]
-        Dedup{"Idempotency Cache\nCheck (Audit Log)"}
-        Savepoint["MariaDB Savepoint\n(sp_sync_uuid)"]
-        ResponseDoc["OmniQuery Response &\nResponse Item DocTypes"]
-        
-        Dedup -->|Duplicate UUID| Skip["Return Cached 200 OK"]
-        Dedup -->|New UUID| Savepoint
-        Savepoint --> ResponseDoc
+        DraftEndpoint["omniquery.api.sync.sync_draft\n(No mandatory validation)"]
+        PushEndpoint["omniquery.api.sync.batch_push\n(Full Script & Rule Validation)"]
+        ErrEndpoint["omniquery.api.telemetry.log_field_error"]
+
+        DraftDoc[("OmniQuery Response: Draft\n(Live Supervisor Monitoring)")]
+        SubmittedDoc[("OmniQuery Response: Submitted\n(Locked & Aggregated)")]
+        ErrDoc[("OmniQuery Field Error Log\n(Instant Admin Triage)")]
     end
 
-    WAL -->|Online Event / Manual Sync| SyncPush
-    SyncPush --> Endpoint
-    Endpoint --> Dedup
+    WAL -->|Online Event| DraftSync --> DraftEndpoint --> DraftDoc
+    WAL -->|Submit Survey| FinalPush --> PushEndpoint --> SubmittedDoc
+    Beacon --> ErrStream --> ErrEndpoint --> ErrDoc
 ```
 
 For complete technical specifications, see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).
