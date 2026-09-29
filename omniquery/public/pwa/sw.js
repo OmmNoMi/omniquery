@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omniquery-cache-v5';
+const CACHE_NAME = 'omniquery-cache-v6';
 const STATIC_ASSETS = [
   '/omniquery',
   '/assets/omniquery/dist/omniquery.bundle.js',

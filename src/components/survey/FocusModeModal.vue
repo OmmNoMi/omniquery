@@ -9,54 +9,29 @@
       @keydown.esc="onClose"
     >
       <!-- Top Navigation & Progress Header Card -->
-      <div class="max-w-2xl w-full mx-auto bg-slate-900/90 dark:bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl backdrop-blur-md space-y-2.5">
+      <div class="max-w-2xl w-full mx-auto bg-slate-900/90 dark:bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl backdrop-blur-md space-y-2 shrink-0">
         <div class="flex items-center justify-between gap-2">
           <!-- Left: Focus Mode Badge & Counter -->
           <div class="flex items-center gap-2">
             <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>{{ __('Auto Form') }}</span>
+              <span>{{ __('Focus Mode') }}</span>
             </span>
             <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700">
               {{ currentIndex + 1 }} / {{ questions.length }}
             </span>
           </div>
 
-          <!-- Right: Auto-Advance Pill Toggle & Close -->
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              @click="$emit('toggle-auto-advance')"
-              :class="[
-                'px-2.5 py-1 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 cursor-pointer',
-                autoAdvance
-                  ? 'bg-emerald-600/30 border-emerald-500/50 text-emerald-300'
-                  : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200'
-              ]"
-              :title="__('Toggle Auto Advance on Answer')"
-            >
-              <span>⚡</span>
-              <span class="hidden sm:inline">{{ __('Auto-Advance') }}</span>
-              <span class="text-[10px] uppercase font-black tracking-wider">
-                {{ autoAdvance ? __('ON') : __('OFF') }}
-              </span>
-              <span
-                :class="[
-                  'w-2 h-2 rounded-full transition-colors',
-                  autoAdvance ? 'bg-emerald-400' : 'bg-slate-600'
-                ]"
-              ></span>
-            </button>
-
-            <button
-              type="button"
-              @click="onClose"
-              class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs transition border border-slate-700 active:scale-95 cursor-pointer"
-              :aria-label="__('Exit Focus Mode')"
-            >
-              ✕
-            </button>
-          </div>
+          <!-- Right: Close Button -->
+          <button
+            type="button"
+            @click="onClose"
+            class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs transition border border-slate-700 active:scale-95 cursor-pointer"
+            :aria-label="__('Exit Focus Mode')"
+            :title="__('Exit Focus Mode')"
+          >
+            ✕
+          </button>
         </div>
 
         <!-- Section Title & Progress Bar -->
@@ -74,43 +49,107 @@
         </div>
       </div>
 
-      <!-- Center: Active Question Hero Card -->
-      <div class="max-w-2xl w-full mx-auto my-auto py-3">
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border border-slate-200/90 dark:border-slate-800 shadow-2xl transition-all duration-200 min-h-[360px] sm:min-h-[400px] flex flex-col justify-start">
-          <QuestionCard
-            :question="currentQuestion"
-            :modelValue="responses[currentQuestion.question_code]"
-            :errorMessage="validationErrors[currentQuestion.question_code]"
-            @update:modelValue="onQuestionInput"
-            @answered="onQuestionAnswered"
-            @capture-gps="$emit('capture-gps')"
-          />
-        </div>
+      <!-- Top-Aligned Question Area: Mobile Keyboard-Friendly (no jumping/squishing) -->
+      <div class="max-w-2xl w-full mx-auto flex-1 pt-3 pb-3 overflow-y-auto">
+        <QuestionCard
+          :question="currentQuestion"
+          :modelValue="responses[currentQuestion.question_code]"
+          :errorMessage="validationErrors[currentQuestion.question_code]"
+          @update:modelValue="onQuestionInput"
+          @answered="onQuestionAnswered"
+          @capture-gps="$emit('capture-gps')"
+        />
       </div>
 
       <!-- Bottom Floating Navigation Bar -->
-      <div class="max-w-2xl w-full mx-auto bg-slate-900/90 dark:bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-2xl backdrop-blur-md flex items-center justify-between gap-3">
+      <div class="max-w-2xl w-full mx-auto bg-slate-900/90 dark:bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-2xl backdrop-blur-md flex items-center justify-between gap-2 shrink-0">
+        <!-- Previous Question Button -->
         <button
           type="button"
           @click="prevQuestion"
           :disabled="currentIndex === 0"
-          class="px-4 sm:px-5 py-2.5 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1.5 cursor-pointer"
+          class="px-3 sm:px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer shrink-0"
         >
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+          <span>←</span>
           <span>{{ __('Previous') }}</span>
         </button>
 
-        <span class="text-xs text-slate-400 hidden sm:inline">
-          {{ __('Use 1..9 or Enter to advance') }}
-        </span>
+        <!-- Center: Mode Dropdown Menu -->
+        <div class="relative" ref="modeMenuRef">
+          <button
+            type="button"
+            @click.stop="isModeMenuOpen = !isModeMenuOpen"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none"
+          >
+            <span>⚙️</span>
+            <span>{{ __('Mode') }}</span>
+            <span class="text-[10px] opacity-70">▾</span>
+          </button>
 
+          <!-- Dropdown Popover Menu (Upward) -->
+          <div
+            v-if="isModeMenuOpen"
+            @click.stop
+            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 space-y-1 z-50 animate-fade-in text-white"
+          >
+            <div class="text-[10px] font-extrabold text-slate-400 uppercase px-2.5 py-1 tracking-wider">
+              {{ __('Survey Options') }}
+            </div>
+
+            <!-- 1. Auto Advance Toggle -->
+            <button
+              type="button"
+              @click="$emit('toggle-auto-advance')"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-sm">⚡</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-100">{{ __('Auto Advance') }}</div>
+                  <div class="text-[10px] text-slate-400">{{ __('Next question on answer') }}</div>
+                </div>
+              </div>
+              <span
+                :class="[
+                  'w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0',
+                  autoAdvance ? 'bg-emerald-600' : 'bg-slate-700'
+                ]"
+              >
+                <span
+                  :class="[
+                    'w-4 h-4 rounded-full bg-white transition-transform transform shadow-xs',
+                    autoAdvance ? 'translate-x-4' : 'translate-x-0'
+                  ]"
+                />
+              </span>
+            </button>
+
+            <!-- 2. Return to Section Form View -->
+            <button
+              type="button"
+              @click="onClose"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-sm">📋</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-100">{{ __('Section View') }}</div>
+                  <div class="text-[10px] text-slate-400">{{ __('Return to all questions in section') }}</div>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-slate-400">✕</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Next Question Button -->
         <button
           type="button"
           @click="nextQuestion"
-          class="px-5 sm:px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1.5 cursor-pointer"
+          class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1 cursor-pointer shrink-0"
         >
-          <span>{{ currentIndex === questions.length - 1 ? __('Next Section') : __('Next') }}</span>
-          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+          <span>{{ currentIndex === questions.length - 1 ? __('Finish') : __('Next') }}</span>
+          <span>→</span>
         </button>
       </div>
     </div>
@@ -118,7 +157,7 @@
 </template>
 
 <script setup>
-import { computed, watch, onUnmounted } from "vue";
+import { computed, ref, watch, onMounted, onUnmounted } from "vue";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
 
@@ -165,6 +204,15 @@ const emit = defineEmits([
 
 const { __ } = useTranslation();
 
+const isModeMenuOpen = ref(false);
+const modeMenuRef = ref(null);
+
+function handleOutsideClick(event) {
+  if (isModeMenuOpen.value && modeMenuRef.value && !modeMenuRef.value.contains(event.target)) {
+    isModeMenuOpen.value = false;
+  }
+}
+
 const currentQuestion = computed(() => {
   return props.questions[props.currentIndex] || null;
 });
@@ -203,6 +251,7 @@ function nextQuestion() {
 }
 
 function onClose() {
+  isModeMenuOpen.value = false;
   emit("close");
 }
 
@@ -216,9 +265,16 @@ watch(
   { immediate: true }
 );
 
+onMounted(() => {
+  if (typeof document !== "undefined") {
+    document.addEventListener("click", handleOutsideClick);
+  }
+});
+
 onUnmounted(() => {
   if (typeof document !== "undefined") {
     document.body.style.overflow = "";
+    document.removeEventListener("click", handleOutsideClick);
   }
 });
 </script>
