@@ -266,8 +266,8 @@ def seed():
 	# 1. Project
 	project_name = "SHG Rajasthan Women Entrepreneurs Study"
 	proj_doc_name = f"PROJ-{project_name}"
-	if not frappe.db.exists("OmniServey Project", proj_doc_name):
-		proj = frappe.new_doc("OmniServey Project")
+	if not frappe.db.exists("OmniQuery Project", proj_doc_name):
+		proj = frappe.new_doc("OmniQuery Project")
 		proj.project_name = project_name
 		proj.grantor_organization = "Rajasthan Grameen Aajeevika Vikas Parishad (RGAVP) / SVEP"
 		proj.status = "Active"
@@ -275,17 +275,17 @@ def seed():
 		proj.insert(ignore_permissions=True)
 		print("Created Project:", proj.name)
 	else:
-		proj = frappe.get_doc("OmniServey Project", proj_doc_name)
+		proj = frappe.get_doc("OmniQuery Project", proj_doc_name)
 		print("Using existing Project:", proj.name)
 
 	# 2. Template
 	template_title = "Study on Performance of SHG-led Women Entrepreneurs in Rajasthan"
-	existing_tmpl = frappe.db.get_value("OmniServey Template", {"title": template_title}, "name")
+	existing_tmpl = frappe.db.get_value("OmniQuery Template", {"title": template_title}, "name")
 	if existing_tmpl:
-		tmpl = frappe.get_doc("OmniServey Template", existing_tmpl)
+		tmpl = frappe.get_doc("OmniQuery Template", existing_tmpl)
 		print("Updating existing Template:", tmpl.name)
 	else:
-		tmpl = frappe.new_doc("OmniServey Template")
+		tmpl = frappe.new_doc("OmniQuery Template")
 		tmpl.title = template_title
 		print("Creating new Template...")
 
@@ -352,7 +352,7 @@ def seed():
 		options_json = None
 		validation_rules_json = None
 
-		# Determine OmniServey field_type
+		# Determine OmniQuery field_type
 		if fieldname == "years_of_shg_membership":
 			target_type = "Range (Slider)"
 			validation_rules_json = json.dumps({"min": 0, "max": 7, "step": 1, "unit": "Years"})
@@ -418,7 +418,7 @@ def seed():
 
 	tmpl.save(ignore_permissions=True)
 	frappe.db.commit()
-	print("Successfully published OmniServey Template:", tmpl.name)
+	print("Successfully published OmniQuery Template:", tmpl.name)
 	print("Sections Count:", len(tmpl.sections))
 	print("Questions Count:", len(tmpl.questions))
 	print("Schema SHA-256:", tmpl.schema_hash_sha256)

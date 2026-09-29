@@ -63,7 +63,7 @@ flowchart TD
         Endpoint["omniquery.api.sync.batch_push"]
         Dedup{"Idempotency Cache\nCheck (Audit Log)"}
         Savepoint["MariaDB Savepoint\n(sp_sync_uuid)"]
-        ResponseDoc["OmniServey Response &\nResponse Item DocTypes"]
+        ResponseDoc["OmniQuery Response &\nResponse Item DocTypes"]
         
         Dedup -->|Duplicate UUID| Skip["Return Cached 200 OK"]
         Dedup -->|New UUID| Savepoint

@@ -17,20 +17,30 @@ class TestRajivikaBenchmark(unittest.TestCase):
 	@classmethod
 	def setUpClass(cls):
 		sync_fixtures("omniquery")
+		if not frappe.db.exists("OmniQuery Surveyor", "SURV-Administrator"):
+			frappe.get_doc(
+				{
+					"doctype": "OmniQuery Surveyor",
+					"surveyor_name": "Administrator",
+					"user": "Administrator",
+					"status": "Active",
+				}
+			).insert(ignore_permissions=True)
+			frappe.db.commit()
 
 	def test_01_fixture_presence_and_metadata(self):
-		project = frappe.get_doc("OmniServey Project", RAJIVIKA_PROJECT)
+		project = frappe.get_doc("OmniQuery Project", RAJIVIKA_PROJECT)
 		self.assertEqual(project.status, "Active")
 		self.assertIn("RGAVP", project.grantor_organization)
 
-		tmpl = frappe.get_doc("OmniServey Template", RAJIVIKA_TEMPLATE)
+		tmpl = frappe.get_doc("OmniQuery Template", RAJIVIKA_TEMPLATE)
 		self.assertEqual(tmpl.status, "Published")
 		self.assertEqual(tmpl.project, RAJIVIKA_PROJECT)
 		self.assertEqual(len(tmpl.sections), 9)
 		self.assertEqual(len(tmpl.questions), 101)
 
 	def test_02_section_hierarchy_and_codes(self):
-		tmpl = frappe.get_doc("OmniServey Template", RAJIVIKA_TEMPLATE)
+		tmpl = frappe.get_doc("OmniQuery Template", RAJIVIKA_TEMPLATE)
 		expected_codes = [f"SEC_{letter}" for letter in "ABCDEFGHI"]
 		actual_codes = [s.section_code for s in tmpl.sections]
 		self.assertEqual(actual_codes, expected_codes)
@@ -40,7 +50,7 @@ class TestRajivikaBenchmark(unittest.TestCase):
 			self.assertTrue(section.section_title)
 
 	def test_03_question_controls_and_validation(self):
-		tmpl = frappe.get_doc("OmniServey Template", RAJIVIKA_TEMPLATE)
+		tmpl = frappe.get_doc("OmniQuery Template", RAJIVIKA_TEMPLATE)
 		q_map = {q.question_code: q for q in tmpl.questions}
 
 		self.assertEqual(q_map["years_of_shg_membership"].field_type, "Range (Slider)")
@@ -50,7 +60,7 @@ class TestRajivikaBenchmark(unittest.TestCase):
 		self.assertEqual(q_map["loan_usages"].field_type, "Dynamic Grid")
 
 	def test_04_schema_compilation_benchmark(self):
-		tmpl = frappe.get_doc("OmniServey Template", RAJIVIKA_TEMPLATE)
+		tmpl = frappe.get_doc("OmniQuery Template", RAJIVIKA_TEMPLATE)
 		start_time = time.perf_counter()
 		tmpl.before_save()
 		elapsed_ms = (time.perf_counter() - start_time) * 1000
@@ -114,12 +124,12 @@ class TestRajivikaBenchmark(unittest.TestCase):
 
 	def _verify_and_cleanup_submission(self, test_uuid, doc_name, payload):
 		try:
-			self.assertTrue(frappe.db.exists("OmniServey Response", doc_name))
+			self.assertTrue(frappe.db.exists("OmniQuery Response", doc_name))
 			resp2 = batch_push(submissions=[payload])
 			self.assertEqual(resp2["results"][0]["status"], "DUPLICATE_SKIPPED")
-			self.assertEqual(frappe.db.count("OmniServey Response", {"idempotency_key": test_uuid}), 1)
+			self.assertEqual(frappe.db.count("OmniQuery Response", {"idempotency_key": test_uuid}), 1)
 		finally:
-			frappe.db.delete("OmniServey Response Item", {"parent": doc_name})
-			frappe.db.delete("OmniServey Response", {"name": doc_name})
-			frappe.db.delete("OmniServey Sync Audit Log", {"name": f"SYNC-{test_uuid}"})
+			frappe.db.delete("OmniQuery Response Item", {"parent": doc_name})
+			frappe.db.delete("OmniQuery Response", {"name": doc_name})
+			frappe.db.delete("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"})
 			frappe.db.commit()

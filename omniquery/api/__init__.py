@@ -1,1 +1,1 @@
-# OmniServey API Package
+# OmniQuery API Package

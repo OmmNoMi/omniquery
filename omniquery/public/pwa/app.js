@@ -13,8 +13,8 @@ db.version(1).stores({
 // 2. Comprehensive Vernacular Dictionary
 const BUILTIN_TRANSLATIONS = {
   "en": {
-    "OmniServey": "OmniServey",
-    "ओमनीसर्वे": "OmniServey",
+    "OmniQuery": "OmniQuery",
+    "ओमनीसर्वे": "OmniQuery",
     "Online": "Online",
     "ऑनलाइन": "Online",
     "Offline": "Offline",
@@ -415,7 +415,7 @@ const BUILTIN_TRANSLATIONS = {
     "in": "में",
     "Cleared": "हटाया गया",
     "Cleared all selections": "सभी चयन हटाए गए",
-    "OmniServey": "ओमनीसर्वे",
+    "OmniQuery": "ओमनीसर्वे",
     "ओमनीसर्वे": "ओमनीसर्वे",
     "Online": "ऑनलाइन",
     "ऑनलाइन": "ऑनलाइन",
@@ -804,7 +804,7 @@ const BUILTIN_TRANSLATIONS = {
     "Enter year (e.g. 2020)": "वर्ष दर्ज करें (उदा. 2020)"
   },
   "mr": {
-    "OmniServey": "ओम्नीसर्व्हे",
+    "OmniQuery": "ओम्नीसर्व्हे",
     "ओमनीसर्वे": "ओम्नीसर्व्हे",
     "Online": "ऑनलाइन",
     "ऑनलाइन": "ऑनलाइन",
@@ -1193,7 +1193,7 @@ const BUILTIN_TRANSLATIONS = {
     "Enter year (e.g. 2020)": "वर्ष प्रविष्ट करा (उदा. 2020)"
   },
   "gu": {
-    "OmniServey": "ઓમ્નીસર્વે",
+    "OmniQuery": "ઓમ્નીસર્વે",
     "ओमनीसर्वे": "ઓમ્નીસર્વે",
     "Online": "ઓનલાઇન",
     "ऑनलाइन": "ઓનલાઇન",
@@ -1582,7 +1582,7 @@ const BUILTIN_TRANSLATIONS = {
     "Enter year (e.g. 2020)": "વર્ષ દાખલ કરો (દા.ત. 2020)"
   },
   "pa": {
-    "OmniServey": "ਓਮਨੀਸਰਵੇ",
+    "OmniQuery": "ਓਮਨੀਸਰਵੇ",
     "ओमनीसर्वे": "ਓਮਨੀਸਰਵੇ",
     "Online": "ਆਨਲਾਈਨ",
     "ऑनलाइन": "ਆਨਲਾਈਨ",
@@ -1971,7 +1971,7 @@ const BUILTIN_TRANSLATIONS = {
     "Enter year (e.g. 2020)": "ਸਾਲ ਦਰਜ ਕਰੋ (ਉਦਾ. 2020)"
   },
   "bn": {
-    "OmniServey": "অমনিসার্ভে",
+    "OmniQuery": "অমনিসার্ভে",
     "ओमनीसर्वे": "অমনিসার্ভে",
     "Online": "অনলাইন",
     "ऑनलाइन": "অনলাইন",
@@ -2360,7 +2360,7 @@ const BUILTIN_TRANSLATIONS = {
     "Enter year (e.g. 2020)": "বছর লিখুন (উদা. ২০২০)"
   },
   "ta": {
-    "OmniServey": "ஓம்னிசர்வே",
+    "OmniQuery": "ஓம்னிசர்வே",
     "ओमनीसर्वे": "ஓம்னிசர்வே",
     "Online": "ஆன்லைன்",
     "ऑनलाइन": "ஆன்லைன்",
@@ -2749,7 +2749,7 @@ const BUILTIN_TRANSLATIONS = {
     "Enter year (e.g. 2020)": "ஆண்டினை உள்ளிடவும் (எ.கா. 2020)"
   },
   "te": {
-    "OmniServey": "ఓమ్నీసర్వే",
+    "OmniQuery": "ఓమ్నీసర్వే",
     "ओमनीसर्वे": "ఓమ్నీసర్వే",
     "Online": "ఆన్‌లైన్",
     "ऑनलाइन": "ఆన్‌లైన్",
@@ -3138,7 +3138,7 @@ const BUILTIN_TRANSLATIONS = {
     "Enter year (e.g. 2020)": "సంవత్సరం నమోదు చేయండి (ఉదా. 2020)"
   },
   "kn": {
-    "OmniServey": "ಓಮ್ನಿಸರ್ವೆ",
+    "OmniQuery": "ಓಮ್ನಿಸರ್ವೆ",
     "ओमनीसर्वे": "ಓಮ್ನಿಸರ್ವೆ",
     "Online": "ಆನ್‌ಲೈನ್",
     "ऑनलाइन": "ಆನ್‌ಲೈನ್",
@@ -3527,7 +3527,7 @@ const BUILTIN_TRANSLATIONS = {
     "Enter year (e.g. 2020)": "ವರ್ಷವನ್ನು ನಮೂದಿಸಿ (ಉದಾ. 2020)"
   },
   "ml": {
-    "OmniServey": "ഓമ്നിസർവെ",
+    "OmniQuery": "ഓമ്നിസർവെ",
     "ओमनीसर्वे": "ഓമ്നിസർവെ",
     "Online": "ഓൺ‌ലൈൻ",
     "ऑनलाइन": "ഓൺ‌ലൈൻ",
@@ -3916,7 +3916,7 @@ const BUILTIN_TRANSLATIONS = {
     "Enter year (e.g. 2020)": "വർഷം നൽകുക (ഉദാ. 2020)"
   },
   "ur": {
-    "OmniServey": "اومنی سروے",
+    "OmniQuery": "اومنی سروے",
     "ओमनीसर्वे": "اومنی سروے",
     "Online": "آن لائن",
     "ऑनलाइन": "آن لائن",
@@ -4890,7 +4890,7 @@ const app = createApp({
     const currentView = ref('dashboard'); // 'dashboard' | 'templates' | 'form' | 'queue'
     const isOnline = ref(navigator.onLine);
     const isSyncing = ref(false);
-    const currentLang = ref(localStorage.getItem('omniquery_lang') || localStorage.getItem('omniservey_lang') || 'en');
+    const currentLang = ref(localStorage.getItem('omniquery_lang') || localStorage.getItem('omniquery_lang') || 'en');
     const menuOpen = ref(false);
     const dashboardFilter = ref('all'); // 'all' | 'drafts' | 'pending' | 'synced'
 
@@ -5254,7 +5254,7 @@ const app = createApp({
       menuOpen.value = false;
     }
 
-    const textSize = ref(localStorage.getItem('omniquery_text_size') || localStorage.getItem('omniservey_text_size') || 'md');
+    const textSize = ref(localStorage.getItem('omniquery_text_size') || localStorage.getItem('omniquery_text_size') || 'md');
 
     function applyTextSize(size) {
       textSize.value = size;
@@ -5307,7 +5307,7 @@ const app = createApp({
     const currentUUID = ref('');
     const speakingQuestionCode = ref(null);
     const emergencyModalOpen = ref(false);
-    const adminEmailInput = ref(localStorage.getItem('omniquery_admin_email') || localStorage.getItem('omniservey_admin_email') || 'admin@ommnomi.local');
+    const adminEmailInput = ref(localStorage.getItem('omniquery_admin_email') || localStorage.getItem('omniquery_admin_email') || 'admin@ommnomi.local');
     const emergencyNote = ref('');
     const isSendingEmail = ref(false);
     const recentErrors = ref([]);
@@ -6886,8 +6886,8 @@ const app = createApp({
 
     async function migrateLegacyDB() {
       try {
-        if (await Dexie.exists('OmniServeyDB')) {
-          const oldDb = new Dexie('OmniServeyDB');
+        if (await Dexie.exists('OmniQueryDB')) {
+          const oldDb = new Dexie('OmniQueryDB');
           oldDb.version(1).stores({ wal: 'idempotency_key, status' });
           const rows = await oldDb.table('wal').toArray();
           if (rows.length > 0) await db.wal.bulkPut(rows);

@@ -9,20 +9,20 @@ from omniquery.api.sync import batch_push
 
 class TestIdempotentSync(unittest.TestCase):
 	def setUp(self):
-		if not frappe.db.exists("OmniServey Project", {"project_name": "Test Dairy Initiative"}):
+		if not frappe.db.exists("OmniQuery Project", {"project_name": "Test Dairy Initiative"}):
 			frappe.get_doc(
 				{
-					"doctype": "OmniServey Project",
+					"doctype": "OmniQuery Project",
 					"project_name": "Test Dairy Initiative",
 					"grantor_organization": "State Livestock Board",
 					"status": "Active",
 				}
 			).insert(ignore_permissions=True)
 
-		if not frappe.db.exists("OmniServey Template", {"title": "Test Women Dairy Assessment 2026"}):
+		if not frappe.db.exists("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}):
 			frappe.get_doc(
 				{
-					"doctype": "OmniServey Template",
+					"doctype": "OmniQuery Template",
 					"title": "Test Women Dairy Assessment 2026",
 					"project": "PROJ-Test Dairy Initiative",
 					"version": 1,
@@ -31,10 +31,10 @@ class TestIdempotentSync(unittest.TestCase):
 			).insert(ignore_permissions=True)
 
 		# Setup dummy surveyor
-		if not frappe.db.exists("OmniServey Surveyor", {"surveyor_name": "Test Surveyor Nomesh"}):
+		if not frappe.db.exists("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"}):
 			frappe.get_doc(
 				{
-					"doctype": "OmniServey Surveyor",
+					"doctype": "OmniQuery Surveyor",
 					"surveyor_name": "Test Surveyor Nomesh",
 					"user": "Administrator",
 					"status": "Active",
@@ -73,14 +73,14 @@ class TestIdempotentSync(unittest.TestCase):
 		doc_name = response_1["results"][0]["doc_name"]
 
 		# Verify Response doc exists
-		resp_doc = frappe.get_doc("OmniServey Response", doc_name)
+		resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
 		self.assertEqual(resp_doc.idempotency_key, test_uuid)
 		self.assertEqual(len(resp_doc.items), 2)
 		self.assertEqual(resp_doc.items[0].value_numeric, 6.0)
 		self.assertEqual(resp_doc.items[1].value_numeric, 42.5)
 
 		# Verify Sync Audit Log exists
-		audit = frappe.get_doc("OmniServey Sync Audit Log", f"SYNC-{test_uuid}")
+		audit = frappe.get_doc("OmniQuery Sync Audit Log", f"SYNC-{test_uuid}")
 		self.assertEqual(audit.sync_status, "SUCCESS")
 
 		# 2. Second push with same UUID (simulating network timeout retry): must skip duplicate
@@ -89,13 +89,13 @@ class TestIdempotentSync(unittest.TestCase):
 		self.assertEqual(response_2["results"][0]["doc_name"], doc_name)
 
 		# Assert no duplicate responses created in DB
-		count = frappe.db.count("OmniServey Response", {"idempotency_key": test_uuid})
+		count = frappe.db.count("OmniQuery Response", {"idempotency_key": test_uuid})
 		self.assertEqual(count, 1)
 
 		# Teardown test records
-		frappe.db.delete("OmniServey Response", {"idempotency_key": test_uuid})
-		frappe.db.delete("OmniServey Sync Audit Log", {"name": f"SYNC-{test_uuid}"})
-		frappe.db.delete("OmniServey Surveyor", {"surveyor_name": "Test Surveyor Nomesh"})
-		frappe.db.delete("OmniServey Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniServey Project", {"project_name": "Test Dairy Initiative"})
+		frappe.db.delete("OmniQuery Response", {"idempotency_key": test_uuid})
+		frappe.db.delete("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"})
+		frappe.db.delete("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"})
+		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
+		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
 		frappe.db.commit()

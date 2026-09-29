@@ -1,0 +1,201 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:RESP-{respondent_uid}",
+ "creation": "2026-09-10 01:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "respondent_uid",
+  "primary_name",
+  "respondent_type",
+  "phone_number",
+  "phone_hash",
+  "column_break_basic",
+  "email",
+  "gender",
+  "age_or_established_year",
+  "section_geo",
+  "village_city",
+  "block",
+  "district",
+  "state",
+  "pincode",
+  "column_break_geo",
+  "gps_latitude",
+  "gps_longitude",
+  "section_custom",
+  "custom_attributes_json",
+  "section_security",
+  "id_number_encrypted",
+  "notes"
+ ],
+ "fields": [
+  {
+   "fieldname": "respondent_uid",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Respondent UID",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "primary_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Primary Name / Organization",
+   "reqd": 1
+  },
+  {
+   "default": "Individual",
+   "fieldname": "respondent_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Respondent Type",
+   "options": "Individual\nHousehold\nEnterprise / Business\nFarmer / Producer\nStudent / Learner\nPatient / Health Beneficiary\nCommunity / Group\nOther",
+   "reqd": 1
+  },
+  {
+   "fieldname": "phone_number",
+   "fieldtype": "Data",
+   "label": "Contact Phone Number"
+  },
+  {
+   "fieldname": "phone_hash",
+   "fieldtype": "Data",
+   "label": "Phone Search Hash",
+   "description": "SHA-256 for fast offline lookup",
+   "search_index": 1
+  },
+  {
+   "fieldname": "column_break_basic",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "email",
+   "fieldtype": "Data",
+   "label": "Email Address"
+  },
+  {
+   "fieldname": "gender",
+   "fieldtype": "Select",
+   "label": "Gender",
+   "options": "Female\nMale\nNon-Binary\nPrefer not to say\nNot Applicable"
+  },
+  {
+   "fieldname": "age_or_established_year",
+   "fieldtype": "Int",
+   "label": "Age / Year Established"
+  },
+  {
+   "fieldname": "section_geo",
+   "fieldtype": "Section Break",
+   "label": "Location & Geography"
+  },
+  {
+   "fieldname": "village_city",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Village / Town / City"
+  },
+  {
+   "fieldname": "block",
+   "fieldtype": "Data",
+   "label": "Block / Ward"
+  },
+  {
+   "fieldname": "district",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "District / County"
+  },
+  {
+   "fieldname": "state",
+   "fieldtype": "Data",
+   "label": "State / Province"
+  },
+  {
+   "fieldname": "pincode",
+   "fieldtype": "Data",
+   "label": "Pincode / Postal Code"
+  },
+  {
+   "fieldname": "column_break_geo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gps_latitude",
+   "fieldtype": "Float",
+   "label": "Latitude",
+   "precision": "7"
+  },
+  {
+   "fieldname": "gps_longitude",
+   "fieldtype": "Float",
+   "label": "Longitude",
+   "precision": "7"
+  },
+  {
+   "fieldname": "section_custom",
+   "fieldtype": "Section Break",
+   "label": "Domain Custom Attributes"
+  },
+  {
+   "fieldname": "custom_attributes_json",
+   "fieldtype": "Code",
+   "label": "Custom Attributes JSON",
+   "options": "JSON",
+   "description": "Arbitrary key-value pairs for domain-specific context (e.g. SHG, Crop type, Revenue)"
+  },
+  {
+   "fieldname": "section_security",
+   "fieldtype": "Section Break",
+   "label": "Security & Identification"
+  },
+  {
+   "fieldname": "id_number_encrypted",
+   "fieldtype": "Password",
+   "label": "National ID / Registration No (Encrypted)"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Small Text",
+   "label": "Additional Notes"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-10 01:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OmniQuery",
+ "name": "OmniQuery Respondent",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "role": "All",
+   "write": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

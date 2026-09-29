@@ -1,0 +1,113 @@
+{
+ "actions": [],
+ "creation": "2026-09-10 01:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "section_code",
+  "question_code",
+  "label_en",
+  "field_type",
+  "is_mandatory",
+  "display_order",
+  "column_break_rules",
+  "options_json",
+  "conditional_logic_json",
+  "validation_rules_json",
+  "audio_prompt"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "section_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Section Code",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "question_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Question Code",
+   "reqd": 1
+  },
+  {
+   "columns": 3,
+   "fieldname": "label_en",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Label (English)",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "default": "Text",
+   "fieldname": "field_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Field Type",
+   "options": "Text\nLong Text\nInteger\nDecimal\nCurrency (INR)\nRange (Slider)\nSingle Choice (Radio)\nSingle Choice (Dropdown)\nMultiple Choice (Checkbox)\nDate\nTime\nGPS Location\nPhoto Upload\nDigital Signature\nDynamic Grid\nRating (1-5)",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "default": "1",
+   "fieldname": "is_mandatory",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Mandatory"
+  },
+  {
+   "columns": 1,
+   "default": "1",
+   "fieldname": "display_order",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Order"
+  },
+  {
+   "fieldname": "column_break_rules",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "options_json",
+   "fieldtype": "Code",
+   "label": "Options JSON / List",
+   "options": "JSON",
+   "description": "e.g. [\"Yes\", \"No\", \"Uncertain\"]"
+  },
+  {
+   "fieldname": "conditional_logic_json",
+   "fieldtype": "Code",
+   "label": "Conditional Skip Logic (JSON)",
+   "options": "JSON",
+   "description": "e.g. {\"depends_on\": \"Q_MARITAL\", \"equals\": \"Married\"}"
+  },
+  {
+   "fieldname": "validation_rules_json",
+   "fieldtype": "Code",
+   "label": "Validation Rules (JSON)",
+   "options": "JSON",
+   "description": "e.g. {\"min\": 0, \"max\": 10000000, \"regex\": \"^[0-9]+$\"}"
+  },
+  {
+   "fieldname": "audio_prompt",
+   "fieldtype": "Attach",
+   "label": "Audio Prompt (.mp3)"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-10 01:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OmniQuery",
+ "name": "OmniQuery Question",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "idx",
+ "sort_order": "ASC"
+}

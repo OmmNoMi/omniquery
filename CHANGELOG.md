@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 * **📦 Rajivika Survey Fixtures & Benchmark Suite**:
-  * Exported native Frappe fixtures (`1_omniservey_project.json`, `2_omniservey_template.json`) for the Rajivika SHG Women Entrepreneurs Study (9 sections, 101 questions, compiled SHA-256 schema).
+  * Exported native Frappe fixtures (`1_omniquery_project.json`, `2_omniquery_template.json`) for the Rajivika SHG Women Entrepreneurs Study (9 sections, 101 questions, compiled SHA-256 schema).
   * Automated fixture synchronization on app install and migration (`after_install`, `after_migrate`) for seamless Frappe Cloud deployment.
   * Dedicated benchmark test suite (`test_rajivika_benchmark.py`) covering fixture integrity, section hierarchies, sub-50ms schema compilation, API responsiveness, and idempotent sync.
 * **🛡️ Zero-Data-Loss Offline PWA**:
@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * **🔁 Client-Side Idempotency & Atomic Ingestion**:
   * Cryptographic UUIDv4 idempotency tokens per submission preventing duplicate responses on flaky networks.
   * Atomic MariaDB savepoints (`sp_sync_<uuid>`) per submission in `omniquery.api.sync.batch_push`.
-  * Deduplication audit log (`OmniServey Sync Audit Log`) for caching and instant idempotent responses.
+  * Deduplication audit log (`OmniQuery Sync Audit Log`) for caching and instant idempotent responses.
 * **♿ WCAG 2.2 AA Accessible UI Controls**:
   * **Zero Native Browser Selects**: Created custom `FCombobox` (`f-combobox`) component replacing all native HTML `<select>` tags with accessible custom dropdowns and full keyboard navigation (<kbd>ArrowDown</kbd>, <kbd>ArrowUp</kbd>, <kbd>Enter</kbd>, <kbd>Space</kbd>, <kbd>Escape</kbd>).
   * **Roving Tabindex Range Controls**: Numeric slider pills implemented as a single tab group (`role="radiogroup"`, `role="radio"`, `tabindex="0"` on selected item) with <kbd>ArrowLeft</kbd> and <kbd>ArrowRight</kbd> stepping.

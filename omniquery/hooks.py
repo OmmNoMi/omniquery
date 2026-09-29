@@ -93,11 +93,11 @@ after_migrate = "omniquery.install.after_migrate"
 fixture_auto_order = True
 fixtures = [
 	{
-		"doctype": "OmniServey Project",
+		"doctype": "OmniQuery Project",
 		"filters": [["name", "in", ["PROJ-SHG Rajasthan Women Entrepreneurs Study"]]],
 	},
 	{
-		"doctype": "OmniServey Template",
+		"doctype": "OmniQuery Template",
 		"filters": [
 			["name", "in", ["TMPL-Study on Performance of SHG-led Women Entrepreneurs in Rajasthan-1"]]
 		],
@@ -276,9 +276,9 @@ fixtures = [
 # Permissions & RBAC
 # ------------------
 permission_query_conditions = {
-	"OmniServey Template": "omniquery.api.survey.get_template_permission_query_conditions",
+	"OmniQuery Template": "omniquery.api.survey.get_template_permission_query_conditions",
 }
 
 has_permission = {
-	"OmniServey Template": "omniquery.api.survey.has_template_doc_permission",
+	"OmniQuery Template": "omniquery.api.survey.has_template_doc_permission",
 }

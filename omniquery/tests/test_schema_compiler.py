@@ -6,12 +6,12 @@ import frappe
 
 class TestSchemaCompiler(unittest.TestCase):
 	def setUp(self):
-		frappe.db.delete("OmniServey Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniServey Project", {"project_name": "Test Dairy Initiative"})
+		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
+		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
 
 		frappe.get_doc(
 			{
-				"doctype": "OmniServey Project",
+				"doctype": "OmniQuery Project",
 				"project_name": "Test Dairy Initiative",
 				"grantor_organization": "State Livestock Board",
 				"status": "Active",
@@ -21,7 +21,7 @@ class TestSchemaCompiler(unittest.TestCase):
 	def test_template_auto_compilation_and_hashing(self):
 		template = frappe.get_doc(
 			{
-				"doctype": "OmniServey Template",
+				"doctype": "OmniQuery Template",
 				"title": "Test Women Dairy Assessment 2026",
 				"project": "PROJ-Test Dairy Initiative",
 				"version": 1,
@@ -72,6 +72,6 @@ class TestSchemaCompiler(unittest.TestCase):
 		self.assertEqual(schema_obj["questions"][1]["conditional_logic"]["depends_on"], "Q_HERD_COUNT")
 
 	def tearDown(self):
-		frappe.db.delete("OmniServey Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniServey Project", {"project_name": "Test Dairy Initiative"})
+		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
+		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
 		frappe.db.commit()

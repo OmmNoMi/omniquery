@@ -9,11 +9,11 @@ from .survey import user_has_template_permission
 
 
 def resolve_surveyor(user):
-	surveyor = frappe.db.get_value("OmniServey Surveyor", {"user": user}, "name")
+	surveyor = frappe.db.get_value("OmniQuery Surveyor", {"user": user}, "name")
 	if not surveyor:
-		surveyor = frappe.db.get_value("OmniServey Surveyor", {"surveyor_name": user}, "name")
+		surveyor = frappe.db.get_value("OmniQuery Surveyor", {"surveyor_name": user}, "name")
 	if not surveyor:
-		surveyor = frappe.db.get_value("OmniServey Surveyor", {}, "name")
+		surveyor = frappe.db.get_value("OmniQuery Surveyor", {}, "name")
 	return surveyor or "SURV-Administrator"
 
 
@@ -99,7 +99,7 @@ def batch_push(submissions=None):
 
 		# 1. Check Idempotency Cache
 		existing_audit = frappe.db.get_value(
-			"OmniServey Sync Audit Log",
+			"OmniQuery Sync Audit Log",
 			{"idempotency_key": idempotency_key},
 			["name", "survey_response", "sync_status"],
 			as_dict=True,
@@ -136,7 +136,7 @@ def batch_push(submissions=None):
 			raw_payload_str = json.dumps(sub, separators=(",", ":"))
 			payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
 
-			resp_doc = frappe.new_doc("OmniServey Response")
+			resp_doc = frappe.new_doc("OmniQuery Response")
 			resp_doc.idempotency_key = idempotency_key
 			resp_doc.survey_template = sub.get("survey_template")
 			resp_doc.template_version = sub.get("template_version") or 1
@@ -181,7 +181,7 @@ def batch_push(submissions=None):
 			map_to_native_survey(sub)
 
 			# Create Sync Audit Log
-			audit = frappe.new_doc("OmniServey Sync Audit Log")
+			audit = frappe.new_doc("OmniQuery Sync Audit Log")
 			audit.idempotency_key = idempotency_key
 			audit.survey_response = resp_doc.name
 			audit.surveyor = resp_doc.surveyor
@@ -201,11 +201,11 @@ def batch_push(submissions=None):
 			)
 		except Exception as e:
 			frappe.db.rollback(save_point=savepoint)
-			frappe.log_error(f"OmniServey Sync Error for {idempotency_key}", str(e))
+			frappe.log_error(f"OmniQuery Sync Error for {idempotency_key}", str(e))
 
 			# Log Failure Audit
 			try:
-				fail_audit = frappe.new_doc("OmniServey Sync Audit Log")
+				fail_audit = frappe.new_doc("OmniQuery Sync Audit Log")
 				fail_audit.idempotency_key = idempotency_key
 				fail_audit.sync_status = "FAILED"
 				fail_audit.client_ip = client_ip

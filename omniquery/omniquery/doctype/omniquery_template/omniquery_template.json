@@ -1,0 +1,173 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "format:TMPL-{title}-{version}",
+ "creation": "2026-09-10 01:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "title",
+  "project",
+  "version",
+  "status",
+  "target_category",
+  "column_break_meta",
+  "schema_hash_sha256",
+  "published_at",
+  "access_tab",
+  "is_public",
+  "allowed_roles",
+  "allowed_users",
+  "sections_tab",
+  "sections",
+  "questions_tab",
+  "questions",
+  "compiled_tab",
+  "compiled_schema_json"
+ ],
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Survey Title",
+   "reqd": 1
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Linked Project",
+   "options": "OmniQuery Project",
+   "reqd": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "version",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Version",
+   "reqd": 1
+  },
+  {
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Draft\nPublished\nDeprecated",
+   "reqd": 1
+  },
+  {
+   "fieldname": "target_category",
+   "fieldtype": "Select",
+   "label": "Target Beneficiary Category",
+   "options": "All\nMicro Enterprise\nSmall Business\nSHG Member\nAgriculture & Dairy\nHandicrafts"
+  },
+  {
+   "fieldname": "column_break_meta",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "schema_hash_sha256",
+   "fieldtype": "Data",
+   "label": "Schema SHA-256 Hash",
+   "read_only": 1
+  },
+  {
+   "fieldname": "published_at",
+   "fieldtype": "Datetime",
+   "label": "Published Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "access_tab",
+   "fieldtype": "Tab Break",
+   "label": "Access & Permissions"
+  },
+  {
+   "default": "0",
+   "description": "If checked, all users and field surveyors can access and fill this survey template.",
+   "fieldname": "is_public",
+   "fieldtype": "Check",
+   "label": "Is Public (Accessible to All)"
+  },
+  {
+   "description": "Comma-separated Frappe Roles permitted to access this template (e.g. System Manager, OmniTrack Manager, Surveyor). Leave empty if unrestricted.",
+   "fieldname": "allowed_roles",
+   "fieldtype": "Small Text",
+   "label": "Allowed Roles"
+  },
+  {
+   "description": "Comma-separated user emails permitted to access this template (e.g. user@example.com).",
+   "fieldname": "allowed_users",
+   "fieldtype": "Small Text",
+   "label": "Allowed Users"
+  },
+  {
+   "fieldname": "sections_tab",
+   "fieldtype": "Tab Break",
+   "label": "Sections"
+  },
+  {
+   "fieldname": "sections",
+   "fieldtype": "Table",
+   "label": "Survey Sections / Pages",
+   "options": "OmniQuery Section"
+  },
+  {
+   "fieldname": "questions_tab",
+   "fieldtype": "Tab Break",
+   "label": "Questions & Rules"
+  },
+  {
+   "fieldname": "questions",
+   "fieldtype": "Table",
+   "label": "Survey Questions",
+   "options": "OmniQuery Question"
+  },
+  {
+   "fieldname": "compiled_tab",
+   "fieldtype": "Tab Break",
+   "label": "Compiled Schema Payload"
+  },
+  {
+   "fieldname": "compiled_schema_json",
+   "fieldtype": "Code",
+   "label": "Compiled Schema JSON",
+   "options": "JSON",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-10 01:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OmniQuery",
+ "name": "OmniQuery Template",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "All"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

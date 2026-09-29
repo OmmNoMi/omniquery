@@ -24,7 +24,7 @@ def user_has_template_permission(template, user=None):
 
 	if isinstance(template, str):
 		template = frappe.db.get_value(
-			"OmniServey Template",
+			"OmniQuery Template",
 			template,
 			["name", "is_public", "allowed_roles", "allowed_users"],
 			as_dict=True,
@@ -55,7 +55,7 @@ def user_has_template_permission(template, user=None):
 	if not allowed_roles_raw and not allowed_users_raw:
 		tmpl_name = getattr(template, "name", None)
 		if tmpl_name:
-			return frappe.has_permission("OmniServey Template", "read", doc=tmpl_name, user=user)
+			return frappe.has_permission("OmniQuery Template", "read", doc=tmpl_name, user=user)
 		return False
 
 	return False
@@ -70,15 +70,15 @@ def get_template_permission_query_conditions(user=None):
 	if "System Manager" in user_roles or "Administrator" in user_roles or user == "Administrator":
 		return ""
 
-	conditions = ["`tabOmniServey Template`.is_public = 1"]
+	conditions = ["`tabOmniQuery Template`.is_public = 1"]
 
 	if user != "Guest":
 		escaped_user = frappe.db.escape(f"%{user}%")
-		conditions.append(f"`tabOmniServey Template`.allowed_users LIKE {escaped_user}")
+		conditions.append(f"`tabOmniQuery Template`.allowed_users LIKE {escaped_user}")
 
 		for role in user_roles:
 			escaped_role = frappe.db.escape(f"%{role}%")
-			conditions.append(f"`tabOmniServey Template`.allowed_roles LIKE {escaped_role}")
+			conditions.append(f"`tabOmniQuery Template`.allowed_roles LIKE {escaped_role}")
 
 	return "(" + " OR ".join(conditions) + ")"
 
@@ -109,7 +109,7 @@ def list_active_templates(project=None):
 		filters["project"] = project
 
 	templates = frappe.get_all(
-		"OmniServey Template",
+		"OmniQuery Template",
 		filters=filters,
 		fields=[
 			"name",
@@ -145,7 +145,7 @@ def get_schema(template_name, version=None):
 			frappe.PermissionError,
 		)
 
-	template = frappe.get_doc("OmniServey Template", template_name)
+	template = frappe.get_doc("OmniQuery Template", template_name)
 
 	if not template.compiled_schema_json:
 		template.save(ignore_permissions=True)
@@ -182,7 +182,7 @@ def get_translations(template_name=None, language_code="hi"):
 
 @frappe.whitelist(allow_guest=True)
 def get_available_languages():
-	"""Returns strictly supported Indian vernacular languages + English for OmniServey field operations."""
+	"""Returns strictly supported Indian vernacular languages + English for OmniQuery field operations."""
 	return [
 		{"code": "en", "label": "English"},
 		{"code": "hi", "label": "हिन्दी (Hindi)"},
@@ -226,7 +226,7 @@ def get_bootstrap_data():
 	current_user = frappe.session.user
 	user_info = get_current_user_info()
 	templates = frappe.get_all(
-		"OmniServey Template",
+		"OmniQuery Template",
 		filters={"status": "Published"},
 		fields=[
 			"name",
@@ -280,10 +280,10 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 	surveyor = surveyor_name or frappe.session.user or "Field Surveyor"
 	now_str = frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M:%S")
 
-	subject = f"[OmniServey Emergency Data Backup] from {surveyor} ({now_str})"
+	subject = f"[OmniQuery Emergency Data Backup] from {surveyor} ({now_str})"
 
 	body = f"""
-	<h3>OmniServey Field Device Data Backup</h3>
+	<h3>OmniQuery Field Device Data Backup</h3>
 	<p><strong>Sent by:</strong> {frappe.utils.escape_html(str(surveyor))}</p>
 	<p><strong>Timestamp:</strong> {now_str}</p>
 	<p><strong>Notes / Error Report:</strong> {frappe.utils.escape_html(str(note or "Direct Emergency Backup Export from PWA"))}</p>
@@ -296,7 +296,7 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 	if data_json:
 		attachments.append(
 			{
-				"fname": f"OmniServey_Backup_{today_date}.json",
+				"fname": f"OmniQuery_Backup_{today_date}.json",
 				"fcontent": data_json.encode("utf-8")
 				if isinstance(data_json, str)
 				else str(data_json).encode("utf-8"),
@@ -305,7 +305,7 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 	if data_csv:
 		attachments.append(
 			{
-				"fname": f"OmniServey_Responses_{today_date}.csv",
+				"fname": f"OmniQuery_Responses_{today_date}.csv",
 				"fcontent": data_csv.encode("utf-8")
 				if isinstance(data_csv, str)
 				else str(data_csv).encode("utf-8"),
@@ -322,5 +322,5 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 		)
 		return {"status": "SUCCESS", "message": f"Backup email successfully dispatched to {recipient_email}"}
 	except Exception as e:
-		frappe.log_error("OmniServey Emergency Backup Email Error", str(e))
+		frappe.log_error("OmniQuery Emergency Backup Email Error", str(e))
 		return {"status": "ERROR", "error": str(e), "message": "Server mail dispatch error"}

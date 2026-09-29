@@ -19,7 +19,7 @@ def get_manifest(district=None, block=None, respondent_type=None):
 		filters["respondent_type"] = respondent_type
 
 	respondents = frappe.get_all(
-		"OmniServey Respondent",
+		"OmniQuery Respondent",
 		filters=filters,
 		fields=[
 			"name",
@@ -47,7 +47,7 @@ def register_respondent(payload):
 	if not uid:
 		frappe.throw(_("Respondent UID is mandatory"), frappe.ValidationError)
 
-	doc = frappe.new_doc("OmniServey Respondent")
+	doc = frappe.new_doc("OmniQuery Respondent")
 	doc.respondent_uid = uid
 	doc.primary_name = payload.get("primary_name")
 	doc.respondent_type = payload.get("respondent_type") or "Individual"
