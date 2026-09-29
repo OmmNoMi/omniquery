@@ -60,10 +60,12 @@
           :isComplete="isSectionComplete(activeSection)"
           :isSubmitting="isSubmitting"
           :autoAdvance="autoAdvance"
+          :isFullForm="isFullForm"
           :isRecording="isRecording"
           :isAudioPaused="isAudioPaused"
           @open-focus-mode="openFocusMode"
           @toggle-auto-advance="autoAdvance = !autoAdvance"
+          @toggle-full-form="toggleFullForm"
           @toggle-audio="toggleAudio"
           @prev="handlePrevSection"
           @next="handleNextSection"
@@ -75,6 +77,7 @@
               :group="item"
               :responses="responses"
               :validationErrors="validationErrors"
+              :notApplicable="item.questions && item.questions.every(q => !isQuestionVisible(q))"
               @update-response="onGroupResponseUpdate"
               @answered="onQuestionAnswered"
             />
@@ -84,6 +87,7 @@
               :question="item.question"
               v-model="responses[item.question.question_code]"
               :errorMessage="validationErrors[item.question.question_code]"
+              :notApplicable="!isQuestionVisible(item.question)"
               @answered="onQuestionAnswered(item.question)"
               @capture-gps="captureGPS"
             />
@@ -374,6 +378,9 @@ const {
   saveDraftLocally,
   discardDraft,
   generateSurveyId,
+  isQuestionVisible,
+  isFullForm,
+  toggleFullForm,
   isSectionComplete,
   validateCurrentSection,
   nextSection,

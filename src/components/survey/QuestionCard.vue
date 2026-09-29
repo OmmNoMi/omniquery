@@ -17,13 +17,15 @@
     @contextmenu.prevent="openConfigModal"
     :class="[
       'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-20',
-      errorMessage
-        ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 border-l-4 border-l-rose-500 shadow-xs ring-1 ring-rose-500/20'
-        : isFocused
-          ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 border-l-4 border-l-[#4285F4] dark:border-l-[#4285F4] shadow-md ring-1 ring-blue-500/10'
-          : isCompleted
-            ? 'bg-[#edf3ef] dark:bg-[#18251f] border-[#d2dfd6] dark:border-[#27382e] shadow-2xs'
-            : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
+      notApplicable
+        ? 'bg-slate-50/70 dark:bg-slate-900/60 border-dashed border-slate-300 dark:border-slate-700 opacity-75'
+        : errorMessage
+          ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 border-l-4 border-l-rose-500 shadow-xs ring-1 ring-rose-500/20'
+          : isFocused
+            ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 border-l-4 border-l-[#4285F4] dark:border-l-[#4285F4] shadow-md ring-1 ring-blue-500/10'
+            : isCompleted
+              ? 'bg-[#edf3ef] dark:bg-[#18251f] border-[#d2dfd6] dark:border-[#27382e] shadow-2xs'
+              : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
     ]"
   >
     <!-- Question Header -->
@@ -50,7 +52,7 @@
     </p>
 
     <!-- Controls based on Field Type / Variant -->
-    <div class="mt-2">
+    <div :class="['mt-2', notApplicable ? 'pointer-events-none opacity-60 select-none' : '']">
       <!-- 1. Binary Switch (Yes / No) -->
       <FSwitch
         v-if="isSwitchControl"
@@ -250,8 +252,19 @@
 
       <!-- Status Badge (Bottom-Right) -->
       <div class="min-h-[22px] flex items-center">
+        <!-- Not Applicable Badge -->
         <span
-          v-if="isCompleted && !isInputFocused"
+          v-if="notApplicable"
+          class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 px-2.5 py-0.5 rounded-full"
+          :title="__('Skipped due to condition on another question')"
+        >
+          <span>⊘</span>
+          <span>{{ __('Not Applicable') }}</span>
+        </span>
+
+        <!-- Answered Badge -->
+        <span
+          v-else-if="isCompleted && !isInputFocused"
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full"
         >
           <span>✓</span>
@@ -487,6 +500,10 @@ const props = defineProps({
     type: String,
     default: "",
   },
+  notApplicable: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "capture-gps", "answered"]);
@@ -645,17 +662,18 @@ const questionLabel = computed(() => getQuestionLabel(props.question));
 
 const parsedQuestionMeta = computed(() => {
   const full = questionLabel.value || "";
-  const match = full.match(/^(Q\d+[a-z]?|\d+\.?|[A-Za-z]\.)\s*(.*)$/i);
+  const match = full.match(/^(Q\d+[a-z]?\.?|\d+\.?|[A-Za-z]\.)\s*(.*)$/i);
   if (match) {
     const rawNum = match[1].replace(/\.$/, "").trim();
+    const cleanText = match[2].replace(/^[\s.:-]+\s*/, "").trim();
     return {
       number: rawNum,
-      text: match[2].trim(),
+      text: cleanText,
     };
   }
   return {
     number: null,
-    text: full,
+    text: full.replace(/^[\s.:-]+\s*/, "").trim(),
   };
 });
 

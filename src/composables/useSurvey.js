@@ -204,9 +204,24 @@ export function useSurvey() {
     return true;
   }
 
+  const isFullForm = ref(false);
+  if (typeof localStorage !== "undefined") {
+    isFullForm.value = localStorage.getItem("omniquery_full_form") === "true";
+  }
+
+  function toggleFullForm() {
+    isFullForm.value = !isFullForm.value;
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("omniquery_full_form", isFullForm.value ? "true" : "false");
+    }
+  }
+
   const activeQuestions = computed(() => {
     if (!activeSection.value || !activeTemplate.value) return [];
     const all = activeTemplate.value.questions || [];
+    if (isFullForm.value) {
+      return all.filter((q) => q.section_code === activeSection.value.section_code);
+    }
     return all.filter((q) => q.section_code === activeSection.value.section_code && isQuestionVisible(q));
   });
 
@@ -226,7 +241,7 @@ export function useSurvey() {
     validationErrors.value = {};
     let isValid = true;
     for (const q of activeQuestions.value) {
-      if (q.is_mandatory) {
+      if (q.is_mandatory && isQuestionVisible(q)) {
         const val = responses.value[q.question_code];
         if (val === undefined || val === null || String(val).trim() === "") {
           validationErrors.value[q.question_code] = "This field is required";
@@ -276,6 +291,8 @@ export function useSurvey() {
     discardDraft,
     generateSurveyId,
     isQuestionVisible,
+    isFullForm,
+    toggleFullForm,
     isSectionComplete,
     validateCurrentSection,
     nextSection,

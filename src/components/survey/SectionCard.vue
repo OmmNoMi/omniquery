@@ -33,48 +33,114 @@
     </div>
 
     <!-- Fixed Native Mobile Bottom Action Bar (Soft Grayish Sage Green) -->
-    <div class="fixed bottom-0 inset-x-0 z-50 bg-[#e2ebe4] dark:bg-[#18261e] border-t border-[#cbdcd0] dark:border-[#25392e] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 sm:px-4 py-2.5 pb-safe">
+    <div class="fixed bottom-0 inset-x-0 z-50 bg-[#d0ded3] dark:bg-[#142019] border-t border-[#b8cdbf] dark:border-[#1f3026] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 sm:px-4 py-2.5 pb-safe">
       <div class="max-w-2xl mx-auto flex items-center justify-between gap-2">
         <!-- Previous Page Button -->
         <button
           v-if="currentIndex > 0"
           type="button"
           @click="$emit('prev')"
-          class="px-3 py-2 rounded-xl border border-[#cbdcd0] dark:border-[#334d3f] bg-[#f0f5f1] dark:bg-[#25392e] font-bold text-slate-900 dark:text-emerald-100 hover:bg-white dark:hover:bg-[#2d4538] active:scale-95 transition text-xs sm:text-sm shrink-0 flex items-center gap-1"
+          class="px-3 py-2 rounded-xl border border-[#b8cdbf] dark:border-[#2a4033] bg-[#e6efe8] dark:bg-[#1c2c22] font-bold text-slate-900 dark:text-emerald-100 hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 transition text-xs sm:text-sm shrink-0 flex items-center gap-1"
         >
           <span>←</span>
           <span>{{ __('Previous') }}</span>
         </button>
         <div v-else class="w-12 sm:w-16"></div>
 
-        <!-- Center Utility Controls: Auto Advance & Auto Form -->
-        <div class="flex items-center gap-1.5 sm:gap-2">
-          <!-- Auto Advance Toggle Button -->
+        <!-- Center: Mode Dropdown Menu -->
+        <div class="relative" ref="modeMenuRef">
           <button
             type="button"
-            @click="$emit('toggle-auto-advance')"
-            :class="[
-              'px-2.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1 active:scale-95 shadow-2xs cursor-pointer',
-              autoAdvance
-                ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                : 'bg-[#f0f5f1] dark:bg-[#25392e] text-slate-700 dark:text-slate-200 border-[#cbdcd0] dark:border-[#334d3f] hover:bg-white dark:hover:bg-[#2d4538]'
-            ]"
-            :title="__('Toggle Auto Advance (advance automatically when answered)')"
+            @click.stop="isModeMenuOpen = !isModeMenuOpen"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none bg-[#e6efe8] dark:bg-[#1c2c22] text-slate-800 dark:text-emerald-100 border-[#b8cdbf] dark:border-[#2a4033] hover:bg-white dark:hover:bg-[#253a2d]"
           >
-            <span>⚡</span>
-            <span class="text-[11px] sm:text-xs font-bold">{{ __('Auto') }}</span>
+            <span>⚙️</span>
+            <span>{{ __('Mode') }}</span>
+            <span class="text-[10px] opacity-70">▾</span>
           </button>
 
-          <!-- Focus Form Mode Button -->
-          <button
-            type="button"
-            @click="$emit('open-focus-mode')"
-            class="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#f0f5f1] dark:bg-[#25392e] border border-[#cbdcd0] dark:border-[#334d3f] text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-[#2d4538] active:scale-95 transition flex items-center gap-1 shadow-2xs cursor-pointer"
-            :title="__('Open One-by-One Focus Popup Form')"
+          <!-- Dropdown Popover Menu (Upward) -->
+          <div
+            v-if="isModeMenuOpen"
+            @click.stop
+            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 space-y-1 z-50 animate-fade-in"
           >
-            <span>🎯</span>
-            <span class="text-[11px] sm:text-xs font-bold">{{ __('Focus') }}</span>
-          </button>
+            <div class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase px-2.5 py-1 tracking-wider">
+              {{ __('Survey Options') }}
+            </div>
+
+            <!-- 1. Auto Advance Toggle -->
+            <button
+              type="button"
+              @click="$emit('toggle-auto-advance')"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-sm">⚡</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ __('Auto Advance') }}</div>
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400">{{ __('Next question on answer') }}</div>
+                </div>
+              </div>
+              <span
+                :class="[
+                  'w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0',
+                  autoAdvance ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
+                ]"
+              >
+                <span
+                  :class="[
+                    'w-4 h-4 rounded-full bg-white transition-transform transform shadow-xs',
+                    autoAdvance ? 'translate-x-4' : 'translate-x-0'
+                  ]"
+                />
+              </span>
+            </button>
+
+            <!-- 2. Full Form Toggle -->
+            <button
+              type="button"
+              @click="$emit('toggle-full-form')"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-sm">📋</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ __('Full Form') }}</div>
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400">{{ __('Show all fields (incl. N/A)') }}</div>
+                </div>
+              </div>
+              <span
+                :class="[
+                  'w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0',
+                  isFullForm ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
+                ]"
+              >
+                <span
+                  :class="[
+                    'w-4 h-4 rounded-full bg-white transition-transform transform shadow-xs',
+                    isFullForm ? 'translate-x-4' : 'translate-x-0'
+                  ]"
+                />
+              </span>
+            </button>
+
+            <!-- 3. Focus Form Mode Action -->
+            <button
+              type="button"
+              @click="onOpenFocusMode"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-1.5"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-sm">🎯</span>
+                <div>
+                  <div class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ __('Focus Form') }}</div>
+                  <div class="text-[10px] text-slate-500 dark:text-slate-400">{{ __('One-by-one popup card') }}</div>
+                </div>
+              </div>
+              <span class="text-xs font-bold text-slate-400">→</span>
+            </button>
+          </div>
         </div>
 
         <!-- Right: Next / Submit Page Controls -->
@@ -140,10 +206,36 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isFullForm: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-defineEmits(["prev", "next", "submit", "open-focus-mode", "toggle-auto-advance", "toggle-audio"]);
+const emit = defineEmits([
+  "prev",
+  "next",
+  "submit",
+  "open-focus-mode",
+  "toggle-auto-advance",
+  "toggle-full-form",
+  "toggle-audio",
+]);
 const { __, getSectionTitle } = useTranslation();
+
+const isModeMenuOpen = ref(false);
+const modeMenuRef = ref(null);
+
+function onOpenFocusMode() {
+  isModeMenuOpen.value = false;
+  emit("open-focus-mode");
+}
+
+function handleOutsideClick(event) {
+  if (isModeMenuOpen.value && modeMenuRef.value && !modeMenuRef.value.contains(event.target)) {
+    isModeMenuOpen.value = false;
+  }
+}
 
 const questionsContainerRef = ref(null);
 const bottomSpacerHeight = ref(80);
@@ -176,11 +268,17 @@ onMounted(() => {
     setupResizeObserver();
   });
   window.addEventListener("resize", updateBottomSpacer);
+  if (typeof document !== "undefined") {
+    document.addEventListener("click", handleOutsideClick);
+  }
 });
 
 onUnmounted(() => {
   if (resizeObserver) resizeObserver.disconnect();
   window.removeEventListener("resize", updateBottomSpacer);
+  if (typeof document !== "undefined") {
+    document.removeEventListener("click", handleOutsideClick);
+  }
 });
 
 watch(() => props.currentIndex, () => {

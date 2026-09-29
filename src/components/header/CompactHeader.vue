@@ -1,5 +1,5 @@
 <template>
-  <header class="sticky top-0 z-40 bg-[#e2ebe4] dark:bg-[#18261e] border-b border-[#cbdcd0] dark:border-[#25392e] shadow-xs">
+  <header class="sticky top-0 z-40 bg-[#d0ded3] dark:bg-[#142019] border-b border-[#b8cdbf] dark:border-[#1f3026] shadow-xs">
     <div class="max-w-3xl mx-auto px-3 sm:px-4 h-13 flex items-center justify-between">
       <!-- Left: Back Chevron & OmniQuery Wordmark -->
       <div class="flex items-center gap-2 shrink-0">
@@ -8,7 +8,7 @@
           v-if="showBack"
           type="button"
           @click="$emit('exit')"
-          class="w-8 h-8 rounded-full flex items-center justify-center bg-[#f0f5f1] dark:bg-[#25392e] hover:bg-white dark:hover:bg-[#2d4538] active:scale-95 text-slate-800 dark:text-emerald-100 border border-[#cbdcd0] dark:border-[#334d3f] transition"
+          class="w-8 h-8 rounded-full flex items-center justify-center bg-[#e6efe8] dark:bg-[#1c2c22] hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 text-slate-800 dark:text-emerald-100 border border-[#b8cdbf] dark:border-[#2a4033] transition"
           :aria-label="__('Return to Home')"
           :title="__('Return to Home')"
         >
@@ -33,7 +33,7 @@
         <!-- Chip 1: Overall Progress in Percentage -->
         <div
           v-if="showBack"
-          class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#f0f5f1] dark:bg-[#25392e] border border-[#cbdcd0] dark:border-[#334d3f] text-slate-800 dark:text-emerald-100 flex items-center gap-1 shadow-2xs select-none"
+          class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#e6efe8] dark:bg-[#1c2c22] border border-[#b8cdbf] dark:border-[#2a4033] text-slate-800 dark:text-emerald-100 flex items-center gap-1 shadow-2xs select-none"
           :title="__('Overall Form Progress')"
         >
           <span class="text-[11px] font-mono font-black text-emerald-700 dark:text-emerald-300">{{ progressPercent }}%</span>
@@ -47,7 +47,7 @@
           class="relative w-8 h-8 rounded-full flex items-center justify-center transition active:scale-95 shadow-2xs cursor-pointer"
           :class="[
             isRecording && !isAudioPaused
-              ? 'bg-white dark:bg-[#25392e] text-slate-800 dark:text-white border border-[#cbdcd0] dark:border-[#334d3f] hover:bg-slate-50'
+              ? 'bg-white dark:bg-[#1c2c22] text-slate-800 dark:text-white border border-[#b8cdbf] dark:border-[#2a4033] hover:bg-slate-50'
               : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
           ]"
           :title="isRecording && !isAudioPaused ? __('Mute microphone') : __('Unmute / record microphone')"
@@ -86,12 +86,12 @@
           <!-- Red Recording Dot (live pulsing dot in bottom-right corner just like user avatar's green dot!) -->
           <span
             v-if="isRecording && !isAudioPaused"
-            class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#e2ebe4] dark:border-[#18261e] bg-rose-600 animate-pulse"
+            class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#d0ded3] dark:border-[#142019] bg-rose-600 animate-pulse"
             :title="__('Recording Live')"
           />
           <span
             v-else
-            class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#e2ebe4] dark:border-[#18261e] bg-slate-400"
+            class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#d0ded3] dark:border-[#142019] bg-slate-400"
             :title="__('Muted')"
           />
         </button>
@@ -100,7 +100,7 @@
         <button
           type="button"
           @click="showConfigModal = true"
-          class="relative w-9 h-9 rounded-full bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-black text-xs flex items-center justify-center shadow-xs ring-2 ring-[#cbdcd0] transition cursor-pointer select-none"
+          class="relative w-9 h-9 rounded-full bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-black text-xs flex items-center justify-center shadow-xs ring-2 ring-[#b8cdbf] transition cursor-pointer select-none"
           :title="__('Settings & Configuration')"
         >
           <span>{{ userInitial }}</span>
@@ -108,7 +108,7 @@
           <!-- Green Dot Indicator Positioned on the User Icon -->
           <span
             :class="[
-              'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#e2ebe4] dark:border-[#18261e]',
+              'absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#d0ded3] dark:border-[#142019]',
               isOnline ? 'bg-emerald-500' : 'bg-amber-400'
             ]"
             :title="isOnline ? 'Online' : 'Offline'"
