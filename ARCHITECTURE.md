@@ -40,9 +40,9 @@ OmniQuery is an enterprise-grade, offline-first survey engine, dynamic inspectio
 
 ---
 
-## 2. Survey Versions (v1, v2) & Version Lifecycle (`is_submittable: 1`)
+## 2. Survey Versions & Native Frappe Amendment Lifecycle (`is_submittable: 1`)
 
-To prevent offline data corruption and schema divergence during multi-month field campaigns, survey templates adopt Frappe's native **Submittable Document Lifecycle**:
+To prevent offline data corruption and schema divergence during multi-month field campaigns, survey templates adopt **Frappe's default Submittable Document Amendment Lifecycle**:
 
 ```mermaid
 flowchart LR
@@ -57,9 +57,9 @@ flowchart LR
 1. **Permanent Template Immutability**:
    - Setting `"is_submittable": 1` ensures that once a survey template is published (`docstatus = 1`), its schema, sections, and linked questions are permanently locked in MariaDB.
    - Any attempt to directly alter a published template raises `frappe.ValidationError`.
-2. **Survey Versioning (`amended_from`)**:
+2. **Frappe Default Submittable Amendment (`amended_from`)**:
    - When survey questions, options, or scripts need updates during an active enumeration campaign, the Project Admin clicks **Amend**.
-   - Frappe generates a sequential version (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from`.
+   - Built on Frappe's standard amendment system, Frappe automatically generates a sequential amended version (`SURV-TMPL-001-1`, `SURV-TMPL-001-2`) linked via `amended_from` without custom versioning hacks.
 3. **Zero Offline Rejection Guarantee**:
    - Field surveyors offline in remote villages without network access continue collecting responses against Version 1.
    - When returning to connectivity, their responses are ingested cleanly without rejection or version mismatch errors. Both Version 1 and Version 2 responses coexist harmoniously in MariaDB.
@@ -211,22 +211,26 @@ flowchart LR
 
 ---
 
-## 8. Disaster Recovery & Universal Local Export
+## 8. Disaster Recovery & Universal Local Export (Per-Survey & Bulk All-At-Once)
 
 To guarantee **zero data loss under any technical failure** (server downtime, corrupted cache, device hardware issues):
 
 1. **PWA Local Storage Recovery Drawer**:
    - Accessible via the top status pill at any time, even when completely offline.
-2. **Multi-Format Export Options**:
+   - Provides instant switching between **Per-Survey Export** and **Bulk Action Export (All At Once)**.
+2. **Dual-Scope Recovery Modes**:
+   - **Per-Survey Export**: Extracts responses, answered fields, and media strictly for the active or selected survey.
+   - **Bulk Action Export (All At Once)**: Master one-click extraction of all surveys, offline responses, audio recordings, and photos stored on the device.
+3. **Multi-Format Export Options**:
    - **`JSON Export`**: Complete, cryptographic raw dump of IndexedDB (WAL, draft state, schema hashes).
-   - **`XLSX Export`**: Formatted tabular workbook containing all responses, sections, and answered columns ready for Excel.
+   - **`XLSX Export`**: Formatted tabular workbook containing all responses, sections, and answered columns ready for Excel (multi-tab in bulk mode).
    - **`Comprehensive Forensic ZIP Bundle`**:
      - `survey_database_dump.json`: Raw IndexedDB WAL state.
      - `responses_spreadsheet.xlsx`: Tabular survey data.
      - `media/`: All captured photos (`.webp`), compressed videos (`.webm`/`.mp4`), and interview audio blobs (`.opus`).
      - `diagnostics/console_logs.txt`: Complete in-memory circular ring buffer of client console logs & errors.
      - `diagnostics/device_telemetry.json`: OS, browser engine, screen DPI, battery level, online/offline transition history, and storage quota utilization.
-3. **Out-of-Band Sharing**:
+4. **Out-of-Band Sharing**:
    - Web Share API / File Saver: Surveyors can send the ZIP directly to supervisors via WhatsApp, Telegram, Google Drive, or Bluetooth.
 
 ---

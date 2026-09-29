@@ -27,12 +27,12 @@ With an embedded Progressive Web App (PWA) running on Dexie.js (IndexedDB Write-
 
 ## 🚀 Key Features
 
-* **🌊 Survey Versions (v1, v2) (`is_submittable: 1`)**: Published templates become permanently immutable documents (`docstatus = 1`). Modifying a survey creates an new survey version (`TMPL-SHG-1` &rarr; `TMPL-SHG-2`) guaranteeing **zero offline rejection** for field surveyors working in remote villages.
+* **🌊 Survey Versions (Frappe Native Submittable Amendment Lifecycle)**: Built 100% on Frappe's default submittable DocType amendment lifecycle (`is_submittable: 1`, `amended_from`). Published templates lock permanently with `docstatus = 1`. Amending a survey automatically generates a linked version (`SURV-TMPL-001-1`, `SURV-TMPL-001-2`) guaranteeing **zero offline rejection** for field surveyors working in remote villages.
 * **🛡️ Zero-Data-Loss Offline PWA**: Dual-tier storage with in-memory reactive state and persistent IndexedDB Write-Ahead Log (WAL) powered by Dexie.js. Forms survive battery depletion, browser crashes, background app eviction, and accidental navigation.
 * **📡 Continuous In-Flight Live Sync (`sync_draft`)**: While working online, partial responses stream asynchronously to MariaDB as `Draft` records without mandatory field blocking, providing central supervisors live monitoring at `/desk/omniquery-workstation`.
 * **🚨 Instantaneous Client Error Reporting Beacon**: Any client-side evaluation error or stuck question fires an asynchronous beacon (`navigator.sendBeacon`) logging directly to `OmniQuery Field Error Log` for immediate Project Admin triage.
 * **🎙️ Ambient Audio Interview Recording**: Persistent floating header control (`[🎙️ Record | ⏸ Pause / ▶ Resume | ⏹ Stop]`) recording ambient interview audio into low-bitrate Opus chunks (`.opus`/`.webm`) with automatic finalization on survey submission.
-* **💾 Universal Disaster Recovery**: Built-in recovery drawer for offline field data rescue with one-click downloads of **JSON** (raw WAL dump), **XLSX** (tabular spreadsheet), and a **Comprehensive Forensic ZIP** (WAL JSON, XLSX, media blobs, client console logs, and device telemetry) for sharing via WhatsApp or Drive.
+* **💾 Universal Disaster Recovery (Per-Survey & Bulk All-At-Once)**: Built-in offline recovery drawer with dual-scope extraction: **Per-Survey Export** (for a single questionnaire) or **Bulk Action Export** (all surveys, offline drafts, and media on device at once) into **JSON**, **XLSX**, and **Comprehensive Forensic ZIP** bundles (WAL state, spreadsheets, photo/audio blobs, console logs, device telemetry) for out-of-band rescue via WhatsApp, Drive, or Bluetooth.
 * **🌍 4-Tier Scope Hierarchy & 100% Frappe Native Translations**:
   * Unified governance across **`Platform`**, **`Workspace`**, **`Project`**, and **`Survey`** scopes.
   * Common questions (Yes/No, Likert 5-point, Full Name, Phone, Age, District, GPS) can be promoted to `Platform` scope.

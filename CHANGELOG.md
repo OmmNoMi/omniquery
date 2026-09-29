@@ -10,9 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned & Architecture Specifications
-* **🌊 Survey Versions (v1, v2) (`is_submittable: 1`)**:
+* **🌊 Survey Versions (Frappe Native Submittable Amendment Lifecycle)**:
   * Published survey templates lock permanently (`docstatus = 1`) to eliminate mid-campaign schema drift.
-  * Amendments create sequential versions (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from` ensuring zero offline rejection.
+  * Native submittable amendment lifecycle (`amended_from`) creates sequential versions (`SURV-TMPL-001-1`, `SURV-TMPL-001-2`) ensuring zero offline rejection.
 * **🌍 4-Tier Scope Hierarchy & Reusable Option Sets**:
   * Question and Option Set scoping: `Platform`, `Workspace`, `Project`, `Survey`.
   * 100% Frappe Native Translations via `locale/*.csv` and `Translation` DocType (`frappe._()`).
@@ -21,8 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   * Choice (Radio, Buttons, Switch, Chips, Rating with stars/faces/hearts and 0.5/1.0 steps, Combobox), Numerical (precision default 0), Temporal with calendar anchors, Duration, Geographic, Text Input, SubTables/Grids, and Media.
 * **🎙️ Continuous Ambient Audio Interview Recording**:
   * Floating header controls (`[🎙️ Record | ⏸ Pause / ▶ Resume | ⏹ Stop]`) streaming low-bitrate Opus chunks (`.opus`/`.webm`) to IndexedDB with auto-stop on submit.
-* **💾 Universal Multi-Format Disaster Recovery**:
-  * PWA recovery drawer generating instant raw WAL JSON, XLSX, and Comprehensive Forensic ZIP bundles (WAL + XLSX + media + console logs + device telemetry).
+* **💾 Universal Multi-Format Disaster Recovery (Per-Survey & Bulk All-At-Once)**:
+  * PWA recovery drawer with dual-scope extraction: **Per-Survey** or **Bulk Action All-At-Once** generating instant raw WAL JSON, XLSX, and Comprehensive Forensic ZIP bundles (WAL + XLSX + media + console logs + device telemetry).
 * **📡 Continuous In-Flight Live Sync & Instant Error Beacon**:
   * Debounced partial sync stream (`sync_draft`) saving drafts to MariaDB for live supervisor monitoring.
   * Zero-latency error beacon (`navigator.sendBeacon`) logging to `OmniQuery Field Error Log`.

@@ -13,14 +13,14 @@
 
 ---
 
-## 🌊 Survey Versions (v1, v2) & Version Immutability (`is_submittable: 1`)
+## 🌊 Survey Versions & Native Frappe Amendment Lifecycle (`is_submittable: 1`)
 
 ### 1. The Immutability Guarantee
 - Published survey templates have `"is_submittable": 1` and lock permanently upon submission (`docstatus = 1`).
 - Eliminates mid-campaign schema drift where surveyors in the field submit responses against modified question definitions.
 
-### 2. Survey Versioning (`amended_from`)
-- Any update to a published survey creates an new survey version (`TMPL-SHG-001-1` &rarr; `TMPL-SHG-001-2`) linked via `amended_from`.
+### 2. Frappe Default Submittable Amendment Lifecycle (`amended_from`)
+- Follows 100% Frappe native submittable DocType amendment lifecycle: amending a published survey automatically creates an incremented version (`SURV-TMPL-001-1` &rarr; `SURV-TMPL-001-2`) linked via `amended_from`.
 - **Zero Offline Rejection**: Field surveyors working offline in remote villages without connectivity continue collecting responses against Version 1. When returning online, both Version 1 and Version 2 responses are ingested cleanly without rejection.
 
 ---
@@ -69,21 +69,24 @@ All UI elements are driven deterministically by schema metadata:
 
 ---
 
-## 💾 Universal Disaster Recovery & Out-of-Band Sharing
+## 💾 Universal Disaster Recovery (Per-Survey & Bulk All-At-Once)
 
 To guarantee **zero data loss under any technical failure** (server downtime, corrupted cache, device hardware issues):
 
-1. **PWA Local Recovery Drawer**: Accessible via the top status pill at any time, even when completely offline.
-2. **Multi-Format Export Options**:
+1. **PWA Local Recovery Drawer**: Accessible via the top status pill at any time, even when completely offline, featuring **Per-Survey** and **Bulk All-At-Once** export modes.
+2. **Dual-Scope Export Capabilities**:
+   - **Per-Survey Export**: Extracts responses, answered fields, and media for a single active survey.
+   - **Bulk Action Export (All At Once)**: Master one-click extraction of every survey, offline response, audio recording, and photo stored on the device.
+3. **Multi-Format Export Options**:
    - **`JSON Export`**: Complete, cryptographic raw dump of IndexedDB (WAL, draft state, schema hashes).
    - **`XLSX Export`**: Formatted tabular workbook containing all responses, sections, and answered columns ready for Excel.
    - **`Comprehensive Forensic ZIP Bundle`**:
      - `survey_database_dump.json`: Raw IndexedDB WAL state.
-     - `responses_spreadsheet.xlsx`: Tabular survey data.
+     - `responses_spreadsheet.xlsx`: Tabular survey data (multi-tab in bulk mode).
      - `media/`: All captured photos (`.webp`), compressed videos (`.webm`/`.mp4`), and interview audio blobs (`.opus`).
      - `diagnostics/console_logs.txt`: Complete in-memory circular ring buffer of client console logs & errors.
      - `diagnostics/device_telemetry.json`: OS, browser engine, screen DPI, battery level, online/offline transition history, and storage quota utilization.
-3. **Out-of-Band Sharing**: Web Share API / File Saver enabling surveyors to send the ZIP directly to supervisors via WhatsApp, Telegram, Google Drive, or Bluetooth.
+4. **Out-of-Band Sharing**: Web Share API / File Saver enabling surveyors to send the ZIP directly to supervisors via WhatsApp, Telegram, Google Drive, or Bluetooth.
 
 ---
 
