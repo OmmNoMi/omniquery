@@ -55,39 +55,47 @@ With an embedded Progressive Web App (PWA) running on Dexie.js (IndexedDB Write-
 
 ```mermaid
 flowchart TD
-    subgraph Client ["Client Device (Browser / Offline PWA: /omniquery)"]
-        UI["Vue 3 + Tailwind PWA UI"]
-        Form["Reactive Form & Control Dispatcher"]
-        WAL[("Dexie.js IndexedDB: OmniQueryDB\n(Write-Ahead Log)")]
-        AudioRec["Opus Audio Recorder (MediaStream)"]
-        Beacon["Error Reporting Beacon (sendBeacon)"]
-        Recovery["Universal Recovery Drawer\n(JSON, XLSX, Forensic ZIP)"]
+    subgraph Client ["Client Device PWA"]
+        UI["Vue 3 Tailwind PWA UI"]
+        Form["Reactive Form and Control Dispatcher"]
+        WAL[("Dexie.js IndexedDB WAL")]
+        AudioRec["Opus Audio Recorder"]
+        Beacon["Error Reporting Beacon"]
+        Recovery["Universal Recovery Drawer"]
 
         UI <--> Form
-        Form -->|Every Input / Keystroke (0ms)| WAL
+        Form -->|Instant Save| WAL
         AudioRec -->|Opus Blobs| WAL
-        UI -.->|Disaster Export| Recovery
+        UI -.->|Local Export| Recovery
     end
 
     subgraph Network ["Transport Layer"]
-        DraftSync["In-Flight sync_draft\n(Debounced 750ms, Partial)"]
-        FinalPush["Batch Push Request\n(UUIDv4 Idempotency Key)"]
+        DraftSync["In-Flight sync_draft"]
+        FinalPush["Batch Push Request"]
         ErrStream["Error Beacon Stream"]
     end
 
     subgraph Backend ["Frappe v16 Backend"]
-        DraftEndpoint["omniquery.api.sync.sync_draft\n(No mandatory validation)"]
-        PushEndpoint["omniquery.api.sync.batch_push\n(Full Script & Rule Validation)"]
-        ErrEndpoint["omniquery.api.telemetry.log_field_error"]
+        DraftEndpoint["api.sync.sync_draft"]
+        PushEndpoint["api.sync.batch_push"]
+        ErrEndpoint["api.telemetry.log_field_error"]
 
-        DraftDoc[("OmniQuery Response: Draft\n(Live Supervisor Monitoring)")]
-        SubmittedDoc[("OmniQuery Response: Submitted\n(Locked & Aggregated)")]
-        ErrDoc[("OmniQuery Field Error Log\n(Instant Admin Triage)")]
+        DraftDoc[("OmniQuery Response: Draft")]
+        SubmittedDoc[("OmniQuery Response: Submitted")]
+        ErrDoc[("OmniQuery Field Error Log")]
     end
 
-    WAL -->|Online Event| DraftSync --> DraftEndpoint --> DraftDoc
-    WAL -->|Submit Survey| FinalPush --> PushEndpoint --> SubmittedDoc
-    Beacon --> ErrStream --> ErrEndpoint --> ErrDoc
+    WAL -->|Online Stream| DraftSync
+    DraftSync --> DraftEndpoint
+    DraftEndpoint --> DraftDoc
+
+    WAL -->|Submit Action| FinalPush
+    FinalPush --> PushEndpoint
+    PushEndpoint --> SubmittedDoc
+
+    Beacon --> ErrStream
+    ErrStream --> ErrEndpoint
+    ErrEndpoint --> ErrDoc
 ```
 
 For complete technical specifications, see [ARCHITECTURE.md](ARCHITECTURE.md) and [ROADMAP.md](ROADMAP.md).

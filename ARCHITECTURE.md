@@ -46,12 +46,12 @@ To prevent offline data corruption and schema divergence during multi-month fiel
 
 ```mermaid
 flowchart LR
-    Draft["Draft Template\n(docstatus = 0)\nSchema being authored"] -->|Submit / Publish| Wave1["Published Wave 1\n(docstatus = 1)\nPERMANENTLY LOCKED"]
-    Wave1 -->|Amend on Requirements Change| Wave2Draft["Amended Draft\n(docstatus = 0)\namended_from = Wave 1"]
-    Wave2Draft -->|Submit / Publish| Wave2["Published Wave 2\n(docstatus = 1)\nPERMANENTLY LOCKED"]
+    Draft["Draft Template<br/>docstatus = 0"] -->|Publish| Wave1["Published Wave 1<br/>docstatus = 1 (Locked)"]
+    Wave1 -->|Amend| Wave2Draft["Amended Draft<br/>docstatus = 0"]
+    Wave2Draft -->|Publish| Wave2["Published Wave 2<br/>docstatus = 1 (Locked)"]
 
-    Wave1 -.-> FieldResp1["Surveyor Offline in Village A\nSubmits against Wave 1\n(INGESTION 100% SUCCEEDS)"]
-    Wave2 -.-> FieldResp2["Surveyor Online in Village B\nSubmits against Wave 2\n(INGESTION 100% SUCCEEDS)"]
+    Wave1 -.-> FieldResp1["Surveyor Offline in Village A<br/>Submits against Wave 1 (Accepted)"]
+    Wave2 -.-> FieldResp2["Surveyor Online in Village B<br/>Submits against Wave 2 (Accepted)"]
 ```
 
 1. **Permanent Template Immutability**:
@@ -72,12 +72,14 @@ Question Masters and Option Sets are decoupled from individual surveys and gover
 
 ```mermaid
 flowchart TD
-    Tier1["Tier 1: Platform\nUniversal standards (Yes/No, Likert 5-point, Full Name, Phone, Age, District, GPS)\nPre-translated in Frappe native Translation; available to all tenants"]
-    Tier2["Tier 2: Workspace\nOrganization-level (shared across all projects in that client's workspace)"]
-    Tier3["Tier 3: Project\nRestricted to a specific project within the workspace"]
-    Tier4["Tier 4: Survey\nBespoke questions/options private to a single survey template wave"]
+    Tier1["Tier 1: Platform<br/>Universal standards: Yes/No, Likert 5-point, Full Name, Phone, Age, GPS<br/>Pre-translated in Frappe native Translation"]
+    Tier2["Tier 2: Workspace<br/>Organization-level standards shared across workspace projects"]
+    Tier3["Tier 3: Project<br/>Restricted to a specific project within workspace"]
+    Tier4["Tier 4: Survey<br/>Bespoke questions private to single survey wave"]
 
-    Tier1 --> Tier2 --> Tier3 --> Tier4
+    Tier1 --> Tier2
+    Tier2 --> Tier3
+    Tier3 --> Tier4
 ```
 
 * **Platform Promotion**: System Administrators can promote widely used questions or option sets to `Platform` scope so no future tenant or project has to reinvent or re-translate them.
@@ -111,30 +113,30 @@ OmniQuery adopts a clean **Raven-style in-app membership architecture**: instead
 
 ```mermaid
 flowchart TD
-    subgraph GlobalRoles ["Frappe Global System Roles (Only 3)"]
-        GA["1. OmniQuery Admin\n(Platform & Site Super-Admin;\nserver settings, platform fixtures, tenant billing)"]
-        GM["2. OmniQuery Manager\n(Desk Access Role: encompasses all Desk-based stakeholders\nWorkspace Admin, Workspace Manager, Project Admin, Project Manager, Project Analyst, Project Viewer)"]
-        GU["3. OmniQuery User\n(Mobile / PWA Role: users who fill in the survey forms)"]
+    subgraph GlobalRoles ["Frappe Global System Roles (3 Only)"]
+        GA["1. OmniQuery Admin<br/>Platform and Site Super-Admin"]
+        GM["2. OmniQuery Manager<br/>Desk Access Role for All Desk Stakeholders"]
+        GU["3. OmniQuery User<br/>Mobile and PWA Role for Form Fillers"]
     end
 
-    subgraph DeskMemberships ["Desk In-App Contextual Governance (for OmniQuery Manager)"]
-        WM["Workspace Member:\n- Workspace Admin (Owner / Transferable)\n- Workspace Manager"]
+    subgraph DeskMemberships ["Desk Contextual Governance"]
+        WM["Workspace Member:<br/>Workspace Admin or Manager"]
 
-        subgraph ProjectDeskRoles ["Project In-App Roles (Per Project in Desk)"]
-            PA["Project Admin (Technical Lead):\nFull edit: questions, scripts, validation rules, wave publication"]
-            PM["Project Manager (Operations Lead):\nRead-only survey structure with commenting feedback; quotas & field pacing"]
-            PY["Project Analyst (Data & Insights):\nDedicated access to response datasets, pacing telemetry & analytics (zero schema edits)"]
-            PV["Project Viewer (Client / Stakeholder):\nClean executive observer UI: overall project health, KPIs, and status reports"]
+        subgraph ProjectDeskRoles ["Project In-App Roles"]
+            PA["Project Admin: Full technical and publishing rights"]
+            PM["Project Manager: Read-only survey view with continuous comments"]
+            PY["Project Analyst: Read-only response data and insights"]
+            PV["Project Viewer: Clean executive observer dashboard"]
         end
     end
 
-    subgraph FieldRole ["Field Collection (for OmniQuery User)"]
-        PU["Project User / Field Surveyor:\nFills in the survey forms offline in PWA (/omniquery)"]
+    subgraph FieldRole ["Field Collection"]
+        PU["Project User / Field Surveyor:<br/>Fills survey forms in offline PWA"]
     end
 
-    GA -.->|Superuser override| DeskMemberships
-    GM -->|Accesses Desk governed by| DeskMemberships
-    GU -->|Accesses PWA to fill forms as| FieldRole
+    GA -.->|Superuser Override| DeskMemberships
+    GM -->|Accesses Desk| DeskMemberships
+    GU -->|Accesses PWA| FieldRole
 ```
 
 ### 1. The 3 Global Frappe Roles
@@ -168,13 +170,13 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-    Inputs["Surveyor Keystrokes & Inputs"] --> WAL[("1. Local WAL (OmniQueryDB: IndexedDB)\nInstant Persistence (0ms)")]
-    WAL -->|Offline in Village| Cont["2. Non-blocking typing continues"]
-    WAL -->|Online (Debounced 750ms)| AutoSync["3. sync_draft API"]
-    AutoSync --> DraftDoc[("OmniQuery Response: Draft\n(No mandatory validation)")]
-    DraftDoc --> LiveHUD["Live Supervisor Monitor (/desk/omniquery-workstation)"]
+    Inputs["Surveyor Keystrokes and Inputs"] --> WAL[("1. Local WAL in IndexedDB")]
+    WAL -->|Offline Village Mode| Cont["2. Non-blocking typing continues"]
+    WAL -->|Online Stream| AutoSync["3. sync_draft API"]
+    AutoSync --> DraftDoc[("OmniQuery Response: Draft")]
+    DraftDoc --> LiveHUD["Live Supervisor Monitor"]
 
-    Submit["User clicks 'Submit Survey'"] --> BatchPush["4. batch_push API\n(Full Script & Rule Validation)"]
+    Submit["Surveyor Clicks Submit"] --> BatchPush["4. batch_push API"]
     BatchPush --> FinalDoc[("OmniQuery Response: Submitted")]
 ```
 
@@ -192,10 +194,10 @@ To guarantee that field surveyors never remain stuck in the field unnoticed:
 
 ```mermaid
 flowchart LR
-    Stuck["Field Surveyor Experiences Error / Freeze\n(Script failure, validation deadlock, network stall)"] --> Beacon["PWA Error Beacon\n(navigator.sendBeacon / window.onerror)"]
-    Beacon --> ServerLog[("OmniQuery Field Error Log\n(Live in MariaDB)")]
-    ServerLog --> Alert["Real-Time Desk Notification to Project Admin\n('Surveyor stuck at Q14 in Wave 1')"]
-    Alert --> Fix["Admin fixes question/script & Publishes Wave 2\n(PWA pulls updated wave seamlessly)"]
+    Stuck["Field Surveyor Experiences Error or Freeze"] --> Beacon["PWA Error Beacon"]
+    Beacon --> ServerLog[("OmniQuery Field Error Log")]
+    ServerLog --> Alert["Real-Time Desk Notification to Project Admin"]
+    Alert --> Fix["Admin fixes script and Publishes Wave 2"]
 ```
 
 1. **Zero-Latency Error Capture**:
