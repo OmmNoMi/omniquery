@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:TMPL-{title}-{version}",
+ "autoname": "autoname",
  "creation": "2026-09-10 01:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
@@ -12,8 +12,12 @@
   "status",
   "target_category",
   "column_break_meta",
+  "is_public_citizen_link",
+  "auto_advance",
+  "presentation_mode",
   "schema_hash_sha256",
   "published_at",
+  "amended_from",
   "access_tab",
   "is_public",
   "allowed_roles",
@@ -70,6 +74,14 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "0",
+   "description": "If checked, survey can be filled publicly at /survey/{slug} without logging into PWA dashboard.",
+   "fieldname": "is_public_citizen_link",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Allow Public Citizen Link"
+  },
+  {
    "fieldname": "schema_hash_sha256",
    "fieldtype": "Data",
    "label": "Schema SHA-256 Hash",
@@ -79,6 +91,15 @@
    "fieldname": "published_at",
    "fieldtype": "Datetime",
    "label": "Published Timestamp",
+   "read_only": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "OmniQuery Template",
+   "print_hide": 1,
    "read_only": 1
   },
   {
@@ -94,13 +115,13 @@
    "label": "Is Public (Accessible to All)"
   },
   {
-   "description": "Comma-separated Frappe Roles permitted to access this template (e.g. System Manager, OmniTrack Manager, Surveyor). Leave empty if unrestricted.",
+   "description": "Comma-separated Frappe Roles permitted to access this template. Leave empty if unrestricted.",
    "fieldname": "allowed_roles",
    "fieldtype": "Small Text",
    "label": "Allowed Roles"
   },
   {
-   "description": "Comma-separated user emails permitted to access this template (e.g. user@example.com).",
+   "description": "Comma-separated user emails permitted to access this template.",
    "fieldname": "allowed_users",
    "fieldtype": "Small Text",
    "label": "Allowed Users"
@@ -125,7 +146,7 @@
    "fieldname": "questions",
    "fieldtype": "Table",
    "label": "Survey Questions",
-   "options": "OmniQuery Question"
+   "options": "OmniQuery Template Question Reference"
   },
   {
    "fieldname": "compiled_tab",
@@ -138,11 +159,25 @@
    "label": "Compiled Schema JSON",
    "options": "JSON",
    "read_only": 1
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_advance",
+   "fieldtype": "Check",
+   "label": "Auto Advance on Selection (AppSheet Style)"
+  },
+  {
+   "default": "Standard Section",
+   "fieldname": "presentation_mode",
+   "fieldtype": "Select",
+   "label": "Presentation Mode",
+   "options": "Standard Section\nOne-by-One Focus Popup\nFlexible"
   }
  ],
  "index_web_pages_for_search": 0,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-09-10 01:00:00.000000",
+ "modified": "2026-09-29 13:50:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Template",
@@ -150,6 +185,8 @@
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -159,15 +196,43 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Admin",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 0,
+   "create": 1,
+   "delete": 0,
+   "read": 1,
+   "role": "OmniQuery Manager",
+   "submit": 1,
    "write": 1
   },
   {
    "read": 1,
-   "role": "All"
+   "role": "OmniQuery User"
   }
  ],
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
- "track_changes": 1
+ "track_changes": 1,
+ "title_field": "title",
+ "show_title_field_in_link": 1
 }

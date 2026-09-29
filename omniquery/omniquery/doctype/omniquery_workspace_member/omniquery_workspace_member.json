@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "creation": "2026-09-29 13:50:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "workspace_role",
+  "added_on"
+ ],
+ "fields": [
+  {
+   "columns": 5,
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "User",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "columns": 4,
+   "default": "Workspace Member",
+   "fieldname": "workspace_role",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Workspace Role",
+   "options": "Workspace Admin\nWorkspace Manager\nWorkspace Member",
+   "reqd": 1
+  },
+  {
+   "columns": 3,
+   "fieldname": "added_on",
+   "fieldtype": "Datetime",
+   "label": "Added On",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-29 13:50:00.000000",
+ "modified_by": "Administrator",
+ "module": "OmniQuery",
+ "name": "OmniQuery Workspace Member",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "idx",
+ "sort_order": "ASC"
+}

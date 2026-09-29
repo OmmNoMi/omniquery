@@ -5,44 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>OmniQuery · OmmNoMi Field Survey Platform</title>
 
-  <!-- Pass Session & CSRF Token to Frontend PWA -->
+  <!-- Pass Session, CSRF Token & Frappe Native Translations to Frontend PWA -->
   <script>
     window.frappe = window.frappe || {};
     window.frappe.csrf_token = "{{ csrf_token or frappe.session.data.csrf_token or '' }}";
     window.frappe.user = "{{ current_user or frappe.session.user or '' }}";
+    window.frappe.initial_survey_id = "{{ initial_survey_id or '' }}";
+    window.__messages = {{ translations or '{}' }};
+    window.__ = function(txt) {
+      return (window.__messages && window.__messages[txt]) || txt;
+    };
   </script>
 
-  <!-- Instant Text Scale Initializer to prevent layout shift -->
+  <!-- Instant Theme & Text Scale Initializer to prevent layout shift -->
   <script>
     (function() {
       try {
-        var s = localStorage.getItem('omniquery_text_size') || localStorage.getItem('omniquery_text_size') || 'md';
+        var t = localStorage.getItem('omniquery_theme') || 'light';
+        if (t === 'dark') document.documentElement.classList.add('dark');
+        var s = localStorage.getItem('omniquery_text_size') || 'md';
         document.documentElement.classList.add('text-scale-' + s);
       } catch (e) {}
     })();
   </script>
 
   <!-- PWA Metadata & Theme -->
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#264839">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="OmniQuery">
   <link rel="manifest" href="/assets/omniquery/pwa/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/assets/omniquery/icons/desktop_icons/solid/omniquery.svg">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/omniquery/pwa/icon-192.png">
 
-  <!-- Tailwind CSS & Custom Elder-Friendly Stylesheet -->
-  <script src="/assets/omniquery/pwa/vendor/tailwindcss.js"></script>
-  <link rel="stylesheet" href="/assets/omniquery/pwa/style.css?v=20260928_2145">
-  <!-- Core Offline Libraries (Dexie & Vue 3) -->
-  <script src="/assets/omniquery/pwa/vendor/dexie.min.js"></script>
-  <script src="/assets/omniquery/pwa/vendor/vue.global.prod.js"></script>
+
+  <!-- Production Pre-Compiled Tailwind & Frappe UI Stylesheet (Zero CDN) -->
+  <link rel="stylesheet" href="/assets/omniquery/dist/omniquery.bundle.css?v=20260929_2008">
 </head>
 <body class="bg-slate-100 text-slate-900 font-sans antialiased min-h-screen">
   
   <div id="app"></div>
 
-  <!-- Main Vue Application Controller -->
-  <script src="/assets/omniquery/pwa/app.js?v=20260928_2145"></script>
+  <!-- Production Pre-Compiled Vue 3 + Frappe UI + Dexie Application Bundle -->
+  <script src="/assets/omniquery/dist/omniquery.bundle.js?v=20260929_2008"></script>
+
+
 
   <!-- Service Worker Registration for Complete Offline Capability -->
   <script>

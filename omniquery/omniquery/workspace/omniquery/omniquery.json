@@ -1,0 +1,250 @@
+{
+ "app": "omniquery",
+ "charts": [],
+ "content": "[{\"id\": \"hdr_actions\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Quick Launch</span>\", \"col\": 12}}, {\"id\": \"sc_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Survey Templates\", \"label\": \"Survey Templates\", \"type\": \"DocType\", \"color\": \"Green\", \"col\": 3, \"link_to\": \"OmniQuery Template\"}}, {\"id\": \"sc_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Questions\", \"label\": \"Questions\", \"type\": \"DocType\", \"color\": \"Blue\", \"col\": 3, \"link_to\": \"OmniQuery Question\"}}, {\"id\": \"sc_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Option Sets\", \"label\": \"Option Sets\", \"type\": \"DocType\", \"color\": \"Purple\", \"col\": 3, \"link_to\": \"OmniQuery Option Set\"}}, {\"id\": \"sc_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Responses\", \"label\": \"Responses\", \"type\": \"DocType\", \"color\": \"Cyan\", \"col\": 3, \"link_to\": \"OmniQuery Response\"}}, {\"id\": \"sc_5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Field App (PWA)\", \"label\": \"Field App (PWA)\", \"type\": \"URL\", \"color\": \"Cyan\", \"col\": 3, \"url\": \"/omniquery\"}}, {\"id\": \"sc_6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Projects\", \"label\": \"Projects\", \"type\": \"DocType\", \"color\": \"Orange\", \"col\": 3, \"link_to\": \"OmniQuery Project\"}}, {\"id\": \"sc_7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Workspaces\", \"label\": \"Workspaces\", \"type\": \"DocType\", \"color\": \"Blue\", \"col\": 3, \"link_to\": \"OmniQuery Workspace\"}}, {\"id\": \"sc_8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Field Error Logs\", \"label\": \"Field Error Logs\", \"type\": \"DocType\", \"color\": \"Red\", \"col\": 3, \"link_to\": \"OmniQuery Field Error Log\"}}, {\"id\": \"sc_9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Settings\", \"label\": \"Settings\", \"type\": \"DocType\", \"color\": \"Grey\", \"col\": 3, \"link_to\": \"OmniQuery Settings\"}}]",
+ "creation": "2026-09-29 14:00:00",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "clipboard-list",
+ "idx": 0,
+ "indicator_color": "blue",
+ "is_hidden": 0,
+ "label": "OmniQuery",
+ "links": [
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Surveys & Forms",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Survey Templates",
+   "link_count": 0,
+   "link_to": "OmniQuery Template",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Questions",
+   "link_count": 0,
+   "link_to": "OmniQuery Question",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Option Sets",
+   "link_count": 0,
+   "link_to": "OmniQuery Option Set",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Responses",
+   "link_count": 0,
+   "link_to": "OmniQuery Response",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Field Operations",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Surveyors",
+   "link_count": 0,
+   "link_to": "OmniQuery Surveyor",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Respondents",
+   "link_count": 0,
+   "link_to": "OmniQuery Respondent",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Supervisor Audits",
+   "link_count": 0,
+   "link_to": "OmniQuery Supervisor Audit",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Organization & Settings",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Projects",
+   "link_count": 0,
+   "link_to": "OmniQuery Project",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Workspaces",
+   "link_count": 0,
+   "link_to": "OmniQuery Workspace",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Settings",
+   "link_count": 0,
+   "link_to": "OmniQuery Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Telemetry & Logs",
+   "link_count": 0,
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Card Break"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Field Error Logs",
+   "link_count": 0,
+   "link_to": "OmniQuery Field Error Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Sync Audit Logs",
+   "link_count": 0,
+   "link_to": "OmniQuery Sync Audit Log",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  }
+ ],
+ "modified": "2026-09-29 14:23:56.872876",
+ "modified_by": "Administrator",
+ "module": "OmniQuery",
+ "name": "OmniQuery",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [],
+ "roles": [],
+ "sequence_id": 0.0,
+ "shortcuts": [
+  {
+   "color": "Green",
+   "doc_view": "",
+   "label": "Survey Templates",
+   "link_to": "OmniQuery Template",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Questions",
+   "link_to": "OmniQuery Question",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "",
+   "label": "Option Sets",
+   "link_to": "OmniQuery Option Set",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "",
+   "label": "Responses",
+   "link_to": "OmniQuery Response",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "doc_view": "",
+   "label": "Field App (PWA)",
+   "type": "URL",
+   "url": "/omniquery"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "",
+   "label": "Projects",
+   "link_to": "OmniQuery Project",
+   "type": "DocType"
+  },
+  {
+   "color": "Blue",
+   "doc_view": "",
+   "label": "Workspaces",
+   "link_to": "OmniQuery Workspace",
+   "type": "DocType"
+  },
+  {
+   "color": "Red",
+   "doc_view": "",
+   "label": "Field Error Logs",
+   "link_to": "OmniQuery Field Error Log",
+   "type": "DocType"
+  },
+  {
+   "color": "Grey",
+   "doc_view": "",
+   "label": "Settings",
+   "link_to": "OmniQuery Settings",
+   "type": "DocType"
+  }
+ ],
+ "title": "OmniQuery",
+ "type": "Workspace"
+}

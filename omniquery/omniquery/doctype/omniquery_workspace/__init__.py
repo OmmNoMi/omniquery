@@ -1,0 +1,1 @@
+"""OmniQuery Workspace DocType package."""

@@ -1,0 +1,136 @@
+{
+ "actions": [],
+ "creation": "2026-09-29 13:50:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "question",
+  "section_code",
+  "question_code",
+  "is_mandatory",
+  "display_order",
+  "control_variant",
+  "allow_user_toggle",
+  "custom_label_override",
+  "column_break_compat",
+  "label_en",
+  "field_type",
+  "options_json",
+  "conditional_logic_json",
+  "validation_rules_json",
+  "audio_prompt"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "question",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Master Question",
+   "options": "OmniQuery Question"
+  },
+  {
+   "columns": 2,
+   "fieldname": "section_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Section Code",
+   "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "question_code",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Question Code",
+   "reqd": 1
+  },
+  {
+   "columns": 1,
+   "default": "1",
+   "fieldname": "is_mandatory",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Mandatory"
+  },
+  {
+   "columns": 1,
+   "default": "1",
+   "fieldname": "display_order",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Order"
+  },
+  {
+   "fieldname": "custom_label_override",
+   "fieldtype": "Small Text",
+   "label": "Custom Label Override"
+  },
+  {
+   "fieldname": "column_break_compat",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "label_en",
+   "fieldtype": "Small Text",
+   "label": "Label (English / Fallback)"
+  },
+  {
+   "default": "Text",
+   "fieldname": "field_type",
+   "fieldtype": "Select",
+   "label": "Field Type",
+   "options": "Text\nLong Text\nInteger\nDecimal\nCurrency (INR)\nRange (Slider)\nSingle Choice (Radio)\nSingle Choice (Dropdown)\nMultiple Choice (Checkbox)\nDate\nTime\nGPS Location\nPhoto Upload\nDigital Signature\nDynamic Grid\nRating (1-5)"
+  },
+  {
+   "fieldname": "options_json",
+   "fieldtype": "Code",
+   "label": "Options JSON / List",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "conditional_logic_json",
+   "fieldtype": "Code",
+   "label": "Conditional Skip Logic (JSON)",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "validation_rules_json",
+   "fieldtype": "Code",
+   "label": "Validation Rules (JSON)",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "audio_prompt",
+   "fieldtype": "Attach",
+   "label": "Audio Prompt (.mp3)"
+  },
+  {
+   "columns": 2,
+   "default": "Auto",
+   "fieldname": "control_variant",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Control Variant",
+   "options": "Auto\nRadio\nButtons\nSwitch\nChips\nRating\nCombobox\nSlider\nGrid\nText\nNumber\nCurrency\nDate\nGPS Capture\nPinpoint Map\nPolygon\nCascaded Admin Hierarchy"
+  },
+  {
+   "default": "0",
+   "fieldname": "allow_user_toggle",
+   "fieldtype": "Check",
+   "label": "Allow Surveyor UI Toggle"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-29 13:50:00.000000",
+ "modified_by": "Administrator",
+ "module": "OmniQuery",
+ "name": "OmniQuery Template Question Reference",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "idx",
+ "sort_order": "ASC"
+}

@@ -1,0 +1,119 @@
+{
+ "actions": [],
+ "allow_rename": 0,
+ "creation": "2026-09-29 14:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "general_section",
+  "enable_offline_sync",
+  "enable_continuous_audio",
+  "cb_general",
+  "max_audio_duration_mins",
+  "audio_format",
+  "disaster_recovery_section",
+  "dr_retention_days",
+  "cb_dr",
+  "auto_backup_on_submission"
+ ],
+ "fields": [
+  {
+   "fieldname": "general_section",
+   "fieldtype": "Section Break",
+   "label": "General Settings"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_offline_sync",
+   "fieldtype": "Check",
+   "label": "Enable Offline PWA Sync"
+  },
+  {
+   "default": "1",
+   "fieldname": "enable_continuous_audio",
+   "fieldtype": "Check",
+   "label": "Enable Continuous Forensic Audio Recording"
+  },
+  {
+   "fieldname": "cb_general",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "60",
+   "fieldname": "max_audio_duration_mins",
+   "fieldtype": "Int",
+   "label": "Max Continuous Audio Duration (Minutes)"
+  },
+  {
+   "default": "Opus (WebM)",
+   "fieldname": "audio_format",
+   "fieldtype": "Select",
+   "label": "Default Audio Format",
+   "options": "Opus (WebM)\nAAC (MP4)"
+  },
+  {
+   "fieldname": "disaster_recovery_section",
+   "fieldtype": "Section Break",
+   "label": "Disaster Recovery & Forensic Retention"
+  },
+  {
+   "default": "90",
+   "fieldname": "dr_retention_days",
+   "fieldtype": "Int",
+   "label": "Forensic Payload Retention (Days)"
+  },
+  {
+   "fieldname": "cb_dr",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "fieldname": "auto_backup_on_submission",
+   "fieldtype": "Check",
+   "label": "Auto-archive Forensic Evidence on Final Submission"
+  }
+ ],
+ "issingle": 1,
+ "links": [],
+ "modified": "2026-09-29 14:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "OmniQuery",
+ "name": "OmniQuery Settings",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "OmniQuery Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 0,
+   "delete": 0,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "OmniQuery Manager",
+   "share": 0,
+   "write": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

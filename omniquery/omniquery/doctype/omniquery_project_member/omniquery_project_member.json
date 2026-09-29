@@ -1,0 +1,51 @@
+{
+ "actions": [],
+ "creation": "2026-09-29 13:50:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "user",
+  "project_role",
+  "assigned_on"
+ ],
+ "fields": [
+  {
+   "columns": 5,
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "User",
+   "options": "User",
+   "reqd": 1
+  },
+  {
+   "columns": 4,
+   "default": "Project User",
+   "fieldname": "project_role",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Project Role",
+   "options": "Project Admin\nProject Manager\nProject Analyst\nProject Viewer\nProject User",
+   "reqd": 1
+  },
+  {
+   "columns": 3,
+   "fieldname": "assigned_on",
+   "fieldtype": "Datetime",
+   "label": "Assigned On",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "istable": 1,
+ "links": [],
+ "modified": "2026-09-29 13:50:00.000000",
+ "modified_by": "Administrator",
+ "module": "OmniQuery",
+ "name": "OmniQuery Project Member",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "idx",
+ "sort_order": "ASC"
+}

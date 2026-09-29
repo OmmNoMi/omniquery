@@ -4,6 +4,15 @@ import frappe
 from frappe import _
 
 
+def resolve_template_name(template_name: str) -> str:
+	if not template_name or frappe.db.exists("OmniQuery Template", template_name):
+		return template_name or ""
+	clean = template_name[5:] if template_name.startswith("TMPL-") else template_name
+	if "-" in clean and clean.rsplit("-", 1)[-1].isdigit():
+		clean = clean.rsplit("-", 1)[0]
+	return frappe.db.get_value("OmniQuery Template", {"title": clean}, "name") or template_name
+
+
 def user_has_template_permission(template, user=None):
 	"""
 	Strict RBAC & Access Control for Survey Templates.
@@ -23,6 +32,7 @@ def user_has_template_permission(template, user=None):
 		return True
 
 	if isinstance(template, str):
+		template = resolve_template_name(template)
 		template = frappe.db.get_value(
 			"OmniQuery Template",
 			template,
@@ -63,29 +73,14 @@ def user_has_template_permission(template, user=None):
 
 def get_template_permission_query_conditions(user=None):
 	"""Hook for Desk list view & Frappe ORM query filtering."""
-	if not user:
-		user = frappe.session.user
-
-	user_roles = set(frappe.get_roles(user))
-	if "System Manager" in user_roles or "Administrator" in user_roles or user == "Administrator":
-		return ""
-
-	conditions = ["`tabOmniQuery Template`.is_public = 1"]
-
-	if user != "Guest":
-		escaped_user = frappe.db.escape(f"%{user}%")
-		conditions.append(f"`tabOmniQuery Template`.allowed_users LIKE {escaped_user}")
-
-		for role in user_roles:
-			escaped_role = frappe.db.escape(f"%{role}%")
-			conditions.append(f"`tabOmniQuery Template`.allowed_roles LIKE {escaped_role}")
-
-	return "(" + " OR ".join(conditions) + ")"
+	from omniquery.permissions import get_template_query_conditions
+	return get_template_query_conditions(user=user)
 
 
 def has_template_doc_permission(doc, ptype="read", user=None):
 	"""Hook for Frappe has_permission check."""
-	return user_has_template_permission(doc, user)
+	from omniquery.permissions import has_template_permission
+	return has_template_permission(doc, ptype=ptype, user=user)
 
 
 @frappe.whitelist(allow_guest=True)
@@ -99,6 +94,38 @@ def get_current_user_info():
 		"roles": roles,
 		"full_name": frappe.utils.get_fullname(user) if user != "Guest" else "Guest Surveyor",
 	}
+
+
+def fetch_project_workspace_meta(project_ids):
+	if not project_ids:
+		return {}, {}
+	projs = frappe.get_all(
+		"OmniQuery Project",
+		filters={"name": ["in", list(project_ids)]},
+		fields=["name", "project_name", "workspace"],
+	)
+	p_map = {p.name: p for p in projs}
+	ws_ids = {p.workspace for p in projs if p.workspace}
+	workspaces = (
+		frappe.get_all(
+			"OmniQuery Workspace",
+			filters={"name": ["in", list(ws_ids)]},
+			fields=["name", "workspace_name", "workspace_title"],
+		)
+		if ws_ids
+		else []
+	)
+	return p_map, {w.name: w for w in workspaces}
+
+
+def enrich_template_meta(tmpl, p_map, w_map):
+	p_meta = p_map.get(tmpl.project) or {}
+	ws_id = p_meta.get("workspace") or ""
+	w_meta = w_map.get(ws_id) or {}
+	tmpl["project_name"] = p_meta.get("project_name") or tmpl.project or ""
+	tmpl["workspace"] = ws_id
+	tmpl["workspace_title"] = w_meta.get("workspace_title") or w_meta.get("workspace_name") or ws_id
+	return tmpl
 
 
 @frappe.whitelist(allow_guest=True)
@@ -126,10 +153,10 @@ def list_active_templates(project=None):
 		order_by="published_at desc",
 	)
 
+	p_ids = {t.project for t in templates if t.project}
+	p_map, w_map = fetch_project_workspace_meta(p_ids)
 	current_user = frappe.session.user
-	# Strictly filter out templates if current user lacks permission
-	authorized_templates = [t for t in templates if user_has_template_permission(t, current_user)]
-	return authorized_templates
+	return [enrich_template_meta(t, p_map, w_map) for t in templates if user_has_template_permission(t, current_user)]
 
 
 @frappe.whitelist(allow_guest=True)
@@ -139,6 +166,7 @@ def get_schema(template_name, version=None):
 		frappe.throw(_("Template name is mandatory"), frappe.ValidationError)
 
 	current_user = frappe.session.user
+	template_name = resolve_template_name(template_name)
 	if not user_has_template_permission(template_name, current_user):
 		frappe.throw(
 			_("You do not have permission to access survey template '{0}'").format(template_name),

@@ -1,0 +1,2232 @@
+# Translations template for OmniQuery.
+# Copyright (C) 2026 OmmNoMi Automation LLP
+# This file is distributed under the same license as the OmniQuery project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: OmniQuery VERSION\n"
+"Report-Msgid-Bugs-To: omniquery@ommnomi.com\n"
+"POT-Creation-Date: 2026-09-29 17:06+0553\n"
+"PO-Revision-Date: 2026-09-29 17:06+0553\n"
+"Last-Translator: omniquery@ommnomi.com\n"
+"Language-Team: omniquery@ommnomi.com\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.16.0\n"
+
+#. Header text in the OmniQuery Workspace
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+msgid "<span class=\"h4\">Quick Launch</span>"
+msgstr ""
+
+#. Option for the 'Default Audio Format' (Select) field in DocType 'OmniQuery
+#. Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "AAC (MP4)"
+msgstr ""
+
+#. Label of the access_tab (Tab Break) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Access & Permissions"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.js:6
+msgid "Actions"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Option Set'
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Project'
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Question'
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Surveyor'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+msgid "Active"
+msgstr ""
+
+#. Label of the added_on (Datetime) field in DocType 'OmniQuery Workspace
+#. Member'
+#: omniquery/omniquery/doctype/omniquery_workspace_member/omniquery_workspace_member.json
+msgid "Added On"
+msgstr ""
+
+#. Label of the notes (Small Text) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Additional Notes"
+msgstr ""
+
+#. Label of the age_or_established_year (Int) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Age / Year Established"
+msgstr ""
+
+#. Option for the 'Target Beneficiary Category' (Select) field in DocType
+#. 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Agriculture & Dairy"
+msgstr ""
+
+#. Name of a role
+#. Option for the 'Target Beneficiary Category' (Select) field in DocType
+#. 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "All"
+msgstr ""
+
+#: src/App.vue:44
+msgid "All Surveys"
+msgstr ""
+
+#. Label of the allow_manual_override (Check) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Allow Manual Override of Administrative Hierarchy"
+msgstr ""
+
+#. Label of the is_public_citizen_link (Check) field in DocType 'OmniQuery
+#. Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Allow Public Citizen Link"
+msgstr ""
+
+#. Label of the allowed_roles (Small Text) field in DocType 'OmniQuery
+#. Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Allowed Roles"
+msgstr ""
+
+#. Label of the allowed_users (Small Text) field in DocType 'OmniQuery
+#. Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Allowed Users"
+msgstr ""
+
+#. Label of the amended_from (Link) field in DocType 'OmniQuery Question'
+#. Label of the amended_from (Link) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Amended From"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.py:89
+msgid "Amended question {0} does not exist"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.py:38
+msgid "Amended template {0} does not exist"
+msgstr ""
+
+#. Label of the anchor_date_rule (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Anchor Date Rule (Time-Series Plotting)"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Response'
+#. Option for the 'Audit Verdict' (Select) field in DocType 'OmniQuery
+#. Supervisor Audit'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Approved"
+msgstr ""
+
+#. Description of the 'Custom Attributes JSON' (Code) field in DocType
+#. 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Arbitrary key-value pairs for domain-specific context (e.g. SHG, Crop type, Revenue)"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Archived"
+msgstr ""
+
+#. Label of the assigned_cluster (Data) field in DocType 'OmniQuery Surveyor'
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+msgid "Assigned Cluster / Blocks"
+msgstr ""
+
+#. Label of the assigned_on (Datetime) field in DocType 'OmniQuery Project
+#. Member'
+#: omniquery/omniquery/doctype/omniquery_project_member/omniquery_project_member.json
+msgid "Assigned On"
+msgstr ""
+
+#. Label of the audio_prompt (Attach) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Audio Prompt (.mp3 / .ogg)"
+msgstr ""
+
+#. Label of the audio_prompt (Attach) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Audio Prompt (.mp3)"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Audit Flagged"
+msgstr ""
+
+#. Label of the audit_remarks (Small Text) field in DocType 'OmniQuery
+#. Supervisor Audit'
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Audit Remarks"
+msgstr ""
+
+#. Label of the audit_verdict (Select) field in DocType 'OmniQuery Supervisor
+#. Audit'
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Audit Verdict"
+msgstr ""
+
+#. Label of the supervisor (Link) field in DocType 'OmniQuery Supervisor Audit'
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Auditing Supervisor"
+msgstr ""
+
+#. Label of the auto_fetch_administrative_fields (Check) field in DocType
+#. 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Auto-Fetch Administrative Fields on GPS Capture"
+msgstr ""
+
+#. Label of the auto_backup_on_submission (Check) field in DocType 'OmniQuery
+#. Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "Auto-archive Forensic Evidence on Final Submission"
+msgstr ""
+
+#. Label of the behaviour_tab (Tab Break) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Behaviour & Validation"
+msgstr ""
+
+#. Label of the behaviour_script (Code) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Behaviour Script (JavaScript)"
+msgstr ""
+
+#. Label of the billing_plan (Select) field in DocType 'OmniQuery Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Billing Plan"
+msgstr ""
+
+#. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Block / Tehsil"
+msgstr ""
+
+#. Label of the block (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Block / Ward"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Buttons"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.py:100
+msgid "Cannot modify active submitted question. Create a new version via Amend."
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.py:42
+msgid "Cannot modify published template. Create a new version via Amend."
+msgstr ""
+
+#: src/components/survey/QuestionCard.vue:80
+msgid "Capturing GPS..."
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Cascaded Admin Hierarchy"
+msgstr ""
+
+#: src/App.vue:82
+msgid "Check your network connection or permissions."
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Chips"
+msgstr ""
+
+#. Option for the 'Field Category' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Choice (Multi)"
+msgstr ""
+
+#. Option for the 'Field Category' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Choice (Single)"
+msgstr ""
+
+#. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "City / Village / Gram Panchayat"
+msgstr ""
+
+#: src/components/common/FCurrencyInput.vue:31
+#: src/components/common/FRating.vue:21
+msgid "Clear"
+msgstr ""
+
+#. Label of the client_ip (Data) field in DocType 'OmniQuery Sync Audit Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "Client IP / Device"
+msgstr ""
+
+#: src/App.vue:142
+msgid "Close"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Combobox"
+msgstr ""
+
+#. Description of the 'Allowed Roles' (Small Text) field in DocType 'OmniQuery
+#. Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Comma-separated Frappe Roles permitted to access this template. Leave empty if unrestricted."
+msgstr ""
+
+#. Description of the 'Allowed Users' (Small Text) field in DocType 'OmniQuery
+#. Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Comma-separated user emails permitted to access this template."
+msgstr ""
+
+#. Option for the 'Respondent Type' (Select) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Community / Group"
+msgstr ""
+
+#. Label of the compiled_schema_json (Code) field in DocType 'OmniQuery
+#. Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Compiled Schema JSON"
+msgstr ""
+
+#. Label of the compiled_tab (Tab Break) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Compiled Schema Payload"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+#: src/components/survey/SectionCard.vue:13
+msgid "Completed"
+msgstr ""
+
+#. Label of the conditional_logic_json (Code) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Conditional Logic (JSON)"
+msgstr ""
+
+#. Label of the conditional_logic_json (Code) field in DocType 'OmniQuery
+#. Template Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Conditional Skip Logic (JSON)"
+msgstr ""
+
+#. Label of the phone_number (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Contact Phone Number"
+msgstr ""
+
+#. Label of the control_variant (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Control Variant"
+msgstr ""
+
+#. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Country"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Currency (INR)"
+msgstr ""
+
+#. Label of the custom_attributes_json (Code) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Custom Attributes JSON"
+msgstr ""
+
+#. Label of the custom_label_override (Small Text) field in DocType 'OmniQuery
+#. Template Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Custom Label Override"
+msgstr ""
+
+#. Option for the 'Sync Status' (Select) field in DocType 'OmniQuery Sync Audit
+#. Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "DUPLICATE_SKIPPED"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#. Option for the 'Temporal Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Date"
+msgstr ""
+
+#. Option for the 'Temporal Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "DateTime"
+msgstr ""
+
+#. Option for the 'Temporal Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Day Only"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Decimal"
+msgstr ""
+
+#. Label of the audio_format (Select) field in DocType 'OmniQuery Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "Default Audio Format"
+msgstr ""
+
+#. Label of the question_tab (Tab Break) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Definition & Display"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Deprecated"
+msgstr ""
+
+#. Label of the description (Small Text) field in DocType 'OmniQuery Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Description"
+msgstr ""
+
+#. Label of the description (Small Text) field in DocType 'OmniQuery Section'
+#: omniquery/omniquery/doctype/omniquery_section/omniquery_section.json
+msgid "Description / Helper Note"
+msgstr ""
+
+#. Label of the description (Small Text) field in DocType 'OmniQuery Option
+#. Set'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+msgid "Description / Usage Guidance"
+msgstr ""
+
+#. Label of the device_info (Code) field in DocType 'OmniQuery Field Error Log'
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+msgid "Device & Client Telemetry"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Digital Signature"
+msgstr ""
+
+#. Label of the disaster_recovery_section (Section Break) field in DocType
+#. 'OmniQuery Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "Disaster Recovery & Forensic Retention"
+msgstr ""
+
+#. Label of the display_order (Int) field in DocType 'OmniQuery Option Item'
+#: omniquery/omniquery/doctype/omniquery_option_item/omniquery_option_item.json
+msgid "Display Order"
+msgstr ""
+
+#. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "District"
+msgstr ""
+
+#. Label of the district (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "District / County"
+msgstr ""
+
+#. Label of the section_custom (Section Break) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Domain Custom Attributes"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Option Set'
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Project'
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Question'
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Response'
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Draft"
+msgstr ""
+
+#. Option for the 'Field Category' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Duration"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Dynamic Grid"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.js:50
+msgid "Elevate & Open"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.js:18
+msgid "Elevate Question Scope"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.js:62
+msgid "Elevating question to new scope..."
+msgstr ""
+
+#. Label of the email (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Email Address"
+msgstr ""
+
+#. Label of the enable_continuous_audio (Check) field in DocType 'OmniQuery
+#. Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "Enable Continuous Forensic Audio Recording"
+msgstr ""
+
+#. Label of the enable_offline_sync (Check) field in DocType 'OmniQuery
+#. Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "Enable Offline PWA Sync"
+msgstr ""
+
+#. Label of the enable_reverse_geocoding (Check) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Enable Reverse Geocoding from Lat/Long"
+msgstr ""
+
+#. Label of the end_date (Date) field in DocType 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "End Date"
+msgstr ""
+
+#: src/components/common/FCurrencyInput.vue:11
+#: src/components/survey/QuestionCard.vue:90
+#: src/components/survey/QuestionCard.vue:100
+msgid "Enter value"
+msgstr ""
+
+#. Option for the 'Billing Plan' (Select) field in DocType 'OmniQuery
+#. Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Enterprise"
+msgstr ""
+
+#. Option for the 'Respondent Type' (Select) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Enterprise / Business"
+msgstr ""
+
+#. Label of the error_message (Small Text) field in DocType 'OmniQuery Sync
+#. Audit Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "Error Details"
+msgstr ""
+
+#. Label of the error_message (Small Text) field in DocType 'OmniQuery Field
+#. Error Log'
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+msgid "Error Message"
+msgstr ""
+
+#: src/App.vue:201 src/components/header/CompactHeader.vue:12
+msgid "Exit Form"
+msgstr ""
+
+#. Option for the 'Sync Status' (Select) field in DocType 'OmniQuery Sync Audit
+#. Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "FAILED"
+msgstr ""
+
+#. Option for the 'Rating Icon' (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Faces"
+msgstr ""
+
+#. Option for the 'Respondent Type' (Select) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Farmer / Producer"
+msgstr ""
+
+#. Option for the 'Gender' (Select) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Female"
+msgstr ""
+
+#. Label of a shortcut in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Field App (PWA)"
+msgstr ""
+
+#. Label of the field_category (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Field Category"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a shortcut in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Field Error Logs"
+msgstr ""
+
+#. Label of a Card Break in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Field Operations"
+msgstr ""
+
+#. Label of the field_type (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Field Type"
+msgstr ""
+
+#. Option for the 'Anchor Date Rule (Time-Series Plotting)' (Select) field in
+#. DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "First Day"
+msgstr ""
+
+#. Option for the 'Audit Verdict' (Select) field in DocType 'OmniQuery
+#. Supervisor Audit'
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Flagged for Re-Survey"
+msgstr ""
+
+#. Label of the dr_retention_days (Int) field in DocType 'OmniQuery Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "Forensic Payload Retention (Days)"
+msgstr ""
+
+#. Option for the 'Billing Plan' (Select) field in DocType 'OmniQuery
+#. Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Free"
+msgstr ""
+
+#. Label of the gps_accuracy (Float) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "GPS Accuracy (Meters)"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "GPS Capture"
+msgstr ""
+
+#. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "GPS Coordinates (Lat/Long)"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "GPS Location"
+msgstr ""
+
+#. Label of the gps_distance_variance_meters (Float) field in DocType
+#. 'OmniQuery Supervisor Audit'
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "GPS Variance vs Village Centroid (m)"
+msgstr ""
+
+#. Label of the gender (Select) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Gender"
+msgstr ""
+
+#. Label of the general_section (Section Break) field in DocType 'OmniQuery
+#. Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "General Settings"
+msgstr ""
+
+#. Option for the 'Field Category' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Geographic"
+msgstr ""
+
+#. Label of the geographic_granularity (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Geographic Granularity"
+msgstr ""
+
+#. Label of the section_scope (Section Break) field in DocType 'OmniQuery
+#. Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Geographic Scope & Notes"
+msgstr ""
+
+#. Label of the grantor_organization (Data) field in DocType 'OmniQuery
+#. Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Grantor / Sponsoring Org"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Grid"
+msgstr ""
+
+#. Option for the 'Target Beneficiary Category' (Select) field in DocType
+#. 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Handicrafts"
+msgstr ""
+
+#. Option for the 'Rating Icon' (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Heart"
+msgstr ""
+
+#. Label of the geo_hierarchy_target_fields (Code) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Hierarchy Target Fields Mapping (JSON)"
+msgstr ""
+
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Home"
+msgstr ""
+
+#. Option for the 'Respondent Type' (Select) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Household"
+msgstr ""
+
+#. Label of the idempotency_key (Data) field in DocType 'OmniQuery Response'
+#. Label of the idempotency_key (Data) field in DocType 'OmniQuery Sync Audit
+#. Log'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "Idempotency UUID"
+msgstr ""
+
+#. Description of the 'Is Public (Accessible to All)' (Check) field in DocType
+#. 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "If checked, all users and field surveyors can access and fill this survey template."
+msgstr ""
+
+#. Description of the 'Allow Public Citizen Link' (Check) field in DocType
+#. 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "If checked, survey can be filled publicly at /survey/{slug} without logging into PWA dashboard."
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Option Set'
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Question'
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Surveyor'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+msgid "Inactive"
+msgstr ""
+
+#. Option for the 'Respondent Type' (Select) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Individual"
+msgstr ""
+
+#. Label of the options_json (Code) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Inline Options JSON (Fallback)"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Integer"
+msgstr ""
+
+#: omniquery/api/sync.py:75
+msgid "Invalid JSON payload"
+msgstr ""
+
+#. Label of the is_active (Check) field in DocType 'OmniQuery Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Is Active"
+msgstr ""
+
+#. Label of the is_public (Check) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Is Public (Accessible to All)"
+msgstr ""
+
+#. Label of the label_en (Small Text) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Label (English / Default)"
+msgstr ""
+
+#. Label of the label_en (Small Text) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Label (English / Fallback)"
+msgstr ""
+
+#. Label of the label_text (Data) field in DocType 'OmniQuery Option Item'
+#: omniquery/omniquery/doctype/omniquery_option_item/omniquery_option_item.json
+msgid "Label Text (Default)"
+msgstr ""
+
+#. Label of the last_active_at (Datetime) field in DocType 'OmniQuery Surveyor'
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+msgid "Last Active Timestamp"
+msgstr ""
+
+#. Option for the 'Anchor Date Rule (Time-Series Plotting)' (Select) field in
+#. DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Last Day"
+msgstr ""
+
+#. Label of the gps_latitude (Float) field in DocType 'OmniQuery Respondent'
+#. Label of the gps_latitude (Float) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Latitude"
+msgstr ""
+
+#. Label of the user (Link) field in DocType 'OmniQuery Surveyor'
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+msgid "Linked Frappe User"
+msgstr ""
+
+#. Label of the project (Link) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Linked Project"
+msgstr ""
+
+#. Label of the survey_response (Link) field in DocType 'OmniQuery Sync Audit
+#. Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "Linked Response"
+msgstr ""
+
+#: src/App.vue:21
+msgid "Loading..."
+msgstr ""
+
+#. Label of the captured_at_local (Datetime) field in DocType 'OmniQuery
+#. Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Local Capture Time"
+msgstr ""
+
+#. Label of the section_geo (Section Break) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Location & Geography"
+msgstr ""
+
+#: src/components/survey/QuestionCard.vue:72
+msgid "Location captured"
+msgstr ""
+
+#. Label of the logged_at (Datetime) field in DocType 'OmniQuery Field Error
+#. Log'
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+msgid "Logged At"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Long Text"
+msgstr ""
+
+#. Label of the gps_longitude (Float) field in DocType 'OmniQuery Respondent'
+#. Label of the gps_longitude (Float) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Longitude"
+msgstr ""
+
+#. Option for the 'Gender' (Select) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Male"
+msgstr ""
+
+#. Label of the is_mandatory (Check) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Mandatory"
+msgstr ""
+
+#. Label of the question (Link) field in DocType 'OmniQuery Template Question
+#. Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Master Question"
+msgstr ""
+
+#. Label of the max_audio_duration_mins (Int) field in DocType 'OmniQuery
+#. Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "Max Continuous Audio Duration (Minutes)"
+msgstr ""
+
+#. Option for the 'Field Category' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Media"
+msgstr ""
+
+#. Label of the attachment_file (Attach) field in DocType 'OmniQuery Response
+#. Item'
+#: omniquery/omniquery/doctype/omniquery_response_item/omniquery_response_item.json
+msgid "Media Attachment"
+msgstr ""
+
+#. Option for the 'Target Beneficiary Category' (Select) field in DocType
+#. 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Micro Enterprise"
+msgstr ""
+
+#. Option for the 'Temporal Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Month-Year"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Multiple Choice (Checkbox)"
+msgstr ""
+
+#. Label of the id_number_encrypted (Password) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "National ID / Registration No (Encrypted)"
+msgstr ""
+
+#: src/App.vue:37
+msgid "New Response"
+msgstr ""
+
+#: src/components/survey/SectionCard.vue:56
+msgid "Next"
+msgstr ""
+
+#: src/components/common/FSwitch.vue:22
+msgid "No"
+msgstr ""
+
+#: src/App.vue:81
+msgid "No active surveys available."
+msgstr ""
+
+#: omniquery/api/sync.py:79
+msgid "No data provided"
+msgstr ""
+
+#: src/components/common/FCombobox.vue:27
+msgid "No options found"
+msgstr ""
+
+#. Option for the 'Gender' (Select) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Non-Binary"
+msgstr ""
+
+#. Label of the items_tab (Tab Break) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Normalized Answers"
+msgstr ""
+
+#. Option for the 'Gender' (Select) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Not Applicable"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.py:116
+msgid "Not permitted to create Questions"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Number"
+msgstr ""
+
+#. Label of the value_numeric (Float) field in DocType 'OmniQuery Response
+#. Item'
+#: omniquery/omniquery/doctype/omniquery_response_item/omniquery_response_item.json
+msgid "Numeric Answer"
+msgstr ""
+
+#. Option for the 'Field Category' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Numerical"
+msgstr ""
+
+#: src/components/header/CompactHeader.vue:45
+msgid "Offline"
+msgstr ""
+
+#. Label of a Desktop Icon
+#. Name of a Workspace
+#. Title of a Workspace Sidebar
+#: omniquery/desktop_icon/omniquery.json
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "OmniQuery"
+msgstr ""
+
+#. Name of a role
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "OmniQuery Admin"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+msgid "OmniQuery Field Error Log"
+msgstr ""
+
+#. Name of a role
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "OmniQuery Manager"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_option_item/omniquery_option_item.json
+msgid "OmniQuery Option Item"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+msgid "OmniQuery Option Set"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "OmniQuery Project"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_project_member/omniquery_project_member.json
+msgid "OmniQuery Project Member"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "OmniQuery Question"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "OmniQuery Respondent"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "OmniQuery Response"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_response_item/omniquery_response_item.json
+msgid "OmniQuery Response Item"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_section/omniquery_section.json
+msgid "OmniQuery Section"
+msgstr ""
+
+#. Name of a DocType
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "OmniQuery Settings"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "OmniQuery Supervisor Audit"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+msgid "OmniQuery Surveyor"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "OmniQuery Sync Audit Log"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "OmniQuery Template"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "OmniQuery Template Question Reference"
+msgstr ""
+
+#. Name of a role
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "OmniQuery User"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "OmniQuery Workspace"
+msgstr ""
+
+#. Name of a DocType
+#: omniquery/omniquery/doctype/omniquery_workspace_member/omniquery_workspace_member.json
+msgid "OmniQuery Workspace Member"
+msgstr ""
+
+#: src/components/header/CompactHeader.vue:45
+msgid "Online"
+msgstr ""
+
+#. Label of the option_code (Data) field in DocType 'OmniQuery Option Item'
+#: omniquery/omniquery/doctype/omniquery_option_item/omniquery_option_item.json
+msgid "Option Code / Value"
+msgstr ""
+
+#. Label of the set_name (Data) field in DocType 'OmniQuery Option Set'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+msgid "Option Set Name"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a shortcut in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Option Sets"
+msgstr ""
+
+#. Label of the options_tab (Tab Break) field in DocType 'OmniQuery Option Set'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+msgid "Options"
+msgstr ""
+
+#. Label of the options_tab (Tab Break) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Options & Audio"
+msgstr ""
+
+#. Label of the options_json (Code) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Options JSON / List"
+msgstr ""
+
+#. Label of the options (Table) field in DocType 'OmniQuery Option Set'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+msgid "Options List"
+msgstr ""
+
+#. Option for the 'Default Audio Format' (Select) field in DocType 'OmniQuery
+#. Settings'
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+msgid "Opus (WebM)"
+msgstr ""
+
+#. Label of the display_order (Int) field in DocType 'OmniQuery Section'
+#. Label of the display_order (Int) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_section/omniquery_section.json
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Order"
+msgstr ""
+
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Organization"
+msgstr ""
+
+#. Label of a Card Break in the OmniQuery Workspace
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+msgid "Organization & Settings"
+msgstr ""
+
+#. Option for the 'Respondent Type' (Select) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Other"
+msgstr ""
+
+#. Label of the is_outlier_flagged (Check) field in DocType 'OmniQuery
+#. Supervisor Audit'
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Outlier Flagged"
+msgstr ""
+
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Overview"
+msgstr ""
+
+#. Option for the 'Respondent Type' (Select) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Patient / Health Beneficiary"
+msgstr ""
+
+#: src/App.vue:127
+msgid "Pending"
+msgstr ""
+
+#. Label of the phone_hash (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Phone Search Hash"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Photo Upload"
+msgstr ""
+
+#. Label of the pincode (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Pincode / Postal Code"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Pinpoint Map"
+msgstr ""
+
+#. Option for the 'Scope' (Select) field in DocType 'OmniQuery Option Set'
+#. Option for the 'Scope' (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Platform"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Polygon"
+msgstr ""
+
+#. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Polygon Boundary"
+msgstr ""
+
+#. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Postal Code / PIN"
+msgstr ""
+
+#. Option for the 'Gender' (Select) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Prefer not to say"
+msgstr ""
+
+#: src/components/survey/SectionCard.vue:37
+msgid "Previous"
+msgstr ""
+
+#. Label of the primary_name (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Primary Name / Organization"
+msgstr ""
+
+#. Option for the 'Billing Plan' (Select) field in DocType 'OmniQuery
+#. Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Pro"
+msgstr ""
+
+#. Label of the processed_at (Datetime) field in DocType 'OmniQuery Sync Audit
+#. Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "Processed At"
+msgstr ""
+
+#. Option for the 'Scope' (Select) field in DocType 'OmniQuery Option Set'
+#. Label of the project (Link) field in DocType 'OmniQuery Option Set'
+#. Option for the 'Scope' (Select) field in DocType 'OmniQuery Question'
+#. Label of the project (Link) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Project"
+msgstr ""
+
+#. Option for the 'Project Role' (Select) field in DocType 'OmniQuery Project
+#. Member'
+#: omniquery/omniquery/doctype/omniquery_project_member/omniquery_project_member.json
+msgid "Project Admin"
+msgstr ""
+
+#. Option for the 'Project Role' (Select) field in DocType 'OmniQuery Project
+#. Member'
+#: omniquery/omniquery/doctype/omniquery_project_member/omniquery_project_member.json
+msgid "Project Analyst"
+msgstr ""
+
+#. Label of the description (Text Editor) field in DocType 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Project Description / Objectives"
+msgstr ""
+
+#. Option for the 'Project Role' (Select) field in DocType 'OmniQuery Project
+#. Member'
+#: omniquery/omniquery/doctype/omniquery_project_member/omniquery_project_member.json
+msgid "Project Manager"
+msgstr ""
+
+#. Label of the project_name (Data) field in DocType 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Project Name"
+msgstr ""
+
+#. Label of the project_role (Select) field in DocType 'OmniQuery Project
+#. Member'
+#: omniquery/omniquery/doctype/omniquery_project_member/omniquery_project_member.json
+msgid "Project Role"
+msgstr ""
+
+#. Label of the members_tab (Tab Break) field in DocType 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Project Team & Roles"
+msgstr ""
+
+#. Label of the members (Table) field in DocType 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Project Team Members"
+msgstr ""
+
+#. Option for the 'Project Role' (Select) field in DocType 'OmniQuery Project
+#. Member'
+#: omniquery/omniquery/doctype/omniquery_project_member/omniquery_project_member.json
+msgid "Project User"
+msgstr ""
+
+#. Option for the 'Project Role' (Select) field in DocType 'OmniQuery Project
+#. Member'
+#: omniquery/omniquery/doctype/omniquery_project_member/omniquery_project_member.json
+msgid "Project Viewer"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.py:13
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.py:106
+msgid "Project is required when Scope is Project"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a shortcut in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Projects"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Published"
+msgstr ""
+
+#. Label of the published_at (Datetime) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Published Timestamp"
+msgstr ""
+
+#. Label of the question_code (Data) field in DocType 'OmniQuery Field Error
+#. Log'
+#. Label of the question_code (Data) field in DocType 'OmniQuery Response Item'
+#. Label of the question_code (Data) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+#: omniquery/omniquery/doctype/omniquery_response_item/omniquery_response_item.json
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Question Code"
+msgstr ""
+
+#. Label of the question_code (Data) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Question Code (Semantic Identifier)"
+msgstr ""
+
+#. Label of the question_label (Small Text) field in DocType 'OmniQuery
+#. Response Item'
+#: omniquery/omniquery/doctype/omniquery_response_item/omniquery_response_item.json
+msgid "Question Label"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.js:66
+msgid "Question elevated to {0}: {1}"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a shortcut in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Questions"
+msgstr ""
+
+#. Label of the questions_tab (Tab Break) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Questions & Rules"
+msgstr ""
+
+#. Option for the 'Sync Status' (Select) field in DocType 'OmniQuery Sync Audit
+#. Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "REJECTED"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Radio"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Range (Slider)"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Rating"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Rating (1-5)"
+msgstr ""
+
+#. Label of the rating_icon (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Rating Icon"
+msgstr ""
+
+#. Label of the rating_max (Int) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Rating Maximum"
+msgstr ""
+
+#. Label of the rating_step (Float) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Rating Step"
+msgstr ""
+
+#. Label of the raw_payload_tab (Tab Break) field in DocType 'OmniQuery
+#. Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Raw Backup Snapshot"
+msgstr ""
+
+#. Label of the response_payload (Code) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Raw Immutable JSON"
+msgstr ""
+
+#. Label of the device_uuid (Data) field in DocType 'OmniQuery Surveyor'
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+msgid "Registered Device UUID"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Response'
+#. Option for the 'Audit Verdict' (Select) field in DocType 'OmniQuery
+#. Supervisor Audit'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Rejected"
+msgstr ""
+
+#. Label of the require_gps_accuracy_meters (Float) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Required GPS Accuracy (Meters)"
+msgstr ""
+
+#. Label of the respondent (Link) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Respondent (Optional)"
+msgstr ""
+
+#. Label of the respondent_type (Select) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Respondent Type"
+msgstr ""
+
+#. Label of the respondent_uid (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Respondent UID"
+msgstr ""
+
+#: omniquery/api/respondent.py:48
+msgid "Respondent UID is mandatory"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Respondents"
+msgstr ""
+
+#. Label of the items (Table) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Response Items"
+msgstr ""
+
+#: src/App.vue:30
+msgid "Response recorded successfully in offline queue."
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a shortcut in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Responses"
+msgstr ""
+
+#: src/components/survey/QuestionCard.vue:80
+msgid "Retry GPS"
+msgstr ""
+
+#. Label of the options_set (Link) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Reusable Option Set"
+msgstr ""
+
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Roles"
+msgstr ""
+
+#. Label of the payload_hash_sha256 (Data) field in DocType 'OmniQuery Sync
+#. Audit Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "SHA-256 Checksum"
+msgstr ""
+
+#. Description of the 'Phone Search Hash' (Data) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "SHA-256 for fast offline lookup"
+msgstr ""
+
+#. Option for the 'Target Beneficiary Category' (Select) field in DocType
+#. 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "SHG Member"
+msgstr ""
+
+#. Option for the 'Sync Status' (Select) field in DocType 'OmniQuery Sync Audit
+#. Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "SUCCESS"
+msgstr ""
+
+#: src/components/survey/SectionCard.vue:47
+msgid "Save Offline"
+msgstr ""
+
+#: src/App.vue:233
+msgid "Saved offline"
+msgstr ""
+
+#. Label of the schema_hash_sha256 (Data) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Schema SHA-256 Hash"
+msgstr ""
+
+#. Label of the scope (Select) field in DocType 'OmniQuery Option Set'
+#. Label of the scope (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Scope"
+msgstr ""
+
+#. Label of the score_weight (Float) field in DocType 'OmniQuery Option Item'
+#: omniquery/omniquery/doctype/omniquery_option_item/omniquery_option_item.json
+msgid "Score / Weight"
+msgstr ""
+
+#: src/components/common/FCombobox.vue:22
+msgid "Search..."
+msgstr ""
+
+#: src/components/survey/SectionCard.vue:7
+msgid "Section"
+msgstr ""
+
+#. Label of the section_code (Data) field in DocType 'OmniQuery Section'
+#. Label of the section_code (Data) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_section/omniquery_section.json
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Section Code"
+msgstr ""
+
+#. Label of the section_title (Data) field in DocType 'OmniQuery Section'
+#: omniquery/omniquery/doctype/omniquery_section/omniquery_section.json
+msgid "Section Title"
+msgstr ""
+
+#. Label of the sections_tab (Tab Break) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Sections"
+msgstr ""
+
+#. Label of the section_security (Section Break) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Security & Identification"
+msgstr ""
+
+#: src/App.vue:77
+msgid "Select an active field survey to begin recording responses."
+msgstr ""
+
+#: src/components/common/FCombobox.vue:10
+msgid "Select an option"
+msgstr ""
+
+#. Label of the synced_at (Datetime) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Server Sync Time"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a shortcut in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Settings"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Single Choice (Dropdown)"
+msgstr ""
+
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Single Choice (Radio)"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Slider"
+msgstr ""
+
+#. Option for the 'Target Beneficiary Category' (Select) field in DocType
+#. 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Small Business"
+msgstr ""
+
+#. Label of the stack_trace (Code) field in DocType 'OmniQuery Field Error Log'
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+msgid "Stack Trace"
+msgstr ""
+
+#. Option for the 'Rating Icon' (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Star"
+msgstr ""
+
+#. Label of the start_date (Date) field in DocType 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Start Date"
+msgstr ""
+
+#: src/App.vue:109
+msgid "Start Survey"
+msgstr ""
+
+#. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#. Label of the state (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "State / Province"
+msgstr ""
+
+#. Label of the status (Select) field in DocType 'OmniQuery Option Set'
+#. Label of the status (Select) field in DocType 'OmniQuery Project'
+#. Label of the status (Select) field in DocType 'OmniQuery Question'
+#. Label of the survey_status (Select) field in DocType 'OmniQuery Response'
+#. Label of the status (Select) field in DocType 'OmniQuery Surveyor'
+#. Label of the status (Select) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Status"
+msgstr ""
+
+#. Label of the value_json (Code) field in DocType 'OmniQuery Response Item'
+#: omniquery/omniquery/doctype/omniquery_response_item/omniquery_response_item.json
+msgid "Structured / Grid JSON"
+msgstr ""
+
+#. Option for the 'Respondent Type' (Select) field in DocType 'OmniQuery
+#. Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Student / Learner"
+msgstr ""
+
+#. Option for the 'Field Category' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "SubTable"
+msgstr ""
+
+#: src/components/survey/SectionCard.vue:65
+msgid "Submit Survey"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Submitted"
+msgstr ""
+
+#: src/components/survey/SectionCard.vue:65
+msgid "Submitting..."
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Supervisor Audits"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Supervisor Verified"
+msgstr ""
+
+#. Option for the 'Scope' (Select) field in DocType 'OmniQuery Option Set'
+#. Option for the 'Scope' (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Survey"
+msgstr ""
+
+#. Label of the questions (Table) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Survey Questions"
+msgstr ""
+
+#. Label of the survey_response (Link) field in DocType 'OmniQuery Supervisor
+#. Audit'
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Survey Response"
+msgstr ""
+
+#: src/App.vue:127
+msgid "Survey Responses"
+msgstr ""
+
+#. Label of the sections (Table) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Survey Sections / Pages"
+msgstr ""
+
+#: src/App.vue:29
+msgid "Survey Submitted"
+msgstr ""
+
+#. Label of the survey_template (Link) field in DocType 'OmniQuery Field Error
+#. Log'
+#. Label of the survey_template (Link) field in DocType 'OmniQuery Option Set'
+#. Label of the survey_template (Link) field in DocType 'OmniQuery Question'
+#. Label of the survey_template (Link) field in DocType 'OmniQuery Response'
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Survey Template"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.py:15
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.py:108
+msgid "Survey Template is required when Scope is Survey"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a shortcut in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Survey Templates"
+msgstr ""
+
+#. Label of the title (Data) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Survey Title"
+msgstr ""
+
+#. Label of the surveyor (Data) field in DocType 'OmniQuery Field Error Log'
+#. Label of the surveyor (Link) field in DocType 'OmniQuery Response'
+#. Label of the surveyor (Link) field in DocType 'OmniQuery Sync Audit Log'
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "Surveyor"
+msgstr ""
+
+#. Label of the surveyor_name (Data) field in DocType 'OmniQuery Surveyor'
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+msgid "Surveyor Name"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Surveyors"
+msgstr ""
+
+#: src/App.vue:76
+msgid "Surveys"
+msgstr ""
+
+#. Label of a Card Break in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Surveys & Forms"
+msgstr ""
+
+#. Option for the 'Status' (Select) field in DocType 'OmniQuery Surveyor'
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+msgid "Suspended"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Switch"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Sync Audit Logs"
+msgstr ""
+
+#: src/App.vue:135
+msgid "Sync Now"
+msgstr ""
+
+#. Label of the sync_status (Select) field in DocType 'OmniQuery Sync Audit
+#. Log'
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+msgid "Sync Status"
+msgstr ""
+
+#. Name of a role
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+#: omniquery/omniquery/doctype/omniquery_settings/omniquery_settings.json
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+#: omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json
+#: omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.json
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "System Manager"
+msgstr ""
+
+#. Label of the target_beneficiaries (Int) field in DocType 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Target Beneficiaries"
+msgstr ""
+
+#. Label of the target_category (Select) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Target Beneficiary Category"
+msgstr ""
+
+#. Label of the district_scope (Small Text) field in DocType 'OmniQuery
+#. Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "Target Districts / Blocks"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.js:23
+msgid "Target Higher Scope"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.js:45
+msgid "Target Project"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.js:37
+msgid "Target Workspace"
+msgstr ""
+
+#. Label of the members (Table) field in DocType 'OmniQuery Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Team Members"
+msgstr ""
+
+#. Label of a Card Break in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Telemetry & Logs"
+msgstr ""
+
+#: omniquery/api/survey.py:134
+msgid "Template name is mandatory"
+msgstr ""
+
+#. Option for the 'Field Category' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Temporal"
+msgstr ""
+
+#. Label of the section_break_granularity (Section Break) field in DocType
+#. 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Temporal & Geographic Controls"
+msgstr ""
+
+#. Label of the temporal_granularity (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Temporal Granularity"
+msgstr ""
+
+#. Option for the 'Control Variant' (Select) field in DocType 'OmniQuery
+#. Question'
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Text"
+msgstr ""
+
+#. Label of the value_text (Small Text) field in DocType 'OmniQuery Response
+#. Item'
+#: omniquery/omniquery/doctype/omniquery_response_item/omniquery_response_item.json
+msgid "Text Answer"
+msgstr ""
+
+#. Option for the 'Field Category' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Text Input"
+msgstr ""
+
+#: src/components/header/CompactHeader.vue:63
+msgid "Text Size"
+msgstr ""
+
+#. Option for the 'Rating Icon' (Select) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Thumbs Up"
+msgstr ""
+
+#. Option for the 'Temporal Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#. Option for the 'Field Type' (Select) field in DocType 'OmniQuery Template
+#. Question Reference'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Time"
+msgstr ""
+
+#. Label of the time_spent_seconds (Int) field in DocType 'OmniQuery Supervisor
+#. Audit'
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Time Spent (Seconds)"
+msgstr ""
+
+#. Label of the user (Link) field in DocType 'OmniQuery Project Member'
+#. Label of the user (Link) field in DocType 'OmniQuery Workspace Member'
+#: omniquery/omniquery/doctype/omniquery_project_member/omniquery_project_member.json
+#: omniquery/omniquery/doctype/omniquery_workspace_member/omniquery_workspace_member.json
+msgid "User"
+msgstr ""
+
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Users"
+msgstr ""
+
+#. Label of the validation_rules_json (Code) field in DocType 'OmniQuery
+#. Question'
+#. Label of the validation_rules_json (Code) field in DocType 'OmniQuery
+#. Template Question Reference'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Validation Rules (JSON)"
+msgstr ""
+
+#. Option for the 'Audit Verdict' (Select) field in DocType 'OmniQuery
+#. Supervisor Audit'
+#: omniquery/omniquery/doctype/omniquery_supervisor_audit/omniquery_supervisor_audit.json
+msgid "Verified"
+msgstr ""
+
+#. Label of the template_version (Int) field in DocType 'OmniQuery Field Error
+#. Log'
+#. Label of the question_version (Int) field in DocType 'OmniQuery Question'
+#. Label of the template_version (Int) field in DocType 'OmniQuery Response'
+#. Label of the version (Int) field in DocType 'OmniQuery Template'
+#: omniquery/omniquery/doctype/omniquery_field_error_log/omniquery_field_error_log.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.json
+msgid "Version"
+msgstr ""
+
+#. Label of the version_notes (Small Text) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Version / Changelog Notes"
+msgstr ""
+
+#. Label of the village_city (Data) field in DocType 'OmniQuery Respondent'
+#: omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.json
+msgid "Village / Town / City"
+msgstr ""
+
+#: src/App.vue:123
+msgid "WAL Queue"
+msgstr ""
+
+#. Option for the 'Scope' (Select) field in DocType 'OmniQuery Option Set'
+#. Label of the workspace (Link) field in DocType 'OmniQuery Option Set'
+#. Label of the workspace (Link) field in DocType 'OmniQuery Project'
+#. Option for the 'Scope' (Select) field in DocType 'OmniQuery Question'
+#. Label of the workspace (Link) field in DocType 'OmniQuery Question'
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Workspace"
+msgstr ""
+
+#. Option for the 'Workspace Role' (Select) field in DocType 'OmniQuery
+#. Workspace Member'
+#: omniquery/omniquery/doctype/omniquery_workspace_member/omniquery_workspace_member.json
+msgid "Workspace Admin"
+msgstr ""
+
+#. Option for the 'Workspace Role' (Select) field in DocType 'OmniQuery
+#. Workspace Member'
+#: omniquery/omniquery/doctype/omniquery_workspace_member/omniquery_workspace_member.json
+msgid "Workspace Manager"
+msgstr ""
+
+#. Option for the 'Workspace Role' (Select) field in DocType 'OmniQuery
+#. Workspace Member'
+#: omniquery/omniquery/doctype/omniquery_workspace_member/omniquery_workspace_member.json
+msgid "Workspace Member"
+msgstr ""
+
+#. Label of the members_tab (Tab Break) field in DocType 'OmniQuery Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Workspace Members"
+msgstr ""
+
+#. Label of the workspace_name (Data) field in DocType 'OmniQuery Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Workspace Name / Slug"
+msgstr ""
+
+#. Label of the workspace_admin (Link) field in DocType 'OmniQuery Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Workspace Owner / Admin"
+msgstr ""
+
+#. Label of the workspace_role (Select) field in DocType 'OmniQuery Workspace
+#. Member'
+#: omniquery/omniquery/doctype/omniquery_workspace_member/omniquery_workspace_member.json
+msgid "Workspace Role"
+msgstr ""
+
+#. Label of the workspace_title (Data) field in DocType 'OmniQuery Workspace'
+#: omniquery/omniquery/doctype/omniquery_workspace/omniquery_workspace.json
+msgid "Workspace Title"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.py:11
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.py:104
+msgid "Workspace is required when Scope is Workspace"
+msgstr ""
+
+#. Label of a Link in the OmniQuery Workspace
+#. Label of a shortcut in the OmniQuery Workspace
+#. Label of a Workspace Sidebar Item
+#: omniquery/omniquery/workspace/omniquery/omniquery.json
+#: omniquery/omniquery/workspace_sidebar/omniquery.json
+#: omniquery/workspace_sidebar/omniquery.json
+msgid "Workspaces"
+msgstr ""
+
+#. Option for the 'Temporal Granularity' (Select) field in DocType 'OmniQuery
+#. Question'
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Year Only"
+msgstr ""
+
+#: src/components/common/FSwitch.vue:22
+msgid "Yes"
+msgstr ""
+
+#: omniquery/api/survey.py:140
+msgid "You do not have permission to access survey template '{0}'"
+msgstr ""
+
+#. Description of the 'Target Districts / Blocks' (Small Text) field in DocType
+#. 'OmniQuery Project'
+#: omniquery/omniquery/doctype/omniquery_project/omniquery_project.json
+msgid "e.g. Mandi, Shimla, Solan, Kangra"
+msgstr ""
+
+#: src/components/survey/SectionCard.vue:7
+msgid "of"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.js:4
+#: omniquery/omniquery/doctype/omniquery_template/omniquery_template.js:8
+msgid "📱 Preview in Field App (PWA)"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.js:4
+msgid "🚀 Elevate Scope"
+msgstr ""
+

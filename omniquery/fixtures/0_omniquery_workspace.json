@@ -1,0 +1,13 @@
+[
+ {
+  "billing_plan": "Enterprise",
+  "description": "Rajasthan Grameen Aajeevika Vikas Parishad (RGAVP) / State Rural Livelihoods Mission",
+  "docstatus": 0,
+  "doctype": "OmniQuery Workspace",
+  "is_active": 1,
+  "name": "OQW-001",
+  "workspace_admin": "Administrator",
+  "workspace_name": "rajivika",
+  "workspace_title": "Rajasthan Grameen Aajeevika Vikas Parishad (RGAVP)"
+ }
+]

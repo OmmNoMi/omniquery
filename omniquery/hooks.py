@@ -17,7 +17,7 @@ add_to_apps_screen = [
 		"name": "omniquery",
 		"logo": "/assets/omniquery/icons/desktop_icons/solid/omniquery.svg?v=oq_v1",
 		"title": "OmniQuery",
-		"route": "/omniquery",
+		"route": "/desk/omniquery",
 	}
 ]
 
@@ -88,18 +88,30 @@ add_to_apps_screen = [
 after_install = "omniquery.install.after_install"
 after_migrate = "omniquery.install.after_migrate"
 
+website_route_rules = [
+	{"from_route": "/omniquery/<path:app_path>", "to_route": "omniquery"},
+]
+
 # Fixtures
 # --------
 fixture_auto_order = True
 fixtures = [
 	{
+		"doctype": "OmniQuery Option Set",
+		"filters": [["scope", "=", "Platform"]],
+	},
+	{
+		"doctype": "OmniQuery Workspace",
+		"filters": [["name", "in", ["OQW-001"]]],
+	},
+	{
 		"doctype": "OmniQuery Project",
-		"filters": [["name", "in", ["PROJ-SHG Rajasthan Women Entrepreneurs Study"]]],
+		"filters": [["name", "in", ["OQP-001-001", "PROJ-SHG Rajasthan Women Entrepreneurs Study"]]],
 	},
 	{
 		"doctype": "OmniQuery Template",
 		"filters": [
-			["name", "in", ["TMPL-Study on Performance of SHG-led Women Entrepreneurs in Rajasthan-1"]]
+			["name", "in", ["OQS-001-001-001", "TMPL-Study on Performance of SHG-led Women Entrepreneurs in Rajasthan-1"]]
 		],
 	},
 ]

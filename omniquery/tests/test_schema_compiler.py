@@ -71,7 +71,41 @@ class TestSchemaCompiler(unittest.TestCase):
 		self.assertEqual(schema_obj["questions"][0]["question_code"], "Q_HERD_COUNT")
 		self.assertEqual(schema_obj["questions"][1]["conditional_logic"]["depends_on"], "Q_HERD_COUNT")
 
+	def test_linked_question_enrichment(self):
+		question_master = self._create_test_rating_question()
+		template = self._create_test_template_with_question(question_master.name)
+		schema_obj = json.loads(template.compiled_schema_json)
+		compiled_q = schema_obj["questions"][0]
+		self.assertEqual(compiled_q["control_variant"], "Rating")
+		self.assertEqual(compiled_q["rating_icon"], "Star")
+		self.assertEqual(compiled_q["rating_max"], 5)
+
+	def _create_test_rating_question(self):
+		return frappe.get_doc({
+			"doctype": "OmniQuery Question",
+			"scope": "Platform",
+			"label_en": "Satisfaction Rating",
+			"field_category": "Choice (Single)",
+			"control_variant": "Rating",
+			"rating_icon": "Star",
+			"rating_max": 5,
+			"rating_step": 1.0,
+			"status": "Active",
+		}).insert(ignore_permissions=True)
+
+	def _create_test_template_with_question(self, question_name):
+		return frappe.get_doc({
+			"doctype": "OmniQuery Template",
+			"title": "Test Women Dairy Assessment 2026",
+			"project": "PROJ-Test Dairy Initiative",
+			"version": 1,
+			"status": "Draft",
+			"sections": [{"section_code": "SEC_1", "section_title": "Section 1"}],
+			"questions": [{"section_code": "SEC_1", "question_code": "Q_SATISFACTION", "question": question_name, "is_mandatory": 0}],
+		}).insert(ignore_permissions=True)
+
 	def tearDown(self):
+		frappe.db.delete("OmniQuery Question", {"label_en": "Satisfaction Rating"})
 		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
 		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
 		frappe.db.commit()

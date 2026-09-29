@@ -1,0 +1,174 @@
+import { ref, computed } from "vue";
+import { db } from "../services/db";
+
+export function useSurvey() {
+  const activeTemplate = ref(null);
+  const activeSectionIndex = ref(0);
+  const availableTemplates = ref([]);
+  const responses = ref({});
+  const validationErrors = ref({});
+  const isSubmitting = ref(false);
+  const isSubmitted = ref(false);
+
+  async function loadAvailableTemplates() {
+    try {
+      const response = await fetch("/api/method/omniquery.api.survey.list_active_templates");
+      if (response.ok) {
+        const data = await response.json();
+        availableTemplates.value = data.message || [];
+        return availableTemplates.value;
+      }
+    } catch (e) {
+      console.warn("Failed to load active templates:", e);
+    }
+    return [];
+  }
+
+  async function getCachedTemplate(surveyId) {
+    try {
+      const cached = await db.templates.get(surveyId);
+      return (cached && cached.schema) || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function cacheTemplateLocally(surveyId, schema, payload) {
+    try {
+      await db.templates.put({
+        template_name: surveyId,
+        title: schema.title,
+        project: schema.project || (payload && payload.project),
+        schema: schema,
+        modified: new Date().toISOString(),
+      });
+    } catch (e) {}
+  }
+
+  async function fetchRemoteSchema(surveyId) {
+    try {
+      const res = await fetch(`/api/method/omniquery.api.survey.get_schema?template_name=${encodeURIComponent(surveyId)}`);
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.message || null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function loadTemplate(surveyId) {
+    if (!surveyId) return null;
+    const cached = await getCachedTemplate(surveyId);
+    if (cached) {
+      activeTemplate.value = cached;
+      activeSectionIndex.value = 0;
+    }
+    const payload = await fetchRemoteSchema(surveyId);
+    if (payload) {
+      const schema = payload.schema || payload;
+      schema.template_name = schema.template_name || payload.template_name || surveyId;
+      schema.title = schema.title || payload.title || surveyId;
+      activeTemplate.value = schema;
+      activeSectionIndex.value = 0;
+      await cacheTemplateLocally(surveyId, schema, payload);
+    }
+    return activeTemplate.value;
+  }
+
+  const sections = computed(() => {
+    return (activeTemplate.value && activeTemplate.value.sections) || [];
+  });
+
+  const activeSection = computed(() => {
+    return sections.value[activeSectionIndex.value] || null;
+  });
+
+  function isQuestionVisible(question) {
+    if (!question || !question.conditional_logic) return true;
+    const logic = question.conditional_logic;
+    const parentCode = logic.depends_on || logic.parent_question;
+    if (!parentCode) return true;
+    const parentValue = responses.value[parentCode];
+    if (logic.operator === "equals" || logic.equals !== undefined) {
+      const target = logic.equals !== undefined ? logic.equals : logic.value;
+      return String(parentValue) === String(target);
+    }
+    if (logic.operator === "in" || Array.isArray(logic.in)) {
+      const targetList = logic.in || logic.values || [];
+      return targetList.map(String).includes(String(parentValue));
+    }
+    return true;
+  }
+
+  const activeQuestions = computed(() => {
+    if (!activeSection.value || !activeTemplate.value) return [];
+    const all = activeTemplate.value.questions || [];
+    return all.filter((q) => q.section_code === activeSection.value.section_code && isQuestionVisible(q));
+  });
+
+  function isSectionComplete(section) {
+    if (!section || !activeTemplate.value) return false;
+    const questions = (activeTemplate.value.questions || []).filter(
+      (q) => q.section_code === section.section_code && isQuestionVisible(q)
+    );
+    return questions.every((q) => {
+      if (!q.is_mandatory) return true;
+      const val = responses.value[q.question_code];
+      return val !== undefined && val !== null && String(val).trim() !== "";
+    });
+  }
+
+  function validateCurrentSection() {
+    validationErrors.value = {};
+    let isValid = true;
+    for (const q of activeQuestions.value) {
+      if (q.is_mandatory) {
+        const val = responses.value[q.question_code];
+        if (val === undefined || val === null || String(val).trim() === "") {
+          validationErrors.value[q.question_code] = "This field is required";
+          isValid = false;
+        }
+      }
+    }
+    return isValid;
+  }
+
+  function nextSection() {
+    if (!validateCurrentSection()) return false;
+    if (activeSectionIndex.value < sections.value.length - 1) {
+      activeSectionIndex.value++;
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+      return true;
+    }
+    return false;
+  }
+
+  function prevSection() {
+    if (activeSectionIndex.value > 0) {
+      activeSectionIndex.value--;
+      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+      return true;
+    }
+    return false;
+  }
+
+  return {
+    activeTemplate,
+    activeSectionIndex,
+    availableTemplates,
+    sections,
+    activeSection,
+    activeQuestions,
+    responses,
+    validationErrors,
+    isSubmitting,
+    isSubmitted,
+    loadAvailableTemplates,
+    loadTemplate,
+    isQuestionVisible,
+    isSectionComplete,
+    validateCurrentSection,
+    nextSection,
+    prevSection,
+  };
+}

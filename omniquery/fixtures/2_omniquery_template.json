@@ -7,8 +7,8 @@
   "doctype": "OmniQuery Template",
   "is_public": 1,
   "modified": "2026-09-28 20:29:23.378466",
-  "name": "TMPL-Study on Performance of SHG-led Women Entrepreneurs in Rajasthan-1",
-  "project": "PROJ-SHG Rajasthan Women Entrepreneurs Study",
+  "name": "OQS-001-001-001",
+  "project": "OQP-001-001",
   "published_at": "2026-09-28 19:02:43.263994",
   "questions": [
    {
@@ -1284,6 +1284,6 @@
   "status": "Published",
   "target_category": "SHG Member",
   "title": "Study on Performance of SHG-led Women Entrepreneurs in Rajasthan",
-  "version": 2
+  "version": 1
  }
 ]

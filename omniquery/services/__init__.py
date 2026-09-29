@@ -1,0 +1,1 @@
+"""OmniQuery domain service layer."""

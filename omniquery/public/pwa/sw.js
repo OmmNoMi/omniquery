@@ -1,14 +1,12 @@
-const CACHE_NAME = 'omniquery-cache-v3';
+const CACHE_NAME = 'omniquery-cache-v4';
 const STATIC_ASSETS = [
   '/omniquery',
-  '/assets/omniquery/pwa/index.html',
-  '/assets/omniquery/pwa/style.css',
-  '/assets/omniquery/pwa/app.js',
+  '/assets/omniquery/dist/omniquery.bundle.js',
+  '/assets/omniquery/dist/omniquery.bundle.css',
   '/assets/omniquery/pwa/manifest.json',
-  '/assets/omniquery/pwa/vendor/tailwindcss.js',
-  '/assets/omniquery/pwa/vendor/vue.global.prod.js',
-  '/assets/omniquery/pwa/vendor/dexie.min.js'
+  '/assets/omniquery/pwa/icon-192.png'
 ];
+
 
 self.addEventListener('install', event => {
   event.waitUntil(

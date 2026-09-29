@@ -26,6 +26,8 @@ coverage.xml
 
 # Node / Frontend
 node_modules/
+node_modules
+*.d.ts
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

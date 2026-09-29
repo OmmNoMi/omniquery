@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --app-bg: #f8fafc;
+  --text-main: #0f172a;
+}
+
+html {
+  font-size: 16px !important;
+}
+
+/* Scoped Typography Scale: Only scales survey question text, labels, inputs and options without resizing UI wrappers */
+html.text-scale-md main label { font-size: 1.05rem; }
+html.text-scale-lg main label { font-size: 1.25rem !important; }
+html.text-scale-xl main label { font-size: 1.45rem !important; }
+
+html.text-scale-md main p { font-size: 0.875rem; }
+html.text-scale-lg main p { font-size: 1.05rem !important; }
+html.text-scale-xl main p { font-size: 1.2rem !important; }
+
+html.text-scale-md main input,
+html.text-scale-md main select,
+html.text-scale-md main textarea { font-size: 1rem; }
+html.text-scale-lg main input,
+html.text-scale-lg main select,
+html.text-scale-lg main textarea { font-size: 1.15rem !important; }
+html.text-scale-xl main input,
+html.text-scale-xl main select,
+html.text-scale-xl main textarea { font-size: 1.3rem !important; }
+
+html.text-scale-md main button { font-size: 0.95rem; }
+html.text-scale-lg main button { font-size: 1.05rem !important; }
+html.text-scale-xl main button { font-size: 1.18rem !important; }
+
+body {
+  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: #f1f5f9;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Dark Mode Theme Invariants */
+html.dark body {
+  background-color: #0b1120;
+  color: #f8fafc;
+}
+
+html.dark .bg-slate-100 {
+  background-color: #0b1120 !important;
+}
+
+html.dark .bg-white {
+  background-color: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
+}
+
+html.dark .text-slate-900,
+html.dark .text-slate-800 {
+  color: #f8fafc !important;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+html.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+html.dark .border-slate-200,
+html.dark .border-slate-300 {
+  border-color: #334155 !important;
+}
+
+html.dark input,
+html.dark select,
+html.dark textarea {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  border-color: #475569 !important;
+}
+
+html.dark .bg-slate-50 {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+

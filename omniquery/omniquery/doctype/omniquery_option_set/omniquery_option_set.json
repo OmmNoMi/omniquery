@@ -1,0 +1,133 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:set_name",
+ "creation": "2026-09-29 13:50:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "set_name",
+  "scope",
+  "status",
+  "column_break_scope",
+  "workspace",
+  "project",
+  "survey_template",
+  "description",
+  "options_tab",
+  "options"
+ ],
+ "fields": [
+  {
+   "fieldname": "set_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Option Set Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "default": "Platform",
+   "fieldname": "scope",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Scope",
+   "options": "Platform\nWorkspace\nProject\nSurvey",
+   "reqd": 1
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Active\nInactive\nDraft",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_scope",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "workspace",
+   "fieldtype": "Link",
+   "label": "Workspace",
+   "options": "OmniQuery Workspace"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "OmniQuery Project"
+  },
+  {
+   "fieldname": "survey_template",
+   "fieldtype": "Link",
+   "label": "Survey Template",
+   "options": "OmniQuery Template"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description / Usage Guidance"
+  },
+  {
+   "fieldname": "options_tab",
+   "fieldtype": "Tab Break",
+   "label": "Options"
+  },
+  {
+   "fieldname": "options",
+   "fieldtype": "Table",
+   "label": "Options List",
+   "options": "OmniQuery Option Item"
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-09-29 13:50:00.000000",
+ "modified_by": "Administrator",
+ "module": "OmniQuery",
+ "name": "OmniQuery Option Set",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "OmniQuery Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "OmniQuery User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

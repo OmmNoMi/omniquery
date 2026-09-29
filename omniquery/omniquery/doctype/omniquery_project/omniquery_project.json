@@ -1,12 +1,13 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "format:PROJ-{project_name}",
+ "autoname": "autoname",
  "creation": "2026-09-10 01:00:00.000000",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
   "project_name",
+  "workspace",
   "grantor_organization",
   "status",
   "column_break_dates",
@@ -15,7 +16,9 @@
   "target_beneficiaries",
   "section_scope",
   "district_scope",
-  "description"
+  "description",
+  "members_tab",
+  "members"
  ],
  "fields": [
   {
@@ -23,8 +26,14 @@
    "fieldtype": "Data",
    "in_list_view": 1,
    "label": "Project Name",
-   "reqd": 1,
-   "unique": 1
+   "reqd": 1
+  },
+  {
+   "fieldname": "workspace",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Workspace",
+   "options": "OmniQuery Workspace"
   },
   {
    "fieldname": "grantor_organization",
@@ -79,11 +88,22 @@
    "fieldname": "description",
    "fieldtype": "Text Editor",
    "label": "Project Description / Objectives"
+  },
+  {
+   "fieldname": "members_tab",
+   "fieldtype": "Tab Break",
+   "label": "Project Team & Roles"
+  },
+  {
+   "fieldname": "members",
+   "fieldtype": "Table",
+   "label": "Project Team Members",
+   "options": "OmniQuery Project Member"
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-10 01:00:00.000000",
+ "modified": "2026-09-29 13:50:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Project",
@@ -103,12 +123,30 @@
    "write": 1
   },
   {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
    "read": 1,
-   "role": "All"
+   "report": 1,
+   "role": "OmniQuery Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "OmniQuery Manager",
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "OmniQuery User"
   }
  ],
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": [],
- "track_changes": 1
+ "track_changes": 1,
+ "title_field": "project_name",
+ "show_title_field_in_link": 1
 }

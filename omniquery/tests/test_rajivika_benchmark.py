@@ -9,8 +9,8 @@ from frappe.utils.fixtures import sync_fixtures
 from omniquery.api.survey import get_bootstrap_data, get_schema, list_active_templates
 from omniquery.api.sync import batch_push
 
-RAJIVIKA_TEMPLATE = "TMPL-Study on Performance of SHG-led Women Entrepreneurs in Rajasthan-1"
-RAJIVIKA_PROJECT = "PROJ-SHG Rajasthan Women Entrepreneurs Study"
+RAJIVIKA_TEMPLATE = "OQS-001-001-001"
+RAJIVIKA_PROJECT = "OQP-001-001"
 
 
 class TestRajivikaBenchmark(unittest.TestCase):

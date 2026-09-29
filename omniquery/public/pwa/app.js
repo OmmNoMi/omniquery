@@ -4879,12 +4879,195 @@ const FCombobox = {
   `
 };
 
+// Reusable Segmented 2-Option Thumb Switch
+const FSwitch = {
+  name: 'FSwitch',
+  props: {
+    modelValue: [String, Number, Boolean],
+    options: {
+      type: Array,
+      default: () => ['Yes', 'No']
+    },
+    disabled: {
+      type: Boolean,
+      default: false
+    },
+    ariaLabel: {
+      type: String,
+      default: 'Switch option'
+    }
+  },
+  emits: ['update:modelValue', 'change'],
+  setup(props, { emit }) {
+    function selectOption(opt) {
+      if (props.disabled) return;
+      emit('update:modelValue', opt);
+      emit('change', opt);
+    }
+    return { selectOption };
+  },
+  template: `
+    <div role="radiogroup" :aria-label="ariaLabel" class="grid grid-cols-2 gap-3 pt-1">
+      <button type="button"
+              v-for="opt in options"
+              :key="opt"
+              @click="selectOption(opt)"
+              :disabled="disabled"
+              :aria-checked="modelValue === opt"
+              role="radio"
+              :class="modelValue === opt ? 'bg-indigo-600 text-white font-black shadow-md border-indigo-600 ring-2 ring-indigo-300' : 'bg-white text-slate-700 font-bold border-slate-300 hover:border-indigo-400'"
+              class="min-h-[56px] py-3.5 px-4 rounded-2xl border-2 text-center text-base sm:text-lg touch-press transition-all flex items-center justify-center space-x-2 cursor-pointer disabled:opacity-50">
+        <span v-if="modelValue === opt" class="text-sm font-black">✓</span>
+        <span>{{ opt }}</span>
+      </button>
+    </div>
+  `
+};
+
+// Reusable Tactile 5-Star / Likert Rating Component
+const FRating = {
+  name: 'FRating',
+  props: {
+    modelValue: [Number, String],
+    maxStars: {
+      type: Number,
+      default: 5
+    },
+    disabled: {
+      type: Boolean,
+      default: false
+    },
+    ariaLabel: {
+      type: String,
+      default: 'Rating'
+    }
+  },
+  emits: ['update:modelValue', 'change'],
+  setup(props, { emit }) {
+    function selectRating(val) {
+      if (props.disabled) return;
+      emit('update:modelValue', val);
+      emit('change', val);
+    }
+    const ratingLabel = computed(() => {
+      const labels = ['', 'Very Poor', 'Poor', 'Average', 'Good', 'Excellent'];
+      return labels[Number(props.modelValue)] || '';
+    });
+    return { selectRating, ratingLabel };
+  },
+  template: `
+    <div role="radiogroup" :aria-label="ariaLabel" class="space-y-3 pt-1">
+      <div class="flex items-center justify-center space-x-2 sm:space-x-3 bg-slate-50 p-4 rounded-2xl border-2 border-slate-200">
+        <button type="button"
+                v-for="star in maxStars"
+                :key="star"
+                @click="selectRating(star)"
+                :disabled="disabled"
+                :aria-label="star + ' stars'"
+                role="radio"
+                :aria-checked="Number(modelValue || 0) === star"
+                :class="Number(modelValue || 0) >= star ? 'text-amber-400 scale-110' : 'text-slate-300 hover:text-amber-200'"
+                class="text-3xl sm:text-4xl touch-press transition-all p-2 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer disabled:opacity-50">
+          ★
+        </button>
+      </div>
+      <div class="text-center text-sm font-black text-indigo-700 min-h-[20px]" v-if="modelValue">
+        {{ ratingLabel }}
+      </div>
+    </div>
+  `
+};
+
+// Reusable Currency Input with Fast Quick-Add Increment Chips
+const FCurrencyInput = {
+  name: 'FCurrencyInput',
+  props: {
+    modelValue: [Number, String],
+    currencySymbol: {
+      type: String,
+      default: '₹'
+    },
+    presets: {
+      type: Array,
+      default: () => [100, 500, 1000, 5000]
+    },
+    placeholder: {
+      type: String,
+      default: 'Enter number...'
+    },
+    required: {
+      type: Boolean,
+      default: false
+    },
+    id: {
+      type: String,
+      default: () => 'curr_' + Math.random().toString(36).slice(2, 9)
+    }
+  },
+  emits: ['update:modelValue', 'change'],
+  setup(props, { emit }) {
+    function onInput(event) {
+      const raw = event.target.value;
+      emit('update:modelValue', raw === '' ? '' : Number(raw));
+      emit('change', raw === '' ? '' : Number(raw));
+    }
+    function addPreset(presetAmount) {
+      const current = Number(props.modelValue) || 0;
+      const nextAmount = current + presetAmount;
+      emit('update:modelValue', nextAmount);
+      emit('change', nextAmount);
+    }
+    function clearValue() {
+      emit('update:modelValue', '');
+      emit('change', '');
+    }
+    return { onInput, addPreset, clearValue };
+  },
+  template: `
+    <div class="space-y-2">
+      <div class="relative">
+        <span class="absolute left-4 top-1/2 -translate-y-1/2 text-xl sm:text-2xl font-black text-slate-400 pointer-events-none">
+          {{ currencySymbol }}
+        </span>
+        <input :id="id"
+               type="number"
+               :value="modelValue"
+               @input="onInput"
+               :required="required"
+               :placeholder="placeholder"
+               class="w-full min-h-[56px] text-xl sm:text-2xl font-black py-3.5 pl-11 pr-4 bg-slate-50 border-2 border-slate-300 focus:border-indigo-600 focus:bg-white rounded-2xl outline-none shadow-inner transition-all">
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5 pt-1">
+        <button type="button"
+                v-for="preset in presets"
+                :key="preset"
+                @click="addPreset(preset)"
+                class="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black touch-press transition-all cursor-pointer">
+          +{{ currencySymbol }}{{ preset.toLocaleString('en-IN') }}
+        </button>
+        <button v-if="modelValue !== undefined && modelValue !== null && modelValue !== ''"
+                type="button"
+                @click="clearValue()"
+                class="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-rose-600 text-xs font-bold touch-press cursor-pointer">
+          ✕ Clear
+        </button>
+      </div>
+    </div>
+  `
+};
+
 // 4. Main Vue 3 Application
 const app = createApp({
   components: {
     FCombobox,
     'f-combobox': FCombobox,
-    'f-select': FCombobox
+    'f-select': FCombobox,
+    FSwitch,
+    'f-switch': FSwitch,
+    FRating,
+    'f-rating': FRating,
+    FCurrencyInput,
+    'f-currency-input': FCurrencyInput
   },
   setup() {
     const currentView = ref('dashboard'); // 'dashboard' | 'templates' | 'form' | 'queue'
@@ -4950,6 +5133,23 @@ const app = createApp({
         code === 'years_of_shg_membership'
       ) {
         return 'range';
+      }
+
+      // 0b. Rating / Stars / Likert Scale
+      if (
+        rawType.includes('rating') ||
+        q.control_variant === 'Rating' ||
+        q.field_category === 'Rating'
+      ) {
+        return 'rating';
+      }
+
+      // 0c. Fast 2-Option Segmented Thumb Switch (e.g. Yes/No, Active/Inactive)
+      if (
+        q.control_variant === 'Switch' ||
+        ((q.options && q.options.length === 2) && !MULTI_SELECT_CODES.has(code) && !rawType.includes('multi'))
+      ) {
+        return 'switch';
       }
 
       // 1. Multiple Choice / Multiselect / Checkboxes (Enforced: No single values for multiselect)
@@ -5169,6 +5369,11 @@ const app = createApp({
       { value: 'Enter Amount', label: t('Enter Amount') }
     ]);
 
+    function getQuestionLabel(questionItem) {
+      if (!questionItem) return '';
+      return t(questionItem.label_en) || questionItem.question_code || '';
+    }
+
     function getRangeFormat(q) {
       if (!q) return 'both';
       const r = q.validation_rules || {};
@@ -5227,6 +5432,64 @@ const app = createApp({
       toastTimeout.value = setTimeout(() => {
         toastMessage.value = '';
       }, 3500);
+    }
+
+    function selectRating(questionCode, ratingValue) {
+      formData[questionCode] = ratingValue;
+      announce(`${ratingValue} out of 5 stars selected`);
+    }
+
+    function getRatingLabel(ratingValue) {
+      const labels = ['', 'Very Poor', 'Poor', 'Average', 'Good', 'Excellent'];
+      return t(labels[Number(ratingValue)] || '');
+    }
+
+    function addCurrencyPreset(questionCode, presetAmount) {
+      const currentAmount = Number(formData[questionCode]) || 0;
+      formData[questionCode] = currentAmount + presetAmount;
+      announce(`Added ₹${presetAmount}, total ₹${formData[questionCode]}`);
+    }
+
+    function isQuestionVisible(questionItem) {
+      if (!questionItem) return true;
+      if (questionItem.conditional_logic) {
+        return evaluateConditionalLogic(questionItem.conditional_logic);
+      }
+      return evaluateNaturalDependencies(questionItem);
+    }
+
+    function evaluateConditionalLogic(logicRule) {
+      if (!logicRule || !logicRule.depends_on) return true;
+      const targetValue = formData[logicRule.depends_on];
+      const operator = logicRule.operator || 'equals';
+      const expectedValue = logicRule.value;
+      if (operator === 'equals') return targetValue === expectedValue;
+      if (operator === 'not_equals') return targetValue !== expectedValue;
+      if (operator === 'contains') return String(targetValue || '').includes(expectedValue);
+      if (operator === 'in') return Array.isArray(expectedValue) && expectedValue.includes(targetValue);
+      if (operator === 'not_in') return Array.isArray(expectedValue) && !expectedValue.includes(targetValue);
+      return targetValue !== undefined && targetValue !== null && String(targetValue).trim() !== '';
+    }
+
+    function evaluateNaturalDependencies(questionItem) {
+      const code = (questionItem.question_code || '').toLowerCase();
+      if (code === 'daily_qr_transactions_count') return formData['uses_qr_banking'] === 'Yes';
+      if (code === 'reason_not_using_qr') return formData['uses_qr_banking'] === 'No';
+      if (code === 'business_closed_year') {
+        return String(formData['business_operational_status'] || '').toLowerCase().includes('no');
+      }
+      if (code === 'reasons_for_scaling_down_closing') {
+        const s = String(formData['business_operational_status'] || '').toLowerCase();
+        return s.includes('no') || s.includes('reduced') || s.includes('scale');
+      }
+      if (code === 'social_media_platforms' || code === 'social_media_usage_manner' || code === 'social_media_frequency') {
+        const sm = String(formData['social_media_for_marketing'] || '').toLowerCase();
+        return sm !== '' && !sm.includes("don't use") && !sm.includes("don't want");
+      }
+      if (code === 'social_media_marketing_other') {
+        return String(formData['social_media_for_marketing'] || '').toLowerCase().includes('other');
+      }
+      return true;
     }
 
     const languages = [
@@ -5956,7 +6219,7 @@ const app = createApp({
       if (!activeTemplate.value || !activeTemplate.value.schema || !activeSection.value) return [];
       const allQ = activeTemplate.value.schema.questions || [];
       const sCode = activeSection.value.section_code;
-      return allQ.filter(q => (q.section === sCode || q.section_code === sCode));
+      return allQ.filter(q => (q.section === sCode || q.section_code === sCode) && isQuestionVisible(q));
     });
 
     function isSectionComplete(secIndex) {
@@ -5966,7 +6229,7 @@ const app = createApp({
       const allQ = activeTemplate.value.schema.questions || [];
       const secQ = allQ.filter(q => (q.section === sec.section_code || q.section_code === sec.section_code));
       for (const q of secQ) {
-        if (q.is_mandatory) {
+        if (q.is_mandatory && isQuestionVisible(q)) {
           const val = formData[q.question_code];
           if (val === undefined || val === null || String(val).trim() === '') return false;
         }
@@ -6465,7 +6728,7 @@ const app = createApp({
           const secQuestions = allQuestions.filter(q => (q.section === sec.section_code || q.section_code === sec.section_code));
           
           for (const q of secQuestions) {
-            if (q.is_mandatory) {
+            if (q.is_mandatory && isQuestionVisible(q)) {
               const val = formData[q.question_code];
               if (val === undefined || val === null || String(val).trim() === '') {
                 missingMandatory.push({
@@ -6907,6 +7170,58 @@ const app = createApp({
         if (isOnline.value) {
           await fetchServerTemplates();
         }
+
+        // Direct survey routing: /omniquery/<survey_id> or ?template=<id>
+        let targetSurvey = (window.frappe && window.frappe.initial_survey_id) || '';
+        if (!targetSurvey) {
+          const urlParams = new URLSearchParams(window.location.search);
+          targetSurvey = urlParams.get('template') || urlParams.get('survey') || urlParams.get('preview') || '';
+        }
+        if (!targetSurvey) {
+          const parts = window.location.pathname.split('/').filter(Boolean);
+          if (parts[0] === 'omniquery' && parts[1]) {
+            targetSurvey = decodeURIComponent(parts[1]);
+          }
+        }
+
+        if (targetSurvey) {
+          let found = templates.value.find(t => t.name === targetSurvey || t.title === targetSurvey);
+          if ((!found || !found.schema || !found.schema.sections || found.schema.sections.length === 0) && isOnline.value) {
+            try {
+              const res = await fetch(`/api/method/omniquery.api.survey.get_schema?template_name=${encodeURIComponent(targetSurvey)}`);
+              if (res.ok) {
+                const sdata = await res.json();
+                if (sdata && sdata.message && sdata.message.schema) {
+                  const compiled = sdata.message.schema;
+                  found = {
+                    name: sdata.message.template_name,
+                    title: sdata.message.title,
+                    project: sdata.message.project,
+                    version: sdata.message.version,
+                    status: sdata.message.status,
+                    schema_hash_sha256: sdata.message.schema_hash_sha256,
+                    schema: compiled,
+                    sections: compiled.sections || [],
+                    questions: compiled.questions || []
+                  };
+                  await db.templates.put(found);
+                  const existingIndex = templates.value.findIndex(t => t.name === found.name);
+                  if (existingIndex >= 0) {
+                    templates.value[existingIndex] = found;
+                  } else {
+                    templates.value.push(found);
+                  }
+                }
+              }
+            } catch (err) {
+              console.warn('[OmniQuery] Direct survey fetch error:', err);
+            }
+          }
+          if (found) {
+            await startSurvey(found);
+            showToast(`📱 ${found.title}`, 'info');
+          }
+        }
       } catch (e) {
         console.error('Dexie open error', e);
       }
@@ -7042,6 +7357,7 @@ const app = createApp({
       getRangeSteps,
       getRangeUnit,
       getRangeFormat,
+      getQuestionLabel,
       getRangeTabIndex,
       selectRangeValue,
       handleRangeKeydown,
@@ -7049,6 +7365,10 @@ const app = createApp({
       amountPaidOptions,
       loanUsageOptions,
       metricStatusOptions,
+      selectRating,
+      getRatingLabel,
+      addCurrencyPreset,
+      isQuestionVisible,
       t
     };
   },
@@ -7807,61 +8127,63 @@ const app = createApp({
         <!-- ========================================== -->
         <!-- VIEW 3: FORM RUNNER (Elder-Friendly Form)  -->
         <!-- ========================================== -->
-        <div v-if="currentView === 'form' && activeTemplate" class="space-y-6 pt-28 sm:pt-32">
+        <div v-if="currentView === 'form' && activeTemplate" class="space-y-5 pt-16 sm:pt-20">
 
-          <!-- UNIFIED SMART AUTO-HIDE SECTION HEADER (Slides up on scroll down, returns on scroll up) -->
-          <div class="fixed top-0 left-0 right-0 z-40 transition-transform duration-300 ease-in-out shadow-xl"
-               :class="showStickyHeader ? 'translate-y-0' : '-translate-y-full'">
-            <div class="bg-indigo-950 text-white border-b-2 border-indigo-800/80 px-4 py-3 sm:px-6">
-              <div class="max-w-3xl mx-auto space-y-2">
-                
-                <!-- Top Row: Exit Button & Step Indicator + Settings Button -->
-                <div class="flex items-center justify-between">
-                  <button type="button" @click="currentView = 'dashboard'" 
-                          class="min-h-[38px] px-3.5 py-1 text-xs sm:text-sm text-indigo-100 hover:text-white font-bold flex items-center space-x-1.5 touch-press bg-indigo-900 hover:bg-indigo-800 rounded-xl border border-indigo-700">
-                    <span>{{ t('Exit Form') }}</span>
-                  </button>
-                  
-                  <div class="flex items-center space-x-1.5 sm:space-x-2">
-                    <button type="button" @click="emergencyModalOpen = true"
-                            aria-label="Email Backup to Admin"
-                            :title="t('Email Data to Admin')"
-                            class="min-h-[38px] px-2.5 py-1 bg-rose-900/90 hover:bg-rose-800 text-rose-100 font-bold text-xs rounded-xl border border-rose-700 flex items-center space-x-1 touch-press">
-                      <span aria-hidden="true">📧</span>
-                    </button>
-                    <button type="button" @click="menuOpen = true"
-                            aria-label="Settings, Font Size and Language"
-                            class="min-h-[38px] px-2.5 py-1 bg-indigo-900 hover:bg-indigo-800 text-indigo-200 hover:text-white font-black text-xs rounded-xl border border-indigo-700 flex items-center space-x-1 touch-press">
-                      <span aria-hidden="true">🔤</span>
-                      <span class="uppercase font-bold">{{ currentLang }}</span>
-                    </button>
-                    <div class="text-xs sm:text-sm font-black text-indigo-200 bg-indigo-900 px-3 py-1 rounded-xl border border-indigo-700">
-                      {{ t('Page') }} <span class="text-white font-black">{{ activeSectionIndex + 1 }}</span> / {{ sections.length }}
-                    </div>
-                  </div>
+          <!-- SLEEK ULTRA-COMPACT MOBILE HEADER (Slim 48px, Maximum Question Visibility) -->
+          <div class="fixed top-0 left-0 right-0 z-40 bg-indigo-950/95 backdrop-blur-md text-white border-b border-indigo-800/80 shadow-md">
+            <div class="max-w-3xl mx-auto px-3 sm:px-4 py-2 flex items-center justify-between gap-2 min-h-[48px]">
+              
+              <!-- Left: Exit Button -->
+              <button type="button" @click="currentView = 'dashboard'" 
+                      class="px-2.5 py-1 text-xs text-indigo-200 hover:text-white font-bold flex items-center space-x-1 touch-press bg-indigo-900/80 hover:bg-indigo-800 rounded-lg border border-indigo-700/60 shrink-0 cursor-pointer">
+                <span aria-hidden="true">←</span>
+                <span>{{ t('Exit') }}</span>
+              </button>
+
+              <!-- Center: Compact Section Title & Step Indicator -->
+              <div v-if="activeSection" class="flex-1 min-w-0 text-center px-1">
+                <div class="text-xs sm:text-sm font-black text-white truncate">
+                  <span class="text-indigo-300 font-bold mr-1">{{ activeSectionIndex + 1 }}/{{ sections.length }}</span>
+                  {{ t(activeSection.section_title) }}
                 </div>
-
-                <!-- Unified Section Title & Description (The blue card in header!) -->
-                <div v-if="activeSection" class="space-y-0.5 pt-0.5">
-                  <div class="text-[11px] font-black uppercase tracking-wider text-indigo-300 truncate">
-                    {{ t(activeTemplate.title) }}
-                  </div>
-                  <h2 class="text-lg sm:text-2xl font-black text-white leading-tight">
-                    {{ t(activeSection.section_title) }}
-                  </h2>
-                  <p v-if="activeSection.description" class="text-xs sm:text-sm text-indigo-200 font-medium truncate">
-                    {{ t(activeSection.description) }}
-                  </p>
-                </div>
-
-                <!-- Sleek Linear Progress Bar -->
-                <div class="w-full bg-indigo-900/80 h-1.5 rounded-full overflow-hidden">
-                  <div class="h-full bg-indigo-400 rounded-full transition-all duration-300"
-                       :style="'width: ' + (((activeSectionIndex + 1) / sections.length) * 100) + '%'"></div>
-                </div>
-
               </div>
+
+              <!-- Right: Quick Actions (Language & Emergency Backup) -->
+              <div class="flex items-center space-x-1.5 shrink-0">
+                <button type="button" @click="emergencyModalOpen = true"
+                        aria-label="Email Backup to Admin"
+                        :title="t('Email Data to Admin')"
+                        class="p-1.5 bg-rose-950/80 hover:bg-rose-900 text-rose-200 text-xs rounded-lg border border-rose-800/60 touch-press cursor-pointer">
+                  <span aria-hidden="true">📧</span>
+                </button>
+                <button type="button" @click="menuOpen = true"
+                        aria-label="Settings, Font Size and Language"
+                        class="px-2 py-1 bg-indigo-900/80 hover:bg-indigo-800 text-indigo-200 hover:text-white font-black text-xs rounded-lg border border-indigo-700/60 touch-press cursor-pointer">
+                  <span class="uppercase font-bold">{{ currentLang }}</span>
+                </button>
+              </div>
+
             </div>
+
+            <!-- Sleek 2px Progress Bar at very bottom of header -->
+            <div class="w-full bg-indigo-900/50 h-1 overflow-hidden">
+              <div class="h-full bg-indigo-400 transition-all duration-300"
+                   :style="'width: ' + (((activeSectionIndex + 1) / sections.length) * 100) + '%'"></div>
+            </div>
+          </div>
+
+          <!-- Section Intro Banner (Scrolls naturally with questions, never blocks the screen) -->
+          <div v-if="activeSection" 
+               class="bg-white rounded-2xl p-4 sm:p-5 border-2 border-slate-200 shadow-xs space-y-1">
+            <div class="text-[11px] font-black uppercase tracking-wider text-indigo-600 truncate">
+              {{ t(activeTemplate.title) }}
+            </div>
+            <h1 class="text-lg sm:text-xl font-black text-slate-900 leading-snug">
+              {{ t(activeSection.section_title) }}
+            </h1>
+            <p v-if="activeSection.description" class="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
+              {{ t(activeSection.description) }}
+            </p>
           </div>
 
           <!-- Question Cards List (Google Forms / WhatsApp Style) -->
@@ -7915,8 +8237,19 @@ const app = createApp({
               <!-- FIELD TYPE RENDERERS (Elder Friendly) -->
               <!-- ===================================== -->
 
+              <!-- 0a. Fast 2-Option Segmented Thumb Switch (e.g. Yes/No, Active/Inactive) -->
+              <f-switch v-if="getFieldCategory(q) === 'switch'"
+                        v-model="formData[q.question_code]"
+                        :options="q.options"
+                        :aria-label="t(q.label_en)"></f-switch>
+
+              <!-- 0b. Tactile Rating Control (Stars / Likert Scale) -->
+              <f-rating v-else-if="getFieldCategory(q) === 'rating'"
+                        v-model="formData[q.question_code]"
+                        :aria-label="t(q.label_en)"></f-rating>
+
               <!-- 1. Large Radio / Single Choice Touch Cards -->
-              <div v-if="getFieldCategory(q) === 'radio'"
+              <div v-else-if="getFieldCategory(q) === 'radio'"
                    role="radiogroup" :aria-label="t(q.label_en)"
                    class="space-y-2.5 pt-1">
 
@@ -8188,18 +8521,50 @@ const app = createApp({
               </div>
 
               <!-- 2. Number / Integer / Currency / Decimal Input -->
-              <div v-else-if="getFieldCategory(q) === 'number'" class="relative">
-                <span v-if="isCurrencyField(q)"
-                      class="absolute left-4 top-1/2 -translate-y-1/2 text-xl sm:text-2xl font-black text-slate-400 pointer-events-none">
-                  ₹
-                </span>
-                <input :id="'q_input_' + q.question_code"
-                       type="number"
-                       v-model="formData[q.question_code]"
-                       :required="q.is_mandatory"
-                       :placeholder="(q.field_type || '').toLowerCase().includes('year') || (q.label_en || '').toLowerCase().includes('year') ? t('e.g. 2020') : t('Enter number...')"
-                       :class="isCurrencyField(q) ? 'pl-11 pr-4' : 'px-4'"
-                       class="w-full min-h-[56px] text-xl sm:text-2xl font-black py-3.5 bg-slate-50 border-2 border-slate-300 focus:border-indigo-600 focus:bg-white rounded-2xl outline-none shadow-inner transition-all">
+              <div v-else-if="getFieldCategory(q) === 'number'" class="space-y-2">
+                <div class="relative">
+                  <span v-if="isCurrencyField(q)"
+                        class="absolute left-4 top-1/2 -translate-y-1/2 text-xl sm:text-2xl font-black text-slate-400 pointer-events-none">
+                    ₹
+                  </span>
+                  <input :id="'q_input_' + q.question_code"
+                         type="number"
+                         v-model="formData[q.question_code]"
+                         :required="q.is_mandatory"
+                         :placeholder="(q.field_type || '').toLowerCase().includes('year') || (q.label_en || '').toLowerCase().includes('year') ? t('e.g. 2020') : t('Enter number...')"
+                         :class="isCurrencyField(q) ? 'pl-11 pr-4' : 'px-4'"
+                         class="w-full min-h-[56px] text-xl sm:text-2xl font-black py-3.5 bg-slate-50 border-2 border-slate-300 focus:border-indigo-600 focus:bg-white rounded-2xl outline-none shadow-inner transition-all">
+                </div>
+
+                <!-- Currency Quick-Add Preset Chips (Fast thumb tap to add ₹100, ₹500, ₹1000, ₹5000) -->
+                <div v-if="isCurrencyField(q)" class="flex flex-wrap items-center gap-1.5 pt-1">
+                  <button type="button"
+                          v-for="preset in [100, 500, 1000, 5000]"
+                          :key="preset"
+                          @click="addCurrencyPreset(q.question_code, preset)"
+                          class="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-black touch-press transition-all cursor-pointer">
+                    +₹{{ preset.toLocaleString('en-IN') }}
+                  </button>
+                  <button v-if="formData[q.question_code]"
+                          type="button"
+                          @click="formData[q.question_code] = ''"
+                          class="px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:text-rose-600 text-xs font-bold touch-press cursor-pointer">
+                    ✕ {{ t('Clear') }}
+                  </button>
+                </div>
+
+                <!-- Year Quick Selector Pills (Fast 1-tap year selection for on the go) -->
+                <div v-else-if="(q.field_type || '').toLowerCase().includes('year') || (q.label_en || '').toLowerCase().includes('year')"
+                     class="flex items-center space-x-1.5 overflow-x-auto pb-1 pt-1 cv-scrollbar no-scrollbar">
+                  <button type="button"
+                          v-for="yr in [2026, 2025, 2024, 2023, 2022, 2021, 2020, 2019]"
+                          :key="yr"
+                          @click="formData[q.question_code] = yr"
+                          :class="formData[q.question_code] == yr ? 'bg-indigo-600 text-white font-black shadow-sm ring-2 ring-indigo-300' : 'bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold'"
+                          class="px-3 py-1.5 rounded-xl text-xs shrink-0 touch-press transition-all border border-slate-300 cursor-pointer">
+                    {{ yr }}
+                  </button>
+                </div>
               </div>
 
               <!-- 3. Dynamic Matrix & Table Grids -->

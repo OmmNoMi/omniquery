@@ -1,0 +1,376 @@
+[
+ {
+  "description": "Standard binary Yes/No option set",
+  "docstatus": 0,
+  "doctype": "OmniQuery Option Set",
+  "name": "YES_NO",
+  "options": [
+   {
+    "display_order": 1,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Yes",
+    "option_code": "yes",
+    "parent": "YES_NO",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   },
+   {
+    "display_order": 2,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "No",
+    "option_code": "no",
+    "parent": "YES_NO",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 0.0
+   }
+  ],
+  "scope": "Platform",
+  "set_name": "YES_NO",
+  "status": "Active"
+ },
+ {
+  "description": "Standard gender identification options",
+  "docstatus": 0,
+  "doctype": "OmniQuery Option Set",
+  "name": "GENDER",
+  "options": [
+   {
+    "display_order": 1,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Female",
+    "option_code": "female",
+    "parent": "GENDER",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 0.0
+   },
+   {
+    "display_order": 2,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Male",
+    "option_code": "male",
+    "parent": "GENDER",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 0.0
+   },
+   {
+    "display_order": 3,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Other",
+    "option_code": "other",
+    "parent": "GENDER",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 0.0
+   },
+   {
+    "display_order": 4,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Prefer not to say",
+    "option_code": "prefer_not_to_say",
+    "parent": "GENDER",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 0.0
+   }
+  ],
+  "scope": "Platform",
+  "set_name": "GENDER",
+  "status": "Active"
+ },
+ {
+  "description": "5-point Likert scale of agreement",
+  "docstatus": 0,
+  "doctype": "OmniQuery Option Set",
+  "name": "AGREEMENT_5PT",
+  "options": [
+   {
+    "display_order": 1,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Strongly Agree",
+    "option_code": "strongly_agree",
+    "parent": "AGREEMENT_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 5.0
+   },
+   {
+    "display_order": 2,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Agree",
+    "option_code": "agree",
+    "parent": "AGREEMENT_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 4.0
+   },
+   {
+    "display_order": 3,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Neutral",
+    "option_code": "neutral",
+    "parent": "AGREEMENT_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 3.0
+   },
+   {
+    "display_order": 4,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Disagree",
+    "option_code": "disagree",
+    "parent": "AGREEMENT_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 2.0
+   },
+   {
+    "display_order": 5,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Strongly Disagree",
+    "option_code": "strongly_disagree",
+    "parent": "AGREEMENT_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   }
+  ],
+  "scope": "Platform",
+  "set_name": "AGREEMENT_5PT",
+  "status": "Active"
+ },
+ {
+  "description": "5-point Likert scale of satisfaction",
+  "docstatus": 0,
+  "doctype": "OmniQuery Option Set",
+  "name": "SATISFACTION_5PT",
+  "options": [
+   {
+    "display_order": 1,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Very Satisfied",
+    "option_code": "very_satisfied",
+    "parent": "SATISFACTION_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 5.0
+   },
+   {
+    "display_order": 2,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Satisfied",
+    "option_code": "satisfied",
+    "parent": "SATISFACTION_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 4.0
+   },
+   {
+    "display_order": 3,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Neutral",
+    "option_code": "neutral",
+    "parent": "SATISFACTION_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 3.0
+   },
+   {
+    "display_order": 4,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Dissatisfied",
+    "option_code": "dissatisfied",
+    "parent": "SATISFACTION_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 2.0
+   },
+   {
+    "display_order": 5,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Very Dissatisfied",
+    "option_code": "very_dissatisfied",
+    "parent": "SATISFACTION_5PT",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   }
+  ],
+  "scope": "Platform",
+  "set_name": "SATISFACTION_5PT",
+  "status": "Active"
+ },
+ {
+  "description": "Standard temporal occurrence frequencies",
+  "docstatus": 0,
+  "doctype": "OmniQuery Option Set",
+  "name": "FREQUENCY_STANDARD",
+  "options": [
+   {
+    "display_order": 1,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Daily",
+    "option_code": "daily",
+    "parent": "FREQUENCY_STANDARD",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 5.0
+   },
+   {
+    "display_order": 2,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Weekly",
+    "option_code": "weekly",
+    "parent": "FREQUENCY_STANDARD",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 4.0
+   },
+   {
+    "display_order": 3,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Monthly",
+    "option_code": "monthly",
+    "parent": "FREQUENCY_STANDARD",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 3.0
+   },
+   {
+    "display_order": 4,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Quarterly",
+    "option_code": "quarterly",
+    "parent": "FREQUENCY_STANDARD",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 2.0
+   },
+   {
+    "display_order": 5,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Annually",
+    "option_code": "annually",
+    "parent": "FREQUENCY_STANDARD",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   },
+   {
+    "display_order": 6,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Never",
+    "option_code": "never",
+    "parent": "FREQUENCY_STANDARD",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 0.0
+   }
+  ],
+  "scope": "Platform",
+  "set_name": "FREQUENCY_STANDARD",
+  "status": "Active"
+ },
+ {
+  "description": "Standard rural and SHG enterprise livelihood activities",
+  "docstatus": 0,
+  "doctype": "OmniQuery Option Set",
+  "name": "LIVELIHOOD_ACTIVITY",
+  "options": [
+   {
+    "display_order": 1,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Dairy & Animal Husbandry",
+    "option_code": "dairy",
+    "parent": "LIVELIHOOD_ACTIVITY",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   },
+   {
+    "display_order": 2,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Agriculture & Farming",
+    "option_code": "agriculture",
+    "parent": "LIVELIHOOD_ACTIVITY",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   },
+   {
+    "display_order": 3,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Tailoring & Garments",
+    "option_code": "tailoring",
+    "parent": "LIVELIHOOD_ACTIVITY",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   },
+   {
+    "display_order": 4,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Handicrafts & Artisans",
+    "option_code": "handicrafts",
+    "parent": "LIVELIHOOD_ACTIVITY",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   },
+   {
+    "display_order": 5,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Grocery / Kirana Store",
+    "option_code": "kirana",
+    "parent": "LIVELIHOOD_ACTIVITY",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   },
+   {
+    "display_order": 6,
+    "docstatus": 0,
+    "doctype": "OmniQuery Option Item",
+    "label_text": "Food Processing & Snacks",
+    "option_code": "food_processing",
+    "parent": "LIVELIHOOD_ACTIVITY",
+    "parentfield": "options",
+    "parenttype": "OmniQuery Option Set",
+    "score_weight": 1.0
+   }
+  ],
+  "scope": "Platform",
+  "set_name": "LIVELIHOOD_ACTIVITY",
+  "status": "Active"
+ }
+]

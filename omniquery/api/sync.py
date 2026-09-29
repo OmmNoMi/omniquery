@@ -5,7 +5,7 @@ import frappe
 from frappe import _
 from frappe.utils import now_datetime
 
-from .survey import user_has_template_permission
+from .survey import resolve_template_name, user_has_template_permission
 
 
 def resolve_surveyor(user):
@@ -117,7 +117,7 @@ def batch_push(submissions=None):
 			continue
 
 		# 1.5 Verify Survey Template Permission
-		template_name = sub.get("survey_template")
+		template_name = resolve_template_name(sub.get("survey_template"))
 		if not user_has_template_permission(template_name, current_user):
 			results.append(
 				{
@@ -138,7 +138,7 @@ def batch_push(submissions=None):
 
 			resp_doc = frappe.new_doc("OmniQuery Response")
 			resp_doc.idempotency_key = idempotency_key
-			resp_doc.survey_template = sub.get("survey_template")
+			resp_doc.survey_template = template_name
 			resp_doc.template_version = sub.get("template_version") or 1
 			resp_doc.respondent = sub.get("respondent") or sub.get("entrepreneur")
 			resp_doc.surveyor = sub.get("surveyor") or surveyor_name or current_user

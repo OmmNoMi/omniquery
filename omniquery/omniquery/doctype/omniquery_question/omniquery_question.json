@@ -1,113 +1,357 @@
 {
  "actions": [],
+ "allow_rename": 1,
+ "autoname": "autoname",
  "creation": "2026-09-10 01:00:00.000000",
  "doctype": "DocType",
- "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "section_code",
   "question_code",
+  "question_version",
+  "status",
+  "amended_from",
+  "scope",
+  "column_break_scope",
+  "workspace",
+  "project",
+  "survey_template",
+  "version_notes",
+  "question_tab",
   "label_en",
-  "field_type",
-  "is_mandatory",
-  "display_order",
-  "column_break_rules",
+  "field_category",
+  "control_variant",
+  "allow_user_toggle",
+  "column_break_rating",
+  "rating_icon",
+  "rating_max",
+  "rating_step",
+  "section_break_granularity",
+  "temporal_granularity",
+  "anchor_date_rule",
+  "column_break_geo",
+  "geographic_granularity",
+  "enable_reverse_geocoding",
+  "auto_fetch_administrative_fields",
+  "allow_manual_override",
+  "require_gps_accuracy_meters",
+  "geo_hierarchy_target_fields",
+  "options_tab",
+  "options_set",
   "options_json",
+  "audio_prompt",
+  "behaviour_tab",
+  "behaviour_script",
   "conditional_logic_json",
-  "validation_rules_json",
-  "audio_prompt"
+  "validation_rules_json"
  ],
  "fields": [
   {
-   "columns": 2,
-   "fieldname": "section_code",
-   "fieldtype": "Data",
-   "in_list_view": 1,
-   "label": "Section Code",
-   "reqd": 1
-  },
-  {
-   "columns": 2,
    "fieldname": "question_code",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Question Code",
+   "label": "Question Code (Semantic Identifier)",
+   "reqd": 0
+  },
+  {
+   "default": "1",
+   "fieldname": "question_version",
+   "fieldtype": "Int",
+   "label": "Version",
+   "read_only": 1,
    "reqd": 1
   },
   {
-   "columns": 3,
+   "default": "Draft",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Active\nInactive\nDraft",
+   "reqd": 1
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "OmniQuery Question",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "Platform",
+   "fieldname": "scope",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Scope",
+   "options": "Platform\nWorkspace\nProject\nSurvey",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_scope",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "workspace",
+   "fieldtype": "Link",
+   "label": "Workspace",
+   "options": "OmniQuery Workspace"
+  },
+  {
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "label": "Project",
+   "options": "OmniQuery Project"
+  },
+  {
+   "fieldname": "survey_template",
+   "fieldtype": "Link",
+   "label": "Survey Template",
+   "options": "OmniQuery Template"
+  },
+  {
+   "fieldname": "version_notes",
+   "fieldtype": "Small Text",
+   "label": "Version / Changelog Notes"
+  },
+  {
+   "fieldname": "question_tab",
+   "fieldtype": "Tab Break",
+   "label": "Definition & Display"
+  },
+  {
    "fieldname": "label_en",
    "fieldtype": "Small Text",
    "in_list_view": 1,
-   "label": "Label (English)",
+   "label": "Label (English / Default)",
    "reqd": 1
   },
   {
-   "columns": 2,
-   "default": "Text",
-   "fieldname": "field_type",
+   "default": "Text Input",
+   "fieldname": "field_category",
    "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Field Type",
-   "options": "Text\nLong Text\nInteger\nDecimal\nCurrency (INR)\nRange (Slider)\nSingle Choice (Radio)\nSingle Choice (Dropdown)\nMultiple Choice (Checkbox)\nDate\nTime\nGPS Location\nPhoto Upload\nDigital Signature\nDynamic Grid\nRating (1-5)",
+   "label": "Field Category",
+   "options": "Choice (Single)\nChoice (Multi)\nNumerical\nTemporal\nDuration\nGeographic\nText Input\nSubTable\nMedia",
    "reqd": 1
   },
   {
-   "columns": 1,
-   "default": "1",
-   "fieldname": "is_mandatory",
-   "fieldtype": "Check",
+   "default": "Auto",
+   "fieldname": "control_variant",
+   "fieldtype": "Select",
    "in_list_view": 1,
-   "label": "Mandatory"
+   "label": "Control Variant",
+   "options": "Auto\nRadio\nButtons\nSwitch\nChips\nRating\nCombobox\nSlider\nGrid\nText\nNumber\nCurrency\nDate\nGPS Capture\nPinpoint Map\nPolygon\nCascaded Admin Hierarchy"
   },
   {
-   "columns": 1,
-   "default": "1",
-   "fieldname": "display_order",
-   "fieldtype": "Int",
-   "in_list_view": 1,
-   "label": "Order"
-  },
-  {
-   "fieldname": "column_break_rules",
+   "fieldname": "column_break_rating",
    "fieldtype": "Column Break"
+  },
+  {
+   "default": "Star",
+   "fieldname": "rating_icon",
+   "fieldtype": "Select",
+   "label": "Rating Icon",
+   "options": "Star\nFaces\nHeart\nThumbs Up"
+  },
+  {
+   "default": "5",
+   "fieldname": "rating_max",
+   "fieldtype": "Int",
+   "label": "Rating Maximum"
+  },
+  {
+   "default": "1.0",
+   "fieldname": "rating_step",
+   "fieldtype": "Float",
+   "label": "Rating Step"
+  },
+  {
+   "fieldname": "section_break_granularity",
+   "fieldtype": "Section Break",
+   "label": "Temporal & Geographic Controls",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "temporal_granularity",
+   "fieldtype": "Select",
+   "label": "Temporal Granularity",
+   "options": "Date\nTime\nDateTime\nMonth-Year\nYear Only\nDay Only",
+   "depends_on": "eval:doc.field_category=='Temporal'"
+  },
+  {
+   "default": "First Day",
+   "fieldname": "anchor_date_rule",
+   "fieldtype": "Select",
+   "label": "Anchor Date Rule (Time-Series Plotting)",
+   "options": "First Day\nLast Day",
+   "depends_on": "eval:doc.field_category=='Temporal'"
+  },
+  {
+   "fieldname": "column_break_geo",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "geographic_granularity",
+   "fieldtype": "Select",
+   "label": "Geographic Granularity",
+   "options": "GPS Coordinates (Lat/Long)\nPinpoint Map\nPolygon Boundary\nCountry\nState / Province\nDistrict\nBlock / Tehsil\nCity / Village / Gram Panchayat\nPostal Code / PIN",
+   "depends_on": "eval:doc.field_category=='Geographic'"
+  },
+  {
+   "default": "0",
+   "fieldname": "enable_reverse_geocoding",
+   "fieldtype": "Check",
+   "label": "Enable Reverse Geocoding from Lat/Long",
+   "depends_on": "eval:doc.field_category=='Geographic'"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_fetch_administrative_fields",
+   "fieldtype": "Check",
+   "label": "Auto-Fetch Administrative Fields on GPS Capture",
+   "depends_on": "eval:doc.field_category=='Geographic' && doc.enable_reverse_geocoding"
+  },
+  {
+   "default": "1",
+   "fieldname": "allow_manual_override",
+   "fieldtype": "Check",
+   "label": "Allow Manual Override of Administrative Hierarchy",
+   "depends_on": "eval:doc.field_category=='Geographic'"
+  },
+  {
+   "default": "15.0",
+   "fieldname": "require_gps_accuracy_meters",
+   "fieldtype": "Float",
+   "label": "Required GPS Accuracy (Meters)",
+   "depends_on": "eval:doc.field_category=='Geographic'"
+  },
+  {
+   "fieldname": "geo_hierarchy_target_fields",
+   "fieldtype": "Code",
+   "label": "Hierarchy Target Fields Mapping (JSON)",
+   "options": "JSON",
+   "depends_on": "eval:doc.field_category=='Geographic' && doc.enable_reverse_geocoding"
+  },
+  {
+   "fieldname": "options_tab",
+   "fieldtype": "Tab Break",
+   "label": "Options & Audio"
+  },
+  {
+   "fieldname": "options_set",
+   "fieldtype": "Link",
+   "label": "Reusable Option Set",
+   "options": "OmniQuery Option Set"
   },
   {
    "fieldname": "options_json",
    "fieldtype": "Code",
-   "label": "Options JSON / List",
-   "options": "JSON",
-   "description": "e.g. [\"Yes\", \"No\", \"Uncertain\"]"
+   "label": "Inline Options JSON (Fallback)",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "audio_prompt",
+   "fieldtype": "Attach",
+   "label": "Audio Prompt (.mp3 / .ogg)"
+  },
+  {
+   "fieldname": "behaviour_tab",
+   "fieldtype": "Tab Break",
+   "label": "Behaviour & Validation"
+  },
+  {
+   "fieldname": "behaviour_script",
+   "fieldtype": "Code",
+   "label": "Behaviour Script (JavaScript)",
+   "options": "JS"
   },
   {
    "fieldname": "conditional_logic_json",
    "fieldtype": "Code",
-   "label": "Conditional Skip Logic (JSON)",
-   "options": "JSON",
-   "description": "e.g. {\"depends_on\": \"Q_MARITAL\", \"equals\": \"Married\"}"
+   "label": "Conditional Logic (JSON)",
+   "options": "JSON"
   },
   {
    "fieldname": "validation_rules_json",
    "fieldtype": "Code",
    "label": "Validation Rules (JSON)",
-   "options": "JSON",
-   "description": "e.g. {\"min\": 0, \"max\": 10000000, \"regex\": \"^[0-9]+$\"}"
+   "options": "JSON"
   },
   {
-   "fieldname": "audio_prompt",
-   "fieldtype": "Attach",
-   "label": "Audio Prompt (.mp3)"
+   "default": "0",
+   "fieldname": "allow_user_toggle",
+   "fieldtype": "Check",
+   "label": "Allow Surveyor UI Toggle (Grid vs Dropdown)"
   }
  ],
  "index_web_pages_for_search": 0,
- "istable": 1,
+ "is_submittable": 1,
  "links": [],
- "modified": "2026-09-10 01:00:00.000000",
+ "modified": "2026-09-29 14:30:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Question",
  "owner": "Administrator",
- "permissions": [],
- "sort_field": "idx",
- "sort_order": "ASC"
+ "permissions": [
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Admin",
+   "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 0,
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Manager",
+   "share": 0,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "read": 1,
+   "role": "OmniQuery User"
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "track_changes": 1,
+ "naming_rule": "By script",
+ "title_field": "label_en",
+ "show_title_field_in_link": 1,
+ "search_fields": "question_code,label_en"
 }
