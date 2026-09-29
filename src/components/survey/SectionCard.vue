@@ -32,27 +32,37 @@
       />
     </div>
 
-    <!-- Fixed Native Mobile Bottom Action Bar (Soft Grayish Sage Green) -->
+    <!-- Fixed Native Mobile Bottom Action Bar (Soft Grayish Sage Green): Tab sequence is Next (primary) -> Mode -> Previous -->
     <div class="fixed bottom-0 inset-x-0 z-50 bg-[#d0ded3] dark:bg-[#142019] border-t border-[#b8cdbf] dark:border-[#1f3026] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 sm:px-4 py-2.5 pb-safe">
       <div class="max-w-2xl mx-auto flex items-center justify-between gap-2">
-        <!-- Previous Page Button -->
-        <button
-          v-if="currentIndex > 0"
-          type="button"
-          @click="$emit('prev')"
-          class="px-3 py-2 rounded-xl border border-[#b8cdbf] dark:border-[#2a4033] bg-[#e6efe8] dark:bg-[#1c2c22] font-bold text-slate-900 dark:text-emerald-100 hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 transition text-xs sm:text-sm shrink-0 flex items-center gap-1"
-        >
-          <span>←</span>
-          <span>{{ __('Previous') }}</span>
-        </button>
-        <div v-else class="w-12 sm:w-16"></div>
+        <!-- 1st in DOM (Focus 1): Next / Submit Page Controls (Visual: Right) -->
+        <div class="order-3">
+          <button
+            v-if="currentIndex < totalSections - 1"
+            type="button"
+            @click="$emit('next')"
+            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          >
+            <span>{{ __('Next') }}</span>
+            <span>→</span>
+          </button>
+          <button
+            v-else
+            type="button"
+            @click="$emit('submit')"
+            :disabled="isSubmitting"
+            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          >
+            <span>{{ isSubmitting ? __('Submitting...') : __('Submit Survey') }}</span>
+          </button>
+        </div>
 
-        <!-- Center: Mode Dropdown Menu -->
-        <div class="relative" ref="modeMenuRef">
+        <!-- 2nd in DOM (Focus 2): Center: Mode Dropdown Menu (Visual: Center) -->
+        <div class="order-2 relative" ref="modeMenuRef">
           <button
             type="button"
             @click.stop="isModeMenuOpen = !isModeMenuOpen"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none bg-[#e6efe8] dark:bg-[#1c2c22] text-slate-800 dark:text-emerald-100 border-[#b8cdbf] dark:border-[#2a4033] hover:bg-white dark:hover:bg-[#253a2d]"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none bg-[#e6efe8] dark:bg-[#1c2c22] text-slate-800 dark:text-emerald-100 border-[#b8cdbf] dark:border-[#2a4033] hover:bg-white dark:hover:bg-[#253a2d] focus:outline-none focus:ring-2 focus:ring-emerald-600"
           >
             <span>⚙️</span>
             <span>{{ __('Mode') }}</span>
@@ -73,7 +83,7 @@
             <button
               type="button"
               @click="$emit('toggle-auto-advance')"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <div class="flex items-center gap-2">
                 <span class="text-sm">⚡</span>
@@ -101,7 +111,7 @@
             <button
               type="button"
               @click="$emit('toggle-full-form')"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <div class="flex items-center gap-2">
                 <span class="text-sm">📋</span>
@@ -129,7 +139,7 @@
             <button
               type="button"
               @click="onOpenFocusMode"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-1.5"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <div class="flex items-center gap-2">
                 <span class="text-sm">🎯</span>
@@ -143,27 +153,17 @@
           </div>
         </div>
 
-        <!-- Right: Next / Submit Page Controls -->
-        <div>
-          <button
-            v-if="currentIndex < totalSections - 1"
-            type="button"
-            @click="$emit('next')"
-            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>{{ __('Next') }}</span>
-            <span>→</span>
-          </button>
-          <button
-            v-else
-            type="button"
-            @click="$emit('submit')"
-            :disabled="isSubmitting"
-            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-          >
-            <span>{{ isSubmitting ? __('Submitting...') : __('Submit Survey') }}</span>
-          </button>
-        </div>
+        <!-- 3rd in DOM (Focus 3): Previous Page Button (Visual: Left) -->
+        <button
+          v-if="currentIndex > 0"
+          type="button"
+          @click="$emit('prev')"
+          class="order-1 px-3 py-2 rounded-xl border border-[#b8cdbf] dark:border-[#2a4033] bg-[#e6efe8] dark:bg-[#1c2c22] font-bold text-slate-900 dark:text-emerald-100 hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 transition text-xs sm:text-sm shrink-0 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-slate-400"
+        >
+          <span>←</span>
+          <span>{{ __('Previous') }}</span>
+        </button>
+        <div v-else class="order-1 w-12 sm:w-16"></div>
       </div>
     </div>
   </div>

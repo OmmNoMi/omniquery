@@ -61,25 +61,24 @@
         />
       </div>
 
-      <!-- Bottom Floating Navigation Bar -->
+      <!-- Bottom Floating Navigation Bar: Tab sequence is Next (primary) -> Mode -> Previous -->
       <div class="max-w-2xl w-full mx-auto bg-slate-900/90 dark:bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-2xl backdrop-blur-md flex items-center justify-between gap-2 shrink-0">
-        <!-- Previous Question Button -->
+        <!-- 1st in DOM (Focus 1): Next Question Button (Visual: Right) -->
         <button
           type="button"
-          @click="prevQuestion"
-          :disabled="currentIndex === 0"
-          class="px-3 sm:px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer shrink-0"
+          @click="nextQuestion"
+          class="order-3 px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
         >
-          <span>←</span>
-          <span>{{ __('Previous') }}</span>
+          <span>{{ currentIndex === questions.length - 1 ? __('Finish') : __('Next') }}</span>
+          <span>→</span>
         </button>
 
-        <!-- Center: Mode Dropdown Menu -->
-        <div class="relative" ref="modeMenuRef">
+        <!-- 2nd in DOM (Focus 2): Mode Dropdown Menu (Visual: Center) -->
+        <div class="order-2 relative" ref="modeMenuRef">
           <button
             type="button"
             @click.stop="isModeMenuOpen = !isModeMenuOpen"
-            class="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none"
+            class="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-slate-400"
           >
             <span>⚙️</span>
             <span>{{ __('Mode') }}</span>
@@ -100,7 +99,7 @@
             <button
               type="button"
               @click="$emit('toggle-auto-advance')"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400"
             >
               <div class="flex items-center gap-2">
                 <span class="text-sm">⚡</span>
@@ -128,7 +127,7 @@
             <button
               type="button"
               @click="onClose"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5 focus:outline-none focus:ring-1 focus:ring-slate-400"
             >
               <div class="flex items-center gap-2">
                 <span class="text-sm">📋</span>
@@ -142,14 +141,15 @@
           </div>
         </div>
 
-        <!-- Right: Next Question Button -->
+        <!-- 3rd in DOM (Focus 3): Previous Question Button (Visual: Left) -->
         <button
           type="button"
-          @click="nextQuestion"
-          class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1 cursor-pointer shrink-0"
+          @click="prevQuestion"
+          :disabled="currentIndex === 0"
+          class="order-1 px-3 sm:px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-slate-400"
         >
-          <span>{{ currentIndex === questions.length - 1 ? __('Finish') : __('Next') }}</span>
-          <span>→</span>
+          <span>←</span>
+          <span>{{ __('Previous') }}</span>
         </button>
       </div>
     </div>
