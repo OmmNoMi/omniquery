@@ -119,66 +119,72 @@
         </span>
       </div>
 
-      <!-- Scrollable Options List -->
-      <div class="max-h-60 overflow-y-auto space-y-0.5 px-0.5 py-0.5" ref="optionsList">
-        <button
-          v-for="(option, index) in filteredOptions"
-          :key="option.value"
-          :ref="(el) => { if (el) optionRefs[index] = el; }"
-          type="button"
-          role="option"
-          :aria-selected="isOptionSelected(option.value) ? 'true' : 'false'"
-          @click="selectOption(option)"
-          @mouseenter="highlightedIndex = index"
-          class="w-full text-left px-3 py-2.5 rounded-xl text-xs transition flex items-center justify-between gap-2.5 cursor-pointer select-none"
-          :class="[
-            index === highlightedIndex
-              ? 'bg-slate-100 dark:bg-slate-700/80 text-slate-900 dark:text-white font-semibold'
-              : 'hover:bg-slate-50 dark:hover:bg-slate-700/40',
-            isOptionSelected(option.value)
-              ? 'font-bold text-[#4285F4] dark:text-blue-400'
-              : 'text-slate-800 dark:text-slate-200'
-          ]"
-        >
-          <!-- Left: Checkbox in Multiselect or Dot in Single -->
-          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+      <!-- Scrollable Options List: Chip / Button Cards Grid -->
+      <div class="max-h-72 overflow-y-auto p-1" ref="optionsList">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" role="listbox">
+          <button
+            v-for="(option, index) in filteredOptions"
+            :key="option.value"
+            :ref="(el) => { if (el) optionRefs[index] = el; }"
+            type="button"
+            role="option"
+            :aria-selected="isOptionSelected(option.value) ? 'true' : 'false'"
+            @click="selectOption(option)"
+            @mouseenter="highlightedIndex = index"
+            class="w-full text-left p-2.5 sm:p-3 rounded-xl border-2 transition-all flex items-center gap-2.5 cursor-pointer select-none active:scale-[0.98] outline-none"
+            :class="[
+              isOptionSelected(option.value)
+                ? (multiple
+                    ? 'bg-blue-50 dark:bg-blue-950/60 border-[#4285F4] text-blue-950 dark:text-blue-100 font-bold shadow-xs'
+                    : 'bg-[#4285F4] text-white border-[#4285F4] shadow-xs font-bold')
+                : index === highlightedIndex
+                  ? 'bg-slate-100 dark:bg-slate-700/80 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white font-medium'
+                  : 'bg-slate-50/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-blue-400 hover:bg-blue-50/30'
+            ]"
+          >
+            <!-- Left: Sharp Square Checkbox for Multi-Select -->
             <span
               v-if="multiple"
               :class="[
-                'w-4 h-4 rounded text-xs flex items-center justify-center font-black transition shrink-0',
+                'w-5 h-5 rounded-[4px] border-2 flex items-center justify-center transition shrink-0',
                 isOptionSelected(option.value)
-                  ? 'bg-[#4285F4] text-white'
-                  : 'border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900'
+                  ? 'bg-[#4285F4] border-[#4285F4] text-white shadow-2xs'
+                  : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900'
               ]"
             >
-              <span v-if="isOptionSelected(option.value)">✓</span>
+              <svg v-if="isOptionSelected(option.value)" class="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
             </span>
-            <span class="truncate font-medium leading-snug">{{ option.label }}</span>
-          </div>
 
-          <!-- Right: check indicator if single select -->
-          <span v-if="!multiple && isOptionSelected(option.value)" class="text-xs text-[#4285F4] dark:text-blue-400 font-black">
-            ✓
-          </span>
-          <span v-else-if="index === highlightedIndex" class="text-[10px] text-slate-400 font-mono">
-            ↵
-          </span>
-        </button>
+            <!-- Left: Radio Circle for Single-Select -->
+            <span
+              v-else
+              :class="[
+                'w-5 h-5 rounded-full border-2 flex items-center justify-center transition shrink-0',
+                isOptionSelected(option.value)
+                  ? 'border-white bg-white/20 text-white'
+                  : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900'
+              ]"
+            >
+              <span v-if="isOptionSelected(option.value)" class="w-2 h-2 rounded-full bg-white"></span>
+            </span>
+
+            <span class="truncate text-xs sm:text-sm font-semibold leading-snug flex-1">{{ option.label }}</span>
+          </button>
+        </div>
 
         <div v-if="filteredOptions.length === 0" class="py-6 text-center text-xs text-slate-400">
           <div>{{ __('No options found') }}</div>
         </div>
       </div>
 
-      <!-- Multiselect Bottom Action Footer -->
-      <div v-if="multiple" class="pt-2 mt-1 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between px-1">
-        <span class="text-xs text-slate-500 dark:text-slate-400">
-          {{ selectedList.length }} {{ __('selected') }}
-        </span>
+      <!-- Multiselect Bottom Action Footer (Clean Done Button on Right, No Duplicate Selected Count) -->
+      <div v-if="multiple" class="pt-2 mt-1 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-end px-1">
         <button
           type="button"
           @click="closeCombobox"
-          class="px-4 py-1.5 rounded-lg bg-[#4285F4] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs shadow-xs transition"
+          class="px-4 py-1.5 rounded-lg bg-[#4285F4] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs shadow-xs transition cursor-pointer"
         >
           {{ __('Done') }}
         </button>
@@ -293,7 +299,7 @@ function closeCombobox() {
 }
 
 function onTriggerKeydown(e) {
-  if (["ArrowDown", "ArrowUp", "Enter", " "].includes(e.key)) {
+  if (["ArrowDown", "ArrowUp", "ArrowRight", "ArrowLeft", "Enter", " "].includes(e.key)) {
     e.preventDefault();
     e.stopPropagation();
     openCombobox();
@@ -388,5 +394,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   document.removeEventListener("click", handleClickOutside);
+});
+
+defineExpose({
+  focus: () => triggerBtn.value?.focus(),
 });
 </script>

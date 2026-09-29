@@ -52,11 +52,14 @@
       <!-- Top-Aligned Question Area: Mobile Keyboard-Friendly (no jumping/squishing) -->
       <div class="max-w-2xl w-full mx-auto flex-1 pt-3 pb-3 overflow-y-auto">
         <QuestionCard
+          ref="questionCardRef"
+          :key="currentQuestion?.question_code || currentIndex"
           :question="currentQuestion"
           :modelValue="responses[currentQuestion.question_code]"
           :errorMessage="validationErrors[currentQuestion.question_code]"
           @update:modelValue="onQuestionInput"
           @answered="onQuestionAnswered"
+          @next="nextQuestion"
           @capture-gps="$emit('capture-gps')"
         />
       </div>
@@ -174,7 +177,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted, onUnmounted } from "vue";
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
 
@@ -223,6 +226,17 @@ const { __ } = useTranslation();
 
 const isModeMenuOpen = ref(false);
 const modeMenuRef = ref(null);
+const questionCardRef = ref(null);
+
+function focusCurrentQuestion() {
+  if (!props.isOpen) return;
+  nextTick(() => {
+    questionCardRef.value?.focus?.();
+    setTimeout(() => {
+      questionCardRef.value?.focus?.();
+    }, 60);
+  });
+}
 
 function handleOutsideClick(event) {
   if (isModeMenuOpen.value && modeMenuRef.value && !modeMenuRef.value.contains(event.target)) {
@@ -280,10 +294,20 @@ function onClose() {
 }
 
 watch(
+  () => props.currentIndex,
+  () => {
+    focusCurrentQuestion();
+  }
+);
+
+watch(
   () => props.isOpen,
   (open) => {
     if (typeof document !== "undefined") {
       document.body.style.overflow = open ? "hidden" : "";
+    }
+    if (open) {
+      focusCurrentQuestion();
     }
   },
   { immediate: true }

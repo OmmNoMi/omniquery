@@ -58,6 +58,7 @@
         v-if="isSwitchControl"
         :modelValue="modelValue"
         @update:modelValue="onControlInput"
+        @next="$emit('next')"
       />
 
       <!-- 2. Range / Slider Control (Years, Scales, Ratings) -->
@@ -102,70 +103,113 @@
           @keydown.esc.stop="focusCard"
         />
 
-        <!-- 5B. Interactive Option Grid with Explicit Checkbox vs Radio Distinction -->
-        <div
-          v-else
-          class="grid gap-2.5 focus:outline-none outline-none"
-          :class="normalizedOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
-          :role="isMultiSelect ? 'group' : 'radiogroup'"
-          @keydown="onGridKeydown"
-          @keydown.esc.stop="focusCard"
-        >
-          <button
-            v-for="(option, index) in normalizedOptions"
-            :key="option.value"
-            type="button"
-            :role="isMultiSelect ? 'checkbox' : 'radio'"
-            :aria-checked="isOptionSelected(option.value)"
-            @click="onOptionClick(option.value)"
-            :class="[
-              'w-full text-left p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex items-center group active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[#4285F4] cursor-pointer shadow-2xs gap-3',
-              isOptionSelected(option.value)
-                ? (isMultiSelect
-                    ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-600 text-blue-950 dark:text-blue-100 font-bold'
-                    : 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-500/30 font-black')
-                : 'bg-slate-50/90 dark:bg-slate-800/90 border-slate-300/80 dark:border-slate-700 text-slate-900 dark:text-slate-100 hover:border-blue-400 hover:bg-blue-50/30'
-            ]"
-          >
-            <!-- Left: Shape Indicator with Keyboard Hint (1, 2, 3...) INSIDE -->
-            <!-- Multi-select: Square with hint/check -->
-            <span
-              v-if="isMultiSelect"
-              :class="[
-                'w-6 h-6 rounded-[4px] border-2 flex items-center justify-center text-xs font-mono font-bold transition shrink-0',
-                isOptionSelected(option.value)
-                  ? 'bg-blue-600 border-blue-600 text-white'
-                  : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-blue-400 group-hover:text-blue-600'
-              ]"
-            >
-              <span v-if="isOptionSelected(option.value)">✓</span>
-              <span v-else-if="index < 9">{{ index + 1 }}</span>
-            </span>
-
-            <!-- Single-select: Circle with hint/dot -->
-            <span
-              v-else
-              :class="[
-                'w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-mono font-bold transition shrink-0',
-                isOptionSelected(option.value)
-                  ? 'border-white bg-white/20 text-white'
-                  : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-blue-400 group-hover:text-blue-600'
-              ]"
-            >
-              <span v-if="index < 9">{{ index + 1 }}</span>
-              <span v-else-if="isOptionSelected(option.value)" class="w-2 h-2 rounded-full bg-white"></span>
-            </span>
-
-            <!-- Option Text & Description: Full Width, No Crowding -->
-            <div class="flex-1 min-w-0">
-              <span class="text-sm sm:text-base font-bold leading-snug block">
-                {{ option.label }}
-              </span>
-              <span v-if="option.description" class="text-xs opacity-80 block mt-0.5 font-normal">
-                {{ option.description }}
-              </span>
+        <!-- 5B. Interactive Option Grid with Quick Search & Explicit Checkbox vs Radio Distinction -->
+        <div v-else>
+          <!-- Quick Search Bar above button cards (when options > 7) -->
+          <div v-if="normalizedOptions.length > 7" class="relative mb-3">
+            <div class="relative flex items-center">
+              <svg class="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input
+                data-search-input
+                v-model="gridSearchQuery"
+                type="text"
+                :placeholder="__('Search options...')"
+                @keydown.enter.prevent="onSearchInputEnter"
+                @keydown.down.prevent="focusFirstOption"
+                class="w-full text-xs sm:text-sm pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-[#4285F4]/20 focus:border-[#4285F4] transition shadow-2xs"
+              />
+              <button
+                v-if="gridSearchQuery"
+                type="button"
+                @click="gridSearchQuery = ''"
+                class="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 text-xs font-bold cursor-pointer"
+                aria-label="Clear search"
+              >
+                ✕
+              </button>
             </div>
-          </button>
+            <!-- Filter summary if search is active -->
+            <div v-if="gridSearchQuery" class="mt-1 px-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+              <span>{{ __('Showing') }} {{ displayedGridOptions.length }} {{ __('of') }} {{ normalizedOptions.length }}</span>
+            </div>
+          </div>
+
+          <div
+            class="grid gap-2.5 focus:outline-none outline-none"
+            :class="displayedGridOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
+            :role="isMultiSelect ? 'group' : 'radiogroup'"
+            @keydown="onGridKeydown"
+            @keydown.esc.stop="focusCard"
+          >
+            <button
+              v-for="(option, index) in displayedGridOptions"
+              :key="option.value"
+              :ref="(el) => { if (el) optionButtonRefs[index] = el; }"
+              type="button"
+              :role="isMultiSelect ? 'checkbox' : 'radio'"
+              :aria-checked="isOptionSelected(option.value)"
+              :tabindex="getOptionTabindex(index)"
+              @click="onOptionClick(option.value)"
+              @keydown.enter.prevent="onOptionEnter"
+              @keydown.space.prevent="onOptionSpace(option.value)"
+              @keydown="onOptionKeydown($event, index)"
+              :class="[
+                'w-full text-left p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex items-center group active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4285F4] cursor-pointer shadow-2xs gap-3',
+                isOptionSelected(option.value)
+                  ? (isMultiSelect
+                      ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-600 text-blue-950 dark:text-blue-100 font-bold'
+                      : 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-500/30 font-black')
+                  : 'bg-slate-50/90 dark:bg-slate-800/90 border-slate-300/80 dark:border-slate-700 text-slate-900 dark:text-slate-100 hover:border-blue-400 hover:bg-blue-50/30'
+              ]"
+            >
+              <!-- Left: Shape Indicator with Keyboard Hint (1, 2, 3...) INSIDE -->
+              <!-- Multi-select: Square with hint/check -->
+              <span
+                v-if="isMultiSelect"
+                :class="[
+                  'w-6 h-6 rounded-[4px] border-2 flex items-center justify-center text-xs font-mono font-bold transition shrink-0',
+                  isOptionSelected(option.value)
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-blue-400 group-hover:text-blue-600'
+                ]"
+              >
+                <span v-if="isOptionSelected(option.value)">✓</span>
+                <span v-else-if="index < 9">{{ index + 1 }}</span>
+              </span>
+
+              <!-- Single-select: Circle with hint/dot -->
+              <span
+                v-else
+                :class="[
+                  'w-6 h-6 rounded-full border-2 flex items-center justify-center text-xs font-mono font-bold transition shrink-0',
+                  isOptionSelected(option.value)
+                    ? 'border-white bg-white/20 text-white'
+                    : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-blue-400 group-hover:text-blue-600'
+                ]"
+              >
+                <span v-if="index < 9">{{ index + 1 }}</span>
+                <span v-else-if="isOptionSelected(option.value)" class="w-2 h-2 rounded-full bg-white"></span>
+              </span>
+
+              <!-- Option Text & Description: Full Width, No Crowding -->
+              <div class="flex-1 min-w-0">
+                <span class="text-sm sm:text-base font-bold leading-snug block">
+                  {{ option.label }}
+                </span>
+                <span v-if="option.description" class="text-xs opacity-80 block mt-0.5 font-normal">
+                  {{ option.description }}
+                </span>
+              </div>
+            </button>
+
+            <!-- Empty search result fallback -->
+            <div v-if="displayedGridOptions.length === 0" class="col-span-full py-6 text-center text-xs text-slate-400">
+              {{ __('No matching options found') }}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -479,7 +523,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useTranslation } from "../../composables/useTranslation";
 import FSwitch from "../common/FSwitch.vue";
 import FRating from "../common/FRating.vue";
@@ -506,7 +550,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue", "capture-gps", "answered"]);
+const emit = defineEmits(["update:modelValue", "capture-gps", "answered", "next"]);
 const { __, getQuestionLabel } = useTranslation();
 
 const cardRef = ref(null);
@@ -522,6 +566,31 @@ watch(showConfigModal, (isOpen) => {
 });
 
 const localMode = ref(null);
+const optionButtonRefs = ref([]);
+const gridSearchQuery = ref("");
+
+watch(
+  () => props.question.question_code,
+  () => {
+    optionButtonRefs.value = [];
+    gridSearchQuery.value = "";
+  }
+);
+
+const displayedGridOptions = computed(() => {
+  if (!gridSearchQuery.value) return normalizedOptions.value;
+  const q = gridSearchQuery.value.toLowerCase().trim();
+  return normalizedOptions.value.filter((opt) => opt.label.toLowerCase().includes(q));
+});
+
+function getOptionTabindex(index) {
+  if (isMultiSelect.value) return 0;
+  const selectedIdx = displayedGridOptions.value.findIndex((opt) => isOptionSelected(opt.value));
+  if (selectedIdx === -1) {
+    return index === 0 ? 0 : -1;
+  }
+  return index === selectedIdx ? 0 : -1;
+}
 
 const isCompleted = computed(() => {
   const val = props.modelValue;
@@ -822,21 +891,15 @@ const effectiveMode = computed(() => {
   const variant = (props.question.control_variant || "Auto").toLowerCase();
   if (variant === "combobox" || variant === "dropdown") return "combobox";
   if (variant === "radio" || variant === "buttons" || variant === "grid" || variant === "chips") return "grid";
-  if (isMultiSelect.value) {
-    return normalizedOptions.value.length > 12 ? "combobox" : "grid";
-  }
-  return normalizedOptions.value.length > 6 ? "combobox" : "grid";
+  return normalizedOptions.value.length > 25 ? "combobox" : "grid";
 });
 
 const templateDefaultMode = computed(() => {
   const variant = (props.question.control_variant || "Auto").toLowerCase();
   const type = (props.question.field_type || "").toLowerCase();
-  if (variant === "combobox" || variant === "dropdown" || type.includes("dropdown") || type.includes("select")) return "combobox";
+  if (variant === "combobox" || variant === "dropdown" || type.includes("dropdown")) return "combobox";
   if (variant === "radio" || variant === "buttons" || variant === "grid" || variant === "chips" || type.includes("radio")) return "grid";
-  if (isMultiSelect.value) {
-    return normalizedOptions.value.length > 12 ? "combobox" : "grid";
-  }
-  return normalizedOptions.value.length > 6 ? "combobox" : "grid";
+  return normalizedOptions.value.length > 25 ? "combobox" : "grid";
 });
 
 const templateDefaultModeLabel = computed(() => {
@@ -881,19 +944,111 @@ function onControlInput(val) {
 
 function onComboboxUpdate(val) {
   emit("update:modelValue", val);
-  if (val) emit("answered", { code: props.question.question_code, value: val });
+  if (!isMultiSelect.value && val) {
+    emit("answered", { code: props.question.question_code, value: val });
+  }
 }
 
-function onInputEnter() {
+function onInputEnter(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
   emit("answered", { code: props.question.question_code, value: props.modelValue });
+  emit("next");
+}
+
+function onOptionEnter(e) {
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+  emit("answered", { code: props.question.question_code, value: props.modelValue });
+  emit("next");
+}
+
+function focusFirstOption() {
+  if (optionButtonRefs.value[0]) {
+    optionButtonRefs.value[0].focus();
+  } else if (cardRef.value) {
+    const btn = cardRef.value.querySelector("button[role=radio], button[role=checkbox]");
+    if (btn) btn.focus();
+  }
+}
+
+function onSearchInputEnter() {
+  if (displayedGridOptions.value.length === 1) {
+    onOptionClick(displayedGridOptions.value[0].value);
+    emit("next");
+  } else if (displayedGridOptions.value.length > 0) {
+    focusFirstOption();
+  } else {
+    emit("next");
+  }
+}
+
+function onOptionSpace(val) {
+  if (isMultiSelect.value) {
+    const list = Array.isArray(props.modelValue) ? [...props.modelValue] : (props.modelValue ? [props.modelValue] : []);
+    const idx = list.indexOf(val);
+    if (idx > -1) list.splice(idx, 1);
+    else list.push(val);
+    emit("update:modelValue", list);
+  } else {
+    emit("update:modelValue", val);
+  }
+}
+
+function handleOptionArrowNav(e, curIdx) {
+  const len = displayedGridOptions.value.length;
+  if (len === 0) return;
+  let nextIdx = curIdx;
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+    nextIdx = (curIdx + 1) % len;
+  } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+    nextIdx = (curIdx - 1 + len) % len;
+  }
+  let targetBtn = optionButtonRefs.value[nextIdx];
+  if (!targetBtn && cardRef.value) {
+    const allBtns = cardRef.value.querySelectorAll("button[role=radio], button[role=checkbox]");
+    targetBtn = allBtns[nextIdx];
+  }
+  if (targetBtn) {
+    targetBtn.focus();
+    if (!isMultiSelect.value) {
+      emit("update:modelValue", displayedGridOptions.value[nextIdx].value);
+    }
+  }
+}
+
+function onOptionKeydown(e, index) {
+  if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) {
+    e.preventDefault();
+    e.stopPropagation();
+    handleOptionArrowNav(e, index);
+  }
 }
 
 function onGridKeydown(e) {
-  const num = parseInt(e.key, 10);
-  if (!isNaN(num) && num >= 1 && num <= normalizedOptions.value.length && num <= 9) {
+  if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) {
     e.preventDefault();
     e.stopPropagation();
-    onOptionClick(normalizedOptions.value[num - 1].value);
+    let curIdx = optionButtonRefs.value.findIndex((btn) => btn === document.activeElement);
+    if (curIdx === -1) {
+      curIdx = displayedGridOptions.value.findIndex((opt) => isOptionSelected(opt.value));
+    }
+    if (curIdx === -1) curIdx = 0;
+    handleOptionArrowNav(e, curIdx);
+    return;
+  }
+
+  const num = parseInt(e.key, 10);
+  if (!isNaN(num) && num >= 1 && num <= displayedGridOptions.value.length && num <= 9) {
+    e.preventDefault();
+    e.stopPropagation();
+    const targetIdx = num - 1;
+    optionButtonRefs.value[targetIdx]?.focus();
+    onOptionClick(displayedGridOptions.value[targetIdx].value);
   }
 }
 
@@ -944,5 +1099,51 @@ onUnmounted(() => {
     document.body.style.overflow = "";
   }
   window.removeEventListener("omniquery:choicemode", onGlobalChoiceMode);
+});
+
+function focusPrimaryInput() {
+  nextTick(() => {
+    if (!cardRef.value) return;
+    // 1. Standard text / number / date input or textarea (exclude quick search inputs)
+    const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]):not([data-search-input]), textarea:not([disabled])");
+    if (input) {
+      input.focus();
+      return;
+    }
+    // 2. Combobox trigger button: [role="combobox"] (Multi-select or single-select combobox dropdown)
+    const comboboxBtn = cardRef.value.querySelector("button[role=combobox]:not([disabled])");
+    if (comboboxBtn) {
+      comboboxBtn.focus();
+      return;
+    }
+    // 3. Option buttons grid: focus selected option button or first option button
+    const checkedOptionBtn = cardRef.value.querySelector("button[role=radio][aria-checked=true], button[role=checkbox][aria-checked=true]");
+    if (checkedOptionBtn) {
+      checkedOptionBtn.focus();
+      return;
+    }
+    const firstOptionBtn = cardRef.value.querySelector("button[role=radio], button[role=checkbox]");
+    if (firstOptionBtn) {
+      firstOptionBtn.focus();
+      return;
+    }
+    // 4. Binary switch control
+    const switchBtn = cardRef.value.querySelector("button[role=switch]");
+    if (switchBtn) {
+      switchBtn.focus();
+      return;
+    }
+    // 5. Any interactive button inside control area
+    const anyBtn = cardRef.value.querySelector("button:not([disabled])");
+    if (anyBtn) {
+      anyBtn.focus();
+      return;
+    }
+    cardRef.value.focus();
+  });
+}
+
+defineExpose({
+  focus: focusPrimaryInput,
 });
 </script>
