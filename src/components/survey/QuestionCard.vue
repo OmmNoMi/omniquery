@@ -138,7 +138,7 @@
             <span
               v-if="isMultiSelect"
               :class="[
-                'w-6 h-6 rounded-lg border-2 flex items-center justify-center text-xs font-mono font-bold transition shrink-0',
+                'w-6 h-6 rounded-[4px] border-2 flex items-center justify-center text-xs font-mono font-bold transition shrink-0',
                 isOptionSelected(option.value)
                   ? 'bg-blue-600 border-blue-600 text-white'
                   : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-blue-400 group-hover:text-blue-600'
@@ -737,8 +737,18 @@ function setRangeFormat(fmt) {
 
 const isMultiSelect = computed(() => {
   const category = (props.question.field_category || "").toLowerCase();
-  const label = (props.question.label_en || "").toLowerCase();
-  return category.includes("multi") || label.includes("multi-select") || label.includes("multiselect");
+  const label = (props.question.label_en || props.question.label || "").toLowerCase();
+  const type = (props.question.field_type || "").toLowerCase();
+  const variant = (props.question.control_variant || "").toLowerCase();
+  return (
+    category.includes("multi") ||
+    label.includes("multi-select") ||
+    label.includes("multiselect") ||
+    type.includes("multi") ||
+    type.includes("checkbox") ||
+    variant.includes("multi") ||
+    variant.includes("checkbox")
+  );
 });
 
 const isChoiceControl = computed(() => {
