@@ -142,10 +142,12 @@
     <Teleport to="body">
       <div
         v-if="showConfigModal"
-        class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-end justify-center"
+        class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-end justify-center overscroll-contain select-none"
         @click.self="showConfigModal = false"
+        @wheel.stop
+        @touchmove.self.prevent
       >
-        <div class="bg-white w-full max-w-lg rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto pb-safe">
+        <div class="bg-white w-full max-w-lg rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto pb-safe overscroll-contain">
           <!-- iOS Grabber Bar -->
           <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto"></div>
 
@@ -378,6 +380,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
+import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -419,6 +422,7 @@ const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-te
 const { __, currentLang, setLanguage } = useTranslation();
 
 const showConfigModal = ref(false);
+useScrollLock(showConfigModal);
 const activeTheme = ref("light");
 
 const userEmail = computed(() => {

@@ -323,21 +323,15 @@
       </div>
     </main>
 
-    <!-- WAL Drawer / Offline Queue Modal -->
-    <div
-      v-if="showWALDrawer"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
-      @click.self="showWALDrawer = false"
+    <!-- WAL Drawer / Offline Queue Modal (Universal BaseModal with built-in scroll lock) -->
+    <BaseModal
+      :isOpen="showWALDrawer"
+      size="md"
+      :title="__('Offline Sync Queue')"
+      icon="⚡"
+      @close="showWALDrawer = false"
     >
-      <div class="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 border border-slate-200 dark:border-slate-800">
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <span class="text-xl">⚡</span>
-            <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">{{ __('Offline Sync Queue') }}</h3>
-          </div>
-          <button @click="showWALDrawer = false" class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold flex items-center justify-center text-xs">✕</button>
-        </div>
-
+      <div class="p-5 sm:p-6 space-y-4">
         <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1">
           <div class="font-extrabold flex items-center justify-between">
             <span>{{ pendingWALCount }} {{ __('Pending Submissions In Device Memory') }}</span>
@@ -368,48 +362,48 @@
           </button>
         </div>
       </div>
-    </div>
+    </BaseModal>
 
-    <!-- Native In-App Exit Confirmation Dialog (Teleported to body) -->
-    <Teleport to="body">
-      <div
-        v-if="showExitDialog"
-        class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
-        @click.self="showExitDialog = false"
-      >
-        <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-200/80 dark:border-slate-800 text-center space-y-4">
-          <div class="w-13 h-13 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center text-2xl shadow-xs">
-            ⚠️
-          </div>
+    <!-- Native In-App Exit Confirmation Dialog (Universal BaseModal with built-in scroll lock) -->
+    <BaseModal
+      :isOpen="showExitDialog"
+      size="sm"
+      hideHeader
+      :showCloseButton="false"
+      @close="showExitDialog = false"
+    >
+      <div class="p-6 text-center space-y-4">
+        <div class="w-13 h-13 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center text-2xl shadow-xs">
+          ⚠️
+        </div>
 
-          <div class="space-y-1">
-            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">
-              {{ __('Exit Survey?') }}
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-              {{ __('Your responses are saved in offline drafts. Return to the survey list?') }}
-            </p>
-          </div>
+        <div class="space-y-1">
+          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">
+            {{ __('Exit Survey?') }}
+          </h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            {{ __('Your responses are saved in offline drafts. Return to the survey list?') }}
+          </p>
+        </div>
 
-          <div class="grid grid-cols-2 gap-2.5 pt-2">
-            <button
-              type="button"
-              @click="showExitDialog = false"
-              class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition"
-            >
-              {{ __('Stay') }}
-            </button>
-            <button
-              type="button"
-              @click="confirmExit"
-              class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs"
-            >
-              {{ __('Exit') }}
-            </button>
-          </div>
+        <div class="grid grid-cols-2 gap-2.5 pt-2">
+          <button
+            type="button"
+            @click="showExitDialog = false"
+            class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer"
+          >
+            {{ __('Stay') }}
+          </button>
+          <button
+            type="button"
+            @click="confirmExit"
+            class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer"
+          >
+            {{ __('Exit') }}
+          </button>
         </div>
       </div>
-    </Teleport>
+    </BaseModal>
 
     <!-- Project Details & Training Materials Modal -->
     <ProjectDetailsModal
@@ -446,6 +440,7 @@ import MatrixQuestionCard from "./components/survey/MatrixQuestionCard.vue";
 import FocusModeModal from "./components/survey/FocusModeModal.vue";
 import SurveyorDashboard from "./components/dashboard/SurveyorDashboard.vue";
 import ProjectHeaderCard from "./components/dashboard/ProjectHeaderCard.vue";
+import BaseModal from "./components/common/BaseModal.vue";
 import ProjectDetailsModal from "./components/dashboard/ProjectDetailsModal.vue";
 import FilledFormsModal from "./components/dashboard/FilledFormsModal.vue";
 
@@ -455,11 +450,6 @@ const focusQuestionIndex = ref(0);
 
 const showExitDialog = ref(false);
 
-watch(showExitDialog, (isOpen) => {
-  if (typeof document !== "undefined") {
-    document.body.style.overflow = isOpen ? "hidden" : "";
-  }
-});
 
 const { __ } = useTranslation();
 const { textSize, cycleTextSize, setTextSize } = useTextScale();

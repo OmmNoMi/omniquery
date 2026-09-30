@@ -232,7 +232,8 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
+import { computed, ref, watch, nextTick, toRef, onMounted, onUnmounted } from "vue";
+import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
 import MatrixQuestionCard from "./MatrixQuestionCard.vue";
@@ -300,6 +301,7 @@ const emit = defineEmits([
 ]);
 
 const { __ } = useTranslation();
+useScrollLock(toRef(props, "isOpen"));
 
 const isModeMenuOpen = ref(false);
 const modeMenuRef = ref(null);

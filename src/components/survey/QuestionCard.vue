@@ -338,214 +338,183 @@
       </div>
     </div>
 
-    <!-- Question Configuration & Info Teleport Modal -->
-    <Teleport to="body">
-      <div
-        v-if="showConfigModal"
-        class="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in overscroll-contain"
-        role="dialog"
-        aria-modal="true"
-        @keydown.esc="showConfigModal = false"
-        @wheel.stop
-        @touchmove.stop
-      >
-        <div class="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full border border-slate-200/90 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col transition-all">
-          
-          <!-- Clean Question Settings Header -->
-          <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-white dark:bg-slate-900">
+    <!-- Question Configuration & Info Modal (Universal BaseModal with built-in scroll lock) -->
+    <BaseModal
+      :isOpen="showConfigModal"
+      size="md"
+      :title="__('Question Settings')"
+      :subtitle="`${question.question_code} · ${question.is_mandatory ? __('Mandatory') : __('Optional')}`"
+      @close="showConfigModal = false"
+    >
+      <div class="p-5 space-y-4">
+        <!-- Question Title & Description -->
+        <div>
+          <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
+            {{ questionLabel }}
+          </h3>
+          <p
+            v-if="questionDescription"
+            class="mt-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 leading-relaxed"
+          >
+            ℹ️ {{ questionDescription }}
+          </p>
+        </div>
+
+        <!-- Display Format Switcher (Choice Control) -->
+        <div v-if="isChoiceControl" class="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-2.5">
+          <div class="flex items-center justify-between gap-2 flex-wrap">
             <div>
-              <h3 class="text-base font-bold text-slate-900 dark:text-white leading-tight">
-                {{ __('Question Settings') }}
-              </h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                {{ question.question_code }} · {{ question.is_mandatory ? __('Mandatory') : __('Optional') }}
-              </p>
-            </div>
-            
-            <button
-              type="button"
-              @click="showConfigModal = false"
-              class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition active:scale-95"
-              aria-label="Close dialog"
-            >
-              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-
-          <!-- Modal Body -->
-          <div class="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
-            <!-- Question Title & Description -->
-            <div>
-              <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
-                {{ questionLabel }}
-              </h3>
-              <p
-                v-if="questionDescription"
-                class="mt-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 leading-relaxed"
-              >
-                ℹ️ {{ questionDescription }}
-              </p>
-            </div>
-
-            <!-- Display Format Switcher (Choice Control) -->
-            <div v-if="isChoiceControl" class="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-2.5">
-              <div class="flex items-center justify-between gap-2 flex-wrap">
-                <div>
-                  <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <span>📱</span>
-                    <span>{{ __('Display Style') }}</span>
-                  </div>
-                  <div class="text-[11px] text-slate-500 dark:text-slate-400">
-                    {{ __('Choose how options appear on your screen') }}
-                  </div>
-                </div>
-                <span class="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 px-2.5 py-0.5 rounded-full">
-                  {{ __('Default:') }} {{ templateDefaultModeLabel }}
-                </span>
+              <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <span>📱</span>
+                <span>{{ __('Display Style') }}</span>
               </div>
-              <div class="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                <button
-                  type="button"
-                  @click="setDisplayMode('grid')"
-                  :class="[
-                    'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                    effectiveMode === 'grid'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                  ]"
-                >
-                  <span>⊞</span>
-                  <span>{{ __('Button Grid') }}</span>
-                  <span v-if="templateDefaultMode === 'grid'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
-                </button>
-                <button
-                  type="button"
-                  @click="setDisplayMode('combobox')"
-                  :class="[
-                    'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                    effectiveMode === 'combobox'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                  ]"
-                >
-                  <span>▾</span>
-                  <span>{{ __('Dropdown') }}</span>
-                  <span v-if="templateDefaultMode === 'combobox'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
-                </button>
+              <div class="text-[11px] text-slate-500 dark:text-slate-400">
+                {{ __('Choose how options appear on your screen') }}
               </div>
             </div>
-
-            <!-- Range Format Switcher (Buttons vs Slider) -->
-            <div v-if="isRangeControl" class="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-2">
-              <div>
-                <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                  <span>🎚</span>
-                  <span>{{ __('Range Presentation') }}</span>
-                </div>
-                <div class="text-[11px] text-slate-500 dark:text-slate-400">
-                  {{ __('Choose between discrete button pills or draggable bar') }}
-                </div>
-              </div>
-              <div class="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-                <button
-                  type="button"
-                  @click="setRangeFormat('buttons')"
-                  :class="[
-                    'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                    rangeFormat === 'buttons'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                  ]"
-                >
-                  <span>🔘</span>
-                  <span>{{ __('Button Pills') }}</span>
-                </button>
-                <button
-                  type="button"
-                  @click="setRangeFormat('slider')"
-                  :class="[
-                    'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                    rangeFormat === 'slider'
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                  ]"
-                >
-                  <span>🎚</span>
-                  <span>{{ __('Slider Bar') }}</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Technical Question Specifications -->
-            <div class="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 overflow-hidden divide-y divide-slate-200/60 dark:divide-slate-800 text-xs">
-              <div class="flex items-center justify-between px-3.5 py-2.5">
-                <span class="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
-                  {{ __('Field Type') }}
-                </span>
-                <span class="font-bold text-slate-900 dark:text-white">
-                  {{ formatFieldType() }}
-                </span>
-              </div>
-              <div v-if="question.options && question.options.length" class="flex items-center justify-between px-3.5 py-2.5">
-                <span class="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
-                  {{ __('Options Count') }}
-                </span>
-                <span class="font-bold text-slate-900 dark:text-white">
-                  {{ question.options.length }} {{ __('choices') }}
-                </span>
-              </div>
-              <div v-if="validationRuleSummary" class="flex items-center justify-between px-3.5 py-2.5">
-                <span class="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                  {{ __('Rules') }}
-                </span>
-                <span class="font-bold text-slate-900 dark:text-white">
-                  {{ validationRuleSummary }}
-                </span>
-              </div>
-              <div v-if="dependencySummary" class="flex items-center justify-between px-3.5 py-2.5">
-                <span class="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
-                  <svg class="w-3.5 h-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
-                  {{ __('Depends On') }}
-                </span>
-                <span class="font-bold text-amber-700 dark:text-amber-400 truncate max-w-[200px]">
-                  {{ dependencySummary }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Modal Footer -->
-          <div class="px-5 py-3.5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
-            <span class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
-              <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-              </svg>
-              {{ __('Saved on your device') }}
+            <span class="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 px-2.5 py-0.5 rounded-full">
+              {{ __('Default:') }} {{ templateDefaultModeLabel }}
             </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
             <button
               type="button"
-              @click="showConfigModal = false"
-              class="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-bold text-xs shadow-xs transition"
+              @click="setDisplayMode('grid')"
+              :class="[
+                'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                effectiveMode === 'grid'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              ]"
             >
-              {{ __('Done') }}
+              <span>⊞</span>
+              <span>{{ __('Button Grid') }}</span>
+              <span v-if="templateDefaultMode === 'grid'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
+            </button>
+            <button
+              type="button"
+              @click="setDisplayMode('combobox')"
+              :class="[
+                'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                effectiveMode === 'combobox'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              ]"
+            >
+              <span>▾</span>
+              <span>{{ __('Dropdown') }}</span>
+              <span v-if="templateDefaultMode === 'combobox'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
             </button>
           </div>
+        </div>
 
+        <!-- Range Format Switcher (Buttons vs Slider) -->
+        <div v-if="isRangeControl" class="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-2">
+          <div>
+            <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <span>🎚</span>
+              <span>{{ __('Range Presentation') }}</span>
+            </div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+              {{ __('Choose between discrete button pills or draggable bar') }}
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
+            <button
+              type="button"
+              @click="setRangeFormat('buttons')"
+              :class="[
+                'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                rangeFormat === 'buttons'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              ]"
+            >
+              <span>🔘</span>
+              <span>{{ __('Button Pills') }}</span>
+            </button>
+            <button
+              type="button"
+              @click="setRangeFormat('slider')"
+              :class="[
+                'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
+                rangeFormat === 'slider'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              ]"
+            >
+              <span>🎚</span>
+              <span>{{ __('Slider Bar') }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Technical Question Specifications -->
+        <div class="rounded-2xl border border-slate-200/70 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 overflow-hidden divide-y divide-slate-200/60 dark:divide-slate-800 text-xs">
+          <div class="flex items-center justify-between px-3.5 py-2.5">
+            <span class="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="9" x2="15" y2="9"></line><line x1="9" y1="13" x2="15" y2="13"></line><line x1="9" y1="17" x2="13" y2="17"></line></svg>
+              {{ __('Field Type') }}
+            </span>
+            <span class="font-bold text-slate-900 dark:text-white">
+              {{ formatFieldType() }}
+            </span>
+          </div>
+          <div v-if="question.options && question.options.length" class="flex items-center justify-between px-3.5 py-2.5">
+            <span class="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+              {{ __('Options Count') }}
+            </span>
+            <span class="font-bold text-slate-900 dark:text-white">
+              {{ question.options.length }} {{ __('choices') }}
+            </span>
+          </div>
+          <div v-if="validationRuleSummary" class="flex items-center justify-between px-3.5 py-2.5">
+            <span class="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              {{ __('Rules') }}
+            </span>
+            <span class="font-bold text-slate-900 dark:text-white">
+              {{ validationRuleSummary }}
+            </span>
+          </div>
+          <div v-if="dependencySummary" class="flex items-center justify-between px-3.5 py-2.5">
+            <span class="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+              {{ __('Depends On') }}
+            </span>
+            <span class="font-bold text-amber-700 dark:text-amber-400 truncate max-w-[200px]">
+              {{ dependencySummary }}
+            </span>
+          </div>
         </div>
       </div>
-    </Teleport>
+
+      <template #footer>
+        <div class="w-full flex items-center justify-between">
+          <span class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
+            <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+            {{ __('Saved on your device') }}
+          </span>
+          <button
+            type="button"
+            @click="showConfigModal = false"
+            class="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-bold text-xs shadow-xs transition cursor-pointer"
+          >
+            {{ __('Done') }}
+          </button>
+        </div>
+      </template>
+    </BaseModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useTranslation } from "../../composables/useTranslation";
+import BaseModal from "../common/BaseModal.vue";
 import FSwitch from "../common/FSwitch.vue";
 import FRating from "../common/FRating.vue";
 import FCurrencyInput from "../common/FCurrencyInput.vue";

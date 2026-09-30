@@ -89,4 +89,12 @@ html.dark .bg-slate-50 {
   border-color: #334155 !important;
 }
 
+/* Universal Modal Scroll Lock: Strictly prevents background scrolling, elastic bounce, and chaining */
+body.modal-open-scroll-locked,
+html.modal-open-scroll-locked {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+
 

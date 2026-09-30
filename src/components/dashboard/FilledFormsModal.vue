@@ -2,7 +2,8 @@
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 h-screen w-screen flex flex-col overflow-hidden animate-fade-in select-none"
+      class="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 h-screen w-screen flex flex-col overflow-hidden animate-fade-in select-none overscroll-contain"
+      @wheel.stop
     >
       <!-- 1. Full-Page Top App Bar (Replaces cramped bottom sheet) -->
       <header class="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-xs">
@@ -321,47 +322,32 @@
         </div>
       </main>
 
-      <!-- 5. Cross-Verification Inspector Dialog (Full screen nested or centered) -->
-      <div
-        v-if="selectedInspectResponse"
-        class="fixed inset-0 z-[110] bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-fade-in"
-        @click.self="selectedInspectResponse = null"
+      <!-- 5. Cross-Verification Inspector Dialog (Universal BaseModal with built-in scroll lock) -->
+      <BaseModal
+        :isOpen="Boolean(selectedInspectResponse)"
+        size="xl"
+        :title="selectedInspectResponse ? `${__('Cross-Verification')}: ${selectedInspectResponse.response_uid}` : ''"
+        :subtitle="selectedInspectResponse?.template_title || selectedInspectResponse?.template_name || ''"
+        icon="🔍"
+        @close="selectedInspectResponse = null"
       >
-        <div class="bg-white dark:bg-slate-900 w-full max-w-xl max-h-[85vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-700">
-          <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-            <div>
-              <h3 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">
-                {{ __('Cross-Verification') }}: {{ selectedInspectResponse.response_uid }}
-              </h3>
-              <p class="text-xs text-slate-500">
-                {{ selectedInspectResponse.template_title || selectedInspectResponse.template_name }}
-              </p>
+        <div v-if="selectedInspectResponse" class="p-4 sm:p-5 space-y-3">
+          <div
+            v-for="(val, code) in (selectedInspectResponse.responses || {})"
+            :key="code"
+            class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-left space-y-1"
+          >
+            <div class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
+              {{ code }}
             </div>
-            <button
-              type="button"
-              @click="selectedInspectResponse = null"
-              class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-bold flex items-center justify-center text-xs cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-
-          <div class="p-4 sm:p-5 overflow-y-auto flex-1 space-y-3">
-            <div
-              v-for="(val, code) in (selectedInspectResponse.responses || {})"
-              :key="code"
-              class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-left space-y-1"
-            >
-              <div class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
-                {{ code }}
-              </div>
-              <div class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 break-words">
-                {{ formatValue(val) }}
-              </div>
+            <div class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 break-words">
+              {{ formatValue(val) }}
             </div>
           </div>
+        </div>
 
-          <div class="p-4 border-t border-slate-100 dark:border-slate-800 flex justify-between gap-2 items-center">
+        <template #footer>
+          <div v-if="selectedInspectResponse" class="w-full flex justify-between gap-2 items-center">
             <button
               type="button"
               @click="copyResponseJson(selectedInspectResponse)"
@@ -377,15 +363,17 @@
               {{ __('Verified Good') }} ✓
             </button>
           </div>
-        </div>
-      </div>
+        </template>
+      </BaseModal>
     </div>
   </Teleport>
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from "vue";
+import { computed, ref, onMounted, watch, toRef } from "vue";
 import JSZip from "jszip";
+import BaseModal from "../common/BaseModal.vue";
+import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import { useWAL } from "../../composables/useWAL";
 import { db } from "../../services/db";
@@ -409,6 +397,9 @@ const emit = defineEmits(["close", "sync-all", "resume-draft"]);
 
 const { __ } = useTranslation();
 const { forceSyncAll } = useWAL();
+
+// Universal scroll locking: strictly prevents background scrolling while open
+useScrollLock(toRef(props, "isOpen"));
 
 const responsesList = ref([]);
 const activeFilter = ref("all");

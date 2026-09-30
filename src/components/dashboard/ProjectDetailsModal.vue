@@ -1,40 +1,15 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in"
-      @click.self="$emit('close')"
-    >
-      <div class="bg-white dark:bg-slate-900 w-full sm:max-w-2xl max-h-[90vh] rounded-t-3xl sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800">
-        <!-- iOS Grabber Bar on mobile -->
-        <div class="sm:hidden pt-3 pb-1 flex justify-center">
-          <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full" />
-        </div>
-
-        <!-- Modal Header -->
-        <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <span class="text-2xl shrink-0">📚</span>
-            <div class="min-w-0">
-              <h2 class="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
-                {{ projectData.project_name || __('Project Overview & Training') }}
-              </h2>
-              <p class="text-xs text-slate-500 dark:text-slate-400 truncate">
-                {{ projectData.grantor_organization || 'National Rural Livelihoods Mission' }}
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            @click="$emit('close')"
-            class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-sm transition shrink-0 cursor-pointer"
-          >
-            ✕
-          </button>
-        </div>
-
-        <!-- Tab Navigation Bar -->
-        <div class="flex border-b border-slate-100 dark:border-slate-800 px-4 gap-4 overflow-x-auto no-scrollbar shrink-0 bg-slate-50/50 dark:bg-slate-800/30">
+  <BaseModal
+    :isOpen="isOpen"
+    :title="projectData.project_name || __('Project Overview & Training')"
+    :subtitle="projectData.grantor_organization || 'National Rural Livelihoods Mission'"
+    icon="📚"
+    size="2xl"
+    maxHeightClass="max-h-[88vh]"
+    @close="$emit('close')"
+  >
+    <!-- Tab Navigation Bar -->
+    <div class="sticky top-0 z-10 flex border-b border-slate-100 dark:border-slate-800 px-4 gap-4 overflow-x-auto no-scrollbar shrink-0 bg-slate-50/95 dark:bg-slate-800/95 backdrop-blur-xs">
           <button
             type="button"
             @click="activeTab = 'sops'"
@@ -168,23 +143,21 @@
           </div>
         </div>
 
-        <!-- Footer -->
-        <div class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-end shrink-0">
-          <button
-            type="button"
-            @click="$emit('close')"
-            class="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs sm:text-sm hover:opacity-90 active:scale-95 transition cursor-pointer"
-          >
-            {{ __('Close') }}
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
+    <template #footer>
+      <button
+        type="button"
+        @click="$emit('close')"
+        class="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs sm:text-sm hover:opacity-90 active:scale-95 transition cursor-pointer"
+      >
+        {{ __('Close') }}
+      </button>
+    </template>
+  </BaseModal>
 </template>
 
 <script setup>
 import { ref } from "vue";
+import BaseModal from "../common/BaseModal.vue";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
