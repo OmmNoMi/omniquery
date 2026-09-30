@@ -73,7 +73,7 @@ export function useSurvey() {
         title: schema.title,
         project: schema.project || (payload && payload.project),
         response_title_format: schema.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
-        schema: schema,
+        schema: JSON.parse(JSON.stringify(schema)),
         modified: new Date().toISOString(),
       });
     } catch (e) {}

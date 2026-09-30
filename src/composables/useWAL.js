@@ -1,4 +1,4 @@
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, getCurrentInstance } from "vue";
 import { db } from "../services/db";
 
 export function useWAL() {
@@ -27,13 +27,13 @@ export function useWAL() {
     };
   }
 
-  async function queueWAL(entityType, payload) {
+  async function queueWAL(entityType, payload, autoSync = true) {
     const walEntry = makeWalEntry(entityType, payload);
     try {
       await db.wal.add(walEntry);
     } catch (e) {}
     await updatePendingCount();
-    if (isOnline.value) syncWAL();
+    if (isOnline.value && autoSync) syncWAL();
     return walEntry;
   }
 
@@ -266,34 +266,36 @@ export function useWAL() {
     }
   }
 
-  onMounted(() => {
-    if (typeof window !== "undefined") {
-      window.addEventListener("online", handleOnline);
-      window.addEventListener("offline", handleOffline);
-      document.addEventListener("visibilitychange", handleVisibilityChange);
-    }
-    updatePendingCount().then(() => {
-      if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
-        syncWAL();
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      if (typeof window !== "undefined") {
+        window.addEventListener("online", handleOnline);
+        window.addEventListener("offline", handleOffline);
+        document.addEventListener("visibilitychange", handleVisibilityChange);
       }
+      updatePendingCount().then(() => {
+        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
+          syncWAL();
+        }
+      });
+
+      // Continuous background auto-sync check every 15 seconds
+      syncInterval = setInterval(() => {
+        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
+          syncWAL();
+        }
+      }, 15000);
     });
 
-    // Continuous background auto-sync check every 15 seconds
-    syncInterval = setInterval(() => {
-      if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
-        syncWAL();
+    onUnmounted(() => {
+      if (syncInterval) clearInterval(syncInterval);
+      if (typeof window !== "undefined") {
+        window.removeEventListener("online", handleOnline);
+        window.removeEventListener("offline", handleOffline);
+        document.removeEventListener("visibilitychange", handleVisibilityChange);
       }
-    }, 15000);
-  });
-
-  onUnmounted(() => {
-    if (syncInterval) clearInterval(syncInterval);
-    if (typeof window !== "undefined") {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    }
-  });
+    });
+  }
 
   return {
     isOnline,

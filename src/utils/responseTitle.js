@@ -35,12 +35,12 @@ export function resolveResponseTitle(responses = {}, formatString = "", fallback
     let val = "";
     const lowerField = field.toLowerCase().trim();
 
-    if (lowerField.includes("respondent") || lowerField.includes("name") || lowerField.includes("entrepreneur")) {
-      val = getFieldValue(field, "respondent_name", "entrepreneur_name", "full_name", "respondent", "name");
-    } else if (lowerField.includes("village") || lowerField.includes("gp") || lowerField.includes("panchayat")) {
-      val = getFieldValue(field, "village_gp", "village", "gram_panchayat", "gp", "location", "block", "district");
-    } else if (lowerField.includes("enterprise") || lowerField.includes("business") || lowerField.includes("shop")) {
+    if (lowerField.includes("enterprise") || lowerField.includes("business") || lowerField.includes("shop") || lowerField.includes("shg")) {
       val = getFieldValue(field, "enterprise_name", "business_name", "shop_name", "shg_name");
+    } else if (lowerField.includes("village") || lowerField.includes("gp") || lowerField.includes("panchayat") || lowerField.includes("block") || lowerField.includes("district") || lowerField.includes("location")) {
+      val = getFieldValue(field, "village_gp", "village", "gram_panchayat", "gp", "location", "block", "district");
+    } else if (lowerField.includes("respondent") || lowerField.includes("entrepreneur") || lowerField.includes("name") || lowerField.includes("person")) {
+      val = getFieldValue(field, "respondent_name", "entrepreneur_name", "full_name", "respondent", "name");
     } else {
       val = getFieldValue(field);
     }
