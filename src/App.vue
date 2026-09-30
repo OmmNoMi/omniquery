@@ -167,38 +167,46 @@
         />
       </div>
 
-      <!-- Modern, High-Clarity Survey Catalog Hub -->
+      <!-- Modern, High-Clarity Survey Catalog Hub & Surveyor KPI Dashboard -->
       <div v-else class="space-y-4">
-        <!-- Search & Filter Controls -->
-        <div class="flex items-center gap-2">
-          <div class="relative flex-1">
-            <input
-              type="text"
-              v-model="searchQuery"
-              :placeholder="__('Search surveys...')"
-              class="w-full pl-9 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-medium shadow-xs focus:border-emerald-500 focus:outline-none transition"
-            />
-            <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
-            <button
-              v-if="searchQuery"
-              @click="searchQuery = ''"
-              type="button"
-              class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
-            >
-              ✕
-            </button>
+        <!-- 1. Surveyor Daily KPI Dashboard -->
+        <SurveyorDashboard
+          :pendingWALCount="pendingWALCount"
+          :isOnline="isOnline"
+          :activeDrafts="activeDrafts"
+          :templates="availableTemplates"
+          @open-wal="showWALDrawer = true"
+          @sync-now="triggerSync"
+          @resume-draft="selectSurvey"
+        />
+
+        <!-- 2. Survey Templates Section Header & Search/Filter Controls -->
+        <div class="space-y-2.5 pt-1">
+          <div class="flex items-center justify-between text-xs font-bold px-1">
+            <span class="uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400">
+              📋 {{ __('Available Surveys') }} ({{ filteredTemplates.length }})
+            </span>
           </div>
 
-          <!-- Pending WAL Queue Shortcut Button if offline items exist -->
-          <button
-            v-if="pendingWALCount > 0"
-            type="button"
-            @click="showWALDrawer = true"
-            class="px-3 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold shrink-0 flex items-center gap-1 active:scale-95 transition"
-          >
-            <span>⚡</span>
-            <span>{{ pendingWALCount }}</span>
-          </button>
+          <div class="flex items-center gap-2">
+            <div class="relative flex-1">
+              <input
+                type="text"
+                v-model="searchQuery"
+                :placeholder="__('Search surveys...')"
+                class="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-medium shadow-xs focus:border-emerald-500 focus:outline-none transition text-slate-900 dark:text-white"
+              />
+              <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+              <button
+                v-if="searchQuery"
+                @click="searchQuery = ''"
+                type="button"
+                class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- Filter Chips for Workspaces (if multiple) -->
@@ -395,6 +403,7 @@ import QuestionCard from "./components/survey/QuestionCard.vue";
 import GroupedQuestionCard from "./components/survey/GroupedQuestionCard.vue";
 import MatrixQuestionCard from "./components/survey/MatrixQuestionCard.vue";
 import FocusModeModal from "./components/survey/FocusModeModal.vue";
+import SurveyorDashboard from "./components/dashboard/SurveyorDashboard.vue";
 
 const autoAdvance = ref(true);
 const isFocusMode = ref(false);

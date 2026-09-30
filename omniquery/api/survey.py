@@ -352,3 +352,58 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 	except Exception as e:
 		frappe.log_error("OmniQuery Emergency Backup Email Error", str(e))
 		return {"status": "ERROR", "error": str(e), "message": "Server mail dispatch error"}
+
+
+@frappe.whitelist(allow_guest=True)
+def get_surveyor_kpis():
+	"""
+	Returns daily and aggregate KPI statistics for the current surveyor.
+	"""
+	user = frappe.session.user
+	today_start = frappe.utils.today() + " 00:00:00"
+	week_start = frappe.utils.add_days(frappe.utils.today(), -frappe.utils.get_datetime().weekday()) + " 00:00:00"
+
+	today_count = 0
+	week_count = 0
+	total_count = 0
+
+	if user != "Guest":
+		try:
+			today_count = frappe.db.sql(
+				"""
+				SELECT COUNT(*) FROM `tabOmniQuery Response`
+				WHERE creation >= %s
+				AND (owner = %s OR surveyor LIKE %s)
+				AND survey_status != 'Draft'
+				""",
+				(today_start, user, f"%{user}%"),
+			)[0][0] or 0
+
+			week_count = frappe.db.sql(
+				"""
+				SELECT COUNT(*) FROM `tabOmniQuery Response`
+				WHERE creation >= %s
+				AND (owner = %s OR surveyor LIKE %s)
+				AND survey_status != 'Draft'
+				""",
+				(week_start, user, f"%{user}%"),
+			)[0][0] or 0
+
+			total_count = frappe.db.sql(
+				"""
+				SELECT COUNT(*) FROM `tabOmniQuery Response`
+				WHERE (owner = %s OR surveyor LIKE %s)
+				AND survey_status != 'Draft'
+				""",
+				(user, f"%{user}%"),
+			)[0][0] or 0
+		except Exception:
+			pass
+
+	return {
+		"today_count": today_count,
+		"week_count": week_count,
+		"total_count": total_count,
+		"daily_target": 10,
+	}
+
