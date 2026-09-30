@@ -118,7 +118,7 @@
                 v-model="gridSearchQuery"
                 type="text"
                 :placeholder="__('Search options...')"
-                @keydown.stop
+                @keydown.esc.prevent.stop="onSearchInputEsc"
                 @keydown.enter.prevent="onSearchInputEnter"
                 @keydown.down.prevent="focusFirstOption"
                 class="w-full text-xs sm:text-sm pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-[#4285F4]/20 focus:border-[#4285F4] transition shadow-2xs"
@@ -687,6 +687,10 @@ function onCardKeydown(e) {
   if (document.activeElement === cardRef.value && (e.key === "c" || e.key === "C")) {
     e.preventDefault();
     openConfigModal();
+    return;
+  }
+  if (isChoiceControl.value && searchInputRef.value && handleTypeaheadSearch(e)) {
+    return;
   }
 }
 
@@ -979,6 +983,14 @@ function focusFirstOption() {
   }
 }
 
+function onSearchInputEsc() {
+  if (gridSearchQuery.value) {
+    gridSearchQuery.value = "";
+  } else {
+    focusCard();
+  }
+}
+
 function onSearchInputEnter() {
   if (displayedGridOptions.value.length === 1) {
     onOptionClick(displayedGridOptions.value[0].value);
@@ -1007,6 +1019,15 @@ function onOptionSpace(val) {
 function handleOptionArrowNav(e, curIdx) {
   const len = displayedGridOptions.value.length;
   if (len === 0) return;
+
+  // When on the first option, ArrowUp smoothly transitions back up to the quick search input
+  if (e.key === "ArrowUp" && curIdx === 0 && searchInputRef.value) {
+    e.preventDefault();
+    e.stopPropagation();
+    searchInputRef.value.focus({ preventScroll: true });
+    return;
+  }
+
   let nextIdx = curIdx;
   if (e.key === "ArrowRight" || e.key === "ArrowDown") {
     nextIdx = (curIdx + 1) % len;
@@ -1026,11 +1047,70 @@ function handleOptionArrowNav(e, curIdx) {
   }
 }
 
+function handleTypeaheadSearch(e) {
+  if (!searchInputRef.value && normalizedOptions.value.length <= 7) {
+    return false;
+  }
+
+  // Backspace key on option button or grid: deletes last search character and refocuses input
+  if (e.key === "Backspace") {
+    if (gridSearchQuery.value && gridSearchQuery.value.length > 0) {
+      e.preventDefault();
+      e.stopPropagation();
+      gridSearchQuery.value = gridSearchQuery.value.slice(0, -1);
+      nextTick(() => {
+        if (searchInputRef.value) {
+          searchInputRef.value.focus({ preventScroll: true });
+          const len = gridSearchQuery.value.length;
+          searchInputRef.value.setSelectionRange?.(len, len);
+        }
+      });
+      return true;
+    }
+    return false;
+  }
+
+  // Ignore navigation, action, and modifier keys
+  if (
+    e.ctrlKey ||
+    e.metaKey ||
+    e.altKey ||
+    e.key === "Tab" ||
+    e.key === "Enter" ||
+    e.key === "Escape" ||
+    e.key === " "
+  ) {
+    return false;
+  }
+
+  // Single printable characters (letters, numbers, symbols): append to search query and refocus input at end
+  if (e.key.length === 1) {
+    e.preventDefault();
+    e.stopPropagation();
+    gridSearchQuery.value += e.key;
+    nextTick(() => {
+      if (searchInputRef.value) {
+        searchInputRef.value.focus({ preventScroll: true });
+        const len = gridSearchQuery.value.length;
+        searchInputRef.value.setSelectionRange?.(len, len);
+      }
+    });
+    return true;
+  }
+
+  return false;
+}
+
 function onOptionKeydown(e, index) {
   if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) {
     e.preventDefault();
     e.stopPropagation();
     handleOptionArrowNav(e, index);
+    return;
+  }
+
+  if (handleTypeaheadSearch(e)) {
+    return;
   }
 }
 
@@ -1047,13 +1127,20 @@ function onGridKeydown(e) {
     return;
   }
 
-  const num = parseInt(e.key, 10);
-  if (!isNaN(num) && num >= 1 && num <= displayedGridOptions.value.length && num <= 9) {
-    e.preventDefault();
-    e.stopPropagation();
-    const targetIdx = num - 1;
-    optionButtonRefs.value[targetIdx]?.focus();
-    onOptionClick(displayedGridOptions.value[targetIdx].value);
+  if (handleTypeaheadSearch(e)) {
+    return;
+  }
+
+  // Only use 1-9 numeric jump shortcuts when quick search is NOT present
+  if (normalizedOptions.value.length <= 7) {
+    const num = parseInt(e.key, 10);
+    if (!isNaN(num) && num >= 1 && num <= displayedGridOptions.value.length && num <= 9) {
+      e.preventDefault();
+      e.stopPropagation();
+      const targetIdx = num - 1;
+      optionButtonRefs.value[targetIdx]?.focus({ preventScroll: true });
+      onOptionClick(displayedGridOptions.value[targetIdx].value);
+    }
   }
 }
 
