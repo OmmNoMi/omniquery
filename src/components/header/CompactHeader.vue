@@ -39,6 +39,19 @@
           <span class="text-[11px] font-mono font-black text-emerald-700 dark:text-emerald-300">{{ progressPercent }}%</span>
         </div>
 
+        <!-- Pending WAL Queue Offline Badge Pill (⚡ N) -->
+        <button
+          v-if="pendingWALCount > 0"
+          type="button"
+          @click="$emit('open-wal')"
+          class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#fffbeb] dark:bg-amber-950/70 border border-amber-300 dark:border-amber-600 text-amber-900 dark:text-amber-200 flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition select-none hover:bg-amber-100 dark:hover:bg-amber-900/60"
+          :title="`${pendingWALCount} ${__('Pending Offline Responses')} - ${__('Click to view & sync')}`"
+          :aria-label="`${pendingWALCount} ${__('Pending Offline Responses')}`"
+        >
+          <span class="text-xs leading-none">⚡</span>
+          <span class="font-bold text-xs leading-none text-amber-900 dark:text-amber-200">{{ pendingWALCount }}</span>
+        </button>
+
         <!-- Chip 2: Google Meet-style Microphone Mute / Unmute Button with Red Recording Dot -->
         <button
           v-if="showBack"
