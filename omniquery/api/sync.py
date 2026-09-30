@@ -151,12 +151,25 @@ def sync_draft(data=None):
 		idempotency_key = f"OQS-{clean_tmpl}-{uuid.uuid4().hex[:6]}"
 
 	current_user = frappe.session.user
+
+	# Security: Strict template RBAC validation
+	if not user_has_template_permission(template_name, user=current_user):
+		err_msg = "Guest access not permitted for private survey template" if current_user == "Guest" else f"Permission denied for template {template_name}"
+		return {"status": "REJECTED", "error": err_msg}
+
 	doc_name = (
 		frappe.db.get_value("OmniQuery Response", {"idempotency_key": idempotency_key}, "name")
 		or (idempotency_key if frappe.db.exists("OmniQuery Response", idempotency_key) else None)
 	)
 
+	user_roles = set(frappe.get_roles(current_user))
+	is_admin_or_mgr = "System Manager" in user_roles or "Administrator" in user_roles or current_user == "Administrator"
+
 	if doc_name:
+		existing_owner = frappe.db.get_value("OmniQuery Response", doc_name, "owner")
+		if existing_owner and existing_owner != current_user and not is_admin_or_mgr:
+			return {"status": "REJECTED", "error": "Unauthorized attempt to overwrite existing response owned by another user"}
+
 		resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
 		if resp_doc.survey_status != "Draft":
 			return {"status": "ALREADY_SUBMITTED", "doc_name": resp_doc.name}
@@ -181,7 +194,8 @@ def sync_draft(data=None):
 	for item in sub.get("items", []):
 		val_raw = item.get("value")
 		val_num = flt(val_raw) if isinstance(val_raw, (int, float)) else None
-		val_text = str(val_raw) if val_raw is not None and not isinstance(val_raw, (dict, list)) else None
+		# Security: Strip HTML to eliminate stored XSS in Desk reports and print views
+		val_text = frappe.utils.strip_html(str(val_raw)) if val_raw is not None and not isinstance(val_raw, (dict, list)) else None
 		val_json = frappe.as_json(val_raw) if isinstance(val_raw, (dict, list)) else None
 		resp_doc.append(
 			"items",
@@ -230,6 +244,19 @@ def batch_push(submissions=None):
 	client_ip = getattr(frappe.local, "request_ip", "127.0.0.1")
 	current_user = frappe.session.user
 
+	# Security: Guests are strictly limited to single-form submission (no batch processing)
+	if current_user == "Guest" and len(submissions) > 1:
+		return {
+			"results": [
+				{
+					"idempotency_key": sub.get("idempotency_key", "UNKNOWN"),
+					"status": "REJECTED",
+					"error": "Batch push not permitted for Guest users",
+				}
+				for sub in submissions
+			]
+		}
+
 	# Durable file-system dump: guaranteed never to fail even under DB lockouts
 	log_raw_ingestion_dump("batch_push", raw_data if "raw_data" in locals() and raw_data else submissions, client_ip=client_ip, surveyor=current_user)
 
@@ -242,6 +269,39 @@ def batch_push(submissions=None):
 			clean_tmpl = (template_name or "SURVEY").replace("OQS-", "")
 			idempotency_key = f"OQS-{clean_tmpl}-{uuid.uuid4().hex[:6]}"
 
+		raw_payload_str = frappe.as_json(sub)
+		payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
+
+		# Security: Strict template RBAC validation
+		if not user_has_template_permission(template_name, user=current_user):
+			err_msg = "Guest access not permitted for private survey template" if current_user == "Guest" else f"Permission denied for template {template_name}"
+			try:
+				existing_audit = frappe.db.get_value(
+					"OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name"
+				)
+				if existing_audit:
+					audit = frappe.get_doc("OmniQuery Sync Audit Log", existing_audit)
+				else:
+					audit = frappe.new_doc("OmniQuery Sync Audit Log")
+					audit.idempotency_key = idempotency_key
+
+				audit.surveyor = resolve_surveyor(sub.get("surveyor") or current_user)
+				audit.sync_status = "REJECTED"
+				audit.client_ip = client_ip
+				audit.processed_at = now_datetime()
+				audit.raw_payload = raw_payload_str
+				audit.error_message = err_msg
+				if existing_audit:
+					audit.save(ignore_permissions=True)
+				else:
+					audit.insert(ignore_permissions=True)
+				frappe.db.commit()
+			except Exception:
+				pass
+
+			results.append({"idempotency_key": idempotency_key, "status": "REJECTED", "error": err_msg})
+			continue
+
 		# Check existing document
 		doc_name = (
 			frappe.db.get_value("OmniQuery Response", {"idempotency_key": idempotency_key}, "name")
@@ -249,6 +309,14 @@ def batch_push(submissions=None):
 		)
 
 		if doc_name:
+			existing_owner = frappe.db.get_value("OmniQuery Response", doc_name, "owner")
+			user_roles = set(frappe.get_roles(current_user))
+			is_admin_or_mgr = "System Manager" in user_roles or "Administrator" in user_roles or current_user == "Administrator"
+			if existing_owner and existing_owner != current_user and not is_admin_or_mgr:
+				err_msg = "Unauthorized attempt to overwrite existing response owned by another user"
+				results.append({"idempotency_key": idempotency_key, "status": "REJECTED", "error": err_msg})
+				continue
+
 			existing_status = frappe.db.get_value("OmniQuery Response", doc_name, "survey_status")
 			if existing_status in ["Submitted", "Supervisor Verified", "Audit Flagged", "Approved"]:
 				results.append({
@@ -257,9 +325,6 @@ def batch_push(submissions=None):
 					"doc_name": doc_name,
 				})
 				continue
-
-		raw_payload_str = frappe.as_json(sub)
-		payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
 
 		# Phase 1: Pre-save in OmniQuery Sync Audit Log with PENDING status and full raw JSON dump
 		audit_doc_name = None
@@ -317,7 +382,8 @@ def batch_push(submissions=None):
 			for item in sub.get("items", []):
 				val_raw = item.get("value")
 				val_num = flt(val_raw) if isinstance(val_raw, (int, float)) else None
-				val_text = str(val_raw) if val_raw is not None and not isinstance(val_raw, (dict, list)) else None
+				# Security: Strip HTML to eliminate stored XSS in Desk reports and print views
+				val_text = frappe.utils.strip_html(str(val_raw)) if val_raw is not None and not isinstance(val_raw, (dict, list)) else None
 				val_json = frappe.as_json(val_raw) if isinstance(val_raw, (dict, list)) else None
 				resp_doc.append(
 					"items",

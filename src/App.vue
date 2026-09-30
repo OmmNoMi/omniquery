@@ -47,9 +47,11 @@
           ✓
         </div>
         <div>
-          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">{{ __('Survey Submitted') }}</h2>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
+            {{ isGuest ? __('Thank You!') : __('Survey Submitted') }}
+          </h2>
           <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mt-1">
-            {{ __('Response recorded successfully in offline queue.') }}
+            {{ isGuest ? __('Thank you for taking the time to complete this survey. Your response has been submitted successfully.') : __('Response recorded successfully in offline queue.') }}
           </p>
         </div>
 
@@ -108,11 +110,13 @@
           <button
             type="button"
             @click="resetSurvey"
-            class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition shadow-xs cursor-pointer"
+            class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition shadow-xs cursor-pointer flex items-center gap-1.5"
           >
-            {{ __('New Response') || 'New Response' }}
+            <span>➕</span>
+            <span>{{ isGuest ? __('Fill Again') : (__('New Response') || 'New Response') }}</span>
           </button>
           <button
+            v-if="!isGuest"
             type="button"
             @click="goHome"
             class="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition cursor-pointer"
@@ -540,6 +544,12 @@ if (typeof localStorage !== "undefined") {
 }
 
 const activeProjectId = ref("");
+
+const isGuest = computed(() => {
+  if (typeof window === "undefined") return true;
+  const user = (window.frappe && (window.frappe.user || (window.frappe.session && window.frappe.session.user))) || "Guest";
+  return user === "Guest";
+});
 
 function getRouteProjectId() {
   if (window.frappe && window.frappe.initial_project_id) {
@@ -1051,6 +1061,10 @@ async function onDiscardDraft(templateName) {
 }
 
 async function goHome() {
+  if (isGuest.value) {
+    resetSurvey();
+    return;
+  }
   if (!isSubmitted.value && activeTemplate.value) {
     scheduleDraftSaveAndSync();
   } else {

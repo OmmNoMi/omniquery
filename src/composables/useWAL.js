@@ -4,14 +4,17 @@ import { db } from "../services/db";
 export function useWAL() {
   const isOnline = ref(typeof navigator !== "undefined" ? navigator.onLine : true);
   const pendingWALCount = ref(0);
+  const quarantinedWALCount = ref(0);
   const isSyncing = ref(false);
   const lastSyncResult = ref(null);
 
   async function updatePendingCount() {
     try {
       pendingWALCount.value = await db.wal.where("status").equals("pending").count();
+      quarantinedWALCount.value = await db.wal.where("status").equals("quarantined").count();
     } catch (e) {
       pendingWALCount.value = 0;
+      quarantinedWALCount.value = 0;
     }
   }
 
@@ -39,10 +42,38 @@ export function useWAL() {
 
   async function getPendingWalEntries() {
     try {
-      return await db.wal.where("status").equals("pending").limit(50).toArray();
+      const isGuest =
+        typeof window !== "undefined" &&
+        window.frappe &&
+        (window.frappe.user === "Guest" || (window.frappe.session && window.frappe.session.user === "Guest"));
+      // Chunk to max 5 records (or 1 for Guest) to eliminate memory spikes, payload limits, and guest batch rejections
+      const limitCount = isGuest ? 1 : 5;
+      return await db.wal.where("status").equals("pending").limit(limitCount).toArray();
     } catch (e) {
       return [];
     }
+  }
+
+  async function getQuarantinedWalEntries() {
+    try {
+      return await db.wal.where("status").equals("quarantined").toArray();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  async function retryQuarantinedEntry(walId) {
+    try {
+      await db.wal.where("wal_id").equals(walId).modify({
+        status: "pending",
+        attempts: 0,
+        last_error: null,
+      });
+      await updatePendingCount();
+      if (isOnline.value) {
+        return await syncWAL();
+      }
+    } catch (e) {}
   }
 
   async function postWalEntries(entries) {
@@ -98,31 +129,47 @@ export function useWAL() {
         } catch (e) {}
       } else if (entry) {
         try {
+          const nextAttempts = (entry.attempts || 0) + 1;
+          const isQuarantined = nextAttempts >= 5 || r.status === "REJECTED";
           await db.wal.where("wal_id").equals(entry.wal_id).modify((e) => {
-            e.attempts = (e.attempts || 0) + 1;
+            e.attempts = nextAttempts;
             e.last_error = r.error || "Sync rejected";
+            if (isQuarantined) {
+              e.status = "quarantined";
+              e.quarantined_at = new Date().toISOString();
+              e.quarantine_reason = r.error || "Exceeded 5 sync attempts";
+            }
           });
         } catch (e) {}
       }
     }
+    await updatePendingCount();
   }
 
   async function syncWAL() {
     if (isSyncing.value || !isOnline.value) return null;
     isSyncing.value = true;
-    let syncedCount = 0;
+    let totalSynced = 0;
+    const allResults = [];
     try {
-      const entries = await getPendingWalEntries();
-      if (!entries.length) return { syncedCount: 0, pendingCount: 0 };
-      const data = await postWalEntries(entries);
-      const msg = data && data.message;
-      const results = (msg && (Array.isArray(msg) ? msg : msg.results)) || [];
-      await markSynced(results, entries);
-      syncedCount = results.filter((r) => r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED").length;
-      return { syncedCount, results };
+      while (true) {
+        const entries = await getPendingWalEntries();
+        if (!entries.length) break;
+        const data = await postWalEntries(entries);
+        const msg = data && data.message;
+        const results = (msg && (Array.isArray(msg) ? msg : msg.results)) || [];
+        if (!results.length) break;
+        await markSynced(results, entries);
+        const chunkSynced = results.filter((r) => r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED").length;
+        totalSynced += chunkSynced;
+        allResults.push(...results);
+        // Break if no successful progress was made to avoid infinite retry loop
+        if (chunkSynced === 0) break;
+      }
+      return { syncedCount: totalSynced, results: allResults };
     } catch (err) {
       console.warn("syncWAL error:", err);
-      return { syncedCount: 0, error: err.message };
+      return { syncedCount: totalSynced, error: err.message };
     } finally {
       isSyncing.value = false;
       await updatePendingCount();
@@ -130,6 +177,12 @@ export function useWAL() {
   }
 
   async function syncAllDrafts() {
+    const isGuest =
+      typeof window !== "undefined" &&
+      window.frappe &&
+      (window.frappe.user === "Guest" || (window.frappe.session && window.frappe.session.user === "Guest"));
+    if (isGuest) return 0;
+
     let syncedCount = 0;
     try {
       const drafts = await db.responses.where("status").equals("Draft").toArray();
@@ -181,15 +234,19 @@ export function useWAL() {
     };
 
     try {
-      const entries = await getPendingWalEntries();
-      summary.walCount = entries.length;
-      if (entries.length > 0) {
+      while (true) {
+        const entries = await getPendingWalEntries();
+        if (!entries.length) break;
+        summary.walCount += entries.length;
         const data = await postWalEntries(entries);
         const msg = data && data.message;
         const results = (msg && (Array.isArray(msg) ? msg : msg.results)) || [];
+        if (!results.length) break;
         await markSynced(results, entries);
-        summary.walSynced = results.filter((r) => r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED").length;
-        summary.walErrors = results.length - summary.walSynced;
+        const chunkSynced = results.filter((r) => r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED").length;
+        summary.walSynced += chunkSynced;
+        summary.walErrors += results.length - chunkSynced;
+        if (chunkSynced === 0) break;
       }
 
       summary.draftsSynced = await syncAllDrafts();
@@ -300,6 +357,7 @@ export function useWAL() {
   return {
     isOnline,
     pendingWALCount,
+    quarantinedWALCount,
     isSyncing,
     lastSyncResult,
     queueWAL,
@@ -307,6 +365,8 @@ export function useWAL() {
     syncAllDrafts,
     forceSyncAll,
     getWalQueueItems,
+    getQuarantinedWalEntries,
+    retryQuarantinedEntry,
     updatePendingCount,
   };
 }

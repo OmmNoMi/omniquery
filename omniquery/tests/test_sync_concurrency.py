@@ -125,3 +125,56 @@ class TestSyncConcurrency(FrappeTestCase):
 		dump_file = os.path.join(frappe.get_site_path("logs"), "omniquery_payloads_dump.jsonl")
 		self.assertTrue(os.path.exists(dump_file))
 
+	def test_guest_batch_push_rejected(self):
+		orig_user = frappe.session.user
+		try:
+			frappe.set_user("Guest")
+			subs = [
+				{"idempotency_key": "GUEST-B1", "survey_template": self.test_template_name, "items": []},
+				{"idempotency_key": "GUEST-B2", "survey_template": self.test_template_name, "items": []},
+			]
+			res = batch_push(subs)
+			results = res.get("results", []) if isinstance(res, dict) else res
+			self.assertEqual(len(results), 2)
+			self.assertEqual(results[0]["status"], "REJECTED")
+			self.assertIn("Batch push not permitted", results[0]["error"])
+		finally:
+			frappe.set_user(orig_user)
+
+	def test_guest_private_template_rejected(self):
+		orig_user = frappe.session.user
+		try:
+			frappe.set_user("Guest")
+			# test_template_name is not public
+			sub = {
+				"idempotency_key": "GUEST-PRIV-001",
+				"survey_template": self.test_template_name,
+				"items": [{"question_code": "q1", "value": "test"}],
+			}
+			res = batch_push([sub])
+			results = res.get("results", []) if isinstance(res, dict) else res
+			self.assertEqual(len(results), 1)
+			self.assertEqual(results[0]["status"], "REJECTED")
+			self.assertIn("Guest access not permitted", results[0]["error"])
+		finally:
+			frappe.set_user(orig_user)
+
+	def test_xss_payload_is_stripped(self):
+		idempotency_key = "TEST-CONC-XSS-001"
+		xss_val = "<script>alert('pwned')</script>Harmless Text"
+		sub = {
+			"idempotency_key": idempotency_key,
+			"survey_template": self.test_template_name,
+			"template_version": 1,
+			"items": [{"question_code": "q_xss", "value": xss_val}],
+		}
+		res = batch_push([sub])
+		results = res.get("results", []) if isinstance(res, dict) else res
+		self.assertEqual(results[0]["status"], "SUCCESS")
+
+		resp_doc = frappe.get_doc("OmniQuery Response", results[0]["doc_name"])
+		saved_item = next(it for it in resp_doc.items if it.question_code == "q_xss")
+		self.assertNotIn("<script>", saved_item.value_text)
+		self.assertIn("Harmless Text", saved_item.value_text)
+
+

@@ -106,4 +106,56 @@ describe("useWAL", () => {
     expect(result).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
   });
+
+  it("quarantines a WAL entry when rejected or reaching 5 failed attempts", async () => {
+    const mockErrorResponse = {
+      message: {
+        results: [
+          {
+            idempotency_key: "TEST-FAIL-001",
+            status: "REJECTED",
+            error: "Validation failed permanently",
+          },
+        ],
+      },
+    };
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => mockErrorResponse,
+    });
+    globalThis.fetch = mockFetch;
+    if (typeof window !== "undefined") {
+      window.fetch = mockFetch;
+    }
+
+    const { queueWAL, syncWAL, quarantinedWALCount, getQuarantinedWalEntries, retryQuarantinedEntry } = useWAL();
+
+    const entry = await queueWAL("OmniQuery Response", {
+      idempotency_key: "TEST-FAIL-001",
+      survey_template: "SHG Survey",
+      items: [],
+    }, false);
+
+    await syncWAL();
+
+    expect(quarantinedWALCount.value).toBe(1);
+    const quarantined = await getQuarantinedWalEntries();
+    expect(quarantined.length).toBe(1);
+    expect(quarantined[0].status).toBe("quarantined");
+    expect(quarantined[0].quarantine_reason).toBe("Validation failed permanently");
+
+    // Test retryQuarantinedEntry with subsequent successful sync
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        message: {
+          results: [{ idempotency_key: "TEST-FAIL-001", status: "SUCCESS" }],
+        },
+      }),
+    });
+    await retryQuarantinedEntry(entry.wal_id);
+    const walRecord = await db.wal.get(entry.wal_id);
+    expect(walRecord.status).toBe("synced");
+  });
 });

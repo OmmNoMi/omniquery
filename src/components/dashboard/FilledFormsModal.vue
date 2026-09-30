@@ -81,6 +81,13 @@
               <span>{{ queuedCount }} {{ __('In Queue') }}</span>
             </span>
             <span
+              v-if="quarantinedCount > 0"
+              class="px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-900 dark:text-rose-200 border border-rose-300 dark:border-rose-800 flex items-center gap-1 shadow-2xs font-extrabold"
+            >
+              <span>⚠️</span>
+              <span>{{ quarantinedCount }} {{ __('Needs Review') }}</span>
+            </span>
+            <span
               v-if="draftsCount > 0"
               class="px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-200 border border-blue-300 dark:border-blue-800 flex items-center gap-1 shadow-2xs"
             >
@@ -187,6 +194,16 @@
             <span>{{ __('In Queue') }} ({{ queuedCount }})</span>
           </button>
           <button
+            v-if="quarantinedCount > 0"
+            type="button"
+            @click="activeFilter = 'quarantined'"
+            class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1"
+            :class="activeFilter === 'quarantined' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 hover:bg-rose-100'"
+          >
+            <span>⚠️</span>
+            <span>{{ __('Needs Review') }} ({{ quarantinedCount }})</span>
+          </button>
+          <button
             type="button"
             @click="activeFilter = 'drafts'"
             class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1"
@@ -259,12 +276,15 @@
                     :class="[
                       resp.status === 'Draft'
                         ? 'bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-800'
-                        : resp.is_in_queue || !resp.synced
-                          ? 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
-                          : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                        : resp.is_quarantined || resp.wal_status === 'quarantined'
+                          ? 'bg-rose-50 text-rose-900 dark:bg-rose-950 dark:text-rose-200 border border-rose-300 dark:border-rose-700'
+                          : resp.is_in_queue || !resp.synced
+                            ? 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
+                            : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                     ]"
                   >
                     <span v-if="resp.status === 'Draft'">📝 {{ __('Draft') }} ({{ resp.progress_percent || 0 }}%)</span>
+                    <span v-else-if="resp.is_quarantined || resp.wal_status === 'quarantined'">⚠️ {{ __('Needs Review') }}</span>
                     <span v-else-if="resp.is_in_queue || !resp.synced">⚡ {{ __('In Queue') }}</span>
                     <span v-else>🟢 {{ __('Synced') }}</span>
                   </span>
@@ -286,6 +306,33 @@
                   <span v-if="resp.wal_attempts && resp.wal_attempts > 0" class="text-amber-600 font-medium">
                     · ({{ resp.wal_attempts }} sync {{ __('attempts') }})
                   </span>
+                </div>
+              </div>
+
+              <!-- Quarantined / Needs Review Action Bar -->
+              <div v-if="resp.is_quarantined || resp.wal_status === 'quarantined'" class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-900 dark:text-rose-200 space-y-2">
+                <div class="flex items-center justify-between">
+                  <div class="font-extrabold flex items-center gap-1.5">
+                    <span>⚠️</span>
+                    <span>{{ __('Quarantined (Needs Review)') }}</span>
+                  </div>
+                  <span class="text-[11px] font-mono text-rose-700 dark:text-rose-400 font-bold">
+                    {{ resp.wal_attempts || 5 }} {{ __('attempts') }}
+                  </span>
+                </div>
+                <p class="text-[11px] text-rose-800/90 dark:text-rose-300 font-mono">
+                  {{ resp.quarantine_reason || __('Multiple sync failures. Please check survey values before retrying.') }}
+                </p>
+                <div class="pt-1 flex items-center gap-2">
+                  <button
+                    type="button"
+                    @click="handleRetryQuarantined(resp.wal_id)"
+                    :disabled="!isOnline"
+                    class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs"
+                  >
+                    <span>⚡</span>
+                    <span>{{ __('Retry Sync') }}</span>
+                  </button>
                 </div>
               </div>
 
@@ -419,7 +466,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "sync-all", "resume-draft"]);
 
 const { __ } = useTranslation();
-const { forceSyncAll } = useWAL();
+const { forceSyncAll, retryQuarantinedEntry } = useWAL();
 
 // Universal scroll locking: strictly prevents background scrolling while open
 useScrollLock(toRef(props, "isOpen"));
@@ -500,12 +547,18 @@ async function loadResponses() {
         existing.wal_id = entry.wal_id;
         existing.wal_status = entry.status;
         existing.wal_attempts = entry.attempts || 0;
+        existing.quarantine_reason = entry.quarantine_reason || entry.last_error;
         if (entry.status === "synced") {
           existing.synced = true;
           existing.is_in_queue = false;
         } else if (entry.status === "pending") {
           existing.synced = false;
           existing.is_in_queue = true;
+        } else if (entry.status === "quarantined") {
+          existing.synced = false;
+          existing.is_in_queue = false;
+          existing.is_quarantined = true;
+          existing.status = "Needs Review";
         }
       } else {
         responseMap.set(key, {
@@ -515,9 +568,11 @@ async function loadResponses() {
           template_title: tmpl?.title || payload.survey_template || "Survey",
           responses: walResponses,
           respondentName,
-          status: entry.status === "synced" ? "Submitted" : "Queued",
+          status: entry.status === "synced" ? "Submitted" : (entry.status === "quarantined" ? "Needs Review" : "Queued"),
           synced: entry.status === "synced",
           is_in_queue: isQueued,
+          is_quarantined: entry.status === "quarantined",
+          quarantine_reason: entry.quarantine_reason || entry.last_error,
           wal_status: entry.status,
           wal_attempts: entry.attempts || 0,
           created_at: payload.captured_at_local || entry.timestamp,
@@ -553,6 +608,20 @@ async function handleForceSync() {
     }, 5000);
   } catch (e) {
     syncFeedbackMessage.value = `Sync error: ${e.message || e}`;
+  } finally {
+    isSyncingLocal.value = false;
+  }
+}
+
+async function handleRetryQuarantined(walId) {
+  if (!walId) return;
+  isSyncingLocal.value = true;
+  try {
+    await retryQuarantinedEntry(walId);
+    await loadResponses();
+    emit("sync-all");
+  } catch (e) {
+    console.warn("Retry quarantined entry failed:", e);
   } finally {
     isSyncingLocal.value = false;
   }
@@ -610,7 +679,11 @@ const todayCount = computed(() => {
 });
 
 const queuedCount = computed(() => {
-  return responsesList.value.filter((r) => r.is_in_queue || (!r.synced && r.status !== "Draft")).length;
+  return responsesList.value.filter((r) => r.is_in_queue || (!r.synced && r.status !== "Draft" && !r.is_quarantined && r.wal_status !== "quarantined")).length;
+});
+
+const quarantinedCount = computed(() => {
+  return responsesList.value.filter((r) => r.is_quarantined || r.wal_status === "quarantined").length;
 });
 
 const draftsCount = computed(() => {
@@ -630,7 +703,10 @@ const filteredResponses = computed(() => {
     });
   }
   if (activeFilter.value === "queue") {
-    return responsesList.value.filter((r) => r.is_in_queue || (!r.synced && r.status !== "Draft"));
+    return responsesList.value.filter((r) => r.is_in_queue || (!r.synced && r.status !== "Draft" && !r.is_quarantined && r.wal_status !== "quarantined"));
+  }
+  if (activeFilter.value === "quarantined") {
+    return responsesList.value.filter((r) => r.is_quarantined || r.wal_status === "quarantined");
   }
   if (activeFilter.value === "drafts") {
     return responsesList.value.filter((r) => r.status === "Draft");
