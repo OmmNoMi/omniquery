@@ -87,6 +87,11 @@ export function useWAL() {
             await db.wal.update(entry.id || entry.wal_id, { status: "synced" });
           } catch (e) {}
         }
+        try {
+          if (r.idempotency_key) {
+            await db.responses.where("response_uid").equals(r.idempotency_key).modify({ synced: true });
+          }
+        } catch (e) {}
       }
     }
   }

@@ -167,8 +167,15 @@
         />
       </div>
 
-      <!-- Modern, High-Clarity Survey Catalog Hub & Surveyor KPI Dashboard -->
+      <!-- Modern, High-Clarity Survey Catalog Hub, Project Header & Surveyor KPI Dashboard -->
       <div v-else class="space-y-4">
+        <!-- 0. Active Project Header Section with Persistent Switcher & Training Material Link -->
+        <ProjectHeaderCard
+          :templates="availableTemplates"
+          v-model:selectedProject="selectedProject"
+          @open-project-details="openProjectDetails"
+        />
+
         <!-- 1. Surveyor Daily KPI Dashboard -->
         <SurveyorDashboard
           :pendingWALCount="pendingWALCount"
@@ -178,6 +185,7 @@
           @open-wal="showWALDrawer = true"
           @sync-now="triggerSync"
           @resume-draft="selectSurvey"
+          @open-filled-forms="showFilledFormsModal = true"
         />
 
         <!-- 2. Survey Templates Section Header & Search/Filter Controls -->
@@ -386,6 +394,22 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Project Details & Training Materials Modal -->
+    <ProjectDetailsModal
+      :isOpen="showProjectDetailsModal"
+      :projectData="projectDetailsData"
+      @close="showProjectDetailsModal = false"
+    />
+
+    <!-- Filled Forms Verification & Data Recovery Modal -->
+    <FilledFormsModal
+      :isOpen="showFilledFormsModal"
+      :isOnline="isOnline"
+      :templates="availableTemplates"
+      @close="showFilledFormsModal = false"
+      @sync-all="triggerSync"
+    />
   </div>
 </template>
 
@@ -404,6 +428,9 @@ import GroupedQuestionCard from "./components/survey/GroupedQuestionCard.vue";
 import MatrixQuestionCard from "./components/survey/MatrixQuestionCard.vue";
 import FocusModeModal from "./components/survey/FocusModeModal.vue";
 import SurveyorDashboard from "./components/dashboard/SurveyorDashboard.vue";
+import ProjectHeaderCard from "./components/dashboard/ProjectHeaderCard.vue";
+import ProjectDetailsModal from "./components/dashboard/ProjectDetailsModal.vue";
+import FilledFormsModal from "./components/dashboard/FilledFormsModal.vue";
 
 const autoAdvance = ref(true);
 const isFocusMode = ref(false);
@@ -456,6 +483,27 @@ const loadingSurveyId = ref("");
 const showWALDrawer = ref(false);
 const searchQuery = ref("");
 const selectedWorkspace = ref("ALL");
+
+const selectedProject = ref("ALL");
+if (typeof localStorage !== "undefined") {
+  const savedProj = localStorage.getItem("omniquery_selected_project");
+  if (savedProj) selectedProject.value = savedProj;
+}
+
+const showProjectDetailsModal = ref(false);
+const showFilledFormsModal = ref(false);
+const projectDetailsData = ref({});
+
+async function openProjectDetails() {
+  showProjectDetailsModal.value = true;
+  try {
+    const res = await fetch(`/api/method/omniquery.api.survey.get_project_details?project_id=${encodeURIComponent(selectedProject.value || "")}`);
+    if (res.ok) {
+      const data = await res.json();
+      projectDetailsData.value = data.message?.project || {};
+    }
+  } catch (e) {}
+}
 
 const submittedResponseId = ref("");
 const submittedTimestamp = ref("");
@@ -529,6 +577,7 @@ const workspacesList = computed(() => {
 const filteredTemplates = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();
   return availableTemplates.value.filter((t) => {
+    if (selectedProject.value !== "ALL" && t.project !== selectedProject.value && t.project_name !== selectedProject.value) return false;
     if (selectedWorkspace.value !== "ALL" && t.workspace !== selectedWorkspace.value) return false;
     if (!q) return true;
     const title = (t.title || "").toLowerCase();

@@ -407,3 +407,112 @@ def get_surveyor_kpis():
 		"daily_target": 10,
 	}
 
+
+@frappe.whitelist(allow_guest=True)
+def get_project_details(project_id=None):
+	"""
+	Returns comprehensive project metadata, guidelines, SOPs, and training materials.
+	"""
+	if not project_id:
+		tmpl = frappe.db.get_value("OmniQuery Template", {"status": "Published"}, "project")
+		project_id = tmpl or "OQP-001-001"
+
+	proj = frappe.db.get_value(
+		"OmniQuery Project",
+		project_id,
+		[
+			"name",
+			"project_name",
+			"grantor_organization",
+			"workspace",
+			"description",
+			"district_scope",
+			"target_beneficiaries",
+			"start_date",
+			"end_date",
+		],
+		as_dict=True,
+	)
+	if not proj:
+		proj = frappe.db.get_value(
+			"OmniQuery Project",
+			{"project_name": project_id},
+			[
+				"name",
+				"project_name",
+				"grantor_organization",
+				"workspace",
+				"description",
+				"district_scope",
+				"target_beneficiaries",
+				"start_date",
+				"end_date",
+			],
+			as_dict=True,
+		)
+		if not proj:
+			proj = {
+				"name": project_id,
+				"project_name": project_id,
+				"grantor_organization": "State Rural Livelihoods Mission / SVEP",
+				"description": "Field Survey & Beneficiary Enterprise Assessment",
+			}
+
+	# Training modules & field SOPs for surveyors
+	training_modules = [
+		{
+			"id": "sop-01",
+			"title": "Field Survey Protocol & Ethical Guidelines",
+			"category": "Field SOP",
+			"icon": "📜",
+			"summary": "Mandatory protocols for introducing the study, voluntary participation, and respondent respect.",
+			"points": [
+				"Always introduce yourself with authorized surveyor credentials and clearly explain the non-commercial research objectives.",
+				"Obtain explicit voluntary oral or written consent before initiating questioning.",
+				"Ensure privacy during interview sessions. Do not discuss personal financial details in public earshot.",
+				"Capture GPS coordinates accurately while physically standing at the enterprise location.",
+			],
+		},
+		{
+			"id": "training-02",
+			"title": "Turnover & Financial Estimation Guide",
+			"category": "Data Accuracy",
+			"icon": "💰",
+			"summary": "How to assist respondents with multi-year turnover and enterprise cost estimates.",
+			"points": [
+				"If accounts are not maintained on paper, compute annual turnover by averaging typical monthly cash inflows multiplied by operational months.",
+				"For table questions (e.g. Q4 challenges & Q9 turnover distributions), cross-verify percentages with the respondent.",
+				"Record loans and capital sources from SHGs, village organizations, banks, or informal lenders separately.",
+				"Ensure zero or non-applicable values are clearly marked rather than skipping items.",
+			],
+		},
+		{
+			"id": "tech-03",
+			"title": "Offline Data Collection & Recovery Guide",
+			"category": "App & Recovery",
+			"icon": "⚡",
+			"summary": "Zero-data-loss workflows for remote field operations without cellular internet.",
+			"points": [
+				"OmniQuery runs 100% offline. Responses, draft progress, and GPS are saved immediately in device storage (IndexedDB).",
+				"Monitor the ⚡ badge in the header: it indicates how many completed responses are stored in the queue awaiting sync.",
+				"When returning to network coverage or village Wi-Fi, tap 'Sync Now' to push records to the server.",
+				"Use 'Filled Forms' to inspect completed submissions, review answers, and export emergency backups to JSON/CSV.",
+			],
+		},
+	]
+
+	# Support Helpline
+	helpline = {
+		"supervisor_name": "Field Operations Lead",
+		"email": "fieldsupport@ommnomi.in",
+		"phone": "+91 1800-102-OMNI",
+		"hours": "8:00 AM – 7:00 PM IST (Mon–Sat)",
+	}
+
+	return {
+		"project": proj,
+		"training_modules": training_modules,
+		"helpline": helpline,
+	}
+
+

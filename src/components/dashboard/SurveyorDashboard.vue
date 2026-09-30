@@ -154,6 +154,22 @@
         <span>→</span>
       </button>
     </div>
+
+    <!-- Quick Access to Filled Forms & Cross-Verification -->
+    <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+      <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+        <span>{{ totalCompleted }} {{ __('total submitted forms stored on device') }}</span>
+      </div>
+      <button
+        type="button"
+        @click="$emit('open-filled-forms')"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition active:scale-95 shadow-2xs cursor-pointer"
+      >
+        <span>📋</span>
+        <span>{{ __('View Filled Forms & Recovery') }}</span>
+        <span>→</span>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -181,7 +197,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["open-wal", "sync-now", "resume-draft"]);
+const emit = defineEmits(["open-wal", "sync-now", "resume-draft", "open-filled-forms"]);
 
 const { __ } = useTranslation();
 
