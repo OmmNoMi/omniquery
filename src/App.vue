@@ -267,36 +267,7 @@
           </div>
         </div>
 
-        <!-- Filter Chips for Workspaces (if multiple) -->
-        <div v-if="workspacesList.length > 1" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-          <button
-            type="button"
-            @click="selectedWorkspace = 'ALL'"
-            :class="[
-              'px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition active:scale-95',
-              selectedWorkspace === 'ALL'
-                ? 'bg-slate-900 text-white shadow-xs'
-                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
-            ]"
-          >
-            {{ __('All Workspaces') }}
-          </button>
-          <button
-            v-for="ws in workspacesList"
-            :key="ws.id"
-            type="button"
-            @click="selectedWorkspace = ws.id"
-            :class="[
-              'px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition active:scale-95 flex items-center gap-1',
-              selectedWorkspace === ws.id
-                ? 'bg-emerald-600 text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-            ]"
-          >
-            <span>🏛️</span>
-            <span>{{ ws.title }}</span>
-          </button>
-        </div>
+
 
         <!-- Empty State -->
         <div v-if="filteredTemplates.length === 0" class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
