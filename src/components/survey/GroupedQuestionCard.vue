@@ -8,12 +8,14 @@
     @focusin="onFocusIn"
     @focusout="onFocusOut"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-20',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-28',
       hasGroupError
         ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 border-l-4 border-l-rose-500 shadow-xs ring-1 ring-rose-500/20'
-        : isGroupCompleted
-          ? 'bg-[#edf3ef] dark:bg-[#18251f] border-[#d2dfd6] dark:border-[#27382e] shadow-2xs'
-          : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
+        : isFocused
+          ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 border-l-4 border-l-[#4285F4] dark:border-l-[#4285F4] shadow-md ring-1 ring-blue-500/10'
+          : isGroupCompleted
+            ? 'bg-[#edf3ef] dark:bg-[#18251f] border-[#d2dfd6] dark:border-[#27382e] shadow-2xs'
+            : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
     ]"
   >
     <!-- Group Header -->
@@ -48,14 +50,26 @@
       <div
         v-for="q in group.questions"
         :key="q.question_code"
-        class="p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition hover:bg-white/60 dark:hover:bg-slate-800/80"
+        :id="'qc_' + q.question_code"
+        :data-subquestion-code="q.question_code"
+        class="p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition border-l-4 scroll-mt-28"
+        :class="[
+          focusedQuestionCode === q.question_code
+            ? 'bg-blue-50/70 dark:bg-blue-950/40 border-l-[#4285F4] shadow-2xs'
+            : 'border-l-transparent hover:bg-white/60 dark:hover:bg-slate-800/80'
+        ]"
       >
         <!-- Sub-Question Label -->
         <div class="flex-1 min-w-0">
           <div class="flex items-center gap-1.5 flex-wrap">
             <span
               v-if="getSubLetter(q)"
-              class="w-5 h-5 rounded-md bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-[11px] font-mono font-bold flex items-center justify-center shrink-0"
+              :class="[
+                'w-5 h-5 rounded-md text-[11px] font-mono font-bold flex items-center justify-center shrink-0 transition',
+                focusedQuestionCode === q.question_code
+                  ? 'bg-blue-600 text-white shadow-2xs'
+                  : 'bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
+              ]"
             >
               {{ getSubLetter(q) }}
             </span>
@@ -89,10 +103,10 @@
               @keydown="onChoiceKeydown($event, q, optIdx, getQuestionOptions(q))"
               @click="onUpdateValue(q.question_code, opt.value)"
               :class="[
-                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500',
+                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#4285F4] focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900',
                 responses[q.question_code] === opt.value
-                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                  : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600'
+                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm hover:bg-emerald-700 hover:border-emerald-700 focus:bg-emerald-700'
+                  : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600 focus:border-[#4285F4]'
               ]"
             >
               {{ opt.label }}
@@ -291,20 +305,45 @@ function getChoiceTabindex(q, optValue, optIdx) {
 }
 
 function onChoiceKeydown(e, q, optIdx, options) {
-  if (["ArrowRight", "ArrowDown"].includes(e.key)) {
+  if (e.key === "ArrowRight") {
     e.preventDefault();
     e.stopPropagation();
     const nextIdx = (optIdx + 1) % options.length;
     const nextOpt = options[nextIdx];
     optionRefsMap.value[q.question_code]?.[nextIdx]?.focus({ preventScroll: true });
     onUpdateValue(q.question_code, nextOpt.value);
-  } else if (["ArrowLeft", "ArrowUp"].includes(e.key)) {
+  } else if (e.key === "ArrowLeft") {
     e.preventDefault();
     e.stopPropagation();
     const prevIdx = (optIdx - 1 + options.length) % options.length;
     const prevOpt = options[prevIdx];
     optionRefsMap.value[q.question_code]?.[prevIdx]?.focus({ preventScroll: true });
     onUpdateValue(q.question_code, prevOpt.value);
+  } else if (["ArrowDown", "ArrowUp"].includes(e.key)) {
+    const qList = props.group.questions || [];
+    const curQIdx = qList.findIndex((item) => item.question_code === q.question_code);
+    if (curQIdx !== -1) {
+      const nextQIdx = e.key === "ArrowDown" ? curQIdx + 1 : curQIdx - 1;
+      if (nextQIdx >= 0 && nextQIdx < qList.length) {
+        e.preventDefault();
+        e.stopPropagation();
+        const nextQ = qList[nextQIdx];
+        focusedQuestionCode.value = nextQ.question_code;
+        // Focus selected or first option in target row
+        const targetOpts = getQuestionOptions(nextQ);
+        const selIdx = targetOpts.findIndex((o) => o.value === props.responses[nextQ.question_code]);
+        const focusIdx = selIdx >= 0 ? selIdx : 0;
+        const targetBtn = optionRefsMap.value[nextQ.question_code]?.[focusIdx];
+        if (targetBtn) {
+          targetBtn.focus({ preventScroll: true });
+          const rect = targetBtn.getBoundingClientRect();
+          const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+          if (rect.bottom > viewportHeight - 70 || rect.top < 100) {
+            targetBtn.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        }
+      }
+    }
   } else if (e.key === " " || e.key === "Enter") {
     e.preventDefault();
     e.stopPropagation();
@@ -323,16 +362,28 @@ function stepNumber(code, delta) {
   onUpdateValue(code, nextVal);
 }
 
+const isFocused = ref(false);
+const focusedQuestionCode = ref(null);
 const isInputFocused = ref(false);
 
 function onFocusIn(e) {
+  isFocused.value = true;
   const tag = e?.target?.tagName?.toLowerCase();
   if (tag === "input" || tag === "textarea") {
     isInputFocused.value = true;
   }
+  const rowEl = e?.target?.closest?.("[data-subquestion-code]");
+  if (rowEl) {
+    focusedQuestionCode.value = rowEl.getAttribute("data-subquestion-code");
+  }
 }
 
 function onFocusOut(e) {
+  const currentTarget = e?.currentTarget;
+  if (!currentTarget?.contains(e?.relatedTarget)) {
+    isFocused.value = false;
+    focusedQuestionCode.value = null;
+  }
   const tag = e?.target?.tagName?.toLowerCase();
   if (tag === "input" || tag === "textarea") {
     isInputFocused.value = false;

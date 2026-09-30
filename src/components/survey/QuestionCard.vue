@@ -16,7 +16,7 @@
     @touchcancel="onTouchCancel"
     @contextmenu.prevent="openConfigModal"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-20',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-28',
       notApplicable
         ? 'bg-slate-50/70 dark:bg-slate-900/60 border-dashed border-slate-300 dark:border-slate-700 opacity-75'
         : errorMessage
@@ -156,6 +156,7 @@
               :aria-checked="isOptionSelected(option.value)"
               :tabindex="getOptionTabindex(index)"
               @click="onOptionClick(option.value)"
+              @focus="activeOptionIndex = index"
               @keydown.enter.prevent="onOptionEnter"
               @keydown.space.prevent="onOptionSpace(option.value)"
               @keydown="onOptionKeydown($event, index)"
@@ -580,12 +581,17 @@ function onClearSearch() {
   });
 }
 
+const activeOptionIndex = ref(0);
+
 watch(
-  () => props.question?.question_code,
+  () => [props.question?.question_code, displayedGridOptions.value.length],
   () => {
     optionButtonRefs.value = [];
     gridSearchQuery.value = "";
-  }
+    const firstSelected = displayedGridOptions.value.findIndex((opt) => isOptionSelected(opt.value));
+    activeOptionIndex.value = firstSelected >= 0 ? firstSelected : 0;
+  },
+  { immediate: true }
 );
 
 const displayedGridOptions = computed(() => {
@@ -595,12 +601,12 @@ const displayedGridOptions = computed(() => {
 });
 
 function getOptionTabindex(index) {
-  if (isMultiSelect.value) return 0;
-  const selectedIdx = displayedGridOptions.value.findIndex((opt) => isOptionSelected(opt.value));
-  if (selectedIdx === -1) {
-    return index === 0 ? 0 : -1;
+  // Strict W3C roving tabindex for BOTH single-select and multi-select:
+  // Exactly ONE tab stop for the entire option group!
+  if (activeOptionIndex.value >= displayedGridOptions.value.length) {
+    activeOptionIndex.value = 0;
   }
-  return index === selectedIdx ? 0 : -1;
+  return index === activeOptionIndex.value ? 0 : -1;
 }
 
 const isCompleted = computed(() => {
@@ -933,6 +939,10 @@ function isOptionSelected(val) {
 }
 
 function onOptionClick(val) {
+  const clickedIdx = displayedGridOptions.value.findIndex((opt) => opt.value === val);
+  if (clickedIdx !== -1) {
+    activeOptionIndex.value = clickedIdx;
+  }
   if (isMultiSelect.value) {
     const list = Array.isArray(props.modelValue) ? [...props.modelValue] : (props.modelValue ? [props.modelValue] : []);
     const idx = list.indexOf(val);
@@ -1034,6 +1044,7 @@ function handleOptionArrowNav(e, curIdx) {
   } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
     nextIdx = (curIdx - 1 + len) % len;
   }
+  activeOptionIndex.value = nextIdx;
   let targetBtn = optionButtonRefs.value[nextIdx];
   if (!targetBtn && cardRef.value) {
     const allBtns = cardRef.value.querySelectorAll("button[role=radio], button[role=checkbox]");
@@ -1041,6 +1052,11 @@ function handleOptionArrowNav(e, curIdx) {
   }
   if (targetBtn) {
     targetBtn.focus({ preventScroll: true });
+    const rect = targetBtn.getBoundingClientRect();
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    if (rect.bottom > viewportHeight - 70 || rect.top < 100) {
+      targetBtn.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
     if (!isMultiSelect.value) {
       emit("update:modelValue", displayedGridOptions.value[nextIdx].value);
     }
@@ -1196,6 +1212,11 @@ onUnmounted(() => {
 function focusPrimaryInput() {
   nextTick(() => {
     if (!cardRef.value) return;
+    // 0. Quick search bar at top of options
+    if (searchInputRef.value) {
+      searchInputRef.value.focus({ preventScroll: true });
+      return;
+    }
     // 1. Standard text / number / date input or textarea (exclude quick search inputs)
     const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]):not([data-search-input]), textarea:not([disabled])");
     if (input) {

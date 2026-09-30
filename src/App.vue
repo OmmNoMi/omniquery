@@ -658,7 +658,8 @@ function scrollAndHighlightQuestion(code) {
     const el = document.getElementById("qc_" + code);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
-    const target = el.querySelector("input, select, textarea, button[role='radio'], button[role='checkbox'], [role='combobox'], [tabindex='0']");
+    const searchInput = el.querySelector("input[data-search-input]");
+    const target = searchInput || el.querySelector("input:not([type=hidden]):not([disabled]), select, textarea, button[role='radio'][aria-checked='true'], button[role='checkbox'][aria-checked='true'], button[role='radio'], button[role='checkbox'], [role='combobox'], [tabindex='0']");
     if (target && typeof target.focus === "function") {
       target.focus({ preventScroll: true });
     }
