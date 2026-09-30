@@ -99,8 +99,9 @@
           <button
             v-if="searchQuery"
             type="button"
-            @click="searchQuery = ''; searchInput?.focus()"
-            class="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5"
+            @mousedown.prevent
+            @click="onClearSearch"
+            class="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
             aria-label="Clear search"
           >
             <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -374,6 +375,13 @@ function handleClickOutside(e) {
   }
 }
 
+function onClearSearch() {
+  searchQuery.value = "";
+  nextTick(() => {
+    searchInput.value?.focus({ preventScroll: true });
+  });
+}
+
 watch(searchQuery, () => {
   highlightedIndex.value = 0;
   optionRefs.value = [];
@@ -384,7 +392,9 @@ watch(isOpen, async (open) => {
     highlightedIndex.value = 0;
     optionRefs.value = [];
     await nextTick();
-    if (searchInput.value) searchInput.value.focus();
+    if (searchInput.value) searchInput.value.focus({ preventScroll: true });
+  } else {
+    searchQuery.value = "";
   }
 });
 

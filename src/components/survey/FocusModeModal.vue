@@ -266,20 +266,40 @@ function onQuestionInput(val) {
   emit("update-response", { code: currentQuestion.value.question_code, value: val });
 }
 
+let advanceTimer = null;
+let isAdvancing = false;
+
 function onQuestionAnswered() {
   if (!props.autoAdvance) return;
-  setTimeout(() => advanceToNext(), 220);
+  if (advanceTimer) clearTimeout(advanceTimer);
+  advanceTimer = setTimeout(() => {
+    advanceToNext();
+    advanceTimer = null;
+  }, 220);
 }
 
 function advanceToNext() {
+  if (isAdvancing) return;
+  isAdvancing = true;
+  if (advanceTimer) {
+    clearTimeout(advanceTimer);
+    advanceTimer = null;
+  }
   if (props.currentIndex < props.questions.length - 1) {
     emit("next-question");
   } else {
     emit("finish-section");
   }
+  setTimeout(() => {
+    isAdvancing = false;
+  }, 350);
 }
 
 function prevQuestion() {
+  if (advanceTimer) {
+    clearTimeout(advanceTimer);
+    advanceTimer = null;
+  }
   if (props.currentIndex > 0) {
     emit("prev-question");
   }

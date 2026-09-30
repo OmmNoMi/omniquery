@@ -113,6 +113,7 @@
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
               <input
+                ref="searchInputRef"
                 data-search-input
                 v-model="gridSearchQuery"
                 type="text"
@@ -125,7 +126,8 @@
               <button
                 v-if="gridSearchQuery"
                 type="button"
-                @click="gridSearchQuery = ''"
+                @mousedown.prevent
+                @click="onClearSearch"
                 class="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 text-xs font-bold cursor-pointer"
                 aria-label="Clear search"
               >
@@ -569,9 +571,17 @@ watch(showConfigModal, (isOpen) => {
 const localMode = ref(null);
 const optionButtonRefs = ref([]);
 const gridSearchQuery = ref("");
+const searchInputRef = ref(null);
+
+function onClearSearch() {
+  gridSearchQuery.value = "";
+  nextTick(() => {
+    searchInputRef.value?.focus({ preventScroll: true });
+  });
+}
 
 watch(
-  () => props.question.question_code,
+  () => props.question?.question_code,
   () => {
     optionButtonRefs.value = [];
     gridSearchQuery.value = "";
@@ -625,6 +635,7 @@ function onFocusOut(e) {
   if (!cardRef.value?.contains(e.relatedTarget)) {
     isFocused.value = false;
     isInputFocused.value = false;
+    gridSearchQuery.value = "";
   }
 }
 
@@ -926,6 +937,7 @@ function onOptionClick(val) {
     emit("update:modelValue", list);
   } else {
     emit("update:modelValue", val);
+    gridSearchQuery.value = "";
     emit("answered", { code: props.question.question_code, value: val });
   }
 }
@@ -946,7 +958,6 @@ function onInputEnter(e) {
     e.preventDefault();
     e.stopPropagation();
   }
-  emit("answered", { code: props.question.question_code, value: props.modelValue });
   emit("next");
 }
 
@@ -955,7 +966,7 @@ function onOptionEnter(e) {
     e.preventDefault();
     e.stopPropagation();
   }
-  emit("answered", { code: props.question.question_code, value: props.modelValue });
+  gridSearchQuery.value = "";
   emit("next");
 }
 
@@ -971,10 +982,12 @@ function focusFirstOption() {
 function onSearchInputEnter() {
   if (displayedGridOptions.value.length === 1) {
     onOptionClick(displayedGridOptions.value[0].value);
+    gridSearchQuery.value = "";
     emit("next");
   } else if (displayedGridOptions.value.length > 0) {
     focusFirstOption();
   } else {
+    gridSearchQuery.value = "";
     emit("next");
   }
 }

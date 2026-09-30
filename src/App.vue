@@ -89,6 +89,7 @@
               :errorMessage="validationErrors[item.question.question_code]"
               :notApplicable="!isQuestionVisible(item.question)"
               @answered="onQuestionAnswered(item.question)"
+              @next="onQuestionAnswered(item.question)"
               @capture-gps="captureGPS"
             />
           </template>

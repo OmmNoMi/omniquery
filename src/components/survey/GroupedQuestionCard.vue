@@ -70,18 +70,25 @@
 
         <!-- Sub-Question Input Control -->
         <div class="shrink-0 w-full sm:w-auto">
-          <!-- Choice Radio/Percent Pills (Clean wrap, ZERO horizontal scroll) -->
+          <!-- Choice Radio/Percent Pills (Clean wrap, ZERO horizontal scroll, Roving Tabindex: 1 tab stop per row) -->
           <div
             v-if="isChoiceQuestion(q)"
+            role="radiogroup"
+            :aria-label="getCleanSubLabel(q)"
             class="flex flex-wrap items-center gap-1.5 py-1"
           >
             <button
-              v-for="opt in getQuestionOptions(q)"
+              v-for="(opt, optIdx) in getQuestionOptions(q)"
               :key="opt.value"
+              :ref="(el) => setOptionRef(q.question_code, optIdx, el)"
               type="button"
+              role="radio"
+              :aria-checked="responses[q.question_code] === opt.value"
+              :tabindex="getChoiceTabindex(q, opt.value, optIdx)"
+              @keydown="onChoiceKeydown($event, q, optIdx, getQuestionOptions(q))"
               @click="onUpdateValue(q.question_code, opt.value)"
               :class="[
-                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95',
+                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500',
                 responses[q.question_code] === opt.value
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
                   : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600'
@@ -235,6 +242,49 @@ function getQuestionOptions(q) {
     value: typeof opt === "object" && opt ? opt.value : opt,
     label: typeof opt === "object" && opt ? opt.label : String(opt),
   }));
+}
+
+const optionRefsMap = ref({});
+
+function setOptionRef(qCode, optIdx, el) {
+  if (!optionRefsMap.value[qCode]) {
+    optionRefsMap.value[qCode] = [];
+  }
+  if (el) {
+    optionRefsMap.value[qCode][optIdx] = el;
+  }
+}
+
+function getChoiceTabindex(q, optValue, optIdx) {
+  const currentVal = props.responses[q.question_code];
+  const options = getQuestionOptions(q);
+  const selectedIdx = options.findIndex((o) => o.value === currentVal);
+  if (selectedIdx === -1) {
+    return optIdx === 0 ? 0 : -1;
+  }
+  return optIdx === selectedIdx ? 0 : -1;
+}
+
+function onChoiceKeydown(e, q, optIdx, options) {
+  if (["ArrowRight", "ArrowDown"].includes(e.key)) {
+    e.preventDefault();
+    e.stopPropagation();
+    const nextIdx = (optIdx + 1) % options.length;
+    const nextOpt = options[nextIdx];
+    optionRefsMap.value[q.question_code]?.[nextIdx]?.focus({ preventScroll: true });
+    onUpdateValue(q.question_code, nextOpt.value);
+  } else if (["ArrowLeft", "ArrowUp"].includes(e.key)) {
+    e.preventDefault();
+    e.stopPropagation();
+    const prevIdx = (optIdx - 1 + options.length) % options.length;
+    const prevOpt = options[prevIdx];
+    optionRefsMap.value[q.question_code]?.[prevIdx]?.focus({ preventScroll: true });
+    onUpdateValue(q.question_code, prevOpt.value);
+  } else if (e.key === " " || e.key === "Enter") {
+    e.preventDefault();
+    e.stopPropagation();
+    onUpdateValue(q.question_code, options[optIdx].value);
+  }
 }
 
 function onUpdateValue(code, val) {
