@@ -61,9 +61,11 @@
           :isSubmitting="isSubmitting"
           :autoAdvance="autoAdvance"
           :isFullForm="isFullForm"
+          :isFocusMode="isFocusMode"
           :isRecording="isRecording"
           :isAudioPaused="isAudioPaused"
           @open-focus-mode="openFocusMode"
+          @toggle-focus-mode="toggleFocusMode"
           @toggle-auto-advance="autoAdvance = !autoAdvance"
           @toggle-full-form="toggleFullForm"
           @toggle-audio="toggleAudio"
@@ -620,6 +622,14 @@ const displayQuestionItems = computed(() => {
 
 function onGroupResponseUpdate({ code, value }) {
   responses.value[code] = value;
+}
+
+function toggleFocusMode() {
+  if (isFocusMode.value) {
+    isFocusMode.value = false;
+  } else {
+    openFocusMode();
+  }
 }
 
 function openFocusMode() {

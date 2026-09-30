@@ -70,11 +70,6 @@
             ]"
             :title="__('Survey Mode')"
           >
-            <!-- Active Indicator Dot -->
-            <span
-              class="w-2 h-2 rounded-full shrink-0"
-              :class="(autoAdvance || isFullForm) ? 'bg-emerald-600 dark:bg-emerald-400 animate-pulse' : 'bg-slate-400'"
-            ></span>
             <span>{{ activeModeIcon }}</span>
             <span class="font-extrabold tracking-tight">{{ activeModeLabel }}</span>
             <svg
@@ -153,10 +148,10 @@
               </span>
             </button>
 
-            <!-- 3. Focus Form Mode Action -->
+            <!-- 3. Focus Form Toggle -->
             <button
               type="button"
-              @click="onOpenFocusMode"
+              @click="onToggleFocusMode"
               class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <div class="flex items-center gap-2">
@@ -166,7 +161,19 @@
                   <div class="text-[10px] text-slate-500 dark:text-slate-400">{{ __('One-by-one popup card') }}</div>
                 </div>
               </div>
-              <span class="text-xs font-bold text-slate-400">→</span>
+              <span
+                :class="[
+                  'w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0',
+                  isFocusMode ? 'bg-emerald-600' : 'bg-slate-300 dark:bg-slate-700'
+                ]"
+              >
+                <span
+                  :class="[
+                    'w-4 h-4 rounded-full bg-white transition-transform transform shadow-xs',
+                    isFocusMode ? 'translate-x-4' : 'translate-x-0'
+                  ]"
+                />
+              </span>
             </button>
           </div>
         </div>
@@ -228,6 +235,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isFocusMode: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits([
@@ -235,6 +246,7 @@ const emit = defineEmits([
   "next",
   "submit",
   "open-focus-mode",
+  "toggle-focus-mode",
   "toggle-auto-advance",
   "toggle-full-form",
   "toggle-audio",
@@ -247,6 +259,11 @@ const modeMenuRef = ref(null);
 function onOpenFocusMode() {
   isModeMenuOpen.value = false;
   emit("open-focus-mode");
+}
+
+function onToggleFocusMode() {
+  isModeMenuOpen.value = false;
+  emit("toggle-focus-mode");
 }
 
 function handleOutsideClick(event) {
@@ -311,6 +328,9 @@ const sectionDescription = computed(() => {
 });
 
 const activeModeLabel = computed(() => {
+  if (props.isFocusMode) {
+    return __('Focus Form');
+  }
   if (props.isFullForm && props.autoAdvance) {
     return __('Full (Auto)');
   }
@@ -324,6 +344,7 @@ const activeModeLabel = computed(() => {
 });
 
 const activeModeIcon = computed(() => {
+  if (props.isFocusMode) return '🎯';
   if (props.autoAdvance) return '⚡';
   if (props.isFullForm) return '📋';
   return '📝';
