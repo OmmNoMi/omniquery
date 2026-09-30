@@ -21,14 +21,15 @@
       <div class="flex items-start gap-2.5 min-w-0 flex-1">
         <!-- Question Number / Group Badge -->
         <span
+          v-if="parsedGroupMeta.number"
           class="px-2 py-0.5 rounded-md text-xs font-mono font-bold shrink-0 mt-0.5 border border-slate-200 dark:border-slate-700 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 shadow-2xs inline-flex items-center"
         >
-          <span>{{ group.number || 'TABLE' }}</span>
+          <span>{{ parsedGroupMeta.number }}</span>
         </span>
 
         <div>
           <h3 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
-            {{ group.title }}
+            {{ parsedGroupMeta.text }}
           </h3>
           <p v-if="group.description" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
             {{ group.description }}
@@ -209,6 +210,30 @@ const isGroupCompleted = computed(() => {
     const val = props.responses[q.question_code];
     return val !== undefined && val !== null && String(val).trim() !== "";
   });
+});
+
+const parsedGroupMeta = computed(() => {
+  const full = props.group.title || "";
+  const match = full.match(/^(Q\d+[a-z]?\.?|\d+\.?|[A-Za-z]\.)\s*(.*)$/i);
+  if (match) {
+    const rawNum = match[1].replace(/\.$/, "").trim();
+    const cleanText = match[2].replace(/^[\s.:-]+\s*/, "").trim();
+    return {
+      number: rawNum,
+      text: cleanText,
+    };
+  }
+  const num = props.group.number;
+  if (num && !["TABLE", "GRID"].includes(String(num).toUpperCase())) {
+    return {
+      number: num,
+      text: full,
+    };
+  }
+  return {
+    number: null,
+    text: full,
+  };
 });
 
 const hasGroupError = computed(() => {
