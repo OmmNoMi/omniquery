@@ -1070,11 +1070,22 @@ async function goHome() {
 async function selectSurvey(surveyName, options = {}) {
   activeProjectId.value = "";
   loadingSurveyId.value = surveyName;
+  const tmpl = await loadTemplate(surveyName, options);
+  loadingSurveyId.value = "";
+  if (!tmpl) {
+    if (window.frappe && window.frappe.show_alert) {
+      window.frappe.show_alert({
+        message: __("This survey is not yet downloaded on your device. Please connect to the internet once to download it."),
+        indicator: "orange",
+      });
+    } else {
+      alert(__("This survey is not yet downloaded on your device. Please connect to the internet once to download it."));
+    }
+    return;
+  }
   if (window.history && window.history.pushState) {
     window.history.pushState({ type: "survey", surveyName }, "", `/omniquery/${encodeURIComponent(surveyName)}`);
   }
-  await loadTemplate(surveyName, options);
-  loadingSurveyId.value = "";
 }
 
 async function saveOfflineRecord() {

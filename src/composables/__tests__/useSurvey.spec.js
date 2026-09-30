@@ -169,4 +169,42 @@ describe("useSurvey", () => {
     expect(survey.nextSection()).toBe(true);
     expect(survey.activeSectionIndex.value).toBe(1);
   });
+
+  it("loads available templates directly from IndexedDB when network fetch fails (offline mode)", async () => {
+    // Pre-populate IndexedDB with cached templates
+    await db.templates.put({
+      template_name: "OQS-OFFLINE-01",
+      title: "Offline Test Survey",
+      project: "PROJ-OFFLINE",
+      project_name: "Offline Project",
+      version: 1,
+      target_category: "Field",
+      schema: {
+        template_name: "OQS-OFFLINE-01",
+        title: "Offline Test Survey",
+        sections: [{ section_code: "s1", section_title: "Start" }],
+        questions: [{ question_code: "q1", label: "Offline Question" }],
+      },
+    });
+
+    // Mock global fetch to reject (simulate completely disconnected network)
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Failed to fetch (offline)")));
+
+    const survey = useSurvey();
+    const loaded = await survey.loadAvailableTemplates();
+
+    expect(loaded.length).toBe(1);
+    expect(loaded[0].name).toBe("OQS-OFFLINE-01");
+    expect(loaded[0].title).toBe("Offline Test Survey");
+    expect(loaded[0].project_name).toBe("Offline Project");
+
+    // Also verify loadTemplate works 100% offline using the cached schema
+    const schema = await survey.loadTemplate("OQS-OFFLINE-01");
+    expect(schema).toBeDefined();
+    expect(schema.template_name).toBe("OQS-OFFLINE-01");
+    expect(schema.questions.length).toBe(1);
+    expect(survey.activeTemplate.value).toBeDefined();
+    expect(survey.activeTemplate.value.title).toBe("Offline Test Survey");
+  });
 });
+

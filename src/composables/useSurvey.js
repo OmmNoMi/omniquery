@@ -42,25 +42,125 @@ export function useSurvey() {
   }
 
   async function loadAvailableTemplates() {
+    // 1. Immediately read cached templates from IndexedDB (instant offline render)
+    try {
+      const cachedList = await db.templates.toArray();
+      if (cachedList && cachedList.length > 0) {
+        availableTemplates.value = cachedList.map((t) => ({
+          name: t.template_name,
+          title: t.title,
+          project: t.project,
+          project_name: t.project_name || t.project,
+          grantor_organization: t.grantor_organization || "",
+          project_description: t.description || "",
+          version: t.version || 1,
+          target_category: t.target_category || "Survey",
+          workspace: t.workspace,
+          workspace_title: t.workspace_title,
+          response_title_format: t.response_title_format,
+        }));
+      }
+    } catch (e) {
+      console.warn("Could not read cached templates from IndexedDB:", e);
+    }
+
+    // 2. Fetch fresh bootstrap data from server if online
+    try {
+      const response = await fetch("/api/method/omniquery.api.survey.get_bootstrap_data");
+      if (response.ok) {
+        const data = await response.json();
+        const templates = data.message?.templates || [];
+        if (templates.length > 0) {
+          const formatted = [];
+          for (const t of templates) {
+            const schema = t.schema || {};
+            schema.template_name = t.name;
+            schema.title = t.title;
+            schema.project = t.project;
+            schema.project_name = t.project_name;
+            schema.version = t.version;
+            schema.target_category = t.target_category;
+            schema.workspace = t.workspace;
+            schema.workspace_title = t.workspace_title;
+            schema.grantor_organization = t.grantor_organization;
+            schema.project_description = t.project_description;
+            schema.response_title_format = t.response_title_format || schema.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})";
+
+            // Persist full schema to IndexedDB
+            await db.templates.put({
+              template_name: t.name,
+              title: t.title,
+              project: t.project,
+              project_name: t.project_name || t.project,
+              grantor_organization: t.grantor_organization || "",
+              description: t.project_description || "",
+              version: t.version || 1,
+              target_category: t.target_category || "Survey",
+              workspace: t.workspace,
+              workspace_title: t.workspace_title,
+              response_title_format: schema.response_title_format,
+              schema: schema,
+              modified: new Date().toISOString(),
+            });
+
+            formatted.push({
+              name: t.name,
+              title: t.title,
+              project: t.project,
+              project_name: t.project_name || t.project,
+              grantor_organization: t.grantor_organization || "",
+              project_description: t.project_description || "",
+              version: t.version || 1,
+              target_category: t.target_category || "Survey",
+              workspace: t.workspace,
+              workspace_title: t.workspace_title,
+              response_title_format: schema.response_title_format,
+            });
+          }
+          availableTemplates.value = formatted;
+          await loadActiveDrafts();
+          return availableTemplates.value;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not fetch get_bootstrap_data from server:", e);
+    }
+
+    // 3. Fallback to list_active_templates if get_bootstrap_data didn't return templates
     try {
       const response = await fetch("/api/method/omniquery.api.survey.list_active_templates");
       if (response.ok) {
         const data = await response.json();
-        availableTemplates.value = data.message || [];
-        await loadActiveDrafts();
-        return availableTemplates.value;
+        const list = data.message || [];
+        if (list.length > 0) {
+          availableTemplates.value = list;
+          // Background prefetch schemas for all templates
+          for (const tmpl of list) {
+            fetchRemoteSchema(tmpl.name).then((payload) => {
+              if (payload) {
+                const schema = payload.schema || payload;
+                cacheTemplateLocally(tmpl.name, schema, payload);
+              }
+            }).catch(() => {});
+          }
+        }
       }
     } catch (e) {
-      console.warn("Failed to load active templates:", e);
+      console.warn("Could not fetch active templates list:", e);
     }
+
     await loadActiveDrafts();
-    return [];
+    return availableTemplates.value;
   }
 
   async function getCachedTemplate(surveyId) {
     try {
       const cached = await db.templates.get(surveyId);
-      return (cached && cached.schema) || null;
+      if (cached && cached.schema) {
+        return cached.schema;
+      }
+      const byTitle = await db.templates.where("title").equals(surveyId).first();
+      return (byTitle && byTitle.schema) || null;
     } catch (e) {
       return null;
     }
@@ -72,6 +172,13 @@ export function useSurvey() {
         template_name: surveyId,
         title: schema.title,
         project: schema.project || (payload && payload.project),
+        project_name: schema.project_name || (payload && payload.project_name) || schema.project,
+        grantor_organization: schema.grantor_organization || (payload && payload.grantor_organization) || "",
+        description: schema.description || (payload && payload.description) || "",
+        version: schema.version || (payload && payload.version) || 1,
+        target_category: schema.target_category || (payload && payload.target_category) || "Survey",
+        workspace: schema.workspace || (payload && payload.workspace) || "",
+        workspace_title: schema.workspace_title || (payload && payload.workspace_title) || "",
         response_title_format: schema.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
         schema: JSON.parse(JSON.stringify(schema)),
         modified: new Date().toISOString(),
@@ -95,20 +202,29 @@ export function useSurvey() {
     const isStartNew = options === false || (typeof options === "object" && options.startNew);
     const targetDraftId = typeof options === "object" ? options.draftId : null;
 
+    // 1. Instant offline retrieval from IndexedDB
     const cached = await getCachedTemplate(surveyId);
     if (cached) {
       activeTemplate.value = cached;
       activeSectionIndex.value = 0;
     }
-    const payload = await fetchRemoteSchema(surveyId);
-    if (payload) {
-      const schema = payload.schema || payload;
-      schema.template_name = schema.template_name || payload.template_name || surveyId;
-      schema.title = schema.title || payload.title || surveyId;
-      schema.response_title_format = schema.response_title_format || payload.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})";
-      activeTemplate.value = schema;
-      activeSectionIndex.value = 0;
-      await cacheTemplateLocally(surveyId, schema, payload);
+
+    // 2. If online, optionally refresh from server
+    if (typeof navigator === "undefined" || navigator.onLine) {
+      try {
+        const payload = await fetchRemoteSchema(surveyId);
+        if (payload) {
+          const schema = payload.schema || payload;
+          schema.template_name = schema.template_name || payload.template_name || surveyId;
+          schema.title = schema.title || payload.title || surveyId;
+          schema.response_title_format = schema.response_title_format || payload.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})";
+          activeTemplate.value = schema;
+          activeSectionIndex.value = 0;
+          await cacheTemplateLocally(surveyId, schema, payload);
+        }
+      } catch (e) {
+        console.warn("Could not refresh remote schema, using local cache:", e);
+      }
     }
 
     if (!isStartNew) {

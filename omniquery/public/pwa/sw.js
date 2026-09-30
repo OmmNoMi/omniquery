@@ -1,4 +1,4 @@
-const CACHE_NAME = 'omniquery-cache-v30';
+const CACHE_NAME = 'omniquery-cache-v32';
 const STATIC_ASSETS = [
   '/omniquery',
   '/assets/omniquery/dist/omniquery.bundle.js',
@@ -7,7 +7,6 @@ const STATIC_ASSETS = [
   '/assets/omniquery/pwa/icon-192.png',
   '/assets/omniquery/icons/desktop_icons/solid/omniquery.svg'
 ];
-
 
 self.addEventListener('install', event => {
   event.waitUntil(
@@ -44,7 +43,6 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
-  // Network-first with instant offline cache fallback for PWA assets & API
   event.respondWith(
     fetch(event.request).then(response => {
       if (response && response.status === 200) {
@@ -52,13 +50,15 @@ self.addEventListener('fetch', event => {
         caches.open(CACHE_NAME).then(c => c.put(event.request, clone));
       }
       return response;
-    }).catch(() => {
-      return caches.match(event.request).then(cached => {
-        if (cached) return cached;
-        if (event.request.mode === 'navigate') {
-          return caches.match('/assets/omniquery/pwa/index.html') || caches.match('/omniquery');
-        }
-      });
+    }).catch(async () => {
+      // 1. Try exact or search-ignored match
+      const cached = await caches.match(event.request, { ignoreSearch: true });
+      if (cached) return cached;
+
+      // 2. If navigating to any survey or sub-page, return cached /omniquery app shell
+      if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+        return (await caches.match('/omniquery')) || (await caches.match('/assets/omniquery/pwa/index.html'));
+      }
     })
   );
 });

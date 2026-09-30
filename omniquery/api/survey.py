@@ -240,14 +240,14 @@ def get_service_worker():
 	except Exception:
 		content = "// OmniQuery Service Worker"
 
-	frappe.response["type"] = "binary"
+	frappe.response["type"] = "download"
+	frappe.response["display_content_as"] = "inline"
 	frappe.response["filecontent"] = content.encode("utf-8")
 	frappe.response["filename"] = "sw.js"
 	frappe.response["content_type"] = "application/javascript; charset=utf-8"
-	frappe.response["headers"] = {
-		"Service-Worker-Allowed": "/",
-		"Cache-Control": "no-cache, no-store, must-revalidate",
-	}
+	if not hasattr(frappe.local, "response_headers") or frappe.local.response_headers is None:
+		frappe.local.response_headers = {}
+	frappe.local.response_headers["Service-Worker-Allowed"] = "/"
 
 
 @frappe.whitelist(allow_guest=True)
@@ -273,21 +273,30 @@ def get_bootstrap_data():
 		],
 		order_by="published_at desc",
 	)
+	authorized_raw = [t for t in templates if user_has_template_permission(t, current_user)]
+	p_ids = {t.project for t in authorized_raw if t.project}
+	p_map, w_map = fetch_project_workspace_meta(p_ids)
+
 	authorized = []
-	for t in templates:
-		if user_has_template_permission(t, current_user):
-			schema_data = json.loads(t.compiled_schema_json) if t.compiled_schema_json else {}
-			authorized.append(
-				{
-					"name": t.name,
-					"title": t.title,
-					"project": t.project,
-					"version": t.version,
-					"target_category": t.target_category,
-					"schema_hash_sha256": t.schema_hash_sha256,
-					"schema": schema_data,
-				}
-			)
+	for t in authorized_raw:
+		enriched = enrich_template_meta(t, p_map, w_map)
+		schema_data = json.loads(t.compiled_schema_json) if t.compiled_schema_json else {}
+		authorized.append(
+			{
+				"name": t.name,
+				"title": t.title,
+				"project": t.project,
+				"project_name": enriched.get("project_name") or t.project,
+				"grantor_organization": enriched.get("grantor_organization") or "",
+				"project_description": enriched.get("project_description") or "",
+				"workspace": enriched.get("workspace") or "",
+				"workspace_title": enriched.get("workspace_title") or "",
+				"version": t.version,
+				"target_category": t.target_category,
+				"schema_hash_sha256": t.schema_hash_sha256,
+				"schema": schema_data,
+			}
+		)
 	return {
 		"user": (user_info.get("full_name") or user_info.get("user") or "Guest Surveyor")
 		if isinstance(user_info, dict)

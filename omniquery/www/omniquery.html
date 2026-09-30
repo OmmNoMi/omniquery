@@ -42,7 +42,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/omniquery/pwa/icon-192.png">
 
   <!-- Production Pre-Compiled Tailwind & Frappe UI Stylesheet (Zero CDN) -->
-  <link rel="stylesheet" href="/assets/omniquery/dist/omniquery.bundle.css?v={{ bundle_version or '20260930_1355' }}">
+  <link rel="stylesheet" href="/assets/omniquery/dist/omniquery.bundle.css?v={{ bundle_version or '20260930_1950' }}">
   <style>
     html, body {
       width: 100%;
@@ -93,7 +93,7 @@
   </div>
 
   <!-- Production Pre-Compiled Vue 3 + Frappe UI + Dexie Application Bundle -->
-  <script src="/assets/omniquery/dist/omniquery.bundle.js?v={{ bundle_version or '20260930_1355' }}"></script>
+  <script src="/assets/omniquery/dist/omniquery.bundle.js?v={{ bundle_version or '20260930_1950' }}"></script>
 
 
 
@@ -101,8 +101,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .catch(() => navigator.serviceWorker.register('/assets/omniquery/pwa/sw.js'))
+        navigator.serviceWorker.register('/api/method/omniquery.api.survey.get_service_worker', { scope: '/' })
           .then(reg => reg && console.log('OmniQuery SW registered:', reg.scope))
           .catch(err => console.error('SW registration failed:', err));
       });
