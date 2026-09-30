@@ -21,8 +21,8 @@
               : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
     ]"
   >
-    <!-- Header -->
-    <div class="mb-3 flex items-start justify-between gap-2 flex-wrap">
+    <!-- Header (Pinned / Sticky during scroll so user always knows the main question) -->
+    <div class="sticky top-[52px] sm:top-[56px] z-20 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-3 p-4 sm:p-5 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 flex items-start justify-between gap-2 flex-wrap shadow-xs">
       <div class="flex items-start gap-2.5 min-w-0 flex-1">
         <!-- Question Number Badge -->
         <span

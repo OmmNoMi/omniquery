@@ -28,6 +28,23 @@
               : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
     ]"
   >
+    <!-- Pinned Parent Context (When rendering a subquestion belonging to a table/matrix) -->
+    <div
+      v-if="question._parentTitle"
+      class="mb-3 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs text-blue-950 dark:text-blue-200"
+    >
+      <div class="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+        <span>📋</span>
+        <span>{{ __('Main Table Question') }}</span>
+      </div>
+      <div class="font-extrabold text-sm text-slate-800 dark:text-slate-100 mt-0.5 leading-snug">
+        {{ question._parentTitle }}
+      </div>
+      <div v-if="question._parentDescription" class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        {{ question._parentDescription }}
+      </div>
+    </div>
+
     <!-- Question Header -->
     <div class="mb-2 flex items-start justify-between gap-2">
       <div class="flex items-start gap-2.5 min-w-0 flex-1">
@@ -621,15 +638,40 @@ let touchTimer = null;
 let touchStartX = 0;
 let touchStartY = 0;
 
+function ensureVisibleAboveFooter(targetEl) {
+  if (!targetEl || typeof targetEl.getBoundingClientRect !== "function") return;
+  const rect = targetEl.getBoundingClientRect();
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  const footerClearance = 80;
+  const headerClearance = 96;
+
+  if (rect.bottom > vh - footerClearance) {
+    const diff = rect.bottom - (vh - footerClearance) + 16;
+    window.scrollBy({ top: diff, behavior: "smooth" });
+  } else if (rect.top < headerClearance) {
+    const diff = rect.top - headerClearance - 16;
+    window.scrollBy({ top: diff, behavior: "smooth" });
+  }
+}
+
 function onCardClick() {
-  // Intentional no-op: preserve user scroll position when tapping anywhere inside card
+  if (!isFocused.value && cardRef.value) {
+    cardRef.value.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 }
 
 function onFocusIn(e) {
+  const fromOutside = !cardRef.value?.contains(e.relatedTarget);
   isFocused.value = true;
   const tag = e?.target?.tagName?.toLowerCase();
   if (tag === "input" || tag === "textarea" || e?.target?.isContentEditable) {
     isInputFocused.value = true;
+  }
+
+  if (fromOutside) {
+    cardRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
+  } else {
+    ensureVisibleAboveFooter(e.target);
   }
 }
 
@@ -1052,11 +1094,7 @@ function handleOptionArrowNav(e, curIdx) {
   }
   if (targetBtn) {
     targetBtn.focus({ preventScroll: true });
-    const rect = targetBtn.getBoundingClientRect();
-    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
-    if (rect.bottom > viewportHeight - 70 || rect.top < 100) {
-      targetBtn.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
+    ensureVisibleAboveFooter(targetBtn);
     if (!isMultiSelect.value) {
       emit("update:modelValue", displayedGridOptions.value[nextIdx].value);
     }

@@ -219,10 +219,37 @@ export function useSurvey() {
   const activeQuestions = computed(() => {
     if (!activeSection.value || !activeTemplate.value) return [];
     const all = activeTemplate.value.questions || [];
-    if (isFullForm.value) {
-      return all.filter((q) => q.section_code === activeSection.value.section_code);
+    let sectionQs = all.filter((q) => q.section_code === activeSection.value.section_code);
+    if (!isFullForm.value) {
+      sectionQs = sectionQs.filter((q) => isQuestionVisible(q));
     }
-    return all.filter((q) => q.section_code === activeSection.value.section_code && isQuestionVisible(q));
+
+    // Automatically link sub-questions to their parent Table/Dynamic Grid question
+    let currentParentTitle = null;
+    let currentParentDesc = null;
+    let currentParentCode = null;
+
+    for (let i = 0; i < sectionQs.length; i++) {
+      const q = sectionQs[i];
+      const type = (q.field_type || "").toLowerCase();
+      const label = q.label_en || q.label || "";
+
+      if (type === "dynamic grid" || type === "table") {
+        currentParentTitle = label;
+        currentParentDesc = q.description || "";
+        currentParentCode = q.question_code;
+      } else if (/^[a-z][.\s]\s*/i.test(label) && currentParentTitle) {
+        q._parentTitle = currentParentTitle;
+        q._parentDescription = currentParentDesc;
+        q._parentCode = currentParentCode;
+      } else {
+        currentParentTitle = null;
+        currentParentDesc = null;
+        currentParentCode = null;
+      }
+    }
+
+    return sectionQs;
   });
 
   function isSectionComplete(section) {

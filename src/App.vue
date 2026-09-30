@@ -115,6 +115,7 @@
           :responses="responses"
           :validationErrors="validationErrors"
           :autoAdvance="autoAdvance"
+          :isFullForm="isFullForm"
           :sectionTitle="activeSection ? activeSection.section_title || activeSection.section_code : ''"
           @close="isFocusMode = false"
           @prev-question="focusQuestionIndex = Math.max(0, focusQuestionIndex - 1)"
@@ -122,6 +123,7 @@
           @finish-section="onFocusModeFinishSection"
           @update-response="onFocusModeUpdateResponse"
           @toggle-auto-advance="autoAdvance = !autoAdvance"
+          @toggle-full-form="toggleFullForm"
           @capture-gps="captureGPS"
         />
       </div>
@@ -506,7 +508,10 @@ const displayQuestionItems = computed(() => {
       while (j < questions.length) {
         const nextQ = questions[j];
         const nextLabel = nextQ.label_en || nextQ.label || "";
-        if (/^[a-z]\.\s+/i.test(nextLabel)) {
+        if (/^[a-z][.\s]\s*/i.test(nextLabel)) {
+          nextQ._parentTitle = label;
+          nextQ._parentDescription = q.description || "";
+          nextQ._parentCode = q.question_code;
           groupQuestions.push(nextQ);
           j++;
         } else {
