@@ -137,32 +137,56 @@
       </div>
     </div>
 
-    <!-- Active Draft Quick Resume Callout Banner (if surveyor has an unfinished survey) -->
+    <!-- Active Draft Quick Resume Callout Card -->
     <div
       v-if="topDraft"
-      class="p-3.5 rounded-xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 flex items-center justify-between gap-3 flex-wrap"
+      class="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 shadow-2xs space-y-2.5"
     >
-      <div class="flex items-center gap-2.5 min-w-0 flex-1">
-        <span class="text-xl shrink-0">⏳</span>
-        <div class="min-w-0">
-          <div class="text-xs font-bold text-amber-900 dark:text-amber-200 truncate">
-            {{ __('Unfinished Survey') }}: {{ topDraft.title || topDraft.template_name }}
+      <!-- Top Row: Eyebrow Badge & Relative Time -->
+      <div class="flex items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-1.5 font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wider text-[11px]">
+          <span>⏳</span>
+          <span>{{ __('In-Progress Draft') }}</span>
+        </div>
+        <span class="text-[11px] text-amber-700/90 dark:text-amber-400 font-medium">
+          {{ __('Last saved') }} {{ formatRelativeTime(topDraft.updated_at) }}
+        </span>
+      </div>
+
+      <!-- Survey Title -->
+      <div>
+        <h4 class="text-sm font-extrabold text-slate-900 dark:text-white leading-snug line-clamp-2">
+          {{ topDraft.title || topDraft.template_name }}
+        </h4>
+      </div>
+
+      <!-- Bottom Row: Progress Strip & Action Button -->
+      <div class="flex items-center justify-between gap-3 pt-1 border-t border-amber-200/80 dark:border-amber-800/60 flex-wrap sm:flex-nowrap">
+        <!-- Progress Bar & Percentage -->
+        <div class="flex-1 min-w-[140px] space-y-1">
+          <div class="flex items-center justify-between text-[11px] font-bold text-amber-900 dark:text-amber-200">
+            <span>{{ __('Progress') }}</span>
+            <span class="font-mono text-xs font-black">{{ topDraft.progress_percent || 0 }}%</span>
           </div>
-          <div class="text-[11px] text-amber-700 dark:text-amber-400 flex items-center gap-2 mt-0.5">
-            <span class="font-bold">{{ topDraft.progress_percent || 0 }}% {{ __('completed') }}</span>
-            <span>·</span>
-            <span>{{ __('Last updated') }} {{ formatRelativeTime(topDraft.updated_at) }}</span>
+          <div class="w-full h-2 bg-amber-200/80 dark:bg-amber-900/60 rounded-full overflow-hidden p-0.5">
+            <div
+              class="h-full bg-amber-500 dark:bg-amber-400 rounded-full transition-all duration-300"
+              :style="{ width: `${topDraft.progress_percent || 0}%` }"
+            />
           </div>
         </div>
+
+        <!-- Resume Action Button -->
+        <button
+          type="button"
+          @click="$emit('resume-draft', topDraft.template_name)"
+          class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0"
+        >
+          <span>▶</span>
+          <span>{{ __('Resume Survey') }}</span>
+          <span>→</span>
+        </button>
       </div>
-      <button
-        type="button"
-        @click="$emit('resume-draft', topDraft.template_name)"
-        class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold shadow-xs transition flex items-center gap-1 cursor-pointer shrink-0"
-      >
-        <span>{{ __('Resume Draft') }}</span>
-        <span>→</span>
-      </button>
     </div>
 
     <!-- Quick Access to Filled Forms & Cross-Verification -->
