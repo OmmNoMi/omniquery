@@ -245,6 +245,8 @@ export function useWAL() {
     }
   }
 
+  let syncInterval = null;
+
   function handleOnline() {
     isOnline.value = true;
     syncWAL();
@@ -254,18 +256,42 @@ export function useWAL() {
     isOnline.value = false;
   }
 
+  function handleVisibilityChange() {
+    if (typeof document !== "undefined" && document.visibilityState === "visible") {
+      updatePendingCount().then(() => {
+        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
+          syncWAL();
+        }
+      });
+    }
+  }
+
   onMounted(() => {
     if (typeof window !== "undefined") {
       window.addEventListener("online", handleOnline);
       window.addEventListener("offline", handleOffline);
+      document.addEventListener("visibilitychange", handleVisibilityChange);
     }
-    updatePendingCount();
+    updatePendingCount().then(() => {
+      if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
+        syncWAL();
+      }
+    });
+
+    // Continuous background auto-sync check every 15 seconds
+    syncInterval = setInterval(() => {
+      if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
+        syncWAL();
+      }
+    }, 15000);
   });
 
   onUnmounted(() => {
+    if (syncInterval) clearInterval(syncInterval);
     if (typeof window !== "undefined") {
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     }
   });
 
