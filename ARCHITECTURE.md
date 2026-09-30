@@ -107,6 +107,71 @@ All UI controls are driven deterministically by schema metadata without custom C
 
 ---
 
+### 4.1 The Dimensional Survey Input Philosophy (1D, 2D, 3D, and 4D Architecture)
+
+Survey inputs in OmniQuery are classified according to their mathematical dimension and structural complexity, ensuring predictable data models, mobile usability, and zero UI breakage across all form factors:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                          OMNIQUERY DIMENSIONAL INPUT SPECTRUM                                   │
+├─────────────────┬──────────────────┬───────────────────────────────┬─────────────────────────────┤
+│ Dimension       │ Geometric Model  │ Semantic Definition           │ Canonical Examples          │
+├─────────────────┼──────────────────┼───────────────────────────────┼─────────────────────────────┤
+│ 1D: Scalar      │ Point (•)        │ 1 Question = 1 Atomic Value   │ Text, Age, Phone, GPS,      │
+│                 │                  │                               │ Yes/No, Currency, Rating    │
+├─────────────────┼──────────────────┼───────────────────────────────┼─────────────────────────────┤
+│ 2D: Vector      │ Line (───)       │ Multiple Rows × 1 Attribute   │ Q9 Marketing share pills,   │
+│                 │                  │ (Single-column breakdown)     │ Q4 Demographics counters    │
+├─────────────────┼──────────────────┼───────────────────────────────┼─────────────────────────────┤
+│ 3D: Matrix      │ Grid (■)         │ Multiple Rows × Multi-Columns │ Q13 Seasonal Turnover       │
+│                 │                  │ (Entity × Metrics)            │ [Season] × [Mo, Sales, Pfit]│
+├─────────────────┼──────────────────┼───────────────────────────────┼─────────────────────────────┤
+│ 4D: Tensor /    │ Cuboid (🧊)      │ Instance × Rows × Columns     │ Q13 Multi-Year Turnover     │
+│ Nested Matrix   │                  │ (Table inside Table / Matrix) │ [2024|2025|2026] × [Season] │
+└─────────────────┴──────────────────┴───────────────────────────────┴─────────────────────────────┘
+```
+
+#### 1. 1D Inputs — Scalar / Single-Value Field
+- **Component**: `QuestionCard.vue`
+- **Data Shape**: `responses[question_code] = scalar_value`
+- **Semantics**: Captures an atomic fact about the respondent or environment.
+- **Controls**: Standard text inputs, number fields, select dropdowns, search comboboxes, switches, ratings, range sliders, and single geolocation fixes.
+
+#### 2. 2D Inputs — Vector / Single-Attribute Breakdown Table
+- **Component**: `GroupedQuestionCard.vue`
+- **Data Shape**: `responses[sub_question_code] = value`
+- **Semantics**: Evaluates a single attribute across a defined list of items or sub-questions.
+- **Key UX Invariants**:
+  - **Roving Tabindex**: Exactly **one tab stop per question row**. Tabbing moves between items (`a` -> `b` -> `c`), while <kbd>Arrow Left</kbd> and <kbd>Arrow Right</kbd> select options within the row.
+  - **Zero Horizontal Scrolling**: Options naturally wrap vertically into clean pill lists (`flex-wrap`).
+  - **Status Integrity**: Shows answered item progress (e.g. `3 / 7 filled`).
+
+#### 3. 3D Inputs — Matrix / Multi-Row × Multi-Column Grid Table
+- **Component**: `MatrixQuestionCard.vue`
+- **Data Shape**: Array of row objects `[{ [row_key]: 'peak', duration_months: 4, monthly_sales: 50000, monthly_profit: 15000 }, ...]` with normalized flat cell keys for backward-compatible relational mapping.
+- **Semantics**: Evaluates multiple distinct numeric, currency, or qualitative metrics across a set of entities.
+- **Canonical Example**: `Q13. Turnover and income from the enterprise`:
+  - **Row Axis (Entity)**: `Peak season`, `Average`, `Lean`
+  - **Column Axis (Metrics)**: `Duration in months (count)`, `Monthly sales (Rs)`, `Monthly income profit (Net profit)`
+- **Key UX Invariants**:
+  - **Desktop/Tablet Adaptive Grid**: Clean tabular view with sticky column headers and aligned inputs.
+  - **Mobile Card-Per-Row Layout**: On narrow mobile screens (<640px), each row becomes an ergonomic card with labeled metric inputs — eliminating horizontal scroll and accidental thumb slips.
+  - **Full Matrix Keyboard Navigation**: <kbd>Tab</kbd> navigates sequentially through all matrix cells; <kbd>Arrow Up</kbd>/<kbd>Down</kbd> move across rows within the same column; <kbd>Arrow Left</kbd>/<kbd>Right</kbd> move across columns.
+
+#### 4. 4D Inputs — Tensor / Multi-Instance Nested Matrix (Table-Inside-Table)
+- **Component**: `MatrixQuestionCard.vue` (with `instances` schema configuration)
+- **Data Shape**: Keyed dictionary of matrix instances `{ "Year 1": [ ... ], "Year 2": [ ... ], "Year 3": [ ... ] }` or dynamic activity lists.
+- **Semantics**: An entire 3D matrix evaluated across an outer contextual dimension (e.g. across multiple fiscal years, multiple business activities, or multiple household members).
+- **Canonical Examples**:
+  - **Multi-Year Seasonal Breakdown**: Capturing 3 years of Seasonal Turnover (`Year 1 (Current)`, `Year 2 (Last Year)`, `Year 3 (Prior Year)`) to evaluate growth trajectory before and after SHG intervention.
+  - **Multi-Activity Enterprise Matrix**: Capturing seasonal turnover independently for a woman running both a grocery shop (Trading) and a tailoring unit (Service).
+- **Key UX Invariants**:
+  - **Segmented Instance Switcher**: Sleek top pill tabs allow surveyors to toggle between instances with a single tap or <kbd>Arrow Left</kbd>/<kbd>Right</kbd>.
+  - **Independent Cell State**: Values for Year 1, Year 2, and Year 3 remain isolated, reactive, and persistent in Dexie IndexedDB.
+  - **Instance Completion Badges**: Each instance tab indicates completion status (e.g. `Year 1 ✓`, `Year 2 2/3`, `Year 3 0/3`).
+
+---
+
 ## 5. SaaS Role Governance & Raven-Style In-App Contextual Membership
 
 OmniQuery adopts a clean **Raven-style in-app membership architecture**: instead of polluting Frappe's global role namespace with dozens of granular roles, OmniQuery defines **only 3 global Frappe Roles**, while granular project permissions are governed by built-in Workspace & Project membership tables:

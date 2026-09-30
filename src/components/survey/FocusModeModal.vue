@@ -51,7 +51,19 @@
 
       <!-- Top-Aligned Question Area: Mobile Keyboard-Friendly (no jumping/squishing) -->
       <div ref="scrollAreaRef" class="max-w-2xl w-full mx-auto flex-1 pt-3 pb-3 overflow-y-auto">
+        <MatrixQuestionCard
+          v-if="isMatrixQuestion(currentQuestion)"
+          ref="questionCardRef"
+          :key="'matrix_' + (currentQuestion?.question_code || currentIndex)"
+          :question="currentQuestion"
+          :modelValue="responses[currentQuestion.question_code]"
+          :errorMessage="validationErrors[currentQuestion.question_code]"
+          @update:modelValue="onQuestionInput"
+          @answered="onQuestionAnswered"
+          @next="nextQuestion"
+        />
         <QuestionCard
+          v-else
           ref="questionCardRef"
           :key="currentQuestion?.question_code || currentIndex"
           :question="currentQuestion"
@@ -180,6 +192,23 @@
 import { computed, ref, watch, nextTick, onMounted, onUnmounted } from "vue";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
+import MatrixQuestionCard from "./MatrixQuestionCard.vue";
+
+function isMatrixQuestion(q) {
+  if (!q) return false;
+  const type = (q.field_type || "").toLowerCase();
+  const code = (q.question_code || "").toLowerCase();
+  return (
+    type === "dynamic grid" ||
+    type === "table" ||
+    type === "matrix" ||
+    code.includes("turnover") ||
+    code.includes("involvement") ||
+    code.includes("capital_sources") ||
+    Boolean(q.columns_schema_json) ||
+    Boolean(q.matrix_schema)
+  );
+}
 
 const props = defineProps({
   isOpen: {

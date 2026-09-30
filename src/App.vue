@@ -71,7 +71,7 @@
           @next="handleNextSection"
           @submit="submitForm"
         >
-          <template v-for="item in displayQuestionItems" :key="item.type === 'group' ? item.group_code : item.question.question_code">
+          <template v-for="item in displayQuestionItems" :key="item.type === 'group' ? item.group_code : (item.type === 'matrix' ? 'matrix_' + item.question.question_code : item.question.question_code)">
             <GroupedQuestionCard
               v-if="item.type === 'group'"
               :group="item"
@@ -80,6 +80,16 @@
               :notApplicable="item.questions && item.questions.every(q => !isQuestionVisible(q))"
               @update-response="onGroupResponseUpdate"
               @answered="onQuestionAnswered"
+            />
+            <MatrixQuestionCard
+              v-else-if="item.type === 'matrix'"
+              :id="'qc_' + item.question.question_code"
+              :question="item.question"
+              v-model="responses[item.question.question_code]"
+              :errorMessage="validationErrors[item.question.question_code]"
+              :notApplicable="!isQuestionVisible(item.question)"
+              @answered="onQuestionAnswered(item.question)"
+              @next="onQuestionAnswered(item.question)"
             />
             <QuestionCard
               v-else
@@ -340,6 +350,7 @@ import CompactHeader from "./components/header/CompactHeader.vue";
 import SectionCard from "./components/survey/SectionCard.vue";
 import QuestionCard from "./components/survey/QuestionCard.vue";
 import GroupedQuestionCard from "./components/survey/GroupedQuestionCard.vue";
+import MatrixQuestionCard from "./components/survey/MatrixQuestionCard.vue";
 import FocusModeModal from "./components/survey/FocusModeModal.vue";
 
 const autoAdvance = ref(true);
@@ -462,6 +473,22 @@ watch(activeTemplate, (tmpl) => {
   }
 });
 
+function isMatrixQuestion(q) {
+  if (!q) return false;
+  const type = (q.field_type || "").toLowerCase();
+  const code = (q.question_code || "").toLowerCase();
+  return (
+    type === "dynamic grid" ||
+    type === "table" ||
+    type === "matrix" ||
+    code.includes("turnover") ||
+    code.includes("involvement") ||
+    code.includes("capital_sources") ||
+    Boolean(q.columns_schema_json) ||
+    Boolean(q.matrix_schema)
+  );
+}
+
 const displayQuestionItems = computed(() => {
   const questions = activeQuestions.value || [];
   const items = [];
@@ -496,6 +523,23 @@ const displayQuestionItems = computed(() => {
         i = j;
         continue;
       }
+
+      // Standalone Dynamic Grid / Table -> Render as 3D / 4D Matrix Table
+      items.push({
+        type: "matrix",
+        question: q,
+      });
+      i++;
+      continue;
+    }
+
+    if (isMatrixQuestion(q)) {
+      items.push({
+        type: "matrix",
+        question: q,
+      });
+      i++;
+      continue;
     }
 
     const qSubMatch = label.match(/^(Q\d+)([a-z])\.\s*(.*)$/i);
