@@ -13,7 +13,7 @@
       hasGroupError
         ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 border-l-4 border-l-rose-500 shadow-xs ring-1 ring-rose-500/20'
         : isFocused
-          ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 border-l-4 border-l-[#4285F4] dark:border-l-[#4285F4] shadow-md ring-1 ring-blue-500/10'
+          ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 border-l-4 border-l-emerald-600 dark:border-l-emerald-500 shadow-md ring-1 ring-emerald-500/10'
           : isGroupCompleted
             ? 'bg-[#edf3ef] dark:bg-[#18251f] border-[#d2dfd6] dark:border-[#27382e] shadow-2xs'
             : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
@@ -56,7 +56,7 @@
         class="p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition border-l-4 scroll-mt-28"
         :class="[
           focusedQuestionCode === q.question_code
-            ? 'bg-blue-50/70 dark:bg-blue-950/40 border-l-[#4285F4] shadow-2xs'
+            ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-l-emerald-600 shadow-2xs'
             : 'border-l-transparent hover:bg-white/60 dark:hover:bg-slate-800/80'
         ]"
       >
@@ -68,7 +68,7 @@
               :class="[
                 'w-5 h-5 rounded-md text-[11px] font-mono font-bold flex items-center justify-center shrink-0 transition',
                 focusedQuestionCode === q.question_code
-                  ? 'bg-blue-600 text-white shadow-2xs'
+                  ? 'bg-emerald-600 text-white shadow-2xs'
                   : 'bg-slate-200/80 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
               ]"
             >
@@ -104,10 +104,10 @@
               @keydown="onChoiceKeydown($event, q, optIdx, getQuestionOptions(q))"
               @click="onUpdateValue(q.question_code, opt.value)"
               :class="[
-                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#4285F4] focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900',
+                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900',
                 responses[q.question_code] === opt.value
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm hover:bg-emerald-700 hover:border-emerald-700 focus:bg-emerald-700'
-                  : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600 focus:border-[#4285F4]'
+                  : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600 focus:border-emerald-500'
               ]"
             >
               {{ opt.label }}

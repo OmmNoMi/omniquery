@@ -34,7 +34,7 @@
 
     <!-- Fixed Native Mobile Bottom Action Bar (Soft Grayish Sage Green): Tab sequence is Next (primary) -> Mode -> Previous -->
     <div class="fixed bottom-0 inset-x-0 z-50 bg-[#d0ded3] dark:bg-[#142019] border-t border-[#b8cdbf] dark:border-[#1f3026] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 sm:px-4 py-2.5 pb-safe">
-      <div class="max-w-2xl mx-auto flex items-center justify-between gap-2">
+      <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
         <!-- 1st in DOM (Focus 1): Next / Submit Page Controls (Visual: Right) -->
         <div class="order-3">
           <button
@@ -58,7 +58,7 @@
         </div>
 
         <!-- 2nd in DOM (Focus 2): Center: Mode Dropdown Menu (Visual: Center) -->
-        <div class="order-2 relative" ref="modeMenuRef">
+        <div v-if="!isGuest" class="order-2 relative" ref="modeMenuRef">
           <button
             type="button"
             @click.stop="isModeMenuOpen = !isModeMenuOpen"
@@ -177,6 +177,9 @@
             </button>
           </div>
         </div>
+        <div v-else class="order-2 text-xs font-bold text-slate-700 dark:text-slate-300 select-none px-3.5 py-1.5 rounded-xl bg-[#e6efe8] dark:bg-[#1c2c22] border border-[#b8cdbf] dark:border-[#2a4033] shadow-2xs">
+          <span>{{ currentIndex + 1 }} / {{ totalSections }}</span>
+        </div>
 
         <!-- 3rd in DOM (Focus 3): Previous Page Button (Visual: Left) -->
         <button
@@ -236,6 +239,10 @@ const props = defineProps({
     default: false,
   },
   isFocusMode: {
+    type: Boolean,
+    default: false,
+  },
+  isGuest: {
     type: Boolean,
     default: false,
   },

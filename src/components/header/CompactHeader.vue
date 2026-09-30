@@ -39,9 +39,9 @@
           <span class="text-[11px] font-mono font-black text-emerald-700 dark:text-emerald-300">{{ progressPercent }}%</span>
         </div>
 
-        <!-- Pending WAL Queue Offline Badge Pill (⚡ N) -->
+        <!-- Pending WAL Queue Offline Badge Pill (⚡ N, only for logged-in surveyors) -->
         <button
-          v-if="pendingWALCount > 0"
+          v-if="!isGuest && pendingWALCount > 0"
           type="button"
           @click="$emit('open-wal')"
           class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#fffbeb] dark:bg-amber-950/70 border border-amber-300 dark:border-amber-600 text-amber-900 dark:text-amber-200 flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition select-none hover:bg-amber-100 dark:hover:bg-amber-900/60"
@@ -52,9 +52,9 @@
           <span class="font-bold text-xs leading-none text-amber-900 dark:text-amber-200">{{ pendingWALCount }}</span>
         </button>
 
-        <!-- Chip 2: Google Meet-style Microphone Mute / Unmute Button with Red Recording Dot -->
+        <!-- Chip 2: Microphone Recording Button (only for logged-in surveyors) -->
         <button
-          v-if="showBack"
+          v-if="showBack && !isGuest"
           type="button"
           @click="$emit('toggle-audio')"
           class="relative w-8 h-8 rounded-full flex items-center justify-center transition active:scale-95 shadow-2xs cursor-pointer"
@@ -80,7 +80,7 @@
             <line x1="12" y1="19" x2="12" y2="23"></line>
             <line x1="8" y1="23" x2="16" y2="23"></line>
           </svg>
-          <!-- Mic Muted Icon (with diagonal slash, Google Meet style) -->
+          <!-- Mic Muted Icon -->
           <svg
             v-else
             class="w-4 h-4 text-rose-600 dark:text-rose-400"
@@ -96,7 +96,7 @@
             <line x1="8" y1="23" x2="16" y2="23"></line>
           </svg>
 
-          <!-- Red Recording Dot (live pulsing dot in bottom-right corner just like user avatar's green dot!) -->
+          <!-- Red Recording Dot -->
           <span
             v-if="isRecording && !isAudioPaused"
             class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#d0ded3] dark:border-[#142019] bg-rose-600 animate-pulse"
@@ -109,8 +109,20 @@
           />
         </button>
 
-        <!-- User Avatar Icon with Live Green Dot -->
+        <!-- Guest Login Button -->
+        <a
+          v-if="isGuest"
+          href="/login?redirect-to=/omniquery"
+          class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition active:scale-95 no-underline"
+          :title="__('Sign in with your OmniQuery surveyor or admin account')"
+        >
+          <span>🔑</span>
+          <span>{{ __('Login') }}</span>
+        </a>
+
+        <!-- User Avatar Icon with Live Green Dot (Logged-in surveyor only) -->
         <button
+          v-else
           type="button"
           @click="showConfigModal = true"
           class="relative w-9 h-9 rounded-full bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-black text-xs flex items-center justify-center shadow-xs ring-2 ring-[#b8cdbf] transition cursor-pointer select-none"

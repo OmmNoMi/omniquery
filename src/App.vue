@@ -19,7 +19,7 @@
     />
 
     <!-- 2. Main View Container -->
-    <main :class="['flex-1 w-full max-w-full min-w-0 mx-auto p-3 sm:p-4 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-2xl', activeSection ? 'pb-0' : 'pb-24']">
+    <main :class="['flex-1 w-full min-w-0 mx-auto p-3 sm:p-6 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-3xl', activeSection ? 'pb-0' : 'pb-24']">
       <!-- Loading State with Branded OmniQuery Logo & Spinner -->
       <div v-if="isLoading" class="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center select-none">
         <div class="relative mb-3">
@@ -139,6 +139,7 @@
           :isFocusMode="isFocusMode"
           :isRecording="isRecording"
           :isAudioPaused="isAudioPaused"
+          :isGuest="isGuest"
           @open-focus-mode="openFocusMode"
           @toggle-focus-mode="toggleFocusMode"
           @toggle-auto-advance="autoAdvance = !autoAdvance"
@@ -423,16 +424,19 @@
       @close="showExitDialog = false"
     >
       <div class="p-6 text-center space-y-4">
-        <div class="w-13 h-13 rounded-2xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 mx-auto flex items-center justify-center text-2xl shadow-xs">
-          ⚠️
+        <div
+          class="w-13 h-13 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-xs"
+          :class="isGuest ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400'"
+        >
+          {{ isGuest ? '🔑' : '⚠️' }}
         </div>
 
         <div class="space-y-1">
           <h3 class="text-base font-extrabold text-slate-900 dark:text-white">
-            {{ __('Exit Survey?') }}
+            {{ isGuest ? __('Go to Login?') : __('Exit Survey?') }}
           </h3>
           <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            {{ __('Your responses are saved in offline drafts. Return to the survey list?') }}
+            {{ isGuest ? __('Sign in with your OmniQuery account for full surveyor and management access.') : __('Your responses are saved in offline drafts. Return to the survey list?') }}
           </p>
         </div>
 
@@ -442,14 +446,15 @@
             @click="showExitDialog = false"
             class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer"
           >
-            {{ __('Stay') }}
+            {{ isGuest ? __('Stay Here') : __('Stay') }}
           </button>
           <button
             type="button"
             @click="confirmExit"
-            class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer"
+            :class="isGuest ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'"
+            class="w-full py-2.5 rounded-xl text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer"
           >
-            {{ __('Exit') }}
+            {{ isGuest ? __('Login') : __('Exit') }}
           </button>
         </div>
       </div>
@@ -959,7 +964,9 @@ function onFocusModeFinishSection() {
 }
 
 function onExit() {
-  if (activeTemplate.value) {
+  if (isGuest.value) {
+    showExitDialog.value = true;
+  } else if (activeTemplate.value) {
     showExitDialog.value = true;
   } else if (activeProjectId.value) {
     closeProjectPage();
@@ -969,7 +976,9 @@ function onExit() {
 }
 
 function onHome() {
-  if (activeTemplate.value) {
+  if (isGuest.value) {
+    showExitDialog.value = true;
+  } else if (activeTemplate.value) {
     showExitDialog.value = true;
   } else {
     goHome();
@@ -978,6 +987,10 @@ function onHome() {
 
 function confirmExit() {
   showExitDialog.value = false;
+  if (isGuest.value) {
+    window.location.href = "/login?redirect-to=/omniquery";
+    return;
+  }
   goHome();
 }
 
@@ -1062,7 +1075,7 @@ async function onDiscardDraft(templateName) {
 
 async function goHome() {
   if (isGuest.value) {
-    resetSurvey();
+    window.location.href = "/login?redirect-to=/omniquery";
     return;
   }
   if (!isSubmitted.value && activeTemplate.value) {

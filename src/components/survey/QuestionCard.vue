@@ -22,7 +22,7 @@
         : errorMessage
           ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 border-l-4 border-l-rose-500 shadow-xs ring-1 ring-rose-500/20'
           : isFocused
-            ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 border-l-4 border-l-[#4285F4] dark:border-l-[#4285F4] shadow-md ring-1 ring-blue-500/10'
+            ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 border-l-4 border-l-emerald-600 dark:border-l-emerald-500 shadow-md ring-1 ring-emerald-500/10'
             : isCompleted
               ? 'bg-[#edf3ef] dark:bg-[#18251f] border-[#d2dfd6] dark:border-[#27382e] shadow-2xs'
               : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
@@ -138,7 +138,7 @@
                 @keydown.esc.prevent.stop="onSearchInputEsc"
                 @keydown.enter.prevent="onSearchInputEnter"
                 @keydown.down.prevent="focusFirstOption"
-                class="w-full text-xs sm:text-sm pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-[#4285F4]/20 focus:border-[#4285F4] transition shadow-2xs"
+                class="w-full text-xs sm:text-sm pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition shadow-2xs"
               />
               <button
                 v-if="gridSearchQuery"
@@ -178,12 +178,12 @@
               @keydown.space.prevent="onOptionSpace(option.value)"
               @keydown="onOptionKeydown($event, index)"
               :class="[
-                'w-full text-left p-3 sm:p-3.5 rounded-2xl border-2 transition-all flex items-center group active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#4285F4] cursor-pointer shadow-2xs gap-3',
+                'w-full text-left p-3 sm:p-3.5 rounded-xl border transition-all flex items-center group active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer shadow-2xs gap-3',
                 isOptionSelected(option.value)
                   ? (isMultiSelect
-                      ? 'bg-blue-50 dark:bg-blue-950/50 border-blue-600 text-blue-950 dark:text-blue-100 font-bold'
-                      : 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-500/30 font-black')
-                  : 'bg-slate-50/90 dark:bg-slate-800/90 border-slate-300/80 dark:border-slate-700 text-slate-900 dark:text-slate-100 hover:border-blue-400 hover:bg-blue-50/30'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-600 text-emerald-950 dark:text-emerald-100 font-bold ring-1 ring-emerald-500/30'
+                      : 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-500/30 font-bold')
+                  : 'bg-slate-50/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 hover:border-emerald-400 hover:bg-emerald-50/30'
               ]"
             >
               <!-- Left: Shape Indicator with Keyboard Hint (1, 2, 3...) INSIDE -->
@@ -193,8 +193,8 @@
                 :class="[
                   'w-6 h-6 rounded-[4px] border-2 flex items-center justify-center text-[11px] font-mono font-bold transition shrink-0',
                   isOptionSelected(option.value)
-                    ? 'bg-blue-600 border-blue-600 text-white'
-                    : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-blue-400 group-hover:text-blue-600'
+                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                    : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-emerald-400 group-hover:text-emerald-600'
                 ]"
               >
                 <span v-if="isOptionSelected(option.value)">✓</span>
@@ -208,7 +208,7 @@
                   'w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] font-mono font-bold transition shrink-0',
                   isOptionSelected(option.value)
                     ? 'border-white bg-white/20 text-white'
-                    : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-blue-400 group-hover:text-blue-600'
+                    : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-emerald-400 group-hover:text-emerald-600'
                 ]"
               >
                 <span v-if="isOptionSelected(option.value)" class="w-2 h-2 rounded-full bg-white"></span>
@@ -308,13 +308,8 @@
       {{ __(errorMessage) }}
     </p>
 
-    <!-- Card Footer: Left = Input Type Badge, Right = Answered Badge -->
-    <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
-      <!-- Input Type Badge (Bottom-Left) -->
-      <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 shrink-0">
-        {{ inputTypeLabel }}
-      </span>
-
+    <!-- Card Footer: Status Badge (Right) -->
+    <div v-if="notApplicable || (isCompleted && !isInputFocused)" class="flex items-center justify-end mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
       <!-- Status Badge (Bottom-Right) -->
       <div class="min-h-[22px] flex items-center">
         <!-- Not Applicable Badge -->
