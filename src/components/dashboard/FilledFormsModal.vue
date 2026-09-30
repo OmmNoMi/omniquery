@@ -5,13 +5,13 @@
       class="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 h-screen w-screen flex flex-col overflow-hidden animate-fade-in select-none overscroll-contain"
       @wheel.stop
     >
-      <!-- 1. Full-Page Top App Bar (Replaces cramped bottom sheet) -->
+      <!-- 1. Full-Page Top App Bar -->
       <header class="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-xs">
-        <div class="flex items-center gap-2.5 min-w-0">
+        <div class="flex items-center gap-3 min-w-0">
           <button
             type="button"
             @click="$emit('close')"
-            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-extrabold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0 shadow-2xs"
+            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
             :title="__('Return to Dashboard')"
           >
             <span>←</span>
@@ -19,30 +19,28 @@
           </button>
 
           <div class="min-w-0">
-            <h1 class="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate flex items-center gap-1.5">
-              <span>📋</span>
-              <span>{{ __('Field Data Recovery & Submissions') }}</span>
+            <h1 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+              {{ __('Saved Responses & Drafts') }}
             </h1>
             <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              {{ responsesList.length }} {{ __('total records stored on device (Queue, Drafts & Synced)') }}
+              {{ responsesList.length }} {{ __('records stored on this device') }}
             </p>
           </div>
         </div>
 
         <div class="flex items-center gap-2 shrink-0">
           <span
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border select-none"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border select-none"
             :class="isOnline ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300' : 'bg-amber-50 dark:bg-amber-950/60 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300'"
           >
-            <span class="w-2 h-2 rounded-full" :class="isOnline ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'" />
-            <span class="hidden sm:inline">{{ isOnline ? __('Online (Auto-Sync Active)') : __('Offline Mode') }}</span>
-            <span class="sm:hidden">{{ isOnline ? __('Online') : __('Offline') }}</span>
+            <span class="w-2 h-2 rounded-full" :class="isOnline ? 'bg-emerald-500' : 'bg-amber-500'" />
+            <span class="text-xs">{{ isOnline ? __('Online') : __('Offline') }}</span>
           </span>
 
           <button
             type="button"
             @click="$emit('close')"
-            class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-sm transition cursor-pointer"
+            class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center font-bold text-sm transition cursor-pointer"
             :title="__('Close')"
           >
             ✕
@@ -68,159 +66,120 @@
         </button>
       </div>
 
-      <!-- 3. Primary Data Action & Emergency Recovery Toolbar -->
-      <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 shrink-0 shadow-2xs space-y-3">
-        <div class="flex items-center justify-between gap-3 flex-wrap">
-          <!-- Counter Badges -->
-          <div class="flex items-center gap-1.5 text-xs font-bold flex-wrap">
-            <span
-              v-if="queuedCount > 0"
-              class="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-800 flex items-center gap-1 shadow-2xs"
-            >
-              <span>⚡</span>
-              <span>{{ queuedCount }} {{ __('In Queue') }}</span>
-            </span>
-            <span
-              v-if="quarantinedCount > 0"
-              class="px-2.5 py-1 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-900 dark:text-rose-200 border border-rose-300 dark:border-rose-800 flex items-center gap-1 shadow-2xs font-extrabold"
-            >
-              <span>⚠️</span>
-              <span>{{ quarantinedCount }} {{ __('Needs Review') }}</span>
-            </span>
-            <span
-              v-if="draftsCount > 0"
-              class="px-2.5 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-900 dark:text-blue-200 border border-blue-300 dark:border-blue-800 flex items-center gap-1 shadow-2xs"
-            >
-              <span>📝</span>
-              <span>{{ draftsCount }} {{ __('Drafts') }}</span>
-            </span>
-            <span class="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              {{ syncedCount }} {{ __('Synced') }}
-            </span>
-          </div>
-
-          <!-- Action Buttons Bar -->
-          <div class="flex items-center gap-2 flex-wrap">
-            <!-- ⚡ Force Sync All Button -->
-            <button
-              type="button"
-              @click="handleForceSync"
-              :disabled="isSyncingLocal || !isOnline"
-              class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-black transition flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
-              :title="__('Push all queued submissions and drafts to the server immediately')"
-            >
-              <span v-if="isSyncingLocal" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
-              <span v-else>⚡</span>
-              <span>{{ isSyncingLocal ? __('Syncing...') : __('Force Sync All') }}</span>
-            </button>
-
-            <!-- 📦 Export Full ZIP Backup (The requested ZIP export!) -->
-            <button
-              type="button"
-              @click="exportToZip"
-              :disabled="isExportingZip || responsesList.length === 0"
-              class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:scale-95 text-white text-xs font-black transition flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-40"
-              :title="__('Download complete ZIP archive containing individual survey JSONs, summary CSV, and full manifest')"
-            >
-              <span v-if="isExportingZip" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
-              <span v-else>📦</span>
-              <span>{{ isExportingZip ? __('Compressing...') : __('Export ZIP') }}</span>
-            </button>
-
-            <!-- 📥 Export JSON -->
-            <button
-              type="button"
-              @click="exportToJson"
-              :disabled="responsesList.length === 0"
-              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 active:scale-95 text-slate-800 dark:text-slate-100 text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer disabled:opacity-40"
-              :title="__('Download complete raw JSON database backup')"
-            >
-              <span>📥</span>
-              <span>{{ __('JSON Backup') }}</span>
-            </button>
-
-            <!-- 📊 Export CSV -->
-            <button
-              type="button"
-              @click="exportToCsv"
-              :disabled="responsesList.length === 0"
-              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 active:scale-95 text-slate-800 dark:text-slate-100 text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer disabled:opacity-40"
-              :title="__('Download CSV spreadsheet format')"
-            >
-              <span>📊</span>
-              <span>{{ __('CSV Export') }}</span>
-            </button>
-
-            <!-- 📋 Copy Full Backup -->
-            <button
-              type="button"
-              @click="copyFullBackupJson"
-              :disabled="responsesList.length === 0"
-              class="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700 active:scale-95 text-slate-800 dark:text-slate-100 text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer disabled:opacity-40"
-              :title="__('Copy complete backup JSON to clipboard for emergency messaging')"
-            >
-              <span>📋</span>
-              <span>{{ hasCopiedAll ? '✓ ' + __('Copied All') : __('Copy All') }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Filter Tabs Row -->
-        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pt-1 text-xs font-bold">
+      <!-- 3. Clean, Single-Row Toolbar (No Duplicate Badges, Compact Export Dropdown) -->
+      <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 sm:px-6 shrink-0 flex items-center justify-between gap-3 flex-wrap">
+        <!-- Clean Filter Tabs -->
+        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs font-semibold py-0.5">
           <button
             type="button"
             @click="activeFilter = 'all'"
-            class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
-            :class="activeFilter === 'all' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'"
+            class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
+            :class="activeFilter === 'all' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'"
           >
-            {{ __('All Records') }} ({{ responsesList.length }})
+            {{ __('All') }} ({{ responsesList.length }})
           </button>
           <button
+            v-if="draftsCount > 0"
             type="button"
-            @click="activeFilter = 'today'"
-            class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1"
-            :class="activeFilter === 'today' ? 'bg-emerald-700 text-white shadow-xs' : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100'"
+            @click="activeFilter = 'drafts'"
+            class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
+            :class="activeFilter === 'drafts' ? 'bg-blue-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'"
           >
-            <span>📅</span>
-            <span>{{ __('Today') }} ({{ todayCount }})</span>
+            {{ __('Drafts') }} ({{ draftsCount }})
           </button>
           <button
+            v-if="queuedCount > 0"
             type="button"
             @click="activeFilter = 'queue'"
-            class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1"
-            :class="activeFilter === 'queue' ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 hover:bg-amber-100'"
+            class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
+            :class="activeFilter === 'queue' ? 'bg-amber-600 text-white font-bold shadow-xs' : 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 hover:bg-amber-100'"
           >
-            <span>⚡</span>
-            <span>{{ __('In Queue') }} ({{ queuedCount }})</span>
+            {{ __('In Queue') }} ({{ queuedCount }})
           </button>
           <button
             v-if="quarantinedCount > 0"
             type="button"
             @click="activeFilter = 'quarantined'"
-            class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1"
-            :class="activeFilter === 'quarantined' ? 'bg-rose-600 text-white shadow-xs' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 hover:bg-rose-100'"
+            class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
+            :class="activeFilter === 'quarantined' ? 'bg-rose-600 text-white font-bold shadow-xs' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 hover:bg-rose-100'"
           >
-            <span>⚠️</span>
-            <span>{{ __('Needs Review') }} ({{ quarantinedCount }})</span>
+            {{ __('Needs Review') }} ({{ quarantinedCount }})
           </button>
           <button
-            type="button"
-            @click="activeFilter = 'drafts'"
-            class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1"
-            :class="activeFilter === 'drafts' ? 'bg-blue-600 text-white shadow-xs' : 'bg-blue-50 dark:bg-blue-950/60 text-blue-900 dark:text-blue-200 hover:bg-blue-100'"
-          >
-            <span>📝</span>
-            <span>{{ __('Drafts') }} ({{ draftsCount }})</span>
-          </button>
-          <button
+            v-if="syncedCount > 0"
             type="button"
             @click="activeFilter = 'synced'"
-            class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1"
-            :class="activeFilter === 'synced' ? 'bg-emerald-600 text-white shadow-xs' : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100'"
+            class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
+            :class="activeFilter === 'synced' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'"
           >
-            <span>🟢</span>
-            <span>{{ __('Synced') }} ({{ syncedCount }})</span>
+            {{ __('Synced') }} ({{ syncedCount }})
           </button>
+        </div>
+
+        <!-- Clean Action Controls -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            v-if="queuedCount > 0"
+            type="button"
+            @click="handleForceSync"
+            :disabled="isSyncingLocal || !isOnline"
+            class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
+          >
+            <span v-if="isSyncingLocal" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
+            <span v-else>⚡</span>
+            <span>{{ isSyncingLocal ? __('Syncing...') : __('Sync Queue') }}</span>
+          </button>
+
+          <!-- Consolidated Export Dropdown -->
+          <div class="relative">
+            <button
+              type="button"
+              @click.stop="isExportMenuOpen = !isExportMenuOpen"
+              class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer select-none active:scale-95"
+            >
+              <span>{{ __('Export') }}</span>
+              <span class="text-[10px] text-slate-400">▾</span>
+            </button>
+
+            <div
+              v-if="isExportMenuOpen"
+              @click.stop
+              class="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-1.5 space-y-1 z-50 text-xs font-semibold animate-fade-in"
+            >
+              <button
+                type="button"
+                @click="exportToZip(); isExportMenuOpen = false"
+                :disabled="isExportingZip || responsesList.length === 0"
+                class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer disabled:opacity-40"
+              >
+                <span>{{ isExportingZip ? __('Compressing...') : __('ZIP Archive') }}</span>
+              </button>
+              <button
+                type="button"
+                @click="exportToCsv(); isExportMenuOpen = false"
+                :disabled="responsesList.length === 0"
+                class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer disabled:opacity-40"
+              >
+                <span>{{ __('Spreadsheet (CSV)') }}</span>
+              </button>
+              <button
+                type="button"
+                @click="exportToJson(); isExportMenuOpen = false"
+                :disabled="responsesList.length === 0"
+                class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer disabled:opacity-40"
+              >
+                <span>{{ __('JSON Backup') }}</span>
+              </button>
+              <button
+                type="button"
+                @click="copyFullBackupJson(); isExportMenuOpen = false"
+                :disabled="responsesList.length === 0"
+                class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer border-t border-slate-100 dark:border-slate-800 pt-2 disabled:opacity-40 text-emerald-700 dark:text-emerald-400"
+              >
+                <span>{{ hasCopiedAll ? __('Copied!') : __('Copy All JSON') }}</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -256,37 +215,34 @@
               <!-- Top Row: Survey Code, Status Pill & Time -->
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <div class="flex items-center gap-2">
-                  <code class="font-mono text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700">
-                    {{ resp.response_uid }}
-                  </code>
-                  <button
-                    type="button"
+                  <span
                     @click="copyCode(resp.response_uid)"
-                    class="text-xs text-slate-400 hover:text-emerald-600 active:scale-95 transition"
-                    :title="__('Copy Response Code')"
+                    class="font-mono text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-emerald-400 transition"
+                    :title="__('Click to copy code')"
                   >
-                    {{ copiedCode === resp.response_uid ? '✓' : '📋' }}
-                  </button>
+                    {{ resp.response_uid }}
+                    <span v-if="copiedCode === resp.response_uid" class="text-[10px] text-emerald-600 font-bold ml-1">✓</span>
+                  </span>
                 </div>
 
                 <div class="flex items-center gap-2">
-                  <!-- Status Badge -->
+                  <!-- Status Badge (Clean, No Loud Icons) -->
                   <span
-                    class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shadow-2xs"
+                    class="px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wider"
                     :class="[
                       resp.status === 'Draft'
-                        ? 'bg-blue-50 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-300 dark:border-blue-800'
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-800'
                         : resp.is_quarantined || resp.wal_status === 'quarantined'
-                          ? 'bg-rose-50 text-rose-900 dark:bg-rose-950 dark:text-rose-200 border border-rose-300 dark:border-rose-700'
+                          ? 'bg-rose-50 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
                           : resp.is_in_queue || !resp.synced
-                            ? 'bg-amber-50 text-amber-900 dark:bg-amber-950 dark:text-amber-200 border border-amber-300 dark:border-amber-700'
-                            : 'bg-emerald-50 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                            ? 'bg-amber-50 text-amber-800 dark:bg-amber-950 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                            : 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                     ]"
                   >
-                    <span v-if="resp.status === 'Draft'">📝 {{ __('Draft') }} ({{ resp.progress_percent || 0 }}%)</span>
-                    <span v-else-if="resp.is_quarantined || resp.wal_status === 'quarantined'">⚠️ {{ __('Needs Review') }}</span>
-                    <span v-else-if="resp.is_in_queue || !resp.synced">⚡ {{ __('In Queue') }}</span>
-                    <span v-else>🟢 {{ __('Synced') }}</span>
+                    <span v-if="resp.status === 'Draft'">{{ __('Draft') }} ({{ resp.progress_percent || 0 }}%)</span>
+                    <span v-else-if="resp.is_quarantined || resp.wal_status === 'quarantined'">{{ __('Needs Review') }}</span>
+                    <span v-else-if="resp.is_in_queue || !resp.synced">{{ __('In Queue') }}</span>
+                    <span v-else>{{ __('Synced') }}</span>
                   </span>
                   <span class="text-xs font-mono text-slate-400">
                     {{ formatTime(resp.updated_at || resp.created_at) }}
@@ -296,11 +252,11 @@
 
               <!-- Middle Row: Template Name & Dynamic Response Title -->
               <div class="space-y-0.5 min-w-0">
-                <h4 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug break-words">
+                <h4 class="text-sm sm:text-base font-bold text-slate-900 dark:text-white leading-snug break-words">
                   {{ resolveResponseTitle(resp.responses, resp.response_title_format, resp.template_title || resp.template_name) }}
                 </h4>
-                <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap min-w-0">
-                  <span class="truncate">📋 {{ resp.template_title || resp.template_name }}</span>
+                <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap min-w-0">
+                  <span class="truncate">{{ resp.template_title || resp.template_name }}</span>
                   <span>·</span>
                   <span>{{ resp.answerCount }} {{ __('answers recorded') }}</span>
                   <span v-if="resp.wal_attempts && resp.wal_attempts > 0" class="text-amber-600 font-medium">
@@ -309,11 +265,10 @@
                 </div>
               </div>
 
-              <!-- Quarantined / Needs Review Action Bar -->
+              <!-- Quarantined / Needs Review Alert Box -->
               <div v-if="resp.is_quarantined || resp.wal_status === 'quarantined'" class="p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-900 dark:text-rose-200 space-y-2">
                 <div class="flex items-center justify-between">
-                  <div class="font-extrabold flex items-center gap-1.5">
-                    <span>⚠️</span>
+                  <div class="font-bold flex items-center gap-1.5">
                     <span>{{ __('Quarantined (Needs Review)') }}</span>
                   </div>
                   <span class="text-[11px] font-mono text-rose-700 dark:text-rose-400 font-bold">
@@ -330,55 +285,57 @@
                     :disabled="!isOnline"
                     class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs"
                   >
-                    <span>⚡</span>
                     <span>{{ __('Retry Sync') }}</span>
                   </button>
                 </div>
               </div>
 
-              <!-- Draft Direct Action Bar -->
-              <div v-if="resp.status === 'Draft'" class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2 min-w-0">
-                <button
-                  type="button"
-                  @click="resumeSpecificDraft(resp.template_name, resp.response_uid)"
-                  class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
-                >
-                  <span>▶</span>
-                  <span>{{ __('Resume This Draft') }}</span>
-                  <span>→</span>
-                </button>
-                <button
-                  type="button"
-                  @click="deleteSpecificDraft(resp.response_uid)"
-                  class="px-2.5 py-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1"
-                  :title="__('Discard draft')"
-                >
-                  <span>🗑️</span>
-                  <span>{{ __('Discard') }}</span>
-                </button>
-              </div>
+              <!-- Unified Single Footer Action Bar (Zero Redundancy) -->
+              <div class="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap min-w-0">
+                <div class="flex items-center gap-2">
+                  <!-- Draft: Resume button -->
+                  <button
+                    v-if="resp.status === 'Draft'"
+                    type="button"
+                    @click="resumeSpecificDraft(resp.template_name, resp.response_uid)"
+                    class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs active:scale-95 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>{{ __('Resume Draft') }}</span>
+                    <span>→</span>
+                  </button>
 
-              <!-- Bottom Row: Verification & Recovery Actions -->
-              <div class="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
-                <div class="flex items-center gap-3">
+                  <!-- View Answers (Primary for submitted, secondary for drafts) -->
                   <button
                     type="button"
                     @click="inspectResponse(resp)"
-                    class="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer"
+                    class="px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer"
+                    :class="resp.status === 'Draft' ? 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs font-bold'"
                   >
-                    <span>🔍</span>
-                    <span>{{ __('Cross-Verify Answers') }}</span>
+                    {{ __('View Answers') }}
                   </button>
                 </div>
 
                 <div class="flex items-center gap-2">
+                  <!-- Draft: Discard Option -->
                   <button
+                    v-if="resp.status === 'Draft'"
+                    type="button"
+                    @click="deleteSpecificDraft(resp.response_uid)"
+                    class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-rose-600 text-xs font-medium transition cursor-pointer"
+                    :title="__('Discard draft')"
+                  >
+                    {{ __('Discard') }}
+                  </button>
+
+                  <!-- Submitted: Subtle Copy JSON -->
+                  <button
+                    v-else
                     type="button"
                     @click="copyResponseJson(resp)"
-                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 transition cursor-pointer"
-                    :title="__('Copy raw response JSON to clipboard')"
+                    class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition cursor-pointer font-medium"
+                    :title="__('Copy raw JSON to clipboard')"
                   >
-                    {{ copiedJsonId === resp.response_uid ? '✓ ' + __('Copied JSON') : '📋 ' + __('Copy JSON') }}
+                    {{ copiedJsonId === resp.response_uid ? __('Copied') : __('Copy JSON') }}
                   </button>
                 </div>
               </div>
@@ -478,6 +435,7 @@ const copiedJsonId = ref("");
 const hasCopiedAll = ref(false);
 const isSyncingLocal = ref(false);
 const isExportingZip = ref(false);
+const isExportMenuOpen = ref(false);
 const syncFeedbackMessage = ref("");
 const selectedInspectResponse = ref(null);
 
