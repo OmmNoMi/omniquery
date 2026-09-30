@@ -326,30 +326,45 @@
     <!-- WAL Drawer / Offline Queue Modal -->
     <div
       v-if="showWALDrawer"
-      class="fixed inset-0 z-50 bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      class="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
+      @click.self="showWALDrawer = false"
     >
-      <div class="bg-white w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl p-6 shadow-2xl space-y-4">
+      <div class="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 border border-slate-200 dark:border-slate-800">
         <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-slate-900">{{ __('WAL Queue') }}</h3>
-          <button @click="showWALDrawer = false" class="text-slate-400 hover:text-slate-600 font-bold p-1">✕</button>
+          <div class="flex items-center gap-2">
+            <span class="text-xl">⚡</span>
+            <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">{{ __('Offline Sync Queue') }}</h3>
+          </div>
+          <button @click="showWALDrawer = false" class="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 font-bold flex items-center justify-center text-xs">✕</button>
         </div>
-        <p class="text-sm text-slate-600">
-          {{ pendingWALCount }} {{ __('Pending') }} {{ __('Survey Responses') }}
-        </p>
-        <div class="flex justify-end gap-2 pt-2">
+
+        <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+          <div class="font-extrabold flex items-center justify-between">
+            <span>{{ pendingWALCount }} {{ __('Pending Submissions In Device Memory') }}</span>
+          </div>
+          <p class="text-[11px] text-amber-800/80 dark:text-amber-300">
+            {{ __('These records are saved safely in local offline storage. When connected, tap Force Sync All to push to the server.') }}
+          </p>
+        </div>
+
+        <div class="space-y-2 pt-1">
           <button
             type="button"
             @click="triggerSync"
-            class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition"
+            :disabled="!isOnline"
+            class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
-            {{ __('Sync Now') }}
+            <span>⚡</span>
+            <span>{{ __('Force Sync All Now') }}</span>
           </button>
+
           <button
             type="button"
-            @click="showWALDrawer = false"
-            class="px-4 py-2 rounded-xl border border-slate-200 font-bold text-slate-700 text-sm hover:bg-slate-50 active:scale-95 transition"
+            @click="showWALDrawer = false; showFilledFormsModal = true"
+            class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            {{ __('Close') }}
+            <span>📋</span>
+            <span>{{ __('Open Recovery & Verification Suite') }}</span>
           </button>
         </div>
       </div>
@@ -410,6 +425,7 @@
       :templates="availableTemplates"
       @close="showFilledFormsModal = false"
       @sync-all="triggerSync"
+      @resume-draft="selectSurvey"
     />
   </div>
 </template>
@@ -447,7 +463,7 @@ watch(showExitDialog, (isOpen) => {
 
 const { __ } = useTranslation();
 const { textSize, cycleTextSize, setTextSize } = useTextScale();
-const { isOnline, pendingWALCount, queueWAL, syncWAL } = useWAL();
+const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll } = useWAL();
 const { gpsCoords, captureGPS } = useGPS();
 const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording } = useAudioRecorder();
 
@@ -1051,8 +1067,9 @@ function resetSurvey() {
   currentDraftId.value = generateSurveyId(activeTemplate.value?.name || activeTemplate.value?.template_name || "");
 }
 
-function triggerSync() {
-  syncWAL();
+async function triggerSync() {
+  await forceSyncAll();
+  await loadActiveDrafts();
 }
 
 onMounted(() => {

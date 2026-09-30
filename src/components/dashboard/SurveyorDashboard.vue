@@ -87,14 +87,24 @@
         </div>
         <div class="flex items-center justify-between gap-1 text-[11px] text-amber-800/90 dark:text-amber-300 font-medium">
           <span class="truncate">{{ pendingWALCount === 0 ? __('All synced') : __('Pending sync') }}</span>
-          <button
-            v-if="pendingWALCount > 0"
-            type="button"
-            @click="$emit('open-wal')"
-            class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline cursor-pointer shrink-0"
-          >
-            {{ __('View') }} →
-          </button>
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button
+              v-if="pendingWALCount > 0"
+              type="button"
+              @click.stop="$emit('sync-now')"
+              class="px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shadow-2xs active:scale-95 transition cursor-pointer"
+            >
+              {{ __('Sync') }}
+            </button>
+            <button
+              v-if="pendingWALCount > 0"
+              type="button"
+              @click="$emit('open-wal')"
+              class="text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:underline cursor-pointer"
+            >
+              {{ __('View') }} →
+            </button>
+          </div>
         </div>
       </div>
 
