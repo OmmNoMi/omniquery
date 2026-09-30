@@ -139,9 +139,25 @@
     <div class="space-y-4">
       <!-- Tab 1: Surveys in this Project -->
       <div v-if="activeTab === 'surveys'" class="space-y-3">
-        <div class="flex items-center justify-between text-xs px-1 font-bold text-slate-600 dark:text-slate-300">
-          <span>{{ __('Select a survey to start collecting field data') }}</span>
-          <span class="text-slate-500">{{ projectSurveys.length }} {{ __('available') }}</span>
+        <div class="flex items-center justify-between text-xs px-1 font-bold text-slate-600 dark:text-slate-300 flex-wrap gap-2">
+          <div class="flex items-center gap-2">
+            <span>{{ __('Select a survey to start collecting field data') }}</span>
+            <span>·</span>
+            <span class="text-emerald-700 dark:text-emerald-400 font-bold">
+              {{ cachedSurveysCount }}/{{ projectSurveys.length }} {{ __('Ready Offline') }}
+            </span>
+          </div>
+
+          <!-- Download All Button for this Project -->
+          <button
+            v-if="cachedSurveysCount < projectSurveys.length && isOnline"
+            type="button"
+            @click="$emit('download-project-surveys', projectId)"
+            class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-xs transition active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-2xs"
+          >
+            <span>⬇️</span>
+            <span>{{ __('Download All for Offline') }}</span>
+          </button>
         </div>
 
         <div v-if="projectSurveys.length === 0" class="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
@@ -175,10 +191,33 @@
               </p>
             </div>
 
-            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
-              <span class="text-[11px] font-mono text-slate-400 truncate max-w-[150px]">
-                {{ s.name }}
-              </span>
+            <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+              <div class="flex items-center gap-1.5">
+                <span
+                  v-if="cachedTemplatesMap[s.name]"
+                  class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400"
+                  :title="__('Survey questions and schema downloaded in device memory')"
+                >
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span>{{ __('Offline Ready') }} ({{ cachedTemplatesMap[s.name].questionCount }} {{ __('Q') }})</span>
+                </span>
+                <button
+                  v-else-if="isOnline"
+                  type="button"
+                  @click.stop="$emit('download-survey', s.name)"
+                  class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
+                  :title="__('Pre-cache survey questions so you can fill it without internet')"
+                >
+                  <span>⬇️</span>
+                  <span>{{ __('Download for Offline') }}</span>
+                </button>
+                <span
+                  v-else
+                  class="text-[11px] font-medium text-amber-700 dark:text-amber-400"
+                >
+                  ⚠️ {{ __('Requires Internet to Download') }}
+                </span>
+              </div>
 
               <button
                 type="button"
@@ -353,17 +392,33 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  cachedTemplatesMap: {
+    type: Object,
+    default: () => ({}),
+  },
   isOnline: {
     type: Boolean,
     default: true,
   },
 });
 
-const emit = defineEmits(["back", "select-survey"]);
+const emit = defineEmits([
+  "back",
+  "select-survey",
+  "download-survey",
+  "download-project-surveys",
+]);
 
 const { __ } = useTranslation();
 const activeTab = ref("surveys");
 const remoteProjectMeta = ref(null);
+
+// Count of surveys in this project ready offline
+const cachedSurveysCount = computed(() => {
+  return projectSurveys.value.filter(
+    (s) => Boolean(props.cachedTemplatesMap && props.cachedTemplatesMap[s.name])
+  ).length;
+});
 
 // Find metadata from templates or fallback to fetched
 const projectMeta = computed(() => {

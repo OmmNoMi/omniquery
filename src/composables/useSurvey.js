@@ -19,6 +19,62 @@ export function useSurvey() {
   const activeDrafts = ref({});
 
   const allDrafts = ref([]);
+  const cachedTemplatesMap = ref({});
+
+  async function refreshCachedTemplatesMap() {
+    try {
+      const records = await db.templates.toArray();
+      const map = {};
+      for (const r of records) {
+        if (r.template_name && r.schema) {
+          const qCount = (r.schema.questions || []).length;
+          map[r.template_name] = {
+            version: r.version || r.schema.version || 1,
+            questionCount: qCount,
+            modified: r.modified || null,
+          };
+        }
+      }
+      cachedTemplatesMap.value = map;
+      return map;
+    } catch (e) {
+      cachedTemplatesMap.value = {};
+      return {};
+    }
+  }
+
+  async function downloadSurveyForOffline(surveyId) {
+    if (!surveyId) return false;
+    try {
+      const payload = await fetchRemoteSchema(surveyId);
+      if (payload) {
+        const schema = payload.schema || payload;
+        schema.template_name = schema.template_name || payload.template_name || surveyId;
+        schema.title = schema.title || payload.title || surveyId;
+        schema.response_title_format = schema.response_title_format || payload.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})";
+        await cacheTemplateLocally(surveyId, schema, payload);
+        await refreshCachedTemplatesMap();
+        return true;
+      }
+    } catch (e) {
+      console.warn("Failed to download survey for offline:", e);
+    }
+    return false;
+  }
+
+  async function downloadProjectSurveysForOffline(projectId) {
+    const list = availableTemplates.value.filter(
+      (t) => (t.project || "default") === projectId || t.project_name === projectId || projectId === "ALL"
+    );
+    if (!list.length) return 0;
+    let count = 0;
+    for (const t of list) {
+      const ok = await downloadSurveyForOffline(t.name);
+      if (ok) count++;
+    }
+    await refreshCachedTemplatesMap();
+    return count;
+  }
 
   async function loadActiveDrafts() {
     try {
@@ -150,6 +206,7 @@ export function useSurvey() {
     }
 
     await loadActiveDrafts();
+    await refreshCachedTemplatesMap();
     return availableTemplates.value;
   }
 
@@ -470,5 +527,9 @@ export function useSurvey() {
     validateCurrentSection,
     nextSection,
     prevSection,
+    cachedTemplatesMap,
+    refreshCachedTemplatesMap,
+    downloadSurveyForOffline,
+    downloadProjectSurveysForOffline,
   };
 }

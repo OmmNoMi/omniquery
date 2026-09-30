@@ -209,9 +209,12 @@
         v-else-if="activeProjectId"
         :projectId="activeProjectId"
         :templates="availableTemplates"
+        :cachedTemplatesMap="cachedTemplatesMap"
         :isOnline="isOnline"
         @back="closeProjectPage"
         @select-survey="selectSurvey"
+        @download-survey="handleDownloadSurvey"
+        @download-project-surveys="handleDownloadProjectSurveys"
       />
 
       <!-- Modern, High-Clarity Survey Catalog Hub, Project Header & Surveyor KPI Dashboard -->
@@ -219,8 +222,11 @@
         <!-- 0. Active Project Header Section with Persistent Switcher & Training Material Link -->
         <ProjectHeaderCard
           :templates="availableTemplates"
+          :cachedTemplatesMap="cachedTemplatesMap"
+          :isOnline="isOnline"
           v-model:selectedProject="selectedProject"
           @open-project-details="openProjectPage"
+          @download-project-surveys="handleDownloadProjectSurveys"
         />
 
         <!-- 1. Surveyor Daily KPI Dashboard -->
@@ -313,11 +319,35 @@
           </div>
 
           <!-- Bottom Action Row -->
-          <div class="flex items-center justify-between pt-3 border-t border-slate-100">
-            <span class="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-              {{ __('Offline Ready') }}
-            </span>
+          <div class="flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span
+                v-if="cachedTemplatesMap[tmpl.name]"
+                class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400"
+                :title="__('Survey questions and schema downloaded in device memory')"
+              >
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>{{ __('Offline Ready') }} ({{ cachedTemplatesMap[tmpl.name].questionCount }} {{ __('Q') }})</span>
+              </span>
+              <button
+                v-else-if="isOnline"
+                type="button"
+                @click.stop="handleDownloadSurvey(tmpl.name)"
+                :disabled="downloadingSurveyId === tmpl.name"
+                class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs disabled:opacity-50"
+                :title="__('Pre-cache survey questions so you can fill it without internet')"
+              >
+                <span v-if="downloadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full"></span>
+                <span v-else>⬇️</span>
+                <span>{{ downloadingSurveyId === tmpl.name ? __('Downloading...') : __('Download Offline') }}</span>
+              </button>
+              <span
+                v-else
+                class="text-[11px] font-medium text-amber-700 dark:text-amber-400"
+              >
+                ⚠️ {{ __('Requires Internet to Download') }}
+              </span>
+            </div>
             <div class="flex items-center gap-2">
               <button
                 v-if="activeDrafts[tmpl.name]"
@@ -505,10 +535,37 @@ const {
   validateCurrentSection,
   nextSection,
   prevSection,
+  cachedTemplatesMap,
+  refreshCachedTemplatesMap,
+  downloadSurveyForOffline,
+  downloadProjectSurveysForOffline,
 } = useSurvey();
 
 const isLoading = ref(true);
 const loadingSurveyId = ref("");
+const downloadingSurveyId = ref("");
+
+async function handleDownloadSurvey(surveyId) {
+  if (!surveyId) return;
+  downloadingSurveyId.value = surveyId;
+  try {
+    await downloadSurveyForOffline(surveyId);
+  } catch (e) {
+    console.warn("Failed downloading survey offline:", e);
+  } finally {
+    downloadingSurveyId.value = "";
+  }
+}
+
+async function handleDownloadProjectSurveys(projectId) {
+  if (!projectId) return;
+  try {
+    await downloadProjectSurveysForOffline(projectId);
+  } catch (e) {
+    console.warn("Failed downloading project surveys:", e);
+  }
+}
+
 const showWALDrawer = ref(false);
 const searchQuery = ref("");
 const selectedWorkspace = ref("ALL");

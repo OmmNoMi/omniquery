@@ -100,6 +100,38 @@
             </p>
           </div>
 
+          <!-- Project Surveys Count & Offline Readiness Strip -->
+          <div class="flex items-center justify-between gap-2 pt-1 text-xs flex-wrap min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="font-bold text-slate-700 dark:text-slate-300">
+                📋 {{ getProjectSurveys(proj.id).length }} {{ __('Surveys') }}
+              </span>
+              <span>·</span>
+              <span
+                v-if="isProjectFullyCached(proj.id)"
+                class="inline-flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400"
+              >
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                <span>{{ __('All Downloaded Offline') }}</span>
+              </span>
+              <span v-else class="text-slate-500 dark:text-slate-400 font-medium">
+                {{ getProjectCachedCount(proj.id) }}/{{ getProjectSurveys(proj.id).length }} {{ __('Ready Offline') }}
+              </span>
+            </div>
+
+            <!-- Download All for Offline Button -->
+            <button
+              v-if="!isProjectFullyCached(proj.id) && isOnline && getProjectSurveys(proj.id).length > 0"
+              type="button"
+              @click.stop="$emit('download-project-surveys', proj.id)"
+              class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-[11px] transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
+              :title="__('Download all survey templates for this project so they can be filled offline')"
+            >
+              <span>⬇️</span>
+              <span>{{ __('Download All for Offline') }}</span>
+            </button>
+          </div>
+
           <!-- Bottom Action Row: On-Card Interactive Switcher + Training Materials -->
           <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap min-w-0">
             <!-- Carousel Switcher Controls directly on Card -->
@@ -167,11 +199,39 @@ const props = defineProps({
     type: String,
     default: "ALL",
   },
+  cachedTemplatesMap: {
+    type: Object,
+    default: () => ({}),
+  },
+  isOnline: {
+    type: Boolean,
+    default: true,
+  },
 });
 
-const emit = defineEmits(["update:selectedProject", "open-project-details"]);
+const emit = defineEmits([
+  "update:selectedProject",
+  "open-project-details",
+  "download-project-surveys",
+]);
 
 const { __ } = useTranslation();
+
+function getProjectSurveys(projId) {
+  if (projId === "ALL") return props.templates;
+  return props.templates.filter((t) => (t.project || "default") === projId || t.project_name === projId);
+}
+
+function getProjectCachedCount(projId) {
+  const surveys = getProjectSurveys(projId);
+  return surveys.filter((t) => Boolean(props.cachedTemplatesMap && props.cachedTemplatesMap[t.name])).length;
+}
+
+function isProjectFullyCached(projId) {
+  const surveys = getProjectSurveys(projId);
+  if (!surveys.length) return false;
+  return surveys.every((t) => Boolean(props.cachedTemplatesMap && props.cachedTemplatesMap[t.name]));
+}
 
 const scrollContainerRef = ref(null);
 const activeIndex = ref(0);

@@ -206,5 +206,35 @@ describe("useSurvey", () => {
     expect(survey.activeTemplate.value).toBeDefined();
     expect(survey.activeTemplate.value.title).toBe("Offline Test Survey");
   });
+
+  it("refreshes cachedTemplatesMap and downloads surveys for offline", async () => {
+    const survey = useSurvey();
+    await db.templates.clear();
+
+    // Map should be empty initially
+    await survey.refreshCachedTemplatesMap();
+    expect(Object.keys(survey.cachedTemplatesMap.value).length).toBe(0);
+
+    // Mock fetch for get_schema
+    const mockSchema = {
+      template_name: "OQS-DL-001",
+      title: "Download Test Survey",
+      sections: [{ section_code: "sec1" }],
+      questions: [{ question_code: "q1" }, { question_code: "q2" }],
+    };
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ message: { schema: mockSchema } }),
+      })
+    );
+
+    const ok = await survey.downloadSurveyForOffline("OQS-DL-001");
+    expect(ok).toBe(true);
+    expect(survey.cachedTemplatesMap.value["OQS-DL-001"]).toBeDefined();
+    expect(survey.cachedTemplatesMap.value["OQS-DL-001"].questionCount).toBe(2);
+  });
 });
 
