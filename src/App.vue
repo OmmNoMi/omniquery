@@ -27,24 +27,63 @@
       </div>
 
       <!-- Submitted Success Card -->
-      <div v-else-if="isSubmitted" class="p-8 text-center bg-white rounded-2xl border border-emerald-200 shadow-sm space-y-4">
-        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto text-3xl font-bold shadow-xs">
+      <div v-else-if="isSubmitted" class="p-6 sm:p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 shadow-sm space-y-4">
+        <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl font-bold shadow-xs">
           ✓
         </div>
-        <h2 class="text-xl font-extrabold text-slate-900">{{ __('Survey Submitted') }}</h2>
-        <p class="text-sm text-slate-600 max-w-md mx-auto">{{ __('Response recorded successfully in offline queue.') }}</p>
+        <div>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">{{ __('Survey Submitted') }}</h2>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mt-1">
+            {{ __('Response recorded successfully in offline queue.') }}
+          </p>
+        </div>
+
+        <!-- Survey Response Code / Reference ID Card -->
+        <div class="max-w-md mx-auto p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-left space-y-2.5 shadow-2xs">
+          <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
+            <span class="uppercase tracking-wider font-bold text-[10px] text-slate-400 dark:text-slate-500">
+              {{ __('Survey Response Code') }}
+            </span>
+            <button
+              v-if="submittedResponseId"
+              type="button"
+              @click="copyResponseCode"
+              class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline cursor-pointer active:scale-95 transition"
+            >
+              <span>{{ hasCopiedCode ? '✓ ' + __('Copied') : '📋 ' + __('Copy Code') }}</span>
+            </button>
+          </div>
+
+          <div class="flex items-center justify-between gap-2 bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700">
+            <code class="font-mono text-xs sm:text-sm font-extrabold text-emerald-700 dark:text-emerald-400 select-all tracking-tight break-all">
+              {{ submittedResponseId || __('Generating...') }}
+            </code>
+            <span
+              class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0"
+              :class="isOnline ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'"
+            >
+              {{ isOnline ? __('Synced') : __('Queued') }}
+            </span>
+          </div>
+
+          <div v-if="activeTemplate" class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
+            <span class="truncate pr-2">📋 {{ activeTemplate.title || activeTemplate.name }}</span>
+            <span class="shrink-0 font-mono">{{ submittedTimestamp || 'Just now' }}</span>
+          </div>
+        </div>
+
         <div class="flex justify-center gap-3 pt-2">
           <button
             type="button"
             @click="resetSurvey"
-            class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition shadow-xs"
+            class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition shadow-xs cursor-pointer"
           >
             {{ __('New Response') || 'New Response' }}
           </button>
           <button
             type="button"
             @click="goHome"
-            class="px-5 py-2.5 rounded-xl border border-slate-300 font-bold text-slate-700 text-sm hover:bg-slate-50 active:scale-95 transition"
+            class="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition cursor-pointer"
           >
             {{ __('All Surveys') || 'All Surveys' }}
           </button>
@@ -408,6 +447,53 @@ const loadingSurveyId = ref("");
 const showWALDrawer = ref(false);
 const searchQuery = ref("");
 const selectedWorkspace = ref("ALL");
+
+const submittedResponseId = ref("");
+const submittedTimestamp = ref("");
+const hasCopiedCode = ref(false);
+
+function copyResponseCode() {
+  if (!submittedResponseId.value) return;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(submittedResponseId.value);
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = submittedResponseId.value;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
+    hasCopiedCode.value = true;
+    setTimeout(() => {
+      hasCopiedCode.value = false;
+    }, 2000);
+  } catch (e) {}
+}
+
+async function restoreSubmittedResponseId() {
+  if (submittedResponseId.value) return;
+  try {
+    const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name;
+    if (!tmplName) return;
+    const latest = await db.responses
+      .where("template_name")
+      .equals(tmplName)
+      .reverse()
+      .sortBy("updated_at");
+    if (latest && latest.length > 0) {
+      submittedResponseId.value = latest[0].response_uid;
+      submittedTimestamp.value = new Date(latest[0].updated_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  } catch (e) {}
+}
+
+watch(isSubmitted, (val) => {
+  if (val) {
+    restoreSubmittedResponseId();
+  }
+});
 
 const progressPercent = computed(() => {
   if (!activeTemplate.value) return 0;
@@ -820,6 +906,8 @@ async function saveOfflineRecord() {
 
   const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
   const draftKey = currentDraftId.value || generateSurveyId(tmplName);
+  submittedResponseId.value = draftKey;
+  submittedTimestamp.value = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   const payload = {
     idempotency_key: draftKey,
@@ -899,6 +987,8 @@ function resetSurvey() {
   responses.value = {};
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
+  submittedResponseId.value = "";
+  hasCopiedCode.value = false;
   currentDraftId.value = generateSurveyId(activeTemplate.value?.name || activeTemplate.value?.template_name || "");
 }
 
