@@ -80,6 +80,21 @@ class TestSchemaCompiler(unittest.TestCase):
 		self.assertEqual(compiled_q["rating_icon"], "Star")
 		self.assertEqual(compiled_q["rating_max"], 5)
 
+	def test_response_title_format_compilation(self):
+		template = frappe.get_doc({
+			"doctype": "OmniQuery Template",
+			"title": "Test Women Dairy Assessment 2026",
+			"project": "PROJ-Test Dairy Initiative",
+			"version": 1,
+			"status": "Draft",
+			"response_title_format": "{farmer_name} - {village} ({dairy_name})",
+			"sections": [{"section_code": "SEC_1", "section_title": "Section 1"}],
+			"questions": [{"section_code": "SEC_1", "question_code": "farmer_name", "label_en": "Farmer Name", "is_mandatory": 0}],
+		}).insert(ignore_permissions=True)
+
+		schema_obj = json.loads(template.compiled_schema_json)
+		self.assertEqual(schema_obj.get("response_title_format"), "{farmer_name} - {village} ({dairy_name})")
+
 	def _create_test_rating_question(self):
 		return frappe.get_doc({
 			"doctype": "OmniQuery Question",

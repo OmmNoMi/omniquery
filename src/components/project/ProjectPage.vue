@@ -22,52 +22,49 @@
       </div>
     </div>
 
-    <!-- 2. Hero Project Banner Card -->
-    <div class="p-5 sm:p-7 rounded-3xl bg-gradient-to-br from-slate-900 via-slate-900 to-emerald-950 text-white shadow-xl border border-slate-800 relative overflow-hidden space-y-4">
-      <div class="absolute -right-8 -bottom-8 w-44 h-44 rounded-full bg-emerald-500/10 blur-2xl pointer-events-none" />
-      <div class="absolute -left-8 -top-8 w-44 h-44 rounded-full bg-teal-500/10 blur-2xl pointer-events-none" />
-
+    <!-- 2. Hero Project Card (Frappe New-Age Software Aesthetic) -->
+    <div class="p-5 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-xs border border-slate-200/90 dark:border-slate-800 relative space-y-4 min-w-0">
       <!-- Top Row Badges -->
-      <div class="flex items-center justify-between gap-2 flex-wrap relative z-10">
-        <div class="flex items-center gap-2 flex-wrap">
-          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-xs font-mono font-bold">
+      <div class="flex items-center justify-between gap-2 flex-wrap min-w-0">
+        <div class="flex items-center gap-2 flex-wrap min-w-0">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-mono font-bold shrink-0">
             <span>🏛️</span>
             <span>{{ projectMeta.name || projectId }}</span>
           </span>
-          <span class="px-3 py-1 rounded-full bg-white/10 text-white text-xs font-bold border border-white/10">
+          <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 shrink-0">
             {{ projectMeta.status || __('Active Field Project') }}
           </span>
         </div>
 
-        <span v-if="projectMeta.workspace" class="text-xs text-slate-300 font-medium">
+        <span v-if="projectMeta.workspace" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
           🏢 {{ projectMeta.workspace_title || projectMeta.workspace }}
         </span>
       </div>
 
       <!-- Project Title & Subtitle -->
-      <div class="space-y-1 relative z-10">
-        <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight leading-tight">
+      <div class="space-y-1 min-w-0">
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight break-words">
           {{ projectMeta.project_name || projectMeta.name || projectId }}
         </h1>
-        <p class="text-xs sm:text-sm text-emerald-300/90 font-medium flex items-center gap-1.5">
+        <p class="text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
           <span>🏛️</span>
           <span>{{ projectMeta.grantor_organization || 'National Rural Livelihoods Mission / State Agency' }}</span>
         </p>
       </div>
 
       <!-- Project Slogan / Description -->
-      <p v-if="projectMeta.description" class="text-xs sm:text-sm text-slate-300 leading-relaxed max-w-3xl relative z-10">
+      <p v-if="projectMeta.description" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
         {{ projectMeta.description }}
       </p>
 
       <!-- Key Metadata Pills Row -->
-      <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-3 flex-wrap relative z-10 text-xs">
-        <div class="flex items-center gap-4 flex-wrap text-slate-300">
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap text-xs min-w-0">
+        <div class="flex items-center gap-4 flex-wrap text-slate-600 dark:text-slate-300">
           <div class="flex items-center gap-1.5 font-bold">
-            <span class="text-emerald-400 text-sm">📋</span>
+            <span class="text-emerald-600 text-sm">📋</span>
             <span>{{ projectSurveys.length }} {{ __('Surveys Assigned') }}</span>
           </div>
-          <div class="flex items-center gap-1.5 font-medium text-slate-400">
+          <div class="flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400">
             <span>🛡️</span>
             <span>{{ __('Standard Field Investigator Protocol') }}</span>
           </div>
@@ -75,7 +72,7 @@
 
         <a
           href="tel:18001026664"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs transition shadow-xs cursor-pointer"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs transition shadow-xs cursor-pointer shrink-0"
         >
           <span>📞</span>
           <span>{{ __('Supervisor Helpline') }}</span>

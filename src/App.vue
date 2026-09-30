@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased">
+  <div class="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
     <!-- 1. Sleek Native Mobile Header with Official OmniQuery Cloud Brand -->
     <CompactHeader
       :surveyTitle="activeTemplate ? activeTemplate.title : (activeProjectId ? (activeProjectTitle || __('Project Details')) : '')"
@@ -19,11 +19,26 @@
     />
 
     <!-- 2. Main View Container -->
-    <main :class="['flex-1 w-full mx-auto p-4 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-2xl', activeSection ? 'pb-0' : 'pb-24']">
-      <!-- Loading State Spinner -->
-      <div v-if="isLoading" class="p-16 text-center text-slate-500">
-        <div class="animate-spin inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mb-3"></div>
-        <p class="text-sm font-bold text-slate-700">{{ __('Loading...') || 'Loading...' }}</p>
+    <main :class="['flex-1 w-full max-w-full min-w-0 mx-auto p-3 sm:p-4 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-2xl', activeSection ? 'pb-0' : 'pb-24']">
+      <!-- Loading State with Branded OmniQuery Logo & Spinner -->
+      <div v-if="isLoading" class="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center select-none">
+        <div class="relative mb-3">
+          <img
+            :src="'/assets/omniquery/icons/desktop_icons/solid/omniquery.svg'"
+            alt="OmniQuery"
+            class="w-16 h-16 rounded-2xl shadow-sm"
+            onerror="this.onerror=null; this.src='/assets/omniquery/pwa/icon-192.png';"
+          />
+          <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-slate-100 dark:border-slate-900" />
+        </div>
+        <h2 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">OmniQuery</h2>
+        <p class="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-4">
+          Field Intelligence Platform
+        </p>
+        <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-semibold">
+          <div class="animate-spin inline-block w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
+          <span>{{ __('Loading surveys & workspace...') }}</span>
+        </div>
       </div>
 
       <!-- Submitted Success Card -->
@@ -196,7 +211,9 @@
           @open-wal="showWALDrawer = true"
           @sync-now="triggerSync"
           @resume-draft="selectSurvey"
-          @open-filled-forms="showFilledFormsModal = true"
+          @start-new-survey="selectSurvey($event, { startNew: true })"
+          @open-filled-forms="openFilteredFilledForms('all')"
+          @open-filtered-forms="openFilteredFilledForms"
         />
 
         <!-- 2. Survey Templates Section Header & Search/Filter Controls -->
@@ -312,19 +329,21 @@
               <button
                 v-if="activeDrafts[tmpl.name]"
                 type="button"
-                @click.stop="onDiscardDraft(tmpl.name)"
-                class="px-3 py-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 text-xs font-bold transition active:scale-95"
+                @click.stop="selectSurvey(tmpl.name, { startNew: true })"
+                class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1"
+                :title="__('Start a fresh blank survey without discarding saved drafts')"
               >
-                {{ __('Discard Draft') }}
+                <span>➕</span>
+                <span>{{ __('Start New') }}</span>
               </button>
               <button
                 type="button"
                 @click="selectSurvey(tmpl.name)"
                 :disabled="loadingSurveyId === tmpl.name"
-                class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50"
+                class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
               >
                 <span v-if="loadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
-                <span>{{ loadingSurveyId === tmpl.name ? __('Loading...') : (activeDrafts[tmpl.name] ? __('Resume Draft') : __('Start Survey')) }}</span>
+                <span>{{ loadingSurveyId === tmpl.name ? __('Loading...') : (activeDrafts[tmpl.name] ? __('Resume Survey') : __('Start Survey')) }}</span>
                 <span v-if="loadingSurveyId !== tmpl.name">→</span>
               </button>
             </div>
@@ -420,11 +439,12 @@
     <!-- Filled Forms Verification & Data Recovery Modal -->
     <FilledFormsModal
       :isOpen="showFilledFormsModal"
+      :initialFilter="filledFormsInitialFilter"
       :isOnline="isOnline"
       :templates="availableTemplates"
       @close="showFilledFormsModal = false"
       @sync-all="triggerSync"
-      @resume-draft="selectSurvey"
+      @resume-draft="handleResumeDraftFromModal"
     />
   </div>
 </template>
@@ -550,6 +570,17 @@ function closeProjectPage() {
 }
 
 const showFilledFormsModal = ref(false);
+const filledFormsInitialFilter = ref("all");
+
+function openFilteredFilledForms(filter = "all") {
+  filledFormsInitialFilter.value = filter;
+  showFilledFormsModal.value = true;
+}
+
+function handleResumeDraftFromModal(templateName, draftId) {
+  showFilledFormsModal.value = false;
+  selectSurvey(templateName, { draftId });
+}
 
 const submittedResponseId = ref("");
 const submittedTimestamp = ref("");
@@ -990,13 +1021,13 @@ async function goHome() {
   await loadAvailableTemplates();
 }
 
-async function selectSurvey(surveyName) {
+async function selectSurvey(surveyName, options = {}) {
   activeProjectId.value = "";
   loadingSurveyId.value = surveyName;
   if (window.history && window.history.pushState) {
     window.history.pushState({ type: "survey", surveyName }, "", `/omniquery/${encodeURIComponent(surveyName)}`);
   }
-  await loadTemplate(surveyName);
+  await loadTemplate(surveyName, options);
   loadingSurveyId.value = "";
 }
 

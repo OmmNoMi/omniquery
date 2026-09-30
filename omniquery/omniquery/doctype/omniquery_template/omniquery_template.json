@@ -11,6 +11,7 @@
   "version",
   "status",
   "target_category",
+  "response_title_format",
   "column_break_meta",
   "is_public_citizen_link",
   "auto_advance",
@@ -68,6 +69,13 @@
    "fieldtype": "Select",
    "label": "Target Beneficiary Category",
    "options": "All\nMicro Enterprise\nSmall Business\nSHG Member\nAgriculture & Dairy\nHandicrafts"
+  },
+  {
+   "default": "{respondent_name} - {village_gp} ({enterprise_name})",
+   "description": "Pattern to construct response and draft titles from question codes (e.g. {respondent_name} - {village_gp} ({enterprise_name}))",
+   "fieldname": "response_title_format",
+   "fieldtype": "Data",
+   "label": "Response Title Format Pattern"
   },
   {
    "fieldname": "column_break_meta",

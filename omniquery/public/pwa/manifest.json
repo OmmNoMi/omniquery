@@ -4,8 +4,8 @@
   "description": "Zero-Data-Loss Offline Survey Engine & Field Intelligence",
   "start_url": "/omniquery",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#1e293b",
+  "background_color": "#f8fafc",
+  "theme_color": "#15803d",
   "icons": [
     {
       "src": "/assets/omniquery/pwa/icon-192.png",

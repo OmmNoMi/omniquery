@@ -162,44 +162,6 @@ def list_active_templates(project=None):
 
 
 @frappe.whitelist(allow_guest=True)
-def get_project_details(project_id):
-	"""Returns project metadata, grantor info, workspace title and associated active surveys."""
-	if not project_id:
-		return {}
-
-	proj = frappe.db.get_value(
-		"OmniQuery Project",
-		project_id,
-		["name", "project_name", "workspace", "grantor_organization", "description", "status"],
-		as_dict=True,
-	)
-	if not proj:
-		# Fallback: search by project_name
-		proj = frappe.db.get_value(
-			"OmniQuery Project",
-			{"project_name": project_id},
-			["name", "project_name", "workspace", "grantor_organization", "description", "status"],
-			as_dict=True,
-		)
-
-	if not proj:
-		return {"name": project_id, "project_name": project_id}
-
-	# Fetch workspace title
-	if proj.get("workspace"):
-		ws = frappe.db.get_value(
-			"OmniQuery Workspace",
-			proj.workspace,
-			["name", "workspace_name", "workspace_title"],
-			as_dict=True,
-		)
-		if ws:
-			proj["workspace_title"] = ws.workspace_title or ws.workspace_name
-
-	return proj
-
-
-@frappe.whitelist(allow_guest=True)
 def get_schema(template_name, version=None):
 	"""Fetches compiled JSON schema after verifying user permission."""
 	if not template_name:

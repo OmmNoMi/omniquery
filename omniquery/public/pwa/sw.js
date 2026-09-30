@@ -1,10 +1,11 @@
-const CACHE_NAME = 'omniquery-cache-v29';
+const CACHE_NAME = 'omniquery-cache-v30';
 const STATIC_ASSETS = [
   '/omniquery',
   '/assets/omniquery/dist/omniquery.bundle.js',
   '/assets/omniquery/dist/omniquery.bundle.css',
   '/assets/omniquery/pwa/manifest.json',
-  '/assets/omniquery/pwa/icon-192.png'
+  '/assets/omniquery/pwa/icon-192.png',
+  '/assets/omniquery/icons/desktop_icons/solid/omniquery.svg'
 ];
 
 

@@ -18,12 +18,17 @@ export function useSurvey() {
   const currentDraftId = ref(null);
   const activeDrafts = ref({});
 
+  const allDrafts = ref([]);
+
   async function loadActiveDrafts() {
     try {
       const drafts = await db.responses.where("status").equals("Draft").toArray();
+      // Sort drafts descending by most recently updated
+      drafts.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
+      allDrafts.value = drafts;
       const draftMap = {};
       for (const d of drafts) {
-        if (d.template_name) {
+        if (d.template_name && !draftMap[d.template_name]) {
           draftMap[d.template_name] = d;
         }
       }
@@ -31,6 +36,7 @@ export function useSurvey() {
       return draftMap;
     } catch (e) {
       activeDrafts.value = {};
+      allDrafts.value = [];
       return {};
     }
   }
@@ -66,6 +72,7 @@ export function useSurvey() {
         template_name: surveyId,
         title: schema.title,
         project: schema.project || (payload && payload.project),
+        response_title_format: schema.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
         schema: schema,
         modified: new Date().toISOString(),
       });
@@ -83,8 +90,11 @@ export function useSurvey() {
     }
   }
 
-  async function loadTemplate(surveyId, resumeExisting = true) {
+  async function loadTemplate(surveyId, options = {}) {
     if (!surveyId) return null;
+    const isStartNew = options === false || (typeof options === "object" && options.startNew);
+    const targetDraftId = typeof options === "object" ? options.draftId : null;
+
     const cached = await getCachedTemplate(surveyId);
     if (cached) {
       activeTemplate.value = cached;
@@ -95,18 +105,30 @@ export function useSurvey() {
       const schema = payload.schema || payload;
       schema.template_name = schema.template_name || payload.template_name || surveyId;
       schema.title = schema.title || payload.title || surveyId;
+      schema.response_title_format = schema.response_title_format || payload.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})";
       activeTemplate.value = schema;
       activeSectionIndex.value = 0;
       await cacheTemplateLocally(surveyId, schema, payload);
     }
 
-    if (resumeExisting) {
+    if (!isStartNew) {
       try {
-        const draft = await db.responses
-          .where("template_name")
-          .equals(surveyId)
-          .and((d) => d.status === "Draft")
-          .first();
+        let draft = null;
+        if (targetDraftId) {
+          draft = await db.responses.get(targetDraftId);
+        } else {
+          // Retrieve most recent draft for this template
+          const matchingDrafts = await db.responses
+            .where("template_name")
+            .equals(surveyId)
+            .and((d) => d.status === "Draft")
+            .toArray();
+
+          if (matchingDrafts && matchingDrafts.length > 0) {
+            matchingDrafts.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
+            draft = matchingDrafts[0];
+          }
+        }
 
         if (draft && draft.responses && Object.keys(draft.responses).length > 0) {
           currentDraftId.value = draft.response_uid;
@@ -123,6 +145,7 @@ export function useSurvey() {
         activeSectionIndex.value = 0;
       }
     } else {
+      // Start a fresh, new survey without affecting existing saved drafts
       currentDraftId.value = generateSurveyId(surveyId);
       responses.value = {};
       activeSectionIndex.value = 0;
@@ -144,6 +167,8 @@ export function useSurvey() {
       await db.responses.put({
         response_uid: currentDraftId.value,
         template_name: tmplName,
+        title: activeTemplate.value.title || tmplName,
+        response_title_format: activeTemplate.value.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
         responses: JSON.parse(JSON.stringify(responses.value)),
         active_section_index: activeSectionIndex.value,
         progress_percent: progress,
@@ -158,20 +183,24 @@ export function useSurvey() {
     }
   }
 
-  async function discardDraft(surveyId) {
-    if (!surveyId) return;
+  async function discardDraft(surveyId, draftId = null) {
+    if (!surveyId && !draftId) return;
     try {
-      await db.responses
-        .where("template_name")
-        .equals(surveyId)
-        .and((d) => d.status === "Draft")
-        .delete();
+      if (draftId) {
+        await db.responses.delete(draftId);
+      } else {
+        await db.responses
+          .where("template_name")
+          .equals(surveyId)
+          .and((d) => d.status === "Draft")
+          .delete();
+      }
 
       const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name;
-      if (tmplName === surveyId) {
+      if (tmplName === surveyId || currentDraftId.value === draftId) {
         responses.value = {};
         activeSectionIndex.value = 0;
-        currentDraftId.value = generateSurveyId(surveyId);
+        currentDraftId.value = generateSurveyId(surveyId || "SURVEY");
       }
       await loadActiveDrafts();
     } catch (e) {
@@ -311,6 +340,7 @@ export function useSurvey() {
     isSubmitted,
     currentDraftId,
     activeDrafts,
+    allDrafts,
     loadActiveDrafts,
     loadAvailableTemplates,
     loadTemplate,

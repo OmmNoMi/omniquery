@@ -50,6 +50,6 @@ def get_context(context):
 	ctx.current_lang = user_lang
 
 	ctx.current_user = frappe.session.user
-	ctx.bundle_version = "20260930_1040"
+	ctx.bundle_version = "20260930_1355"
 	return ctx
 

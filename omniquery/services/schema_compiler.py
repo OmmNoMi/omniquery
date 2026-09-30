@@ -27,6 +27,7 @@ def build_schema_dictionary(template_document):
 		"version": template_document.version or 1,
 		"status": template_document.status,
 		"amended_from": template_document.amended_from,
+		"response_title_format": getattr(template_document, "response_title_format", None) or "{respondent_name} - {village_gp} ({enterprise_name})",
 		"is_public_citizen_link": bool(template_document.is_public_citizen_link),
 		"auto_advance": bool(getattr(template_document, "auto_advance", 1)),
 		"presentation_mode": getattr(template_document, "presentation_mode", "Standard Section") or "Standard Section",

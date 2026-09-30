@@ -170,6 +170,15 @@
           </button>
           <button
             type="button"
+            @click="activeFilter = 'today'"
+            class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1"
+            :class="activeFilter === 'today' ? 'bg-emerald-700 text-white shadow-xs' : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100'"
+          >
+            <span>📅</span>
+            <span>{{ __('Today') }} ({{ todayCount }})</span>
+          </button>
+          <button
+            type="button"
             @click="activeFilter = 'queue'"
             class="px-3.5 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer flex items-center gap-1"
             :class="activeFilter === 'queue' ? 'bg-amber-600 text-white shadow-xs' : 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 hover:bg-amber-100'"
@@ -265,21 +274,41 @@
                 </div>
               </div>
 
-              <!-- Middle Row: Template Name & Respondent Name -->
-              <div class="space-y-0.5">
-                <h4 class="text-xs sm:text-base font-bold text-slate-900 dark:text-white leading-snug">
-                  {{ resp.template_title || resp.template_name }}
+              <!-- Middle Row: Template Name & Dynamic Response Title -->
+              <div class="space-y-0.5 min-w-0">
+                <h4 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug break-words">
+                  {{ resolveResponseTitle(resp.responses, resp.response_title_format, resp.template_title || resp.template_name) }}
                 </h4>
-                <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap">
-                  <span v-if="resp.respondentName">
-                    👤 <strong class="text-slate-700 dark:text-slate-300">{{ resp.respondentName }}</strong>
-                  </span>
+                <div class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2 flex-wrap min-w-0">
+                  <span class="truncate">📋 {{ resp.template_title || resp.template_name }}</span>
                   <span>·</span>
                   <span>{{ resp.answerCount }} {{ __('answers recorded') }}</span>
                   <span v-if="resp.wal_attempts && resp.wal_attempts > 0" class="text-amber-600 font-medium">
                     · ({{ resp.wal_attempts }} sync {{ __('attempts') }})
                   </span>
                 </div>
+              </div>
+
+              <!-- Draft Direct Action Bar -->
+              <div v-if="resp.status === 'Draft'" class="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2 min-w-0">
+                <button
+                  type="button"
+                  @click="resumeSpecificDraft(resp.template_name, resp.response_uid)"
+                  class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs active:scale-95 transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>▶</span>
+                  <span>{{ __('Resume This Draft') }}</span>
+                  <span>→</span>
+                </button>
+                <button
+                  type="button"
+                  @click="deleteSpecificDraft(resp.response_uid)"
+                  class="px-2.5 py-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1"
+                  :title="__('Discard draft')"
+                >
+                  <span>🗑️</span>
+                  <span>{{ __('Discard') }}</span>
+                </button>
               </div>
 
               <!-- Bottom Row: Verification & Recovery Actions -->
@@ -292,17 +321,6 @@
                   >
                     <span>🔍</span>
                     <span>{{ __('Cross-Verify Answers') }}</span>
-                  </button>
-
-                  <!-- Resume Draft Button if item is in draft -->
-                  <button
-                    v-if="resp.status === 'Draft'"
-                    type="button"
-                    @click="resumeDraft(resp.template_name)"
-                    class="inline-flex items-center gap-1 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-                  >
-                    <span>▶</span>
-                    <span>{{ __('Resume Draft') }}</span>
                   </button>
                 </div>
 
@@ -376,6 +394,7 @@ import BaseModal from "../common/BaseModal.vue";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import { useWAL } from "../../composables/useWAL";
+import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db } from "../../services/db";
 
 const props = defineProps({
@@ -390,6 +409,10 @@ const props = defineProps({
   templates: {
     type: Array,
     default: () => [],
+  },
+  initialFilter: {
+    type: String,
+    default: "all",
   },
 });
 
@@ -437,6 +460,7 @@ async function loadResponses() {
       responseMap.set(r.response_uid, {
         ...r,
         template_title: tmpl?.title || r.template_name,
+        response_title_format: tmpl?.response_title_format || r.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
         respondentName,
         answerCount: Object.keys(responses).length,
         is_in_queue: isQueued,
@@ -539,6 +563,52 @@ function resumeDraft(templateName) {
   emit("close");
 }
 
+function resumeSpecificDraft(templateName, draftId) {
+  emit("resume-draft", templateName, draftId);
+  emit("close");
+}
+
+async function deleteSpecificDraft(responseUid) {
+  if (confirm(__("Are you sure you want to discard this saved draft?"))) {
+    try {
+      await db.responses.delete(responseUid);
+      await loadResponses();
+    } catch (e) {
+      console.warn("Failed to delete draft:", e);
+    }
+  }
+}
+
+watch(
+  () => props.isOpen,
+  (val) => {
+    if (val) {
+      if (props.initialFilter) {
+        activeFilter.value = props.initialFilter;
+      }
+      loadResponses();
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.initialFilter,
+  (newVal) => {
+    if (newVal) {
+      activeFilter.value = newVal;
+    }
+  }
+);
+
+const todayCount = computed(() => {
+  const todayStr = new Date().toDateString();
+  return responsesList.value.filter((r) => {
+    const d = new Date(r.updated_at || r.created_at || r.captured_at_local || Date.now());
+    return d.toDateString() === todayStr && r.status !== "Draft";
+  }).length;
+});
+
 const queuedCount = computed(() => {
   return responsesList.value.filter((r) => r.is_in_queue || (!r.synced && r.status !== "Draft")).length;
 });
@@ -552,6 +622,13 @@ const syncedCount = computed(() => {
 });
 
 const filteredResponses = computed(() => {
+  if (activeFilter.value === "today") {
+    const todayStr = new Date().toDateString();
+    return responsesList.value.filter((r) => {
+      const d = new Date(r.updated_at || r.created_at || r.captured_at_local || Date.now());
+      return d.toDateString() === todayStr && r.status !== "Draft";
+    });
+  }
   if (activeFilter.value === "queue") {
     return responsesList.value.filter((r) => r.is_in_queue || (!r.synced && r.status !== "Draft"));
   }

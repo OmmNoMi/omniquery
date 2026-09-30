@@ -51,43 +51,54 @@
       </div>
     </div>
 
-    <!-- 4 KPI Performance Cards Grid -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+    <!-- 4 KPI Performance Cards Grid (Clickable to open filtered view in Filled Forms) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full min-w-0">
       <!-- 1. Completed Today -->
-      <div class="p-3 sm:p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-left space-y-1 shadow-2xs">
-        <div class="flex items-center justify-between text-emerald-700 dark:text-emerald-400">
-          <span class="text-xs font-bold uppercase tracking-wider">{{ __('Today') }}</span>
-          <span class="text-base">📋</span>
+      <div
+        @click="$emit('open-filtered-forms', 'today')"
+        role="button"
+        tabindex="0"
+        class="p-3 sm:p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-left space-y-1 shadow-2xs hover:shadow-md hover:border-emerald-400 active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
+        :title="__('Click to view today\'s completed surveys')"
+      >
+        <div class="flex items-center justify-between text-emerald-700 dark:text-emerald-400 min-w-0">
+          <span class="text-xs font-bold uppercase tracking-wider truncate">{{ __('Today') }}</span>
+          <span class="text-base group-hover:scale-110 transition shrink-0">📋</span>
         </div>
         <div class="text-2xl sm:text-3xl font-extrabold text-emerald-900 dark:text-emerald-100 font-mono">
           {{ completedToday }}
         </div>
-        <div class="text-[11px] text-emerald-700/90 dark:text-emerald-400 font-medium truncate">
-          {{ remainingTodayText }}
+        <div class="text-[11px] text-emerald-700/90 dark:text-emerald-400 font-medium flex items-center justify-between gap-1 min-w-0">
+          <span class="truncate">{{ remainingTodayText }}</span>
+          <span class="text-[10px] font-bold opacity-0 group-hover:opacity-100 transition shrink-0">→</span>
         </div>
       </div>
 
       <!-- 2. Pending Offline Queue (⚡ N) -->
       <div
-        class="p-3 sm:p-3.5 rounded-xl border text-left space-y-1 shadow-2xs transition"
+        @click="$emit('open-filtered-forms', 'queue')"
+        role="button"
+        tabindex="0"
+        class="p-3 sm:p-3.5 rounded-xl border text-left space-y-1 shadow-2xs hover:shadow-md active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
         :class="[
           pendingWALCount > 0
             ? 'bg-amber-50/80 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700 text-amber-950 dark:text-amber-100 ring-1 ring-amber-400/20'
             : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
         ]"
+        :title="__('Click to view queued offline submissions')"
       >
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+        <div class="flex items-center justify-between min-w-0">
+          <span class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 truncate">
             {{ __('Queue') }}
           </span>
-          <span class="text-base">⚡</span>
+          <span class="text-base group-hover:scale-110 transition shrink-0">⚡</span>
         </div>
         <div class="text-2xl sm:text-3xl font-extrabold font-mono" :class="pendingWALCount > 0 ? 'text-amber-900 dark:text-amber-200' : 'text-slate-800 dark:text-slate-200'">
           {{ pendingWALCount }}
         </div>
-        <div class="flex items-center justify-between gap-1 text-[11px] text-amber-800/90 dark:text-amber-300 font-medium">
+        <div class="flex items-center justify-between gap-1 text-[11px] text-amber-800/90 dark:text-amber-300 font-medium min-w-0">
           <span class="truncate">{{ pendingWALCount === 0 ? __('All synced') : __('Pending sync') }}</span>
-          <div class="flex items-center gap-1.5 shrink-0">
+          <div class="flex items-center gap-1 shrink-0">
             <button
               v-if="pendingWALCount > 0"
               type="button"
@@ -96,74 +107,84 @@
             >
               {{ __('Sync') }}
             </button>
-            <button
-              v-if="pendingWALCount > 0"
-              type="button"
-              @click="$emit('open-wal')"
-              class="text-[10px] font-bold text-slate-500 dark:text-slate-400 hover:underline cursor-pointer"
-            >
-              {{ __('View') }} →
-            </button>
+            <span class="text-[10px] font-bold text-amber-700 dark:text-amber-400">View →</span>
           </div>
         </div>
       </div>
 
       <!-- 3. Active Drafts -->
-      <div class="p-3 sm:p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 text-left space-y-1 shadow-2xs">
-        <div class="flex items-center justify-between text-blue-700 dark:text-blue-400">
-          <span class="text-xs font-bold uppercase tracking-wider">{{ __('Drafts') }}</span>
-          <span class="text-base">📝</span>
+      <div
+        @click="$emit('open-filtered-forms', 'drafts')"
+        role="button"
+        tabindex="0"
+        class="p-3 sm:p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 text-left space-y-1 shadow-2xs hover:shadow-md hover:border-blue-400 active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
+        :title="__('Click to view all saved in-progress drafts')"
+      >
+        <div class="flex items-center justify-between text-blue-700 dark:text-blue-400 min-w-0">
+          <span class="text-xs font-bold uppercase tracking-wider truncate">{{ __('Drafts') }}</span>
+          <span class="text-base group-hover:scale-110 transition shrink-0">📝</span>
         </div>
         <div class="text-2xl sm:text-3xl font-extrabold text-blue-900 dark:text-blue-100 font-mono">
           {{ activeDraftsCount }}
         </div>
-        <div class="text-[11px] text-blue-700/90 dark:text-blue-400 font-medium truncate">
-          {{ activeDraftsCount > 0 ? __('In progress') : __('None pending') }}
+        <div class="text-[11px] text-blue-700/90 dark:text-blue-400 font-medium flex items-center justify-between gap-1 min-w-0">
+          <span class="truncate">{{ activeDraftsCount > 0 ? __('In progress') : __('None pending') }}</span>
+          <span class="text-[10px] font-bold opacity-0 group-hover:opacity-100 transition shrink-0">→</span>
         </div>
       </div>
 
       <!-- 4. Total Lifetime Submissions -->
-      <div class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-left space-y-1 shadow-2xs">
-        <div class="flex items-center justify-between text-slate-600 dark:text-slate-400">
-          <span class="text-xs font-bold uppercase tracking-wider">{{ __('Total') }}</span>
-          <span class="text-base">🏆</span>
+      <div
+        @click="$emit('open-filtered-forms', 'all')"
+        role="button"
+        tabindex="0"
+        class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-left space-y-1 shadow-2xs hover:shadow-md hover:border-slate-400 active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
+        :title="__('Click to view all submitted records and recovery archive')"
+      >
+        <div class="flex items-center justify-between text-slate-600 dark:text-slate-400 min-w-0">
+          <span class="text-xs font-bold uppercase tracking-wider truncate">{{ __('Total') }}</span>
+          <span class="text-base group-hover:scale-110 transition shrink-0">🏆</span>
         </div>
         <div class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 font-mono">
           {{ totalCompleted }}
         </div>
-        <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate">
-          {{ __('Submitted records') }}
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between gap-1 min-w-0">
+          <span class="truncate">{{ __('Submitted records') }}</span>
+          <span class="text-[10px] font-bold opacity-0 group-hover:opacity-100 transition shrink-0">→</span>
         </div>
       </div>
     </div>
 
-    <!-- Active Draft Quick Resume Callout Card -->
+    <!-- Active Draft Quick Resume Callout Card with Configurable Response Title -->
     <div
       v-if="topDraft"
-      class="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 shadow-2xs space-y-2.5"
+      class="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 shadow-2xs space-y-2.5 min-w-0 overflow-hidden"
     >
       <!-- Top Row: Eyebrow Badge & Relative Time -->
-      <div class="flex items-center justify-between gap-2 text-xs">
-        <div class="flex items-center gap-1.5 font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wider text-[11px]">
+      <div class="flex items-center justify-between gap-2 text-xs flex-wrap min-w-0">
+        <div class="flex items-center gap-1.5 font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wider text-[11px] shrink-0">
           <span>⏳</span>
           <span>{{ __('In-Progress Draft') }}</span>
         </div>
-        <span class="text-[11px] text-amber-700/90 dark:text-amber-400 font-medium">
+        <span class="text-[11px] text-amber-700/90 dark:text-amber-400 font-medium shrink-0">
           {{ __('Last saved') }} {{ formatRelativeTime(topDraft.updated_at) }}
         </span>
       </div>
 
-      <!-- Survey Title -->
-      <div>
-        <h4 class="text-sm font-extrabold text-slate-900 dark:text-white leading-snug line-clamp-2">
-          {{ topDraft.title || topDraft.template_name }}
+      <!-- Survey Title & Configured Dynamic Respondent Title -->
+      <div class="space-y-0.5 min-w-0">
+        <h4 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug break-words">
+          {{ resolveResponseTitle(topDraft.responses, topDraft.response_title_format, topDraft.title || topDraft.template_name) }}
         </h4>
+        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
+          📋 {{ topDraft.title || topDraft.template_name }}
+        </p>
       </div>
 
-      <!-- Bottom Row: Progress Strip & Action Button -->
-      <div class="flex items-center justify-between gap-3 pt-1 border-t border-amber-200/80 dark:border-amber-800/60 flex-wrap sm:flex-nowrap">
+      <!-- Bottom Row: Progress Strip & Actions -->
+      <div class="flex items-center justify-between gap-3 pt-1 border-t border-amber-200/80 dark:border-amber-800/60 flex-wrap min-w-0">
         <!-- Progress Bar & Percentage -->
-        <div class="flex-1 min-w-[140px] space-y-1">
+        <div class="flex-1 min-w-[130px] space-y-1">
           <div class="flex items-center justify-between text-[11px] font-bold text-amber-900 dark:text-amber-200">
             <span>{{ __('Progress') }}</span>
             <span class="font-mono text-xs font-black">{{ topDraft.progress_percent || 0 }}%</span>
@@ -176,28 +197,41 @@
           </div>
         </div>
 
-        <!-- Resume Action Button -->
-        <button
-          type="button"
-          @click="$emit('resume-draft', topDraft.template_name)"
-          class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer shrink-0"
-        >
-          <span>▶</span>
-          <span>{{ __('Resume Survey') }}</span>
-          <span>→</span>
-        </button>
+        <!-- Start New and Resume Buttons -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            @click="$emit('start-new-survey', topDraft.template_name)"
+            class="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-amber-300 dark:border-amber-700 active:scale-95 text-slate-800 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
+            :title="__('Start a fresh blank survey without discarding this draft')"
+          >
+            <span>➕</span>
+            <span>{{ __('Start New') }}</span>
+          </button>
+
+          <button
+            type="button"
+            @click="$emit('resume-draft', topDraft.template_name)"
+            class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
+            :title="__('Resume editing this saved draft')"
+          >
+            <span>▶</span>
+            <span>{{ __('Resume Survey') }}</span>
+            <span>→</span>
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Quick Access to Filled Forms & Cross-Verification -->
-    <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap">
-      <div class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+    <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap min-w-0">
+      <div class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate min-w-0">
         <span>{{ totalCompleted }} {{ __('total submitted forms stored on device') }}</span>
       </div>
       <button
         type="button"
         @click="$emit('open-filled-forms')"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition active:scale-95 shadow-2xs cursor-pointer"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition active:scale-95 shadow-2xs cursor-pointer shrink-0"
       >
         <span>📋</span>
         <span>{{ __('View Filled Forms & Recovery') }}</span>
@@ -210,6 +244,7 @@
 <script setup>
 import { computed, ref, onMounted, watch } from "vue";
 import { useTranslation } from "../../composables/useTranslation";
+import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db } from "../../services/db";
 
 const props = defineProps({
@@ -235,7 +270,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["open-wal", "sync-now", "resume-draft", "open-filled-forms"]);
+const emit = defineEmits([
+  "open-wal",
+  "sync-now",
+  "resume-draft",
+  "start-new-survey",
+  "open-filled-forms",
+  "open-filtered-forms",
+]);
 
 const { __ } = useTranslation();
 
@@ -375,6 +417,7 @@ const topDraft = computed(() => {
   return {
     ...draft,
     title: tmpl?.title || draft.template_name,
+    response_title_format: tmpl?.response_title_format || draft.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
   };
 });
 
