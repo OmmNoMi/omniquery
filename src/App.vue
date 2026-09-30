@@ -182,6 +182,7 @@
           :isOnline="isOnline"
           :activeDrafts="activeDrafts"
           :templates="availableTemplates"
+          :selectedProject="selectedProject"
           @open-wal="showWALDrawer = true"
           @sync-now="triggerSync"
           @resume-draft="selectSurvey"

@@ -102,7 +102,7 @@ def fetch_project_workspace_meta(project_ids):
 	projs = frappe.get_all(
 		"OmniQuery Project",
 		filters={"name": ["in", list(project_ids)]},
-		fields=["name", "project_name", "workspace"],
+		fields=["name", "project_name", "workspace", "grantor_organization", "description"],
 	)
 	p_map = {p.name: p for p in projs}
 	ws_ids = {p.workspace for p in projs if p.workspace}
@@ -123,6 +123,8 @@ def enrich_template_meta(tmpl, p_map, w_map):
 	ws_id = p_meta.get("workspace") or ""
 	w_meta = w_map.get(ws_id) or {}
 	tmpl["project_name"] = p_meta.get("project_name") or tmpl.project or ""
+	tmpl["grantor_organization"] = p_meta.get("grantor_organization") or ""
+	tmpl["project_description"] = p_meta.get("description") or ""
 	tmpl["workspace"] = ws_id
 	tmpl["workspace_title"] = w_meta.get("workspace_title") or w_meta.get("workspace_name") or ws_id
 	return tmpl
@@ -355,9 +357,9 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 
 
 @frappe.whitelist(allow_guest=True)
-def get_surveyor_kpis():
+def get_surveyor_kpis(project=None):
 	"""
-	Returns daily and aggregate KPI statistics for the current surveyor.
+	Returns daily and aggregate KPI statistics for the current surveyor, optionally filtered by project.
 	"""
 	user = frappe.session.user
 	today_start = frappe.utils.today() + " 00:00:00"
@@ -367,35 +369,47 @@ def get_surveyor_kpis():
 	week_count = 0
 	total_count = 0
 
+	project_filter_sql = ""
+	project_params = []
+	if project and project != "ALL":
+		project_filter_sql = " AND survey_template IN (SELECT name FROM `tabOmniQuery Template` WHERE project = %s OR name = %s)"
+		project_params = [project, project]
+
 	if user != "Guest":
 		try:
+			today_params = [today_start, user, f"%{user}%"] + project_params
 			today_count = frappe.db.sql(
-				"""
+				f"""
 				SELECT COUNT(*) FROM `tabOmniQuery Response`
 				WHERE creation >= %s
 				AND (owner = %s OR surveyor LIKE %s)
 				AND survey_status != 'Draft'
+				{project_filter_sql}
 				""",
-				(today_start, user, f"%{user}%"),
+				tuple(today_params),
 			)[0][0] or 0
 
+			week_params = [week_start, user, f"%{user}%"] + project_params
 			week_count = frappe.db.sql(
-				"""
+				f"""
 				SELECT COUNT(*) FROM `tabOmniQuery Response`
 				WHERE creation >= %s
 				AND (owner = %s OR surveyor LIKE %s)
 				AND survey_status != 'Draft'
+				{project_filter_sql}
 				""",
-				(week_start, user, f"%{user}%"),
+				tuple(week_params),
 			)[0][0] or 0
 
+			total_params = [user, f"%{user}%"] + project_params
 			total_count = frappe.db.sql(
-				"""
+				f"""
 				SELECT COUNT(*) FROM `tabOmniQuery Response`
 				WHERE (owner = %s OR surveyor LIKE %s)
 				AND survey_status != 'Draft'
+				{project_filter_sql}
 				""",
-				(user, f"%{user}%"),
+				tuple(total_params),
 			)[0][0] or 0
 		except Exception:
 			pass

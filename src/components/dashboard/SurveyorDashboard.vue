@@ -195,6 +195,10 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
+  selectedProject: {
+    type: String,
+    default: "ALL",
+  },
 });
 
 const emit = defineEmits(["open-wal", "sync-now", "resume-draft", "open-filled-forms"]);
@@ -232,10 +236,23 @@ const formattedToday = computed(() => {
 
 async function refreshLocalMetrics() {
   try {
-    const allSubmitted = await db.responses
+    let allSubmitted = await db.responses
       .where("status")
       .equals("Submitted")
       .toArray();
+
+    if (props.selectedProject && props.selectedProject !== "ALL") {
+      const allowedTemplates = new Set(
+        props.templates
+          .filter((t) => (t.project || "default") === props.selectedProject)
+          .map((t) => t.name || t.template_name)
+      );
+      if (allowedTemplates.size > 0) {
+        allSubmitted = allSubmitted.filter((r) =>
+          allowedTemplates.has(r.survey_template || r.template_name)
+        );
+      }
+    }
 
     localTotalCount.value = allSubmitted.length;
 
@@ -255,7 +272,11 @@ async function refreshLocalMetrics() {
 async function fetchServerMetrics() {
   if (!props.isOnline) return;
   try {
-    const res = await fetch("/api/method/omniquery.api.survey.get_surveyor_kpis");
+    const url =
+      props.selectedProject && props.selectedProject !== "ALL"
+        ? `/api/method/omniquery.api.survey.get_surveyor_kpis?project=${encodeURIComponent(props.selectedProject)}`
+        : `/api/method/omniquery.api.survey.get_surveyor_kpis`;
+    const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
       const msg = data.message || {};
@@ -288,11 +309,28 @@ const remainingTodayText = computed(() => {
 });
 
 const activeDraftsCount = computed(() => {
-  return Object.keys(props.activeDrafts || {}).length;
+  let list = Object.values(props.activeDrafts || {});
+  if (props.selectedProject && props.selectedProject !== "ALL") {
+    const allowedTemplates = new Set(
+      props.templates
+        .filter((t) => (t.project || "default") === props.selectedProject)
+        .map((t) => t.name || t.template_name)
+    );
+    list = list.filter((d) => allowedTemplates.has(d.template_name));
+  }
+  return list.length;
 });
 
 const topDraft = computed(() => {
-  const list = Object.values(props.activeDrafts || {});
+  let list = Object.values(props.activeDrafts || {});
+  if (props.selectedProject && props.selectedProject !== "ALL") {
+    const allowedTemplates = new Set(
+      props.templates
+        .filter((t) => (t.project || "default") === props.selectedProject)
+        .map((t) => t.name || t.template_name)
+    );
+    list = list.filter((d) => allowedTemplates.has(d.template_name));
+  }
   if (!list.length) return null;
   // sort by updated_at descending
   const sorted = [...list].sort((a, b) => {
@@ -320,6 +358,11 @@ function formatRelativeTime(isoStr) {
     return __("recently");
   }
 }
+
+watch(() => props.selectedProject, () => {
+  refreshLocalMetrics();
+  fetchServerMetrics();
+});
 
 watch(() => props.pendingWALCount, () => {
   refreshLocalMetrics();
