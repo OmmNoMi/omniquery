@@ -4,9 +4,49 @@ import uuid
 
 import frappe
 from frappe import _
-from frappe.utils import now_datetime
+from frappe.utils import (
+	cint,
+	flt,
+	get_datetime_str,
+	now_datetime,
+)
 
 from .survey import resolve_template_name, user_has_template_permission
+
+
+def parse_local_datetime(val):
+	"""Converts ISO-8601 string or date object into Frappe standard datetime string."""
+	if not val:
+		return now_datetime()
+	try:
+		return get_datetime_str(val)
+	except Exception:
+		return now_datetime()
+
+
+def log_raw_ingestion_dump(endpoint, raw_payload, client_ip=None, surveyor=None):
+	"""
+	Appends the raw unadulterated payload to a durable JSONL dump file on the server.
+	This is completely decoupled from MariaDB transactions and will never fail.
+	"""
+	try:
+		import os
+		from frappe.utils import now
+		log_dir = frappe.get_site_path("logs")
+		os.makedirs(log_dir, exist_ok=True)
+		dump_file = os.path.join(log_dir, "omniquery_payloads_dump.jsonl")
+		payload_str = raw_payload if isinstance(raw_payload, str) else frappe.as_json(raw_payload)
+		record = {
+			"timestamp": now(),
+			"endpoint": endpoint,
+			"client_ip": client_ip or getattr(frappe.local, "request_ip", "127.0.0.1"),
+			"surveyor": surveyor or frappe.session.user,
+			"payload": payload_str,
+		}
+		with open(dump_file, "a", encoding="utf-8") as f:
+			f.write(json.dumps(record, ensure_ascii=False) + "\n")
+	except Exception:
+		pass
 
 
 def resolve_surveyor(user_or_name=None):
@@ -19,13 +59,31 @@ def resolve_surveyor(user_or_name=None):
 		or frappe.db.get_value("OmniQuery Surveyor", {"surveyor_name": user}, "name")
 		or frappe.db.get_value("OmniQuery Surveyor", {"status": "Active"}, "name")
 	)
-	return s or "SURV-Administrator"
+	if s:
+		return s
+	try:
+		doc = frappe.get_doc({
+			"doctype": "OmniQuery Surveyor",
+			"surveyor_name": user.split("@")[0] if "@" in user else user,
+			"user": user if frappe.db.exists("User", user) else "Administrator",
+			"status": "Active",
+		})
+		doc.insert(ignore_permissions=True)
+		return doc.name
+	except Exception:
+		return "SURV-Administrator"
 
 
 def resolve_respondent(val):
 	"""Returns respondent docname only if it exists in OmniQuery Respondent, otherwise None."""
-	if val and frappe.db.exists("OmniQuery Respondent", str(val).strip()):
-		return str(val).strip()
+	if not val:
+		return None
+	val_str = str(val).strip()
+	if frappe.db.exists("OmniQuery Respondent", val_str):
+		return val_str
+	matched = frappe.db.get_value("OmniQuery Respondent", {"primary_name": val_str}, "name")
+	if matched:
+		return matched
 	return None
 
 
@@ -69,8 +127,8 @@ def sync_draft(data=None):
 	Lightweight in-flight live draft save handler.
 	Upserts OmniQuery Response in 'Draft' status with ID OQS-{surveyID}-{randomstring}.
 	"""
+	raw_data = None
 	if data is None:
-		raw_data = None
 		if hasattr(frappe.local, "request") and frappe.local.request:
 			try:
 				raw_data = frappe.request.get_data(as_text=True)
@@ -78,7 +136,9 @@ def sync_draft(data=None):
 				pass
 		if not raw_data and hasattr(frappe.local, "form_dict") and frappe.local.form_dict:
 			raw_data = frappe.local.form_dict.get("data")
-		data = json.loads(raw_data) if isinstance(raw_data, str) else (raw_data or {})
+		data = frappe.parse_json(raw_data) if isinstance(raw_data, str) else (raw_data or {})
+
+	log_raw_ingestion_dump("sync_draft", raw_data or data, client_ip=getattr(frappe.local, "request_ip", "127.0.0.1"), surveyor=frappe.session.user)
 
 	sub = data.get("draft") if isinstance(data, dict) and "draft" in data else data
 	if not isinstance(sub, dict):
@@ -113,16 +173,16 @@ def sync_draft(data=None):
 	resp_doc.gps_latitude = sub.get("gps_latitude")
 	resp_doc.gps_longitude = sub.get("gps_longitude")
 	resp_doc.gps_accuracy = sub.get("gps_accuracy")
-	resp_doc.captured_at_local = sub.get("captured_at_local") or now_datetime()
+	resp_doc.captured_at_local = parse_local_datetime(sub.get("captured_at_local"))
 	resp_doc.synced_at = now_datetime()
-	resp_doc.response_payload = json.dumps(sub, separators=(",", ":"))
+	resp_doc.response_payload = frappe.as_json(sub)
 
 	resp_doc.set("items", [])
 	for item in sub.get("items", []):
 		val_raw = item.get("value")
-		val_num = float(val_raw) if isinstance(val_raw, (int, float)) else None
+		val_num = flt(val_raw) if isinstance(val_raw, (int, float)) else None
 		val_text = str(val_raw) if val_raw is not None and not isinstance(val_raw, (dict, list)) else None
-		val_json = json.dumps(val_raw) if isinstance(val_raw, (dict, list)) else None
+		val_json = frappe.as_json(val_raw) if isinstance(val_raw, (dict, list)) else None
 		resp_doc.append(
 			"items",
 			{
@@ -150,8 +210,8 @@ def batch_push(submissions=None):
 	Lightweight Zero-Loss Sync Handler.
 	Sets document name directly to OQS-{surveyID}-{randomstring}.
 	"""
+	raw_data = None
 	if submissions is None:
-		raw_data = None
 		if hasattr(frappe.local, "request") and frappe.local.request:
 			try:
 				raw_data = frappe.request.get_data(as_text=True)
@@ -160,16 +220,20 @@ def batch_push(submissions=None):
 		if not raw_data and hasattr(frappe.local, "form_dict") and frappe.local.form_dict:
 			raw_data = frappe.local.form_dict.get("data")
 
-		payload = json.loads(raw_data) if isinstance(raw_data, str) else (raw_data or {})
+		payload = frappe.parse_json(raw_data) if isinstance(raw_data, str) else (raw_data or {})
 		submissions = payload.get("submissions", [])
 		if isinstance(payload, list):
 			submissions = payload
 		elif not submissions and "idempotency_key" in payload:
 			submissions = [payload]
 
-	results = []
 	client_ip = getattr(frappe.local, "request_ip", "127.0.0.1")
 	current_user = frappe.session.user
+
+	# Durable file-system dump: guaranteed never to fail even under DB lockouts
+	log_raw_ingestion_dump("batch_push", raw_data if "raw_data" in locals() and raw_data else submissions, client_ip=client_ip, surveyor=current_user)
+
+	results = []
 
 	for sub in submissions:
 		template_name = resolve_template_name(sub.get("survey_template"))
@@ -194,11 +258,41 @@ def batch_push(submissions=None):
 				})
 				continue
 
+		raw_payload_str = frappe.as_json(sub)
+		payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
+
+		# Phase 1: Pre-save in OmniQuery Sync Audit Log with PENDING status and full raw JSON dump
+		audit_doc_name = None
+		try:
+			existing_audit = frappe.db.get_value(
+				"OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name"
+			)
+			if existing_audit:
+				audit = frappe.get_doc("OmniQuery Sync Audit Log", existing_audit)
+			else:
+				audit = frappe.new_doc("OmniQuery Sync Audit Log")
+				audit.idempotency_key = idempotency_key
+
+			audit.surveyor = resolve_surveyor(sub.get("surveyor") or current_user)
+			audit.sync_status = "PENDING"
+			audit.client_ip = client_ip
+			audit.payload_hash_sha256 = payload_hash
+			audit.processed_at = now_datetime()
+			audit.raw_payload = raw_payload_str
+			audit.error_message = None
+			if existing_audit:
+				audit.save(ignore_permissions=True)
+			else:
+				audit.insert(ignore_permissions=True)
+			audit_doc_name = audit.name
+			frappe.db.commit()
+		except Exception as audit_pre_err:
+			frappe.log_error("Audit Pre-Log write failed", frappe.get_traceback())
+
+		# Phase 2: Savepoint-protected Response Document Creation
 		savepoint = f"sp_sync_{idempotency_key.replace('-', '_')}"
 		try:
 			frappe.db.savepoint(savepoint)
-			raw_payload_str = json.dumps(sub, separators=(",", ":"))
-			payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
 
 			if doc_name:
 				resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
@@ -215,16 +309,16 @@ def batch_push(submissions=None):
 			resp_doc.gps_latitude = sub.get("gps_latitude")
 			resp_doc.gps_longitude = sub.get("gps_longitude")
 			resp_doc.gps_accuracy = sub.get("gps_accuracy")
-			resp_doc.captured_at_local = sub.get("captured_at_local") or now_datetime()
+			resp_doc.captured_at_local = parse_local_datetime(sub.get("captured_at_local"))
 			resp_doc.synced_at = now_datetime()
 			resp_doc.response_payload = raw_payload_str
 
 			resp_doc.set("items", [])
 			for item in sub.get("items", []):
 				val_raw = item.get("value")
-				val_num = float(val_raw) if isinstance(val_raw, (int, float)) else None
+				val_num = flt(val_raw) if isinstance(val_raw, (int, float)) else None
 				val_text = str(val_raw) if val_raw is not None and not isinstance(val_raw, (dict, list)) else None
-				val_json = json.dumps(val_raw) if isinstance(val_raw, (dict, list)) else None
+				val_json = frappe.as_json(val_raw) if isinstance(val_raw, (dict, list)) else None
 				resp_doc.append(
 					"items",
 					{
@@ -244,27 +338,19 @@ def batch_push(submissions=None):
 
 			map_to_native_survey(sub)
 
-			# Record Audit
-			existing_audit = frappe.db.get_value(
-				"OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name"
-			)
-			if existing_audit:
-				audit = frappe.get_doc("OmniQuery Sync Audit Log", existing_audit)
-			else:
-				audit = frappe.new_doc("OmniQuery Sync Audit Log")
-				audit.idempotency_key = idempotency_key
-
-			audit.survey_response = resp_doc.name
-			audit.surveyor = resp_doc.surveyor
-			audit.sync_status = "SUCCESS"
-			audit.client_ip = client_ip
-			audit.payload_hash_sha256 = payload_hash
-			audit.processed_at = now_datetime()
-			audit.error_message = None
-			if existing_audit:
-				audit.save(ignore_permissions=True)
-			else:
-				audit.insert(ignore_permissions=True)
+			# Phase 2b: Update Audit to SUCCESS
+			if audit_doc_name:
+				frappe.db.set_value(
+					"OmniQuery Sync Audit Log",
+					audit_doc_name,
+					{
+						"survey_response": resp_doc.name,
+						"sync_status": "SUCCESS",
+						"processed_at": now_datetime(),
+						"error_message": None,
+					},
+				)
+				frappe.db.commit()
 
 			results.append({
 				"idempotency_key": idempotency_key,
@@ -274,7 +360,40 @@ def batch_push(submissions=None):
 			})
 		except Exception as e:
 			frappe.db.rollback(save_point=savepoint)
-			frappe.log_error(f"OmniQuery Sync Error for {idempotency_key}", str(e))
+			frappe.log_error(f"OmniQuery Sync Error for {idempotency_key}", frappe.get_traceback())
+
+			# Phase 2c: Update Audit to FAILED
+			if audit_doc_name:
+				try:
+					frappe.db.set_value(
+						"OmniQuery Sync Audit Log",
+						audit_doc_name,
+						{
+							"sync_status": "FAILED",
+							"error_message": str(e)[:1000],
+							"processed_at": now_datetime(),
+						},
+					)
+					frappe.db.commit()
+				except Exception:
+					pass
+
+			# Record Field Error Log so administrators can inspect failed submissions in Desk
+			try:
+				field_err = frappe.new_doc("OmniQuery Field Error Log")
+				field_err.survey_template = template_name
+				field_err.template_version = sub.get("template_version") or 1
+				field_err.question_code = idempotency_key
+				field_err.surveyor = str(sub.get("surveyor") or current_user)
+				field_err.logged_at = now_datetime()
+				field_err.error_message = str(e)[:1000]
+				field_err.stack_trace = frappe.get_traceback()
+				field_err.device_info = raw_payload_str[:4000]
+				field_err.insert(ignore_permissions=True)
+				frappe.db.commit()
+			except Exception as field_err_ex:
+				frappe.log_error("Field error log write failed", frappe.get_traceback())
+
 			results.append({"idempotency_key": idempotency_key, "status": "FAILED", "error": str(e)})
 
 	frappe.db.commit()

@@ -90,3 +90,38 @@ class TestSyncConcurrency(FrappeTestCase):
 		res = batch_push([])
 		results = res.get("results", []) if isinstance(res, dict) else res
 		self.assertEqual(results, [])
+
+	def test_raw_payload_and_iso_datetime(self):
+		import os
+		idempotency_key = "TEST-CONC-ISO-001"
+		iso_time = "2026-09-30T10:22:52.738Z"
+		sub = {
+			"idempotency_key": idempotency_key,
+			"survey_template": self.test_template_name,
+			"template_version": 1,
+			"captured_at_local": iso_time,
+			"items": [
+				{"question_code": "q_iso", "value": "Valid ISO Datetime Response"}
+			],
+		}
+
+		res = batch_push([sub])
+		results = res.get("results", []) if isinstance(res, dict) else res
+		self.assertEqual(len(results), 1)
+		self.assertEqual(results[0]["status"], "SUCCESS")
+
+		# 1. Verify OmniQuery Response saved captured_at_local cleanly without MariaDB 1292 error
+		resp_doc = frappe.get_doc("OmniQuery Response", results[0]["doc_name"])
+		self.assertIsNotNone(resp_doc.captured_at_local)
+
+		# 2. Verify OmniQuery Sync Audit Log captured the raw_payload dump
+		audit_name = frappe.db.get_value("OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name")
+		self.assertIsNotNone(audit_name)
+		audit_doc = frappe.get_doc("OmniQuery Sync Audit Log", audit_name)
+		self.assertEqual(audit_doc.sync_status, "SUCCESS")
+		self.assertIn("Valid ISO Datetime Response", audit_doc.raw_payload)
+
+		# 3. Verify server-side dump file exists on disk
+		dump_file = os.path.join(frappe.get_site_path("logs"), "omniquery_payloads_dump.jsonl")
+		self.assertTrue(os.path.exists(dump_file))
+

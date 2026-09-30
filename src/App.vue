@@ -74,11 +74,28 @@
               {{ submittedResponseId || __('Generating...') }}
             </code>
             <span
-              class="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0"
-              :class="isOnline ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'"
+              class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 flex items-center gap-1"
+              :class="isSubmissionSynced ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'"
             >
-              {{ isOnline ? __('Synced') : __('Queued') }}
+              <span>{{ isSubmissionSynced ? '✓' : '⚡' }}</span>
+              <span>{{ isSubmissionSynced ? __('Synced') : __('Queued') }}</span>
             </span>
+          </div>
+
+          <!-- Direct Sync Action if in offline queue -->
+          <div v-if="!isSubmissionSynced" class="flex items-center justify-between gap-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-3 py-2 rounded-lg text-xs">
+            <span class="text-amber-800 dark:text-amber-300 font-medium">
+              {{ isOnline ? __('Pending server database sync') : __('Stored locally. Will auto-sync when online') }}
+            </span>
+            <button
+              v-if="isOnline"
+              type="button"
+              @click="handleSyncSubmittedNow"
+              :disabled="isSyncingSubmission"
+              class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shrink-0 active:scale-95 transition cursor-pointer disabled:opacity-50"
+            >
+              {{ isSyncingSubmission ? __('Syncing...') : __('⚡ Sync Now') }}
+            </button>
           </div>
 
           <div v-if="activeTemplate" class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
@@ -585,11 +602,32 @@ function handleResumeDraftFromModal(templateName, draftId) {
 const submittedResponseId = ref("");
 const submittedTimestamp = ref("");
 const hasCopiedCode = ref(false);
+const isSubmissionSynced = ref(false);
+const isSyncingSubmission = ref(false);
+
+async function handleSyncSubmittedNow() {
+  if (isSyncingSubmission.value || !isOnline.value) return;
+  isSyncingSubmission.value = true;
+  try {
+    const res = await syncWAL();
+    if (res && res.syncedCount > 0) {
+      isSubmissionSynced.value = true;
+      if (window.frappe && window.frappe.show_alert) {
+        window.frappe.show_alert({ message: __("Survey synced to server successfully!"), indicator: "green" });
+      }
+    }
+  } catch (e) {
+  } finally {
+    isSyncingSubmission.value = false;
+  }
+}
 
 function copyResponseCode() {
   if (!submittedResponseId.value) return;
   try {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
+    if (window.frappe && window.frappe.utils && window.frappe.utils.copy_to_clipboard) {
+      window.frappe.utils.copy_to_clipboard(submittedResponseId.value);
+    } else if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(submittedResponseId.value);
     } else {
       const textarea = document.createElement("textarea");
@@ -600,6 +638,9 @@ function copyResponseCode() {
       document.body.removeChild(textarea);
     }
     hasCopiedCode.value = true;
+    if (window.frappe && window.frappe.show_alert) {
+      window.frappe.show_alert({ message: __("Response Code copied to clipboard"), indicator: "green" });
+    }
     setTimeout(() => {
       hasCopiedCode.value = false;
     }, 2000);
@@ -1010,11 +1051,18 @@ async function onDiscardDraft(templateName) {
 }
 
 async function goHome() {
-  scheduleDraftSaveAndSync();
+  if (!isSubmitted.value && activeTemplate.value) {
+    scheduleDraftSaveAndSync();
+  } else {
+    if (draftSyncTimer) clearTimeout(draftSyncTimer);
+  }
   activeTemplate.value = null;
   activeProjectId.value = "";
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
+  isSubmissionSynced.value = false;
+  currentDraftId.value = "";
+  responses.value = {};
   if (window.history && window.history.pushState) {
     window.history.pushState({}, "", "/omniquery");
   }
@@ -1055,7 +1103,7 @@ async function saveOfflineRecord() {
     survey_template: tmplName,
     template_version: activeTemplate.value.version || 1,
     respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
-    surveyor: (window.frappe && window.frappe.session && window.frappe.session.user) || "Administrator",
+    surveyor: (window.frappe && (window.frappe.user || (window.frappe.session && window.frappe.session.user))) || "Administrator",
     captured_at_local: new Date().toISOString(),
     gps_latitude: gpsCoords.value?.latitude || null,
     gps_longitude: gpsCoords.value?.longitude || null,
@@ -1067,6 +1115,8 @@ async function saveOfflineRecord() {
     await db.responses.put({
       response_uid: draftKey,
       template_name: tmplName,
+      title: activeTemplate.value.title || tmplName,
+      response_title_format: activeTemplate.value.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
       responses: JSON.parse(JSON.stringify(responses.value)),
       active_section_index: activeSectionIndex.value,
       progress_percent: 100,
@@ -1077,9 +1127,19 @@ async function saveOfflineRecord() {
     await loadActiveDrafts();
   } catch (e) {}
 
-  await queueWAL("OmniQuery Response", payload);
+  await queueWAL("OmniQuery Response", payload, false);
   if (isOnline.value) {
-    await syncWAL();
+    const res = await syncWAL();
+    if (res && res.syncedCount > 0) {
+      isSubmissionSynced.value = true;
+      if (window.frappe && window.frappe.show_alert) {
+        window.frappe.show_alert({ message: __("Survey synced to server successfully!"), indicator: "green" });
+      }
+    } else {
+      isSubmissionSynced.value = false;
+    }
+  } else {
+    isSubmissionSynced.value = false;
   }
 }
 
@@ -1117,6 +1177,7 @@ async function submitForm() {
     scrollToFirstPendingQuestion();
     return;
   }
+  if (draftSyncTimer) clearTimeout(draftSyncTimer);
   isSubmitting.value = true;
   stopRecording();
   await saveOfflineRecord();
@@ -1125,9 +1186,11 @@ async function submitForm() {
 }
 
 function resetSurvey() {
+  if (draftSyncTimer) clearTimeout(draftSyncTimer);
   responses.value = {};
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
+  isSubmissionSynced.value = false;
   submittedResponseId.value = "";
   hasCopiedCode.value = false;
   currentDraftId.value = generateSurveyId(activeTemplate.value?.name || activeTemplate.value?.template_name || "");

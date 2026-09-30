@@ -14,7 +14,9 @@
   "client_ip",
   "payload_hash_sha256",
   "processed_at",
-  "error_message"
+  "error_message",
+  "section_break_dump",
+  "raw_payload"
  ],
  "fields": [
   {
@@ -48,7 +50,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Sync Status",
-   "options": "SUCCESS\nDUPLICATE_SKIPPED\nREJECTED\nFAILED"
+   "options": "SUCCESS\nDUPLICATE_SKIPPED\nREJECTED\nFAILED\nPENDING"
   },
   {
    "fieldname": "column_break_net",
@@ -75,6 +77,17 @@
    "fieldname": "error_message",
    "fieldtype": "Small Text",
    "label": "Error Details"
+  },
+  {
+   "fieldname": "section_break_dump",
+   "fieldtype": "Section Break",
+   "label": "Raw Ingestion Payload"
+  },
+  {
+   "fieldname": "raw_payload",
+   "fieldtype": "Code",
+   "label": "Raw JSON Payload Dump",
+   "options": "JSON"
   }
  ],
  "index_web_pages_for_search": 0,
