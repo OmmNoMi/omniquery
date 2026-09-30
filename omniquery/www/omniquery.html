@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>OmniQuery · OmmNoMi Field Survey Platform</title>
+  <title>{{ title or "OmniQuery · OmmNoMi Field Survey Platform" }}</title>
 
   <!-- Pass Session, CSRF Token & Frappe Native Translations to Frontend PWA -->
   <script>
@@ -11,6 +11,7 @@
     window.frappe.csrf_token = "{{ csrf_token or frappe.session.data.csrf_token or '' }}";
     window.frappe.user = "{{ current_user or frappe.session.user or '' }}";
     window.frappe.initial_survey_id = "{{ initial_survey_id or '' }}";
+    window.frappe.initial_project_id = "{{ initial_project_id or '' }}";
     window.__messages = {{ translations or '{}' }};
     window.__ = function(txt) {
       return (window.__messages && window.__messages[txt]) || txt;
@@ -40,14 +41,14 @@
 
 
   <!-- Production Pre-Compiled Tailwind & Frappe UI Stylesheet (Zero CDN) -->
-  <link rel="stylesheet" href="/assets/omniquery/dist/omniquery.bundle.css?v={{ bundle_version or '20260930_1020' }}">
+  <link rel="stylesheet" href="/assets/omniquery/dist/omniquery.bundle.css?v={{ bundle_version or '20260930_1030' }}">
 </head>
 <body class="bg-slate-100 text-slate-900 font-sans antialiased min-h-screen">
   
   <div id="app"></div>
 
   <!-- Production Pre-Compiled Vue 3 + Frappe UI + Dexie Application Bundle -->
-  <script src="/assets/omniquery/dist/omniquery.bundle.js?v={{ bundle_version or '20260930_1020' }}"></script>
+  <script src="/assets/omniquery/dist/omniquery.bundle.js?v={{ bundle_version or '20260930_1030' }}"></script>
 
 
 

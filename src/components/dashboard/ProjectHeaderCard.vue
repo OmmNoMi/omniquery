@@ -101,7 +101,7 @@
 
           <button
             type="button"
-            @click.stop="$emit('open-project-details')"
+            @click.stop="$emit('open-project-details', proj.id)"
             class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600/80 active:scale-95 text-xs font-bold text-slate-100 transition shadow-xs cursor-pointer"
           >
             <span>📚</span>

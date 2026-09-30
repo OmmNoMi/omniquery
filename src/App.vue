@@ -2,12 +2,12 @@
   <div class="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased">
     <!-- 1. Sleek Native Mobile Header with Official OmniQuery Cloud Brand -->
     <CompactHeader
-      :surveyTitle="activeTemplate ? activeTemplate.title : ''"
-      :showBack="Boolean(activeTemplate)"
+      :surveyTitle="activeTemplate ? activeTemplate.title : (activeProjectId ? (activeProjectTitle || __('Project Details')) : '')"
+      :showBack="Boolean(activeTemplate || activeProjectId)"
       :isOnline="isOnline"
       :pendingWALCount="pendingWALCount"
       :textSize="textSize"
-      :progressPercent="progressPercent"
+      :progressPercent="activeTemplate ? progressPercent : 0"
       :isRecording="isRecording"
       :isAudioPaused="isAudioPaused"
       @exit="onExit"
@@ -19,7 +19,7 @@
     />
 
     <!-- 2. Main View Container -->
-    <main :class="['flex-1 max-w-2xl w-full mx-auto p-4', activeSection ? 'pb-0' : 'pb-24']">
+    <main :class="['flex-1 w-full mx-auto p-4 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-2xl', activeSection ? 'pb-0' : 'pb-24']">
       <!-- Loading State Spinner -->
       <div v-if="isLoading" class="p-16 text-center text-slate-500">
         <div class="animate-spin inline-block w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full mb-3"></div>
@@ -167,13 +167,23 @@
         />
       </div>
 
+      <!-- Dedicated Full Project Page (Route: /omniquery/project/:projectId) -->
+      <ProjectPage
+        v-else-if="activeProjectId"
+        :projectId="activeProjectId"
+        :templates="availableTemplates"
+        :isOnline="isOnline"
+        @back="closeProjectPage"
+        @select-survey="selectSurvey"
+      />
+
       <!-- Modern, High-Clarity Survey Catalog Hub, Project Header & Surveyor KPI Dashboard -->
       <div v-else class="space-y-4">
         <!-- 0. Active Project Header Section with Persistent Switcher & Training Material Link -->
         <ProjectHeaderCard
           :templates="availableTemplates"
           v-model:selectedProject="selectedProject"
-          @open-project-details="openProjectDetails"
+          @open-project-details="openProjectPage"
         />
 
         <!-- 1. Surveyor Daily KPI Dashboard -->
@@ -405,12 +415,7 @@
       </div>
     </BaseModal>
 
-    <!-- Project Details & Training Materials Modal -->
-    <ProjectDetailsModal
-      :isOpen="showProjectDetailsModal"
-      :projectData="projectDetailsData"
-      @close="showProjectDetailsModal = false"
-    />
+
 
     <!-- Filled Forms Verification & Data Recovery Modal -->
     <FilledFormsModal
@@ -441,7 +446,7 @@ import FocusModeModal from "./components/survey/FocusModeModal.vue";
 import SurveyorDashboard from "./components/dashboard/SurveyorDashboard.vue";
 import ProjectHeaderCard from "./components/dashboard/ProjectHeaderCard.vue";
 import BaseModal from "./components/common/BaseModal.vue";
-import ProjectDetailsModal from "./components/dashboard/ProjectDetailsModal.vue";
+import ProjectPage from "./components/project/ProjectPage.vue";
 import FilledFormsModal from "./components/dashboard/FilledFormsModal.vue";
 
 const autoAdvance = ref(true);
@@ -497,20 +502,54 @@ if (typeof localStorage !== "undefined") {
   if (savedProj) selectedProject.value = savedProj;
 }
 
-const showProjectDetailsModal = ref(false);
-const showFilledFormsModal = ref(false);
-const projectDetailsData = ref({});
+const activeProjectId = ref("");
 
-async function openProjectDetails() {
-  showProjectDetailsModal.value = true;
-  try {
-    const res = await fetch(`/api/method/omniquery.api.survey.get_project_details?project_id=${encodeURIComponent(selectedProject.value || "")}`);
-    if (res.ok) {
-      const data = await res.json();
-      projectDetailsData.value = data.message?.project || {};
-    }
-  } catch (e) {}
+function getRouteProjectId() {
+  if (window.frappe && window.frappe.initial_project_id) {
+    return window.frappe.initial_project_id;
+  }
+  const path = (window.location && window.location.pathname) || "";
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length >= 3 && parts[0] === "omniquery" && parts[1] === "project") {
+    return decodeURIComponent(parts[2]);
+  }
+  return "";
 }
+
+const activeProjectTitle = computed(() => {
+  if (!activeProjectId.value) return "";
+  const match = availableTemplates.value.find(
+    (t) =>
+      t.project === activeProjectId.value ||
+      t.project_name === activeProjectId.value ||
+      t.name === activeProjectId.value
+  );
+  return match?.project_name || activeProjectId.value;
+});
+
+function openProjectPage(projectIdOrData) {
+  const pId =
+    typeof projectIdOrData === "string"
+      ? projectIdOrData
+      : projectIdOrData?.name || projectIdOrData?.id || projectIdOrData?.project_name || selectedProject.value;
+  activeProjectId.value = pId;
+  activeTemplate.value = null;
+  if (window.history && window.history.pushState) {
+    window.history.pushState({ type: "project", projectId: pId }, "", `/omniquery/project/${encodeURIComponent(pId)}`);
+  }
+  if (typeof window !== "undefined") {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+function closeProjectPage() {
+  activeProjectId.value = "";
+  if (window.history && window.history.pushState) {
+    window.history.pushState({}, "", "/omniquery");
+  }
+}
+
+const showFilledFormsModal = ref(false);
 
 const submittedResponseId = ref("");
 const submittedTimestamp = ref("");
@@ -602,6 +641,7 @@ function getRouteSurveyId() {
   const path = (window.location && window.location.pathname) || "";
   const parts = path.split("/").filter(Boolean);
   if (parts.length >= 2 && parts[0] === "omniquery") {
+    if (parts[1] === "project") return "";
     return decodeURIComponent(parts[1]);
   }
   return "";
@@ -609,12 +649,13 @@ function getRouteSurveyId() {
 
 async function init() {
   isLoading.value = true;
+  await loadAvailableTemplates();
+  const initialProjectId = getRouteProjectId();
   const initialSurveyId = getRouteSurveyId();
-  if (initialSurveyId) {
+  if (initialProjectId) {
+    activeProjectId.value = initialProjectId;
+  } else if (initialSurveyId) {
     await loadTemplate(initialSurveyId);
-  }
-  if (!activeTemplate.value) {
-    await loadAvailableTemplates();
   }
   isLoading.value = false;
 }
@@ -838,6 +879,8 @@ function onFocusModeFinishSection() {
 function onExit() {
   if (activeTemplate.value) {
     showExitDialog.value = true;
+  } else if (activeProjectId.value) {
+    closeProjectPage();
   } else {
     goHome();
   }
@@ -938,6 +981,7 @@ async function onDiscardDraft(templateName) {
 async function goHome() {
   scheduleDraftSaveAndSync();
   activeTemplate.value = null;
+  activeProjectId.value = "";
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
   if (window.history && window.history.pushState) {
@@ -947,9 +991,10 @@ async function goHome() {
 }
 
 async function selectSurvey(surveyName) {
+  activeProjectId.value = "";
   loadingSurveyId.value = surveyName;
   if (window.history && window.history.pushState) {
-    window.history.pushState({}, "", `/omniquery/${surveyName}`);
+    window.history.pushState({ type: "survey", surveyName }, "", `/omniquery/${encodeURIComponent(surveyName)}`);
   }
   await loadTemplate(surveyName);
   loadingSurveyId.value = "";
@@ -1064,5 +1109,22 @@ async function triggerSync() {
 
 onMounted(() => {
   init();
+  if (typeof window !== "undefined") {
+    window.addEventListener("popstate", async () => {
+      const projId = getRouteProjectId();
+      const survId = getRouteSurveyId();
+      if (projId) {
+        activeProjectId.value = projId;
+        activeTemplate.value = null;
+      } else if (survId) {
+        activeProjectId.value = "";
+        await loadTemplate(survId);
+      } else {
+        activeProjectId.value = "";
+        activeTemplate.value = null;
+        await loadAvailableTemplates();
+      }
+    });
+  }
 });
 </script>

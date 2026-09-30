@@ -8,14 +8,27 @@ def get_context(context):
 		ctx = context
 
 	ctx.no_cache = 1
-	app_path = frappe.form_dict.get("app_path") or ""
-	ctx.initial_survey_id = app_path.strip("/") if app_path else ""
+	app_path = (frappe.form_dict.get("app_path") or "").strip("/")
+	ctx.initial_survey_id = ""
+	ctx.initial_project_id = ""
 
 	ctx.title = "OmniQuery · OmmNoMi Field Survey Platform"
-	if ctx.initial_survey_id and frappe.db.exists("OmniQuery Template", ctx.initial_survey_id):
-		t_title = frappe.db.get_value("OmniQuery Template", ctx.initial_survey_id, "title")
-		if t_title:
-			ctx.title = f"{t_title} · OmniQuery"
+
+	if app_path.startswith("project/"):
+		ctx.initial_project_id = app_path.split("project/", 1)[1].strip("/")
+		if ctx.initial_project_id:
+			proj_name = (
+				frappe.db.get_value("OmniQuery Project", ctx.initial_project_id, "project_name")
+				or ctx.initial_project_id
+			)
+			ctx.title = f"{proj_name} · OmniQuery"
+	elif app_path:
+		ctx.initial_survey_id = app_path
+		if frappe.db.exists("OmniQuery Template", ctx.initial_survey_id):
+			t_title = frappe.db.get_value("OmniQuery Template", ctx.initial_survey_id, "title")
+			if t_title:
+				ctx.title = f"{t_title} · OmniQuery"
+
 
 	try:
 		from frappe.sessions import get_csrf_token
@@ -37,6 +50,6 @@ def get_context(context):
 	ctx.current_lang = user_lang
 
 	ctx.current_user = frappe.session.user
-	ctx.bundle_version = "20260930_1020"
+	ctx.bundle_version = "20260930_1030"
 	return ctx
 
