@@ -548,13 +548,6 @@ const isFocused = ref(false);
 const isInputFocused = ref(false);
 const showConfigModal = ref(false);
 
-watch(showConfigModal, (isOpen) => {
-  if (typeof document !== "undefined") {
-    document.documentElement.style.overflow = isOpen ? "hidden" : "";
-    document.body.style.overflow = isOpen ? "hidden" : "";
-  }
-});
-
 const localMode = ref(null);
 const optionButtonRefs = ref([]);
 const gridSearchQuery = ref("");
@@ -565,34 +558,6 @@ function onClearSearch() {
   nextTick(() => {
     searchInputRef.value?.focus({ preventScroll: true });
   });
-}
-
-const activeOptionIndex = ref(0);
-
-watch(
-  () => [props.question?.question_code, displayedGridOptions.value.length],
-  () => {
-    optionButtonRefs.value = [];
-    gridSearchQuery.value = "";
-    const firstSelected = displayedGridOptions.value.findIndex((opt) => isOptionSelected(opt.value));
-    activeOptionIndex.value = firstSelected >= 0 ? firstSelected : 0;
-  },
-  { immediate: true }
-);
-
-const displayedGridOptions = computed(() => {
-  if (!gridSearchQuery.value) return normalizedOptions.value;
-  const q = gridSearchQuery.value.toLowerCase().trim();
-  return normalizedOptions.value.filter((opt) => opt.label.toLowerCase().includes(q));
-});
-
-function getOptionTabindex(index) {
-  // Strict W3C roving tabindex for BOTH single-select and multi-select:
-  // Exactly ONE tab stop for the entire option group!
-  if (activeOptionIndex.value >= displayedGridOptions.value.length) {
-    activeOptionIndex.value = 0;
-  }
-  return index === activeOptionIndex.value ? 0 : -1;
 }
 
 const isCompleted = computed(() => {
@@ -905,6 +870,12 @@ const normalizedOptions = computed(() => {
   });
 });
 
+const displayedGridOptions = computed(() => {
+  if (!gridSearchQuery.value) return normalizedOptions.value;
+  const q = gridSearchQuery.value.toLowerCase().trim();
+  return normalizedOptions.value.filter((opt) => opt.label.toLowerCase().includes(q));
+});
+
 const effectiveMode = computed(() => {
   if (localMode.value) return localMode.value;
   const qId = props.question.question_code || props.question.name;
@@ -947,6 +918,28 @@ function isOptionSelected(val) {
     return Array.isArray(props.modelValue) && props.modelValue.includes(val);
   }
   return props.modelValue === val;
+}
+
+const activeOptionIndex = ref(0);
+
+watch(
+  () => [props.question?.question_code, displayedGridOptions.value.length],
+  () => {
+    optionButtonRefs.value = [];
+    gridSearchQuery.value = "";
+    const firstSelected = displayedGridOptions.value.findIndex((opt) => isOptionSelected(opt.value));
+    activeOptionIndex.value = firstSelected >= 0 ? firstSelected : 0;
+  },
+  { immediate: true }
+);
+
+function getOptionTabindex(index) {
+  // Strict W3C roving tabindex for BOTH single-select and multi-select:
+  // Exactly ONE tab stop for the entire option group!
+  if (activeOptionIndex.value >= displayedGridOptions.value.length) {
+    activeOptionIndex.value = 0;
+  }
+  return index === activeOptionIndex.value ? 0 : -1;
 }
 
 function onOptionClick(val) {

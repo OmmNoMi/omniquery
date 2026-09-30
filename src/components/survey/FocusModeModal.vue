@@ -418,9 +418,6 @@ watch(
 watch(
   () => props.isOpen,
   (open) => {
-    if (typeof document !== "undefined") {
-      document.body.style.overflow = open ? "hidden" : "";
-    }
     if (open) {
       focusCurrentQuestion();
     }
@@ -436,7 +433,6 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (typeof document !== "undefined") {
-    document.body.style.overflow = "";
     document.removeEventListener("click", handleOutsideClick);
   }
 });
