@@ -236,5 +236,169 @@ describe("useSurvey", () => {
     expect(survey.cachedTemplatesMap.value["OQS-DL-001"]).toBeDefined();
     expect(survey.cachedTemplatesMap.value["OQS-DL-001"].questionCount).toBe(2);
   });
+
+  describe("Phone validation and connected conditional fields", () => {
+    it("correctly identifies phone number questions vs choice questions", () => {
+      const { isPhoneQuestion } = useSurvey();
+
+      expect(isPhoneQuestion({ question_code: "respondent_phone", label_en: "Q5. Respondent Phone Number", field_type: "Text" })).toBe(true);
+      expect(isPhoneQuestion({ question_code: "contact_mobile", label_en: "Mobile Number", field_type: "Data" })).toBe(true);
+      expect(isPhoneQuestion({ question_code: "emergency_contact", label_en: "Primary Contact Number", field_type: "Text" })).toBe(true);
+      // Radio question asking about owning a smart phone is NOT a phone input field
+      expect(isPhoneQuestion({ question_code: "owns_smartphone", label_en: "Q1. Do you own a smart phone?", field_type: "Single Choice (Radio)", options: ["Yes", "No"] })).toBe(false);
+      // Generic text input is NOT a phone input field
+      expect(isPhoneQuestion({ question_code: "respondent_name", label_en: "Respondent Name", field_type: "Text" })).toBe(false);
+    });
+
+    it("validates 10-digit numeric phone numbers correctly", () => {
+      const { isValidPhoneNumber } = useSurvey();
+
+      expect(isValidPhoneNumber("9876543210")).toBe(true);
+      expect(isValidPhoneNumber("1234567890")).toBe(true);
+      expect(isValidPhoneNumber("98765")).toBe(false); // too short
+      expect(isValidPhoneNumber("987654321000")).toBe(false); // too long
+      expect(isValidPhoneNumber("abcdefghij")).toBe(false); // non-digits
+      expect(isValidPhoneNumber("")).toBe(false);
+      expect(isValidPhoneNumber(null)).toBe(false);
+    });
+
+    it("auto-infers conditional dependency when question label starts with 'If Yes'", () => {
+      const survey = useSurvey();
+      survey.activeTemplate.value = {
+        template_name: "TMPL-COND-TEST",
+        title: "Conditional Inference Test",
+        sections: [{ section_code: "sec_g", section_title: "Training" }],
+        questions: [
+          {
+            section_code: "sec_g",
+            question_code: "attended_training",
+            label_en: "Q1. Have you attended any training under SVEP/OSF?",
+            field_type: "Single Choice (Radio)",
+            options: ["No", "Yes"],
+            conditional_logic: null,
+          },
+          {
+            section_code: "sec_g",
+            question_code: "attended_training_specify",
+            label_en: "Q2. If Yes, specify training attended",
+            field_type: "Text",
+            is_mandatory: true,
+            conditional_logic: null,
+          },
+        ],
+      };
+
+      const q1 = survey.activeTemplate.value.questions[0];
+      const q2 = survey.activeTemplate.value.questions[1];
+
+      // Initially neither is answered -> Q2 should be hidden
+      expect(survey.isQuestionVisible(q2)).toBe(false);
+
+      // Parent answered "No" -> Q2 remains hidden
+      survey.responses.value.attended_training = "No";
+      expect(survey.isQuestionVisible(q2)).toBe(false);
+
+      // Parent answered "Yes" -> Q2 becomes visible!
+      survey.responses.value.attended_training = "Yes";
+      expect(survey.isQuestionVisible(q2)).toBe(true);
+
+      // Case-insensitive "yes" / boolean 1
+      survey.responses.value.attended_training = "yes";
+      expect(survey.isQuestionVisible(q2)).toBe(true);
+    });
+
+    it("enforces strict phone number validation during section validation and navigation", () => {
+      const survey = useSurvey();
+      survey.activeTemplate.value = {
+        template_name: "TMPL-PHONE-VAL",
+        title: "Phone Validation Test",
+        sections: [
+          { section_code: "sec1", section_title: "Contact Info" },
+          { section_code: "sec2", section_title: "Next Step" },
+        ],
+        questions: [
+          {
+            section_code: "sec1",
+            question_code: "respondent_phone",
+            label_en: "Q5. Respondent Phone Number",
+            field_type: "Text",
+            is_mandatory: true,
+          },
+        ],
+      };
+
+      survey.activeSectionIndex.value = 0;
+
+      // 1. Empty mandatory phone
+      expect(survey.validateCurrentSection()).toBe(false);
+      expect(survey.validationErrors.value.respondent_phone).toBe("This field is required");
+      expect(survey.nextSection()).toBe(false);
+
+      // 2. Incomplete phone (5 digits)
+      survey.responses.value.respondent_phone = "98765";
+      expect(survey.validateCurrentSection()).toBe(false);
+      expect(survey.validationErrors.value.respondent_phone).toBe("Please enter a valid 10-digit phone number");
+      expect(survey.nextSection()).toBe(false);
+
+      // 3. Valid 10 digits
+      survey.responses.value.respondent_phone = "9876543210";
+      expect(survey.validateCurrentSection()).toBe(true);
+      expect(survey.validationErrors.value.respondent_phone).toBeUndefined();
+      expect(survey.nextSection()).toBe(true);
+      expect(survey.activeSectionIndex.value).toBe(1);
+    });
+
+    it("does not block section validation on hidden conditional fields when parent is No", () => {
+      const survey = useSurvey();
+      survey.activeTemplate.value = {
+        template_name: "TMPL-COND-VALIDATE",
+        title: "Conditional Validation Test",
+        sections: [
+          { section_code: "sec1", section_title: "Enterprise Details" },
+          { section_code: "sec2", section_title: "Conclusion" },
+        ],
+        questions: [
+          {
+            section_code: "sec1",
+            question_code: "attended_training",
+            label_en: "Q1. Have you attended any training?",
+            field_type: "Single Choice (Radio)",
+            options: ["No", "Yes"],
+            is_mandatory: true,
+          },
+          {
+            section_code: "sec1",
+            question_code: "attended_training_specify",
+            label_en: "Q2. If Yes, specify training attended",
+            field_type: "Text",
+            is_mandatory: true, // Mandatory when visible!
+          },
+        ],
+      };
+
+      survey.activeSectionIndex.value = 0;
+
+      // Case A: User answers "No" to Q1. Q2 is hidden and should NOT block validation.
+      survey.responses.value.attended_training = "No";
+      expect(survey.validateCurrentSection()).toBe(true);
+      expect(survey.isSectionComplete(survey.activeTemplate.value.sections[0])).toBe(true);
+      expect(survey.nextSection()).toBe(true);
+      expect(survey.activeSectionIndex.value).toBe(1);
+
+      // Case B: User answers "Yes" to Q1. Q2 is now visible and mandatory!
+      survey.activeSectionIndex.value = 0;
+      survey.responses.value.attended_training = "Yes";
+      delete survey.responses.value.attended_training_specify;
+
+      expect(survey.validateCurrentSection()).toBe(false);
+      expect(survey.validationErrors.value.attended_training_specify).toBe("This field is required");
+      expect(survey.nextSection()).toBe(false);
+
+      // Fill Q2 -> Now valid
+      survey.responses.value.attended_training_specify = "SVEP Financial Literacy";
+      expect(survey.validateCurrentSection()).toBe(true);
+      expect(survey.nextSection()).toBe(true);
+    });
+  });
 });
 

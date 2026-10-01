@@ -290,7 +290,32 @@
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
 
-      <!-- 10. Default Text Input -->
+      <!-- 10. Phone Input (Numeric Only with Auto-Sanitization) -->
+      <div v-else-if="isPhoneControl" class="relative">
+        <div class="relative flex items-center">
+          <span class="absolute left-3.5 text-base select-none pointer-events-none text-slate-400">
+            📞
+          </span>
+          <input
+            ref="phoneInputRef"
+            type="tel"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength="10"
+            :value="modelValue"
+            @input="onPhoneInput"
+            @keydown.enter="onInputEnter"
+            @keydown.esc.stop="focusCard"
+            :placeholder="__('Enter 10-digit phone number')"
+            class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 pl-11 pr-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800 tracking-wider font-mono placeholder:font-sans placeholder:tracking-normal placeholder:font-normal"
+          />
+        </div>
+        <p v-if="phoneDigitCountText" class="mt-1.5 px-1 text-[11px] font-medium text-slate-400 dark:text-slate-500">
+          {{ phoneDigitCountText }}
+        </p>
+      </div>
+
+      <!-- 11. Default Text Input -->
       <input
         v-else
         type="text"
@@ -509,6 +534,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { useTranslation } from "../../composables/useTranslation";
+import { isPhoneQuestion } from "../../composables/useSurvey";
 import BaseModal from "../common/BaseModal.vue";
 import FSwitch from "../common/FSwitch.vue";
 import FRating from "../common/FRating.vue";
@@ -560,6 +586,9 @@ const isCompleted = computed(() => {
   if (val === undefined || val === null) return false;
   if (Array.isArray(val)) return val.length > 0;
   if (typeof val === "object") return Object.keys(val).length > 0;
+  if (isPhoneControl.value) {
+    return String(val).replace(/\D/g, "").length === 10;
+  }
   return String(val).trim() !== "";
 });
 
@@ -678,6 +707,7 @@ const inputTypeLabel = computed(() => {
   if (isCurrencyControl.value) return __("Currency");
   if (isYearControl.value) return __("Year");
   if (isGeolocationControl.value) return __("GPS");
+  if (isPhoneControl.value) return __("Phone");
   if (isChoiceControl.value) return isMultiSelect.value ? __("Multi-select") : __("Select");
   if (isDateControl.value) return __("Date");
   if (isNumberControl.value) return __("Number");
@@ -1185,6 +1215,45 @@ const isDateControl = computed(() => {
   const type = (props.question.field_type || "").toLowerCase();
   return type.includes("date");
 });
+
+const isPhoneControl = computed(() => {
+  if (
+    isChoiceControl.value ||
+    isSwitchControl.value ||
+    isRatingControl.value ||
+    isRangeControl.value ||
+    isCurrencyControl.value ||
+    isYearControl.value ||
+    isGeolocationControl.value ||
+    isDateControl.value
+  ) {
+    return false;
+  }
+  return isPhoneQuestion(props.question);
+});
+
+const phoneDigitCountText = computed(() => {
+  if (!isPhoneControl.value) return "";
+  const len = String(props.modelValue || "").replace(/\D/g, "").length;
+  if (len === 0) return "";
+  if (len === 10) return __("✓ 10 digits entered");
+  return `${len}/10 ${__("digits")}`;
+});
+
+function onPhoneInput(e) {
+  let digits = (e.target.value || "").replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  } else if (digits.length === 11 && digits.startsWith("0")) {
+    digits = digits.slice(1);
+  }
+  digits = digits.slice(0, 10);
+  e.target.value = digits;
+  emit("update:modelValue", digits);
+  if (digits.length === 10) {
+    emit("answered", { code: props.question.question_code, value: digits });
+  }
+}
 
 function formatCoords(coords) {
   if (typeof coords === "object" && coords.latitude) {
