@@ -16,6 +16,17 @@
     window.__ = function(txt) {
       return (window.__messages && window.__messages[txt]) || txt;
     };
+    // Frappe Native Validation Engine (mirrors apps/frappe/frappe/public/js/frappe/utils/utils.js)
+    window.frappe.utils = window.frappe.utils || {};
+    window.frappe.utils.validate_type = function(val, type) {
+      if (type === "phone") {
+        return /^([0-9 +_\-,.*#()]){1,20}$/.test(String(val || "").trim());
+      }
+      return false;
+    };
+    window.validate_phone = function(txt) {
+      return window.frappe.utils.validate_type(txt, "phone");
+    };
   </script>
 
   <!-- Instant Theme & Text Scale Initializer to prevent layout shift -->

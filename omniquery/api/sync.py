@@ -9,6 +9,7 @@ from frappe.utils import (
 	flt,
 	get_datetime_str,
 	now_datetime,
+	validate_phone_number,
 )
 
 from .survey import resolve_template_name, user_has_template_permission
@@ -396,6 +397,12 @@ def batch_push(submissions=None):
 						"attachment_file": item.get("attachment_file"),
 					},
 				)
+				# Frappe Native Phone Field Validation Check
+				q_code = str(item.get("question_code") or "").lower()
+				q_lbl = str(item.get("question_label") or "").lower()
+				if ("phone" in q_code or "mobile" in q_code or "phone" in q_lbl) and "smart" not in q_lbl:
+					if val_text and not validate_phone_number(val_text.strip(), throw=False):
+						frappe.log_error(f"Invalid phone format: {val_text}", "OmniQuery Phone Validation")
 
 			if doc_name:
 				resp_doc.save(ignore_permissions=True)

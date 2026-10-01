@@ -7,6 +7,222 @@ export function generateSurveyId(templateName) {
   return `OQS-${cleanId}-${rand}`;
 }
 
+export function isPhoneQuestion(q) {
+  if (!q) return false;
+  if (Array.isArray(q.options) && q.options.length > 0) return false;
+  const type = (q.field_type || "").toLowerCase();
+  const code = (q.question_code || "").toLowerCase();
+  const label = (q.label_en || q.label || "").toLowerCase();
+  return (
+    type === "phone" ||
+    code.includes("phone") ||
+    code.includes("mobile") ||
+    label.includes("phone number") ||
+    label.includes("mobile number") ||
+    label.includes("phone no") ||
+    label.includes("contact number")
+  );
+}
+
+// Frappe Native Phone Number Validation Pattern
+// Matches apps/frappe/frappe/public/js/frappe/utils/utils.js:452 and apps/frappe/frappe/utils/__init__.py:45
+export const FRAPPE_PHONE_NUMBER_PATTERN = /^([0-9 +_\-,.*#()]){1,20}$/;
+
+export function validate_phone(val) {
+  if (typeof window !== "undefined" && typeof window.validate_phone === "function") {
+    return window.validate_phone(val);
+  }
+  if (typeof window !== "undefined" && window.frappe?.utils?.validate_type) {
+    return window.frappe.utils.validate_type(val, "phone");
+  }
+  if (!val) return false;
+  return FRAPPE_PHONE_NUMBER_PATTERN.test(String(val).trim());
+}
+
+export function isValidPhoneNumber(val) {
+  if (val === undefined || val === null) return false;
+  const str = String(val).trim();
+  if (!validate_phone(str)) return false;
+  const digits = str.replace(/\D/g, "");
+  return digits.length === 10 && !digits.startsWith("0");
+}
+
+export function normalizeLogicValue(val) {
+  if (val === undefined || val === null) return "";
+  if (val === true || val === 1 || String(val).toLowerCase() === "true" || String(val).toLowerCase() === "yes" || String(val) === "1") {
+    return "yes";
+  }
+  if (val === false || val === 0 || String(val).toLowerCase() === "false" || String(val).toLowerCase() === "no" || String(val) === "0") {
+    return "no";
+  }
+  return String(val).trim().toLowerCase();
+}
+
+/**
+ * Frappe Native evaluate_depends_on_value Engine.
+ * Evaluates field visibility based on Frappe's depends_on syntax ('eval:doc.field == value', fieldname, or rule).
+ * Reference: apps/frappe/frappe/public/js/frappe/form/layout.js:784
+ */
+export function evaluate_depends_on_value(expression, doc = {}) {
+  if (!expression) return true;
+  if (typeof expression === "boolean") return expression;
+  if (typeof expression === "function") return Boolean(expression(doc));
+
+  // 1. Frappe native 'eval:' expression (e.g. "eval:doc.attended_training == 'Yes'")
+  if (typeof expression === "string" && expression.startsWith("eval:")) {
+    try {
+      const code = expression.slice(5).trim();
+      const fn = new Function("doc", "responses", `with(doc) { return Boolean(${code}); }`);
+      return Boolean(fn(doc, doc));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 2. Structured rule { depends_on, operator, value }
+  if (typeof expression === "object") {
+    const parentCode = expression.depends_on || expression.parent_question || expression.field;
+    if (!parentCode) return true;
+    const parentVal = doc[parentCode];
+    if (parentVal === undefined || parentVal === null || parentVal === "") return false;
+
+    const op = (expression.operator || "equals").toLowerCase();
+    const target = expression.value !== undefined ? expression.value : (expression.equals !== undefined ? expression.equals : expression.target);
+
+    if (op === "equals" || op === "==" || op === "eq") {
+      const normP = normalizeLogicValue(parentVal);
+      const normT = normalizeLogicValue(target);
+      if (normP === normT) return true;
+      if (normT === "yes" && (normP.startsWith("yes") || normP === "1")) return true;
+      if (normT === "no" && (normP.startsWith("no") || normP === "0")) return true;
+      return false;
+    }
+
+    if (op === "not_equals" || op === "!=" || op === "neq") {
+      return normalizeLogicValue(parentVal) !== normalizeLogicValue(target);
+    }
+
+    if (op === "contains") {
+      return String(parentVal).toLowerCase().includes(String(target || "").toLowerCase());
+    }
+
+    if (op === "in" || Array.isArray(expression.in) || Array.isArray(expression.values)) {
+      const list = (expression.in || expression.values || []).map(normalizeLogicValue);
+      return list.includes(normalizeLogicValue(parentVal));
+    }
+
+    return true;
+  }
+
+  // 3. Simple fieldname (Frappe truthiness)
+  if (typeof expression === "string") {
+    const val = doc[expression];
+    return Array.isArray(val) ? val.length > 0 : Boolean(val);
+  }
+
+  return true;
+}
+
+export function resolveQuestionDependency(question, allQuestions = []) {
+  if (!question) return null;
+  if (question.conditional_logic) {
+    return question.conditional_logic;
+  }
+
+  if (!allQuestions || !allQuestions.length) return null;
+
+  const curIdx = allQuestions.findIndex((q) => q.question_code === question.question_code);
+  if (curIdx <= 0) return null;
+
+  const label = (question.label_en || question.label || "").toLowerCase();
+
+  // 1. "If Yes, ..."
+  if (/\bif\s+yes\b/i.test(label)) {
+    for (let i = curIdx - 1; i >= 0; i--) {
+      const prev = allQuestions[i];
+      if (prev.section_code !== question.section_code) break;
+      const opts = (prev.options || []).map((o) => String(o).toLowerCase());
+      const isYesNo = opts.includes("yes") || opts.includes("no") || prev.field_type === "Check";
+      if (isYesNo) {
+        return {
+          depends_on: prev.question_code,
+          operator: "equals",
+          value: "Yes",
+        };
+      }
+    }
+  }
+
+  // 2. "If No, ..."
+  if (/\bif\s+no\b/i.test(label)) {
+    for (let i = curIdx - 1; i >= 0; i--) {
+      const prev = allQuestions[i];
+      if (prev.section_code !== question.section_code) break;
+      const opts = (prev.options || []).map((o) => String(o).toLowerCase());
+      const isYesNo = opts.includes("yes") || opts.includes("no");
+      if (isYesNo) {
+        return {
+          depends_on: prev.question_code,
+          operator: "equals",
+          value: "No",
+        };
+      }
+    }
+  }
+
+  // 3. "If rented, ..."
+  if (/\bif\s+rented\b/i.test(label)) {
+    for (let i = curIdx - 1; i >= 0; i--) {
+      const prev = allQuestions[i];
+      if (prev.section_code !== question.section_code) break;
+      const opts = (prev.options || []).map((o) => String(o).toLowerCase());
+      if (opts.includes("rented") || opts.includes("rent")) {
+        return {
+          depends_on: prev.question_code,
+          operator: "equals",
+          value: "Rented",
+        };
+      }
+    }
+  }
+
+  // 4. "If Other ... specify"
+  if (/\bif\s+other\b/i.test(label)) {
+    for (let i = curIdx - 1; i >= 0; i--) {
+      const prev = allQuestions[i];
+      if (prev.section_code !== question.section_code) break;
+      const opts = (prev.options || []).map((o) => String(o).toLowerCase());
+      const hasOther = opts.some((o) => o.includes("other"));
+      if (hasOther) {
+        return {
+          depends_on: prev.question_code,
+          operator: "contains",
+          value: "other",
+        };
+      }
+    }
+  }
+
+  // 5. "If closed, ..."
+  if (/\bif\s+closed\b/i.test(label)) {
+    for (let i = curIdx - 1; i >= 0; i--) {
+      const prev = allQuestions[i];
+      if (prev.section_code !== question.section_code) break;
+      const opts = (prev.options || []).map((o) => String(o).toLowerCase());
+      const hasClosed = opts.some((o) => o.includes("closed"));
+      if (hasClosed) {
+        return {
+          depends_on: prev.question_code,
+          operator: "contains",
+          value: "closed",
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
 export function useSurvey() {
   const activeTemplate = ref(null);
   const activeSectionIndex = ref(0);
@@ -390,20 +606,13 @@ export function useSurvey() {
   });
 
   function isQuestionVisible(question) {
-    if (!question || !question.conditional_logic) return true;
-    const logic = question.conditional_logic;
-    const parentCode = logic.depends_on || logic.parent_question;
-    if (!parentCode) return true;
-    const parentValue = responses.value[parentCode];
-    if (logic.operator === "equals" || logic.equals !== undefined) {
-      const target = logic.equals !== undefined ? logic.equals : logic.value;
-      return String(parentValue) === String(target);
-    }
-    if (logic.operator === "in" || Array.isArray(logic.in)) {
-      const targetList = logic.in || logic.values || [];
-      return targetList.map(String).includes(String(parentValue));
-    }
-    return true;
+    if (!question) return true;
+    const allQs = (activeTemplate.value && activeTemplate.value.questions) || [];
+    // Check Frappe native depends_on property, conditional_logic, or auto-inferred dependency
+    const expr = question.depends_on || question.conditional_logic || resolveQuestionDependency(question, allQs);
+    if (!expr) return true;
+
+    return evaluate_depends_on_value(expr, responses.value);
   }
 
   const isFullForm = ref(false);
@@ -460,9 +669,13 @@ export function useSurvey() {
       (q) => q.section_code === section.section_code && isQuestionVisible(q)
     );
     return questions.every((q) => {
-      if (!q.is_mandatory) return true;
       const val = responses.value[q.question_code];
-      return val !== undefined && val !== null && String(val).trim() !== "";
+      const isFilled = val !== undefined && val !== null && String(val).trim() !== "";
+      if (q.is_mandatory && !isFilled) return false;
+      if (isPhoneQuestion(q) && isFilled) {
+        return isValidPhoneNumber(val);
+      }
+      return true;
     });
   }
 
@@ -470,11 +683,23 @@ export function useSurvey() {
     validationErrors.value = {};
     let isValid = true;
     for (const q of activeQuestions.value) {
-      if (q.is_mandatory && isQuestionVisible(q)) {
-        const val = responses.value[q.question_code];
-        if (val === undefined || val === null || String(val).trim() === "") {
-          validationErrors.value[q.question_code] = "This field is required";
+      if (!isQuestionVisible(q)) {
+        continue;
+      }
+      const val = responses.value[q.question_code];
+      const isFilled = val !== undefined && val !== null && String(val).trim() !== "";
+
+      if (q.is_mandatory && !isFilled) {
+        validationErrors.value[q.question_code] = "This field is required";
+        isValid = false;
+        continue;
+      }
+
+      if (isPhoneQuestion(q) && isFilled) {
+        if (!isValidPhoneNumber(val)) {
+          validationErrors.value[q.question_code] = "Please enter a valid 10-digit phone number";
           isValid = false;
+          continue;
         }
       }
     }
@@ -530,6 +755,12 @@ export function useSurvey() {
     cachedTemplatesMap,
     refreshCachedTemplatesMap,
     downloadSurveyForOffline,
-    downloadProjectSurveysForOffline,
+    isPhoneQuestion,
+    isValidPhoneNumber,
+    validate_phone,
+    evaluate_depends_on_value,
+    FRAPPE_PHONE_NUMBER_PATTERN,
+    resolveQuestionDependency,
+    normalizeLogicValue,
   };
 }
