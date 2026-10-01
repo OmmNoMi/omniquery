@@ -1,0 +1,30 @@
+#!/bin/sh
+set -e
+
+echo "=========================================================="
+echo "🛡️  [TDD++ Pre-Commit Gate] Verifying local test suite..."
+echo "=========================================================="
+
+# 1. Run Vitest frontend test suite
+echo "🧪 [1/2] Running Vitest frontend specs..."
+yarn test
+
+# 2. Run Frappe backend test suite if bench environment is present
+if command -v bench >/dev/null 2>&1; then
+    SITE_NAME="${FRAPPE_SITE:-ommnomi.local}"
+    if [ -d "../../sites/$SITE_NAME" ]; then
+        echo "🧪 [2/2] Running Frappe backend unit specs on $SITE_NAME..."
+        (cd ../.. && bench --site "$SITE_NAME" run-tests --app omniquery)
+    elif [ -d "sites/$SITE_NAME" ]; then
+        echo "🧪 [2/2] Running Frappe backend unit specs on $SITE_NAME..."
+        bench --site "$SITE_NAME" run-tests --app omniquery
+    else
+        echo "ℹ️  Site $SITE_NAME not detected in parent directory; skipping bench tests."
+    fi
+else
+    echo "ℹ️  Bench CLI not detected in current PATH; skipping Frappe tests."
+fi
+
+echo "=========================================================="
+echo "✅ [TDD++ Pre-Commit Gate] All tests passed! Proceeding with commit."
+echo "=========================================================="

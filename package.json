@@ -8,7 +8,8 @@
     "build": "vite build",
     "dev": "vite",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "husky"
   },
   "dependencies": {
     "dexie": "^4.0.10",
@@ -23,6 +24,7 @@
     "autoprefixer": "^10.4.20",
     "fake-indexeddb": "^6.2.5",
     "happy-dom": "^17.6.1",
+    "husky": "^9.1.7",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "vite": "^6.0.5",
