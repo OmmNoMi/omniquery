@@ -3,6 +3,8 @@ import unittest
 
 import frappe
 
+from omniquery.services.schema_compiler import calculate_schema_hash, compile_template_schema
+
 
 class TestSchemaCompiler(unittest.TestCase):
 	def setUp(self):
@@ -95,6 +97,79 @@ class TestSchemaCompiler(unittest.TestCase):
 		schema_obj = json.loads(template.compiled_schema_json)
 		self.assertEqual(schema_obj.get("response_title_format"), "{farmer_name} - {village} ({dairy_name})")
 
+	def test_deterministic_schema_hash_consistency(self):
+		question_master = self._create_test_rating_question()
+		template = self._create_test_template_with_question(question_master.name)
+		hashes = []
+		for _ in range(25):
+			compile_template_schema(template)
+			hashes.append(template.schema_hash_sha256)
+		self.assertEqual(len(set(hashes)), 1)
+		self.assertEqual(len(template.schema_hash_sha256), 64)
+
+	def test_schema_hash_sensitivity_on_question_mutation(self):
+		question_master = self._create_test_rating_question()
+		template = self._create_test_template_with_question(question_master.name)
+		original_hash = template.schema_hash_sha256
+
+		# 1. Mutate question label
+		template.questions[0].label_en = "Altered Satisfaction Rating"
+		compile_template_schema(template)
+		label_hash = template.schema_hash_sha256
+		self.assertNotEqual(original_hash, label_hash)
+
+		# 2. Mutate validation rules
+		template.questions[0].validation_rules_json = json.dumps({"min": 1, "max": 10})
+		compile_template_schema(template)
+		val_hash = template.schema_hash_sha256
+		self.assertNotEqual(label_hash, val_hash)
+
+		# 3. Mutate conditional logic
+		template.questions[0].conditional_logic_json = json.dumps({"depends_on": "Q_OTHER", "value": "Yes"})
+		compile_template_schema(template)
+		cond_hash = template.schema_hash_sha256
+		self.assertNotEqual(val_hash, cond_hash)
+
+	def test_schema_hash_sensitivity_on_option_set_item_change(self):
+		option_set = frappe.get_doc({
+			"doctype": "OmniQuery Option Set",
+			"set_name": "Test Animal Species",
+			"scope": "Platform",
+			"options": [
+				{"option_code": "Cow", "label_text": "Cow"},
+				{"option_code": "Buffalo", "label_text": "Buffalo"},
+			],
+		}).insert(ignore_permissions=True)
+
+		q = frappe.get_doc({
+			"doctype": "OmniQuery Question",
+			"scope": "Platform",
+			"label_en": "Species Type",
+			"field_category": "Choice (Single)",
+			"options_set": option_set.name,
+			"status": "Active",
+		}).insert(ignore_permissions=True)
+
+		tmpl = frappe.get_doc({
+			"doctype": "OmniQuery Template",
+			"title": "Test Women Dairy Assessment 2026",
+			"project": "PROJ-Test Dairy Initiative",
+			"version": 1,
+			"status": "Draft",
+			"sections": [{"section_code": "SEC_1", "section_title": "Section 1"}],
+			"questions": [{"section_code": "SEC_1", "question_code": "Q_SPECIES", "question": q.name, "is_mandatory": 0}],
+		}).insert(ignore_permissions=True)
+
+		initial_hash = tmpl.schema_hash_sha256
+
+		# Add an option item to Option Set
+		option_set.append("options", {"option_code": "Goat", "label_text": "Goat"})
+		option_set.save(ignore_permissions=True)
+
+		compile_template_schema(tmpl)
+		new_hash = tmpl.schema_hash_sha256
+		self.assertNotEqual(initial_hash, new_hash)
+
 	def _create_test_rating_question(self):
 		return frappe.get_doc({
 			"doctype": "OmniQuery Question",
@@ -120,7 +195,10 @@ class TestSchemaCompiler(unittest.TestCase):
 		}).insert(ignore_permissions=True)
 
 	def tearDown(self):
-		frappe.db.delete("OmniQuery Question", {"label_en": "Satisfaction Rating"})
+		frappe.db.delete("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type"]]})
+		frappe.db.delete("OmniQuery Option Item", {"parent": "Test Animal Species"})
+		frappe.db.delete("OmniQuery Option Set", {"set_name": "Test Animal Species"})
 		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
 		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
 		frappe.db.commit()
+

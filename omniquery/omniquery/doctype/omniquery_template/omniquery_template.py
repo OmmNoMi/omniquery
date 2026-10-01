@@ -22,13 +22,14 @@ class OmniQueryTemplate(Document):
 		self._validate_immutability()
 		self._compile_schema()
 
-	def on_submit(self):
+	def before_submit(self):
 		self.status = "Published"
 		self.published_at = now_datetime()
 		self._compile_schema()
 
-	def on_cancel(self):
+	def before_cancel(self):
 		self.status = "Deprecated"
+
 
 	def validate_amended_from(self):
 		"""Allow active survey versions to coexist without cancelling historical published versions."""
@@ -36,6 +37,9 @@ class OmniQueryTemplate(Document):
 			return
 		if not frappe.db.exists(self.doctype, self.amended_from):
 			frappe.throw(frappe._("Amended template {0} does not exist").format(self.amended_from))
+		source_docstatus = frappe.db.get_value(self.doctype, self.amended_from, "docstatus")
+		if source_docstatus == 0:
+			frappe.throw(frappe._("Cannot amend draft template. Only submitted templates can be amended."))
 
 	def _validate_immutability(self):
 		if self.docstatus == 1 and not self.flags.in_submit:

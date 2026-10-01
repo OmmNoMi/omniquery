@@ -126,10 +126,10 @@ def resolve_option_set_items(option_set_name):
 	items = frappe.get_all(
 		"OmniQuery Option Item",
 		filters={"parent": option_set_name},
-		fields=["option_value"],
+		fields=["option_code"],
 		order_by="idx asc",
 	)
-	return [item.option_value for item in items]
+	return [item.option_code for item in items]
 
 
 def resolve_question_label(question_row):
