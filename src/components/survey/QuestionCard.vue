@@ -19,8 +19,8 @@
       'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-28',
       notApplicable
         ? 'bg-slate-50/70 dark:bg-slate-900/60 border-dashed border-slate-300 dark:border-slate-700 opacity-75'
-        : errorMessage
-          ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 border-l-4 border-l-rose-500 shadow-xs ring-1 ring-rose-500/20'
+        : isInvalid
+          ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700/80 border-l-4 border-l-amber-500 dark:border-l-amber-500 shadow-xs ring-1 ring-amber-500/20'
           : isFocused
             ? 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 border-l-4 border-l-emerald-600 dark:border-l-emerald-500 shadow-md ring-1 ring-emerald-500/10'
             : isCompleted
@@ -51,7 +51,14 @@
         <!-- Question Number Badge -->
         <span
           v-if="parsedQuestionMeta.number"
-          class="px-2 py-0.5 rounded-md text-xs font-mono font-bold shrink-0 mt-0.5 border border-slate-200 dark:border-slate-700 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 shadow-2xs inline-flex items-center"
+          :class="[
+            'px-2 py-0.5 rounded-md text-xs font-mono font-bold shrink-0 mt-0.5 border shadow-2xs inline-flex items-center transition-colors',
+            isInvalid
+              ? 'border-amber-400 bg-amber-100 text-amber-900 dark:bg-amber-900/60 dark:text-amber-200 dark:border-amber-600'
+              : isCompleted
+                ? 'border-emerald-300/80 bg-emerald-100/70 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                : 'border-slate-200 dark:border-slate-700 bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300'
+          ]"
         >
           <span>{{ parsedQuestionMeta.number }}</span>
         </span>
@@ -307,10 +314,23 @@
             @keydown.enter="onInputEnter"
             @keydown.esc.stop="focusCard"
             :placeholder="__('Enter 10-digit phone number')"
-            class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 pl-11 pr-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800 tracking-wider font-mono placeholder:font-sans placeholder:tracking-normal placeholder:font-normal"
+            :class="[
+              'block w-full min-h-[50px] rounded-xl border py-3 pl-11 pr-4 text-base font-semibold tracking-wider font-mono placeholder:font-sans placeholder:tracking-normal placeholder:font-normal transition-all',
+              isInvalid
+                ? 'border-amber-400 dark:border-amber-600 bg-amber-50/20 dark:bg-amber-950/20 text-slate-900 dark:text-white focus:border-amber-500 focus:ring-amber-500'
+                : 'border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800'
+            ]"
           />
         </div>
-        <p v-if="phoneDigitCountText" class="mt-1.5 px-1 text-[11px] font-medium text-slate-400 dark:text-slate-500">
+        <p
+          v-if="phoneDigitCountText"
+          :class="[
+            'mt-1.5 px-1 text-[11px] font-medium transition-colors',
+            isInvalid
+              ? 'text-amber-700 dark:text-amber-400 font-semibold'
+              : 'text-slate-400 dark:text-slate-500'
+          ]"
+        >
           {{ phoneDigitCountText }}
         </p>
       </div>
@@ -328,13 +348,14 @@
       />
     </div>
 
-    <!-- Validation Error -->
-    <p v-if="errorMessage" class="mt-2 text-xs font-semibold text-rose-600">
-      {{ __(errorMessage) }}
+    <!-- Validation Error (when error exists and input is not active or explicitly invalid) -->
+    <p v-if="validationError && (errorMessage || !isInputFocused)" class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+      <span class="text-amber-500">⚠</span>
+      <span>{{ __(validationError) }}</span>
     </p>
 
     <!-- Card Footer: Status Badge (Right) -->
-    <div v-if="notApplicable || (isCompleted && !isInputFocused)" class="flex items-center justify-end mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+    <div v-if="notApplicable || isInvalid || (isCompleted && !isInputFocused)" class="flex items-center justify-end mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
       <!-- Status Badge (Bottom-Right) -->
       <div class="min-h-[22px] flex items-center">
         <!-- Not Applicable Badge -->
@@ -347,9 +368,36 @@
           <span>{{ __('Not Applicable') }}</span>
         </span>
 
+        <!-- Invalid Badge with Hover Error Tooltip -->
+        <div
+          v-else-if="isInvalid"
+          class="relative group/invalid inline-flex items-center"
+        >
+          <span
+            data-testid="invalid-badge"
+            class="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/60 border border-amber-300/90 dark:border-amber-700/60 px-2.5 py-0.5 rounded-full cursor-help shadow-2xs transition-all hover:bg-amber-100 dark:hover:bg-amber-900/40 hover:border-amber-400"
+            :title="validationError"
+          >
+            <span class="text-amber-600 dark:text-amber-400 font-bold">⚠</span>
+            <span>{{ __('Invalid') }}</span>
+          </span>
+
+          <!-- Floating Hover Error Tooltip Popover -->
+          <div
+            role="tooltip"
+            data-testid="invalid-tooltip"
+            class="absolute bottom-full right-0 mb-1.5 hidden group-hover/invalid:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900/95 dark:bg-slate-800/95 text-white text-xs font-medium shadow-lg border border-slate-700/60 whitespace-nowrap z-30 pointer-events-none"
+          >
+            <span class="text-amber-400 text-xs">⚠</span>
+            <span>{{ validationError }}</span>
+            <div class="absolute -bottom-1 right-4 w-2 h-2 bg-slate-900/95 dark:bg-slate-800/95 border-r border-b border-slate-700/60 rotate-45"></div>
+          </div>
+        </div>
+
         <!-- Answered Badge -->
         <span
           v-else-if="isCompleted && !isInputFocused"
+          data-testid="answered-badge"
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full"
         >
           <span>✓</span>
@@ -581,13 +629,83 @@ function onClearSearch() {
   });
 }
 
+const validationError = computed(() => {
+  if (props.notApplicable) return null;
+
+  // 1. External error message passed via props (e.g. from parent/section validator)
+  if (props.errorMessage) {
+    return props.errorMessage;
+  }
+
+  const val = props.modelValue;
+  const strVal = val !== undefined && val !== null ? String(val).trim() : "";
+  const hasInput = strVal !== "";
+
+  // 2. Phone Question Validation
+  if (isPhoneControl.value && hasInput) {
+    const digits = strVal.replace(/\D/g, "");
+    if (digits.length < 10) {
+      const missing = 10 - digits.length;
+      return `${__("Missing")} ${missing} ${missing === 1 ? __("digit") : __("digits")} (${digits.length}/10 ${__("entered")})`;
+    }
+    if (digits.length === 10 && digits.startsWith("0")) {
+      return __("Phone number cannot start with 0");
+    }
+    if (digits.length > 10) {
+      return __("Phone number cannot exceed 10 digits");
+    }
+  }
+
+  // 3. Number Question Validation
+  if (isNumberControl.value && hasInput) {
+    const num = Number(val);
+    if (isNaN(num)) {
+      return __("Please enter a valid number");
+    }
+    const r = props.question.validation_rules;
+    if (r) {
+      if (r.min !== undefined && num < Number(r.min)) {
+        return `${__("Value must be at least")} ${r.min}`;
+      }
+      if (r.max !== undefined && num > Number(r.max)) {
+        return `${__("Value cannot exceed")} ${r.max}`;
+      }
+    }
+    if (props.question.min_value !== undefined && num < Number(props.question.min_value)) {
+      return `${__("Value must be at least")} ${props.question.min_value}`;
+    }
+    if (props.question.max_value !== undefined && num > Number(props.question.max_value)) {
+      return `${__("Value cannot exceed")} ${props.question.max_value}`;
+    }
+  }
+
+  // 4. Custom validation rules on question definition
+  if (props.question.validation_rule && hasInput) {
+    try {
+      const regex = new RegExp(props.question.validation_rule);
+      if (!regex.test(strVal)) {
+        return props.question.validation_error_message || __("Invalid format");
+      }
+    } catch (e) {}
+  }
+
+  return null;
+});
+
+const isInvalid = computed(() => {
+  if (props.notApplicable) return false;
+  return Boolean(validationError.value);
+});
+
 const isCompleted = computed(() => {
+  if (isInvalid.value) return false;
   const val = props.modelValue;
   if (val === undefined || val === null) return false;
   if (Array.isArray(val)) return val.length > 0;
   if (typeof val === "object") return Object.keys(val).length > 0;
   if (isPhoneControl.value) {
-    return String(val).replace(/\D/g, "").length === 10;
+    const digits = String(val).replace(/\D/g, "");
+    return digits.length === 10 && !digits.startsWith("0");
   }
   return String(val).trim() !== "";
 });
@@ -1234,10 +1352,17 @@ const isPhoneControl = computed(() => {
 
 const phoneDigitCountText = computed(() => {
   if (!isPhoneControl.value) return "";
-  const len = String(props.modelValue || "").replace(/\D/g, "").length;
+  const digits = String(props.modelValue || "").replace(/\D/g, "");
+  const len = digits.length;
   if (len === 0) return "";
-  if (len === 10) return __("✓ 10 digits entered");
-  return `${len}/10 ${__("digits")}`;
+  if (len === 10) {
+    if (digits.startsWith("0")) {
+      return __("Phone number cannot start with 0");
+    }
+    return __("✓ 10 digits entered");
+  }
+  const missing = 10 - len;
+  return `${len}/10 ${__("digits")} · ${missing} ${missing === 1 ? __("digit missing") : __("digits missing")}`;
 });
 
 function onPhoneInput(e) {
@@ -1250,7 +1375,7 @@ function onPhoneInput(e) {
   digits = digits.slice(0, 10);
   e.target.value = digits;
   emit("update:modelValue", digits);
-  if (digits.length === 10) {
+  if (digits.length === 10 && !digits.startsWith("0")) {
     emit("answered", { code: props.question.question_code, value: digits });
   }
 }

@@ -44,7 +44,7 @@ export function isValidPhoneNumber(val) {
   const str = String(val).trim();
   if (!validate_phone(str)) return false;
   const digits = str.replace(/\D/g, "");
-  return digits.length === 10;
+  return digits.length === 10 && !digits.startsWith("0");
 }
 
 export function normalizeLogicValue(val) {

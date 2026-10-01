@@ -266,6 +266,7 @@ describe("useSurvey", () => {
       // isValidPhoneNumber (strict 10-digit field validator)
       expect(isValidPhoneNumber("9876543210")).toBe(true);
       expect(isValidPhoneNumber("1234567890")).toBe(true);
+      expect(isValidPhoneNumber("0902348908")).toBe(false); // starts with 0
       expect(isValidPhoneNumber("98765")).toBe(false); // too short
       expect(isValidPhoneNumber("987654321000")).toBe(false); // too long
       expect(isValidPhoneNumber("abcdefghij")).toBe(false); // non-digits
