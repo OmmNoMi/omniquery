@@ -86,6 +86,11 @@ export function useWAL() {
             ...payload,
           };
         } catch (err) {
+          db.wal.where("wal_id").equals(e.wal_id).modify({
+            status: "quarantined",
+            quarantine_reason: `Corrupt WAL payload: ${err.message}`,
+            quarantined_at: new Date().toISOString(),
+          }).catch(() => {});
           return null;
         }
       })

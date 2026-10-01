@@ -65,6 +65,37 @@ class TestSyncConcurrency(FrappeTestCase):
 		count = frappe.db.count("OmniQuery Response", {"idempotency_key": idempotency_key})
 		self.assertEqual(count, 1)
 
+	def test_concurrent_duplicate_burst(self):
+		idempotency_key = "TEST-CONC-BURST-001"
+		sub = {
+			"idempotency_key": idempotency_key,
+			"survey_template": self.test_template_name,
+			"template_version": 1,
+			"items": [
+				{"question_code": "q1", "value": "Burst Invariant"}
+			],
+		}
+
+		# Simulate 10 rapid repeated pushes with identical token
+		results = []
+		for _ in range(10):
+			res = batch_push([sub])
+			items = res.get("results", []) if isinstance(res, dict) else res
+			results.append(items[0]["status"])
+
+		# Invariant: exactly 1 SUCCESS, all subsequent 9 DUPLICATE_SKIPPED
+		self.assertEqual(results[0], "SUCCESS")
+		self.assertEqual(results[1:], ["DUPLICATE_SKIPPED"] * 9)
+
+		# Database count invariant: exactly 1 response record exists
+		count = frappe.db.count("OmniQuery Response", {"idempotency_key": idempotency_key})
+		self.assertEqual(count, 1)
+
+		# Clean up test artifact
+		frappe.db.delete("OmniQuery Response", {"idempotency_key": idempotency_key})
+		frappe.db.delete("OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key})
+		frappe.db.commit()
+
 	def test_batch_push_multiple_submissions(self):
 		submissions = [
 			{

@@ -304,6 +304,10 @@ function onTriggerKeydown(e) {
     e.preventDefault();
     e.stopPropagation();
     openCombobox();
+  } else if (e.key === "Escape" && isOpen.value) {
+    e.preventDefault();
+    e.stopPropagation();
+    closeCombobox();
   }
 }
 
