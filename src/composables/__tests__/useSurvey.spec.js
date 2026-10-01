@@ -250,9 +250,20 @@ describe("useSurvey", () => {
       expect(isPhoneQuestion({ question_code: "respondent_name", label_en: "Respondent Name", field_type: "Text" })).toBe(false);
     });
 
-    it("validates 10-digit numeric phone numbers correctly", () => {
-      const { isValidPhoneNumber } = useSurvey();
+    it("validates 10-digit numeric phone numbers correctly using Frappe native phone validation", () => {
+      const { isValidPhoneNumber, validate_phone, FRAPPE_PHONE_NUMBER_PATTERN } = useSurvey();
 
+      // Frappe regex pattern matching
+      expect(FRAPPE_PHONE_NUMBER_PATTERN.test("9876543210")).toBe(true);
+      expect(FRAPPE_PHONE_NUMBER_PATTERN.test("+91 98765 43210")).toBe(true);
+      expect(FRAPPE_PHONE_NUMBER_PATTERN.test("abc")).toBe(false);
+
+      // validate_phone helper
+      expect(validate_phone("9876543210")).toBe(true);
+      expect(validate_phone("98765")).toBe(true); // matches phone chars pattern
+      expect(validate_phone("invalid_phone_text")).toBe(false);
+
+      // isValidPhoneNumber (strict 10-digit field validator)
       expect(isValidPhoneNumber("9876543210")).toBe(true);
       expect(isValidPhoneNumber("1234567890")).toBe(true);
       expect(isValidPhoneNumber("98765")).toBe(false); // too short
@@ -260,6 +271,25 @@ describe("useSurvey", () => {
       expect(isValidPhoneNumber("abcdefghij")).toBe(false); // non-digits
       expect(isValidPhoneNumber("")).toBe(false);
       expect(isValidPhoneNumber(null)).toBe(false);
+    });
+
+    it("evaluates Frappe native depends_on syntax ('eval:doc.field == value') correctly", () => {
+      const { evaluate_depends_on_value } = useSurvey();
+
+      const doc = { attended_training: "Yes", has_vehicle: "No", count: 3 };
+
+      // 1. Frappe eval: string expression
+      expect(evaluate_depends_on_value("eval:doc.attended_training == 'Yes'", doc)).toBe(true);
+      expect(evaluate_depends_on_value("eval:doc.attended_training == 'No'", doc)).toBe(false);
+      expect(evaluate_depends_on_value("eval:doc.count > 2", doc)).toBe(true);
+
+      // 2. Frappe simple fieldname truthiness
+      expect(evaluate_depends_on_value("attended_training", doc)).toBe(true);
+      expect(evaluate_depends_on_value("nonexistent_field", doc)).toBe(false);
+
+      // 3. Structured dependency object
+      expect(evaluate_depends_on_value({ depends_on: "attended_training", operator: "equals", value: "Yes" }, doc)).toBe(true);
+      expect(evaluate_depends_on_value({ depends_on: "attended_training", operator: "equals", value: "No" }, doc)).toBe(false);
     });
 
     it("auto-infers conditional dependency when question label starts with 'If Yes'", () => {

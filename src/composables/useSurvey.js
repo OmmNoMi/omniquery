@@ -24,10 +24,27 @@ export function isPhoneQuestion(q) {
   );
 }
 
+// Frappe Native Phone Number Validation Pattern
+// Matches apps/frappe/frappe/public/js/frappe/utils/utils.js:452 and apps/frappe/frappe/utils/__init__.py:45
+export const FRAPPE_PHONE_NUMBER_PATTERN = /^([0-9 +_\-,.*#()]){1,20}$/;
+
+export function validate_phone(val) {
+  if (typeof window !== "undefined" && typeof window.validate_phone === "function") {
+    return window.validate_phone(val);
+  }
+  if (typeof window !== "undefined" && window.frappe?.utils?.validate_type) {
+    return window.frappe.utils.validate_type(val, "phone");
+  }
+  if (!val) return false;
+  return FRAPPE_PHONE_NUMBER_PATTERN.test(String(val).trim());
+}
+
 export function isValidPhoneNumber(val) {
   if (val === undefined || val === null) return false;
-  const clean = String(val).replace(/\D/g, "");
-  return clean.length === 10;
+  const str = String(val).trim();
+  if (!validate_phone(str)) return false;
+  const digits = str.replace(/\D/g, "");
+  return digits.length === 10;
 }
 
 export function normalizeLogicValue(val) {
@@ -39,6 +56,71 @@ export function normalizeLogicValue(val) {
     return "no";
   }
   return String(val).trim().toLowerCase();
+}
+
+/**
+ * Frappe Native evaluate_depends_on_value Engine.
+ * Evaluates field visibility based on Frappe's depends_on syntax ('eval:doc.field == value', fieldname, or rule).
+ * Reference: apps/frappe/frappe/public/js/frappe/form/layout.js:784
+ */
+export function evaluate_depends_on_value(expression, doc = {}) {
+  if (!expression) return true;
+  if (typeof expression === "boolean") return expression;
+  if (typeof expression === "function") return Boolean(expression(doc));
+
+  // 1. Frappe native 'eval:' expression (e.g. "eval:doc.attended_training == 'Yes'")
+  if (typeof expression === "string" && expression.startsWith("eval:")) {
+    try {
+      const code = expression.slice(5).trim();
+      const fn = new Function("doc", "responses", `with(doc) { return Boolean(${code}); }`);
+      return Boolean(fn(doc, doc));
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // 2. Structured rule { depends_on, operator, value }
+  if (typeof expression === "object") {
+    const parentCode = expression.depends_on || expression.parent_question || expression.field;
+    if (!parentCode) return true;
+    const parentVal = doc[parentCode];
+    if (parentVal === undefined || parentVal === null || parentVal === "") return false;
+
+    const op = (expression.operator || "equals").toLowerCase();
+    const target = expression.value !== undefined ? expression.value : (expression.equals !== undefined ? expression.equals : expression.target);
+
+    if (op === "equals" || op === "==" || op === "eq") {
+      const normP = normalizeLogicValue(parentVal);
+      const normT = normalizeLogicValue(target);
+      if (normP === normT) return true;
+      if (normT === "yes" && (normP.startsWith("yes") || normP === "1")) return true;
+      if (normT === "no" && (normP.startsWith("no") || normP === "0")) return true;
+      return false;
+    }
+
+    if (op === "not_equals" || op === "!=" || op === "neq") {
+      return normalizeLogicValue(parentVal) !== normalizeLogicValue(target);
+    }
+
+    if (op === "contains") {
+      return String(parentVal).toLowerCase().includes(String(target || "").toLowerCase());
+    }
+
+    if (op === "in" || Array.isArray(expression.in) || Array.isArray(expression.values)) {
+      const list = (expression.in || expression.values || []).map(normalizeLogicValue);
+      return list.includes(normalizeLogicValue(parentVal));
+    }
+
+    return true;
+  }
+
+  // 3. Simple fieldname (Frappe truthiness)
+  if (typeof expression === "string") {
+    const val = doc[expression];
+    return Array.isArray(val) ? val.length > 0 : Boolean(val);
+  }
+
+  return true;
 }
 
 export function resolveQuestionDependency(question, allQuestions = []) {
@@ -526,47 +608,11 @@ export function useSurvey() {
   function isQuestionVisible(question) {
     if (!question) return true;
     const allQs = (activeTemplate.value && activeTemplate.value.questions) || [];
-    const logic = resolveQuestionDependency(question, allQs);
-    if (!logic) return true;
+    // Check Frappe native depends_on property, conditional_logic, or auto-inferred dependency
+    const expr = question.depends_on || question.conditional_logic || resolveQuestionDependency(question, allQs);
+    if (!expr) return true;
 
-    const parentCode = logic.depends_on || logic.parent_question;
-    if (!parentCode) return true;
-
-    const parentValue = responses.value[parentCode];
-    if (parentValue === undefined || parentValue === null || parentValue === "") {
-      return false;
-    }
-
-    const op = (logic.operator || "equals").toLowerCase();
-    const target = logic.equals !== undefined ? logic.equals : (logic.value !== undefined ? logic.value : logic.target);
-
-    if (op === "equals" || op === "==" || op === "eq") {
-      const normP = normalizeLogicValue(parentValue);
-      const normT = normalizeLogicValue(target);
-      if (normP === normT) return true;
-      if (normT === "yes" && (normP.startsWith("yes") || normP === "1")) return true;
-      if (normT === "no" && (normP.startsWith("no") || normP === "0")) return true;
-      return false;
-    }
-
-    if (op === "not_equals" || op === "!=" || op === "neq") {
-      const normP = normalizeLogicValue(parentValue);
-      const normT = normalizeLogicValue(target);
-      return normP !== normT;
-    }
-
-    if (op === "contains") {
-      const pStr = String(parentValue).toLowerCase();
-      const tStr = String(target || "").toLowerCase();
-      return pStr.includes(tStr);
-    }
-
-    if (op === "in" || Array.isArray(logic.in) || Array.isArray(logic.values)) {
-      const targetList = (logic.in || logic.values || []).map(normalizeLogicValue);
-      return targetList.includes(normalizeLogicValue(parentValue));
-    }
-
-    return true;
+    return evaluate_depends_on_value(expr, responses.value);
   }
 
   const isFullForm = ref(false);
@@ -709,9 +755,11 @@ export function useSurvey() {
     cachedTemplatesMap,
     refreshCachedTemplatesMap,
     downloadSurveyForOffline,
-    downloadProjectSurveysForOffline,
     isPhoneQuestion,
     isValidPhoneNumber,
+    validate_phone,
+    evaluate_depends_on_value,
+    FRAPPE_PHONE_NUMBER_PATTERN,
     resolveQuestionDependency,
     normalizeLogicValue,
   };
