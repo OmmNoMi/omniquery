@@ -348,10 +348,10 @@
       />
     </div>
 
-    <!-- Validation Error (when error exists and input is not active or explicitly invalid) -->
-    <p v-if="validationError && (errorMessage || !isInputFocused)" class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+    <!-- Explicit Error from Parent (e.g. Mandatory field missing on submit) -->
+    <p v-if="errorMessage" class="mt-2 text-xs font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
       <span class="text-amber-500">⚠</span>
-      <span>{{ __(validationError) }}</span>
+      <span>{{ __(errorMessage) }}</span>
     </p>
 
     <!-- Card Footer: Status Badge (Right) -->
@@ -1355,14 +1355,10 @@ const phoneDigitCountText = computed(() => {
   const digits = String(props.modelValue || "").replace(/\D/g, "");
   const len = digits.length;
   if (len === 0) return "";
-  if (len === 10) {
-    if (digits.startsWith("0")) {
-      return __("Phone number cannot start with 0");
-    }
+  if (len === 10 && !digits.startsWith("0")) {
     return __("✓ 10 digits entered");
   }
-  const missing = 10 - len;
-  return `${len}/10 ${__("digits")} · ${missing} ${missing === 1 ? __("digit missing") : __("digits missing")}`;
+  return `${len}/10 ${__("digits")}`;
 });
 
 function onPhoneInput(e) {

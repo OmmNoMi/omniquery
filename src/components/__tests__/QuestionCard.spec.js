@@ -89,9 +89,8 @@ describe("QuestionCard - Phone Validation and Input Handling", () => {
         },
       });
 
-      // 1. Helper text reports missing numbers
+      // 1. Helper text reports digit count
       expect(wrapper.text()).toContain("3/10 digits");
-      expect(wrapper.text()).toContain("7 digits missing");
 
       // 2. Card container has orange classes (border-amber-300, bg-amber-50/40, border-l-amber-500)
       const card = wrapper.find("[data-question-card]");
