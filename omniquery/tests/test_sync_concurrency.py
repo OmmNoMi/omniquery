@@ -1,3 +1,4 @@
+import unittest.mock
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from omniquery.api.sync import batch_push
@@ -35,8 +36,13 @@ class TestSyncConcurrency(FrappeTestCase):
 		for r in responses:
 			frappe.delete_doc("OmniQuery Response", r, force=True)
 
+		frappe.db.delete("OmniQuery Sync Audit Log", {"idempotency_key": ["like", "TEST-CONC-%"]})
+		frappe.db.delete("OmniQuery Field Error Log", {"question_code": ["like", "TEST-CONC-%"]})
+		frappe.db.delete("OmniQuery Response", {"name": "TEMP_SP_003"})
+
 		if frappe.db.exists("OmniQuery Template", self.test_template_name):
 			frappe.delete_doc("OmniQuery Template", self.test_template_name, force=True)
+
 
 	def test_duplicate_submission_is_skipped(self):
 		idempotency_key = "TEST-CONC-001"
@@ -207,5 +213,78 @@ class TestSyncConcurrency(FrappeTestCase):
 		saved_item = next(it for it in resp_doc.items if it.question_code == "q_xss")
 		self.assertNotIn("<script>", saved_item.value_text)
 		self.assertIn("Harmless Text", saved_item.value_text)
+
+	def test_batch_push_savepoint_partial_failure_isolation(self):
+		batch = [
+			{
+				"idempotency_key": f"TEST-CONC-SP-{i:03d}",
+				"survey_template": self.test_template_name,
+				"template_version": 1,
+				"items": [{"question_code": "q1", "value": f"Response {i}"}],
+			}
+			for i in range(1, 6)
+		]
+
+		orig_insert = frappe.model.document.Document.insert
+
+		def flaky_insert(doc, *args, **kwargs):
+			if doc.doctype == "OmniQuery Response" and getattr(doc, "idempotency_key", "") == "TEST-CONC-SP-003":
+				frappe.db.sql(
+					"INSERT INTO `tabOmniQuery Response` (name, idempotency_key, survey_template, creation, modified, modified_by, owner) VALUES ('TEMP_SP_003', 'TEMP_SP_003', 'TEST', NOW(), NOW(), 'Administrator', 'Administrator')"
+				)
+				raise frappe.ValidationError("Simulated unexpected MariaDB write fault on record #3")
+			return orig_insert(doc, *args, **kwargs)
+
+		with unittest.mock.patch("frappe.model.document.Document.insert", side_effect=flaky_insert, autospec=True):
+			res = batch_push(batch)
+
+		results = res.get("results", []) if isinstance(res, dict) else res
+		self.assertEqual(len(results), 5)
+
+		# Submissions 1, 2, 4, 5 must succeed
+		self.assertEqual(results[0]["status"], "SUCCESS")
+		self.assertEqual(results[1]["status"], "SUCCESS")
+		self.assertEqual(results[3]["status"], "SUCCESS")
+		self.assertEqual(results[4]["status"], "SUCCESS")
+
+		# Submission 3 must be isolated and marked FAILED
+		self.assertEqual(results[2]["status"], "FAILED")
+		self.assertIn("Simulated unexpected MariaDB write fault", results[2]["error"])
+
+		# Database state verification:
+		# 1. Successful documents exist in MariaDB
+		for i in [1, 2, 4, 5]:
+			self.assertTrue(frappe.db.exists("OmniQuery Response", f"TEST-CONC-SP-{i:03d}"))
+
+		# 2. Failed document and uncommitted changes within savepoint are rolled back
+		self.assertFalse(frappe.db.exists("OmniQuery Response", "TEST-CONC-SP-003"))
+		self.assertFalse(frappe.db.exists("OmniQuery Response", "TEMP_SP_003"))
+
+		# 3. Field error log created for administrative inspection
+		field_err = frappe.db.get_value(
+			"OmniQuery Field Error Log",
+			{"question_code": "TEST-CONC-SP-003"},
+			["name", "error_message"],
+			as_dict=True,
+		)
+		self.assertIsNotNone(field_err)
+		self.assertIn("Simulated unexpected MariaDB write fault", field_err.error_message)
+
+		# 4. Sync Audit Log statuses are accurate
+		for i in [1, 2, 4, 5]:
+			status = frappe.db.get_value(
+				"OmniQuery Sync Audit Log",
+				{"idempotency_key": f"TEST-CONC-SP-{i:03d}"},
+				"sync_status",
+			)
+			self.assertEqual(status, "SUCCESS")
+
+		failed_audit_status = frappe.db.get_value(
+			"OmniQuery Sync Audit Log",
+			{"idempotency_key": "TEST-CONC-SP-003"},
+			"sync_status",
+		)
+		self.assertEqual(failed_audit_status, "FAILED")
+
 
 
