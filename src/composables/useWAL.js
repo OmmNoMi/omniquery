@@ -171,6 +171,9 @@ export function useWAL() {
         // Break if no successful progress was made to avoid infinite retry loop
         if (chunkSynced === 0) break;
       }
+      try {
+        await syncPendingAudio();
+      } catch (audioErr) {}
       return { syncedCount: totalSynced, results: allResults };
     } catch (err) {
       console.warn("syncWAL error:", err);
@@ -226,6 +229,61 @@ export function useWAL() {
     return syncedCount;
   }
 
+  async function syncPendingAudio(targetResponseUid = null) {
+    if (!isOnline.value) return 0;
+    let uploadedCount = 0;
+    try {
+      let pendingAudios = [];
+      if (targetResponseUid) {
+        pendingAudios = await db.audio_recordings
+          .where("response_uid")
+          .equals(targetResponseUid)
+          .and((r) => r.status === "pending")
+          .toArray();
+      } else {
+        pendingAudios = await db.audio_recordings
+          .where("status")
+          .equals("pending")
+          .toArray();
+      }
+
+      for (const rec of pendingAudios) {
+        if (!rec.blob || !rec.response_uid) continue;
+        try {
+          const formData = new FormData();
+          formData.append("response_name", rec.response_uid);
+          formData.append("file", rec.blob, rec.file_name || `interview_${rec.response_uid}.webm`);
+
+          const res = await fetch("/api/method/omniquery.api.sync.upload_response_audio", {
+            method: "POST",
+            headers: {
+              "X-Frappe-CSRF-Token": (window.frappe && window.frappe.csrf_token) || "",
+            },
+            body: formData,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const msg = data && (data.message || data);
+            if (msg && msg.status === "SUCCESS") {
+              await db.audio_recordings.where("response_uid").equals(rec.response_uid).modify({
+                status: "synced",
+                file_url: msg.file_url,
+                synced_at: new Date().toISOString(),
+              });
+              uploadedCount++;
+            }
+          }
+        } catch (uploadErr) {
+          console.warn(`Failed to upload audio for ${rec.response_uid}:`, uploadErr);
+        }
+      }
+    } catch (e) {
+      console.warn("syncPendingAudio error:", e);
+    }
+    return uploadedCount;
+  }
+
   async function forceSyncAll() {
     if (isSyncing.value) return { status: "IN_PROGRESS", message: "Sync already in progress" };
     isSyncing.value = true;
@@ -234,6 +292,7 @@ export function useWAL() {
       walSynced: 0,
       walErrors: 0,
       draftsSynced: 0,
+      audioSynced: 0,
       totalSynced: 0,
       message: "",
     };
@@ -255,6 +314,7 @@ export function useWAL() {
       }
 
       summary.draftsSynced = await syncAllDrafts();
+      summary.audioSynced = await syncPendingAudio();
       summary.totalSynced = summary.walSynced + summary.draftsSynced;
 
       if (summary.walErrors > 0) {
@@ -367,6 +427,7 @@ export function useWAL() {
     lastSyncResult,
     queueWAL,
     syncWAL,
+    syncPendingAudio,
     syncAllDrafts,
     forceSyncAll,
     getWalQueueItems,

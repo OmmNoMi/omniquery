@@ -505,9 +505,9 @@ const showExitDialog = ref(false);
 
 const { __ } = useTranslation();
 const { textSize, cycleTextSize, setTextSize } = useTextScale();
-const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll } = useWAL();
+const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
 const { gpsCoords, captureGPS } = useGPS();
-const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording } = useAudioRecorder();
+const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
 
 const {
   activeTemplate,
@@ -1198,6 +1198,9 @@ async function saveOfflineRecord() {
     const res = await syncWAL();
     if (res && res.syncedCount > 0) {
       isSubmissionSynced.value = true;
+      try {
+        await syncPendingAudio(draftKey);
+      } catch (audioSyncErr) {}
       if (window.frappe && window.frappe.show_alert) {
         window.frappe.show_alert({ message: __("Survey synced to server successfully!"), indicator: "green" });
       }
@@ -1245,7 +1248,19 @@ async function submitForm() {
   }
   if (draftSyncTimer) clearTimeout(draftSyncTimer);
   isSubmitting.value = true;
-  stopRecording();
+
+  const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name || "";
+  const draftKey = currentDraftId.value || generateSurveyId(tmplName);
+
+  try {
+    const recordedBlob = await stopRecording();
+    if (recordedBlob && recordedBlob.size > 0) {
+      await saveAudioForResponse(draftKey, recordedBlob);
+    }
+  } catch (audioErr) {
+    console.warn("Failed saving audio recording:", audioErr);
+  }
+
   await saveOfflineRecord();
   isSubmitting.value = false;
   isSubmitted.value = true;
@@ -1253,6 +1268,7 @@ async function submitForm() {
 
 function resetSurvey() {
   if (draftSyncTimer) clearTimeout(draftSyncTimer);
+  discardAudio();
   responses.value = {};
   activeSectionIndex.value = 0;
   isSubmitted.value = false;

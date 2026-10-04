@@ -868,6 +868,23 @@ async function exportToZip() {
       surveysFolder.file(fileName, JSON.stringify(r, null, 2));
     }
 
+    // 4b. Media folder for recorded audio blobs
+    try {
+      const audioRecords = await db.audio_recordings.toArray();
+      if (audioRecords.length > 0) {
+        const mediaFolder = zip.folder("media");
+        for (const rec of audioRecords) {
+          if (rec.blob && rec.response_uid) {
+            const ext = (rec.mime_type || "").includes("mp4") ? "mp4" : "webm";
+            const audioFileName = `interview_${rec.response_uid}.${ext}`;
+            mediaFolder.file(audioFileName, rec.blob);
+          }
+        }
+      }
+    } catch (mediaErr) {
+      console.warn("Could not bundle audio blobs into ZIP:", mediaErr);
+    }
+
     // 5. Audit Instructions
     zip.file(
       "README.txt",
@@ -883,6 +900,7 @@ ARCHIVE LAYOUT:
 - all_records.json: Complete raw and parsed IndexedDB snapshot
 - records_summary.csv: Tabular data for Excel / Google Sheets
 - individual_surveys/: Standalone JSON files for each survey response
+- media/: Interview audio recordings (.webm / .mp4)
 
 RECOVERY NOTE:
 Transfer this ZIP file to your study supervisor or operations lead. 

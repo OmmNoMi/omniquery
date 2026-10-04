@@ -158,4 +158,48 @@ describe("useWAL", () => {
     const walRecord = await db.wal.get(entry.wal_id);
     expect(walRecord.status).toBe("synced");
   });
+
+  it("syncs pending audio recordings and updates status to synced", async () => {
+    await db.audio_recordings.clear();
+    const testUid = "OQS-TEST-AUDIO-SYNC";
+    const testBlob = new Blob(["mock-audio-data"], { type: "audio/webm" });
+
+    await db.audio_recordings.put({
+      response_uid: testUid,
+      blob: testBlob,
+      mime_type: "audio/webm",
+      file_name: `interview_${testUid}.webm`,
+      size: testBlob.size,
+      status: "pending",
+      created_at: new Date().toISOString(),
+    });
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          status: "SUCCESS",
+          doc_name: testUid,
+          file_url: `/private/files/interview_${testUid}.webm`,
+        },
+      }),
+    });
+    globalThis.fetch = mockFetch;
+    if (typeof window !== "undefined") {
+      window.fetch = mockFetch;
+    }
+
+    const { syncPendingAudio } = useWAL();
+    const uploaded = await syncPendingAudio(testUid);
+
+    expect(uploaded).toBe(1);
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/method/omniquery.api.sync.upload_response_audio",
+      expect.objectContaining({ method: "POST" })
+    );
+
+    const updated = await db.audio_recordings.get(testUid);
+    expect(updated.status).toBe("synced");
+    expect(updated.file_url).toBe(`/private/files/interview_${testUid}.webm`);
+  });
 });

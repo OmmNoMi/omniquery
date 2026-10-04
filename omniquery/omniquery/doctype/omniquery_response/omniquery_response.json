@@ -18,6 +18,7 @@
   "gps_accuracy",
   "captured_at_local",
   "synced_at",
+  "audio_recording",
   "items_tab",
   "items",
   "raw_payload_tab",
@@ -111,6 +112,11 @@
    "in_list_view": 1,
    "label": "Server Sync Time",
    "read_only": 1
+  },
+  {
+   "fieldname": "audio_recording",
+   "fieldtype": "Attach",
+   "label": "Interview Audio Recording"
   },
   {
    "fieldname": "items_tab",

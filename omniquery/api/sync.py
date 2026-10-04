@@ -464,3 +464,75 @@ def batch_push(submissions=None):
 
 	frappe.db.commit()
 	return {"results": results}
+
+
+@frappe.whitelist(allow_guest=True)
+def upload_response_audio(response_name=None, idempotency_key=None, filename=None):
+	"""
+	Uploads an interview audio recording file and binds it to OmniQuery Response.
+	Accepts multipart file upload (frappe.request.files['file']) or base64 audio content.
+	"""
+	from frappe.utils.file_manager import save_file
+
+	target_name = response_name or idempotency_key
+	if not target_name and hasattr(frappe.local, "form_dict"):
+		target_name = frappe.local.form_dict.get("response_name") or frappe.local.form_dict.get("idempotency_key")
+
+	if not target_name:
+		frappe.throw(_("Missing response_name or idempotency_key"), frappe.ValidationError)
+
+	# Locate target OmniQuery Response document
+	if not frappe.db.exists("OmniQuery Response", target_name):
+		target_name = frappe.db.get_value("OmniQuery Response", {"idempotency_key": target_name}, "name")
+
+	if not target_name or not frappe.db.exists("OmniQuery Response", target_name):
+		frappe.throw(_("OmniQuery Response {0} not found").format(target_name), frappe.DoesNotExistError)
+
+	file_content = None
+	file_name = filename or f"interview_{target_name}.webm"
+
+	# 1. Check multipart/form-data upload
+	if hasattr(frappe.local, "request") and frappe.local.request and hasattr(frappe.local.request, "files"):
+		uploaded_file = frappe.local.request.files.get("file") or frappe.local.request.files.get("audio")
+		if uploaded_file:
+			file_name = filename or getattr(uploaded_file, "filename", None) or file_name
+			file_content = uploaded_file.read()
+
+	# 2. Check form_dict base64 payload
+	if not file_content and hasattr(frappe.local, "form_dict"):
+		b64_data = frappe.local.form_dict.get("file_base64") or frappe.local.form_dict.get("data")
+		if b64_data:
+			import base64
+			if "," in b64_data:
+				b64_data = b64_data.split(",", 1)[1]
+			try:
+				file_content = base64.b64decode(b64_data)
+			except Exception as b64_err:
+				frappe.throw(_("Invalid base64 audio content: {0}").format(str(b64_err)))
+
+	if not file_content:
+		frappe.throw(_("No audio file content received"), frappe.ValidationError)
+
+	# Save file and link as attachment to OmniQuery Response
+	file_doc = save_file(
+		fname=file_name,
+		content=file_content,
+		dt="OmniQuery Response",
+		dn=target_name,
+		folder="Home",
+		decode=False,
+		is_private=1,
+		df="audio_recording",
+	)
+
+	# Update audio_recording field on the Response
+	frappe.db.set_value("OmniQuery Response", target_name, "audio_recording", file_doc.file_url)
+	frappe.db.commit()
+
+	return {
+		"status": "SUCCESS",
+		"doc_name": target_name,
+		"file_name": file_doc.file_name,
+		"file_url": file_doc.file_url,
+	}
+
