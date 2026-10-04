@@ -8,8 +8,11 @@
         'relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2',
         modelValue ? 'bg-emerald-600' : 'bg-slate-300'
       ]"
+      :id="id"
       role="switch"
       :aria-checked="Boolean(modelValue)"
+      :aria-label="ariaLabel || __('Toggle yes or no')"
+      :aria-describedby="ariaDescribedby"
     >
       <span
         aria-hidden="true"
@@ -32,6 +35,18 @@ const props = defineProps({
   modelValue: {
     type: [Boolean, String, Number],
     default: false,
+  },
+  id: {
+    type: String,
+    default: undefined,
+  },
+  ariaLabel: {
+    type: String,
+    default: "",
+  },
+  ariaDescribedby: {
+    type: String,
+    default: undefined,
   },
 });
 

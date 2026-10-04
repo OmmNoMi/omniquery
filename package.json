@@ -9,6 +9,7 @@
     "dev": "vite",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:mutation": "node scripts/run_mutation_tests.cjs",
     "prepare": "husky"
   },
   "dependencies": {

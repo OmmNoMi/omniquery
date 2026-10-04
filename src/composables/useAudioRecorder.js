@@ -30,7 +30,15 @@ export function useAudioRecorder() {
   async function initStream() {
     if (mediaStream) return mediaStream;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaStream = await navigator.mediaDevices.getUserMedia({
+      audio: {
+        channelCount: 1, // Mono: single source voice; saves 50% byte weight with zero vocal fidelity loss
+        sampleRate: 48000, // 48 kHz full-band voice capture
+        echoCancellation: true, // Hardware/browser acoustic echo cancellation
+        noiseSuppression: true, // Filters out field environmental & wind noise
+        autoGainControl: true, // Normalizes distant respondent speech levels
+      },
+    });
     return mediaStream;
   }
 
@@ -54,10 +62,18 @@ export function useAudioRecorder() {
       if (!stream) return;
       audioChunks = [];
       currentMimeType = getSupportedMimeType();
+      const recorderOptions = {
+        mimeType: currentMimeType,
+        audioBitsPerSecond: 48000, // 48 kbps Opus: perceptually transparent/lossless full-band voice compression
+      };
       try {
-        mediaRecorder = new MediaRecorder(stream, { mimeType: currentMimeType });
+        mediaRecorder = new MediaRecorder(stream, recorderOptions);
       } catch (optErr) {
-        mediaRecorder = new MediaRecorder(stream);
+        try {
+          mediaRecorder = new MediaRecorder(stream, { mimeType: currentMimeType });
+        } catch (mimeErr) {
+          mediaRecorder = new MediaRecorder(stream);
+        }
       }
       mediaRecorder.ondataavailable = handleDataAvailable;
       mediaRecorder.onstop = handleRecorderStop;

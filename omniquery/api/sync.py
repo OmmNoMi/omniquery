@@ -87,6 +87,15 @@ def resolve_respondent(val):
 	return None
 
 
+def sanitize_value_text(val_raw):
+	if val_raw is None or isinstance(val_raw, (dict, list)):
+		return None
+	import re
+	cleaned = re.sub(r"<script.*?>.*?</script>", "", str(val_raw), flags=re.IGNORECASE | re.DOTALL)
+	cleaned = re.sub(r"<style.*?>.*?</style>", "", cleaned, flags=re.IGNORECASE | re.DOTALL)
+	return frappe.utils.strip_html(cleaned)
+
+
 def set_field_value(doc, q, val):
 	if not doc.meta.has_field(q) or val is None:
 		return
@@ -194,8 +203,8 @@ def sync_draft(data=None):
 	for item in sub.get("items", []):
 		val_raw = item.get("value")
 		val_num = flt(val_raw) if isinstance(val_raw, (int, float)) else None
-		# Security: Strip HTML to eliminate stored XSS in Desk reports and print views
-		val_text = frappe.utils.strip_html(str(val_raw)) if val_raw is not None and not isinstance(val_raw, (dict, list)) else None
+		# Security: Strip HTML and script tags to eliminate stored XSS in Desk reports and print views
+		val_text = sanitize_value_text(val_raw)
 		val_json = frappe.as_json(val_raw) if isinstance(val_raw, (dict, list)) else None
 		resp_doc.append(
 			"items",
@@ -382,8 +391,8 @@ def batch_push(submissions=None):
 			for item in sub.get("items", []):
 				val_raw = item.get("value")
 				val_num = flt(val_raw) if isinstance(val_raw, (int, float)) else None
-				# Security: Strip HTML to eliminate stored XSS in Desk reports and print views
-				val_text = frappe.utils.strip_html(str(val_raw)) if val_raw is not None and not isinstance(val_raw, (dict, list)) else None
+				# Security: Strip HTML and script tags to eliminate stored XSS in Desk reports and print views
+				val_text = sanitize_value_text(val_raw)
 				val_json = frappe.as_json(val_raw) if isinstance(val_raw, (dict, list)) else None
 				resp_doc.append(
 					"items",
@@ -488,8 +497,43 @@ def upload_response_audio(response_name=None, idempotency_key=None, filename=Non
 	if not target_name or not frappe.db.exists("OmniQuery Response", target_name):
 		frappe.throw(_("OmniQuery Response {0} not found").format(target_name), frappe.DoesNotExistError)
 
+	resp_doc = frappe.get_doc("OmniQuery Response", target_name)
+	current_user = frappe.session.user
+
+	# Security Gate 1: Authorization & IDOR protection
+	if current_user == "Guest":
+		is_public = frappe.db.get_value(
+			"OmniQuery Template",
+			resp_doc.survey_template,
+			["is_public_citizen_link", "is_public"],
+			as_dict=True,
+		)
+		if not is_public or not (is_public.is_public_citizen_link or is_public.is_public):
+			frappe.throw(_("Unauthorized audio upload on private survey"), frappe.PermissionError)
+	else:
+		roles = frappe.get_roles(current_user)
+		is_manager = "System Manager" in roles or current_user == "Administrator"
+		is_owner = resp_doc.owner == current_user
+		is_surveyor = resp_doc.surveyor and (
+			resp_doc.surveyor == current_user
+			or frappe.db.get_value("OmniQuery Surveyor", resp_doc.surveyor, "user") == current_user
+		)
+		if not (is_manager or is_owner or is_surveyor):
+			frappe.throw(_("You do not have permission to attach audio to this response"), frappe.PermissionError)
+
 	file_content = None
-	file_name = filename or f"interview_{target_name}.webm"
+	resolved_filename = filename or (hasattr(frappe.local, "form_dict") and frappe.local.form_dict.get("filename"))
+	file_name = resolved_filename or f"interview_{target_name}.webm"
+
+	# Security Gate 2: Audio extension whitelist
+	import os
+	valid_extensions = {".webm", ".mp4", ".ogg", ".opus", ".wav", ".aac", ".m4a"}
+	ext = os.path.splitext(file_name)[1].lower()
+	if ext not in valid_extensions:
+		frappe.throw(
+			_("Invalid file format. Only audio recordings (.webm, .mp4, .ogg, .opus, .wav, .aac, .m4a) are allowed."),
+			frappe.ValidationError,
+		)
 
 	# 1. Check multipart/form-data upload
 	if hasattr(frappe.local, "request") and frappe.local.request and hasattr(frappe.local.request, "files"):
@@ -512,6 +556,11 @@ def upload_response_audio(response_name=None, idempotency_key=None, filename=Non
 
 	if not file_content:
 		frappe.throw(_("No audio file content received"), frappe.ValidationError)
+
+	# Security Gate 3: File size constraint (50MB maximum)
+	MAX_AUDIO_SIZE = 50 * 1024 * 1024
+	if len(file_content) > MAX_AUDIO_SIZE:
+		frappe.throw(_("Audio recording exceeds the 50MB size limit"), frappe.ValidationError)
 
 	# Save file and link as attachment to OmniQuery Response
 	file_doc = save_file(

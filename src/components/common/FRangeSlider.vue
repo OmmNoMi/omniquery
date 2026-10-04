@@ -19,11 +19,18 @@
     <div v-if="activeFormat === 'slider'" class="px-2 pt-2 space-y-3">
       <div class="relative flex items-center">
         <input
+          :id="id"
           type="range"
           :min="min"
           :max="max"
           :step="step"
           :value="numericValue"
+          :aria-label="ariaLabel || __('Range value')"
+          :aria-valuemin="min"
+          :aria-valuemax="max"
+          :aria-valuenow="numericValue"
+          :aria-valuetext="`${displayValue} ${unit ? __(unit) : ''}`.trim()"
+          :aria-describedby="ariaDescribedby"
           @input="onSliderInput"
           class="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-grab active:cursor-grabbing accent-emerald-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 transition shadow-inner"
         />
@@ -105,6 +112,18 @@ const props = defineProps({
   format: {
     type: String,
     default: "buttons", // 'buttons' | 'slider'
+  },
+  id: {
+    type: String,
+    default: undefined,
+  },
+  ariaLabel: {
+    type: String,
+    default: "",
+  },
+  ariaDescribedby: {
+    type: String,
+    default: undefined,
   },
 });
 

@@ -378,48 +378,37 @@ def get_surveyor_kpis(project=None):
 	week_count = 0
 	total_count = 0
 
-	project_filter_sql = ""
-	project_params = []
-	if project and project != "ALL":
-		project_filter_sql = " AND survey_template IN (SELECT name FROM `tabOmniQuery Template` WHERE project = %s OR name = %s)"
-		project_params = [project, project]
-
 	if user != "Guest":
 		try:
-			today_params = [today_start, user, f"%{user}%"] + project_params
-			today_count = frappe.db.sql(
-				f"""
-				SELECT COUNT(*) FROM `tabOmniQuery Response`
-				WHERE creation >= %s
-				AND (owner = %s OR surveyor LIKE %s)
-				AND survey_status != 'Draft'
-				{project_filter_sql}
-				""",
-				tuple(today_params),
-			)[0][0] or 0
+			Response = frappe.qb.DocType("OmniQuery Response")
 
-			week_params = [week_start, user, f"%{user}%"] + project_params
-			week_count = frappe.db.sql(
-				f"""
-				SELECT COUNT(*) FROM `tabOmniQuery Response`
-				WHERE creation >= %s
-				AND (owner = %s OR surveyor LIKE %s)
-				AND survey_status != 'Draft'
-				{project_filter_sql}
-				""",
-				tuple(week_params),
-			)[0][0] or 0
+			def build_query(since=None):
+				query = (
+					frappe.qb.from_(Response)
+					.select(frappe.qb.fn.Count("*"))
+					.where(Response.survey_status != "Draft")
+					.where((Response.owner == user) | (Response.surveyor.like(f"%{user}%")))
+				)
+				if since:
+					query = query.where(Response.creation >= since)
+				if project and project != "ALL":
+					Template = frappe.qb.DocType("OmniQuery Template")
+					tmpl_subquery = (
+						frappe.qb.from_(Template)
+						.select(Template.name)
+						.where((Template.project == project) | (Template.name == project))
+					)
+					query = query.where(Response.survey_template.isin(tmpl_subquery))
+				return query
 
-			total_params = [user, f"%{user}%"] + project_params
-			total_count = frappe.db.sql(
-				f"""
-				SELECT COUNT(*) FROM `tabOmniQuery Response`
-				WHERE (owner = %s OR surveyor LIKE %s)
-				AND survey_status != 'Draft'
-				{project_filter_sql}
-				""",
-				tuple(total_params),
-			)[0][0] or 0
+			today_res = build_query(since=today_start).run()
+			today_count = (today_res and today_res[0][0]) or 0
+
+			week_res = build_query(since=week_start).run()
+			week_count = (week_res and week_res[0][0]) or 0
+
+			total_res = build_query().run()
+			total_count = (total_res and total_res[0][0]) or 0
 		except Exception:
 			pass
 

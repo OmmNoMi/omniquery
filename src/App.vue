@@ -1,5 +1,10 @@
 <template>
   <div class="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
+    <!-- Live Region for Screen Readers (WCAG 2.2 AA) -->
+    <div id="omniquery-live-region" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
+      {{ liveAnnouncementText }}
+    </div>
+
     <!-- 1. Sleek Native Mobile Header with Official OmniQuery Cloud Brand -->
     <CompactHeader
       :surveyTitle="activeTemplate ? activeTemplate.title : (activeProjectId ? (activeProjectTitle || __('Project Details')) : '')"
@@ -501,6 +506,11 @@ const isFocusMode = ref(false);
 const focusQuestionIndex = ref(0);
 
 const showExitDialog = ref(false);
+const liveAnnouncementText = ref("");
+
+function announce(message) {
+  liveAnnouncementText.value = message;
+}
 
 
 const { __ } = useTranslation();
@@ -781,6 +791,14 @@ watch(activeTemplate, (tmpl) => {
   if (tmpl.presentation_mode === "One-by-One Focus Popup") {
     isFocusMode.value = true;
     focusQuestionIndex.value = 0;
+  }
+  announce(`${__('Loaded survey')}: ${tmpl.title || tmpl.name}`);
+});
+
+watch(activeSectionIndex, (idx) => {
+  if (activeSection.value && sections.value.length > 0) {
+    const title = activeSection.value.section_title || activeSection.value.section_code || "";
+    announce(`${__('Section')} ${idx + 1} ${__('of')} ${sections.value.length}: ${title}`);
   }
 });
 

@@ -56,15 +56,22 @@
           <span>{{ parsedQuestionMeta.number }}</span>
         </span>
 
-        <label class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
+        <label
+          :for="'q_input_' + question.question_code"
+          class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug cursor-pointer"
+        >
           {{ parsedQuestionMeta.text }}
-          <span v-if="question.is_mandatory" class="text-rose-500 font-extrabold ml-0.5">*</span>
+          <span v-if="question.is_mandatory" class="text-rose-500 font-extrabold ml-0.5" aria-hidden="true">*</span>
         </label>
       </div>
     </div>
 
     <!-- Description / Subtitle -->
-    <p v-if="questionDescription" class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3">
+    <p
+      v-if="questionDescription"
+      :id="'q_desc_' + question.question_code"
+      class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mb-3"
+    >
       {{ questionDescription }}
     </p>
 
@@ -73,7 +80,10 @@
       <!-- 1. Binary Switch (Yes / No) -->
       <FSwitch
         v-if="isSwitchControl"
+        :id="'q_input_' + question.question_code"
         :modelValue="modelValue"
+        :ariaLabel="questionLabel"
+        :ariaDescribedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
         @update:modelValue="onControlInput"
         @next="$emit('next')"
       />
@@ -81,12 +91,15 @@
       <!-- 2. Range / Slider Control (Years, Scales, Ratings) -->
       <FRangeSlider
         v-else-if="isRangeControl"
+        :id="'q_input_' + question.question_code"
         :modelValue="modelValue"
         :min="rangeMin"
         :max="rangeMax"
         :step="rangeStep"
         :unit="rangeUnit"
         :format="rangeFormat"
+        :ariaLabel="questionLabel"
+        :ariaDescribedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
         @update:modelValue="onControlInput"
         @esc="focusCard"
       />
@@ -94,6 +107,7 @@
       <!-- 3. Rating Control -->
       <FRating
         v-else-if="isRatingControl"
+        :id="'q_input_' + question.question_code"
         :modelValue="Number(modelValue) || 0"
         :maxStars="question.rating_max || 5"
         @update:modelValue="onControlInput"
@@ -102,7 +116,10 @@
       <!-- 4. Currency Control -->
       <FCurrencyInput
         v-else-if="isCurrencyControl"
+        :id="'q_input_' + question.question_code"
         :modelValue="modelValue"
+        :ariaLabel="questionLabel"
+        :ariaDescribedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
         @update:modelValue="onControlInput"
         @enter="onInputEnter"
         @esc="focusCard"
@@ -270,8 +287,13 @@
       <!-- 8. Number Input -->
       <input
         v-else-if="isNumberControl"
+        :id="'q_input_' + question.question_code"
         type="number"
         :value="modelValue"
+        :aria-label="questionLabel"
+        :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
+        :aria-invalid="Boolean(errorMessage)"
+        :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @input="$emit('update:modelValue', $event.target.value)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
@@ -282,8 +304,13 @@
       <!-- 9. Date Input -->
       <input
         v-else-if="isDateControl"
+        :id="'q_input_' + question.question_code"
         type="date"
         :value="modelValue"
+        :aria-label="questionLabel"
+        :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
+        :aria-invalid="Boolean(errorMessage)"
+        :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @input="$emit('update:modelValue', $event.target.value)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
@@ -293,8 +320,13 @@
       <!-- 10. Default Text Input -->
       <input
         v-else
+        :id="'q_input_' + question.question_code"
         type="text"
         :value="modelValue"
+        :aria-label="questionLabel"
+        :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
+        :aria-invalid="Boolean(errorMessage)"
+        :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @input="$emit('update:modelValue', $event.target.value)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
@@ -304,7 +336,12 @@
     </div>
 
     <!-- Validation Error -->
-    <p v-if="errorMessage" class="mt-2 text-xs font-semibold text-rose-600">
+    <p
+      v-if="errorMessage"
+      :id="'q_err_' + question.question_code"
+      role="alert"
+      class="mt-2 text-xs font-semibold text-rose-600"
+    >
       {{ __(errorMessage) }}
     </p>
 
