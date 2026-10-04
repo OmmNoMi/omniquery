@@ -31,3 +31,40 @@ if (typeof window !== "undefined" && window.indexedDB) {
     // Legacy database cleanup fallback
   }
 }
+
+/**
+ * Prunes synced responses older than `retentionDays` (default 30 days) to prevent
+ * storage bloat on field devices, while preserving pending WAL items, unsynced drafts,
+ * and audio recordings.
+ */
+export async function compactLocalStorage(retentionDays = 30) {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+    const cutoffIso = cutoffDate.toISOString();
+
+    const oldSyncedResponses = await db.responses
+      .where("synced")
+      .equals(1)
+      .or("status")
+      .equals("Submitted")
+      .filter((r) => r.synced === true && r.updated_at && r.updated_at < cutoffIso)
+      .toArray();
+
+    if (oldSyncedResponses.length > 0) {
+      const uidsToDelete = oldSyncedResponses.map((r) => r.response_uid);
+      await db.responses.bulkDelete(uidsToDelete);
+      // Clean up corresponding synced audio recordings
+      await db.audio_recordings
+        .where("status")
+        .equals("synced")
+        .filter((a) => uidsToDelete.includes(a.response_uid))
+        .delete();
+      return uidsToDelete.length;
+    }
+    return 0;
+  } catch (err) {
+    console.warn("Storage compaction skipped:", err);
+    return 0;
+  }
+}

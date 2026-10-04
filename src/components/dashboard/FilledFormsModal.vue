@@ -178,6 +178,15 @@
               >
                 <span>{{ hasCopiedAll ? __('Copied!') : __('Copy All JSON') }}</span>
               </button>
+              <button
+                type="button"
+                @click="handleCompactStorage(); isExportMenuOpen = false"
+                class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer border-t border-slate-100 dark:border-slate-800 pt-2 text-slate-600 dark:text-slate-400"
+                :title="__('Safely prune synced responses older than 30 days to free device storage')"
+              >
+                <span>🧹</span>
+                <span>{{ __('Prune Old Synced Data') }}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -399,7 +408,7 @@ import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import { useWAL } from "../../composables/useWAL";
 import { resolveResponseTitle } from "../../utils/responseTitle";
-import { db } from "../../services/db";
+import { db, compactLocalStorage } from "../../services/db";
 
 const props = defineProps({
   isOpen: {
@@ -927,6 +936,19 @@ Individual JSON files can be ingested directly into the OmniQuery backend.
 
 function inspectResponse(resp) {
   selectedInspectResponse.value = resp;
+}
+
+async function handleCompactStorage() {
+  const pruned = await compactLocalStorage(30);
+  await loadResponses();
+  if (pruned > 0) {
+    syncFeedbackMessage.value = `${__('Cleaned up')} ${pruned} ${__('old synced responses to free local storage')}`;
+  } else {
+    syncFeedbackMessage.value = __('Storage already compact. Zero old records required cleanup.');
+  }
+  setTimeout(() => {
+    syncFeedbackMessage.value = "";
+  }, 4000);
 }
 
 watch(

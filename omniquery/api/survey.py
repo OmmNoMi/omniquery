@@ -230,13 +230,18 @@ def get_available_languages():
 
 @frappe.whitelist(allow_guest=True)
 def get_service_worker():
-	"""Serves the Service Worker script with Service-Worker-Allowed root scope header."""
+	"""Serves the Service Worker script with Service-Worker-Allowed root scope header and dynamic cache hash."""
 	import os
 
 	sw_path = os.path.join(frappe.get_app_path("omniquery"), "public", "pwa", "sw.js")
 	try:
 		with open(sw_path, encoding="utf-8") as f:
 			content = f.read()
+
+		# Inject dynamic cache version based on dist bundle mtime
+		bundle_path = os.path.join(frappe.get_app_path("omniquery"), "public", "dist", "omniquery.bundle.js")
+		v_hash = str(int(os.path.getmtime(bundle_path))) if os.path.exists(bundle_path) else "20261005_v33"
+		content = content.replace("omniquery-cache-v32", f"omniquery-cache-v{v_hash}")
 	except Exception:
 		content = "// OmniQuery Service Worker"
 

@@ -50,6 +50,11 @@ def get_context(context):
 	ctx.current_lang = user_lang
 
 	ctx.current_user = frappe.session.user
-	ctx.bundle_version = "20260930_1950"
+	try:
+		import os
+		bundle_path = os.path.join(frappe.get_app_path("omniquery"), "public", "dist", "omniquery.bundle.js")
+		ctx.bundle_version = str(int(os.path.getmtime(bundle_path))) if os.path.exists(bundle_path) else "20261005_v33"
+	except Exception:
+		ctx.bundle_version = "20261005_v33"
 	return ctx
 
