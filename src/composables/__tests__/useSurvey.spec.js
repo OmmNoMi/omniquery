@@ -236,5 +236,73 @@ describe("useSurvey", () => {
     expect(survey.cachedTemplatesMap.value["OQS-DL-001"]).toBeDefined();
     expect(survey.cachedTemplatesMap.value["OQS-DL-001"].questionCount).toBe(2);
   });
+
+  it("evaluates reactive arithmetic formulas across dependent questions safely", () => {
+    const survey = useSurvey();
+    const responses = {
+      q_income: "50000",
+      q_expenses: "32000",
+      q_multiplier: "2",
+    };
+
+    // Subtraction formula
+    const netProfit = survey.evaluateFormula("{q_income} - {q_expenses}", responses);
+    expect(netProfit).toBe(18000);
+
+    // Multi-operator with parentheses
+    const projected = survey.evaluateFormula("({q_income} - {q_expenses}) * {q_multiplier}", responses);
+    expect(projected).toBe(36000);
+
+    // Handles missing / invalid codes gracefully
+    const fallback = survey.evaluateFormula("{q_missing} + 100", responses);
+    expect(fallback).toBe(100);
+
+    // Rejects unsafe javascript execution attempts
+    const unsafe = survey.evaluateFormula("alert(1)", responses);
+    expect(unsafe).toBeNull();
+  });
+
+  it("enforces cross-question consistency validation rules and reports specific errors", () => {
+    const survey = useSurvey();
+    survey.activeTemplate.value = {
+      template_name: "TMPL-CROSS-VALIDATION",
+      sections: [{ section_code: "sec1" }],
+      questions: [
+        {
+          question_code: "q_income",
+          section_code: "sec1",
+          is_mandatory: true,
+        },
+        {
+          question_code: "q_expenses",
+          section_code: "sec1",
+          is_mandatory: true,
+          validation_rule: {
+            operator: "lte",
+            compare_to: "q_income",
+            message: "Total expenses cannot exceed total revenue",
+          },
+        },
+      ],
+    };
+
+    // Failing case: expenses > income
+    survey.responses.value = {
+      q_income: "20000",
+      q_expenses: "25000",
+    };
+    const validFail = survey.validateCurrentSection();
+    expect(validFail).toBe(false);
+    expect(survey.validationErrors.value.q_expenses).toBe("Total expenses cannot exceed total revenue");
+
+    // Passing case: expenses <= income
+    survey.responses.value = {
+      q_income: "30000",
+      q_expenses: "25000",
+    };
+    const validPass = survey.validateCurrentSection();
+    expect(validPass).toBe(true);
+    expect(survey.validationErrors.value.q_expenses).toBeUndefined();
+  });
 });
 

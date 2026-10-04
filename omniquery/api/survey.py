@@ -7,10 +7,23 @@ from frappe import _
 def resolve_template_name(template_name: str) -> str:
 	if not template_name or frappe.db.exists("OmniQuery Template", template_name):
 		return template_name or ""
+	# Try matching by title directly
+	by_title = frappe.db.get_value("OmniQuery Template", {"title": template_name}, "name")
+	if by_title:
+		return by_title
 	clean = template_name[5:] if template_name.startswith("TMPL-") else template_name
 	if "-" in clean and clean.rsplit("-", 1)[-1].isdigit():
 		clean = clean.rsplit("-", 1)[0]
-	return frappe.db.get_value("OmniQuery Template", {"title": clean}, "name") or template_name
+	by_clean = frappe.db.get_value("OmniQuery Template", {"title": clean}, "name")
+	if by_clean:
+		return by_clean
+	# Try matching slugified title
+	all_templates = frappe.get_all("OmniQuery Template", fields=["name", "title"])
+	clean_slug = template_name.lower().replace("-", " ").replace("_", " ").strip()
+	for t in all_templates:
+		if t.title and t.title.lower().replace("-", " ").replace("_", " ").strip() == clean_slug:
+			return t.name
+	return template_name
 
 
 def user_has_template_permission(template, user=None):
@@ -36,13 +49,13 @@ def user_has_template_permission(template, user=None):
 		template = frappe.db.get_value(
 			"OmniQuery Template",
 			template,
-			["name", "is_public", "allowed_roles", "allowed_users"],
+			["name", "is_public", "is_public_citizen_link", "allowed_roles", "allowed_users"],
 			as_dict=True,
 		)
 		if not template:
 			return False
 
-	is_public = getattr(template, "is_public", 0)
+	is_public = getattr(template, "is_public", 0) or getattr(template, "is_public_citizen_link", 0)
 	if is_public:
 		return True
 

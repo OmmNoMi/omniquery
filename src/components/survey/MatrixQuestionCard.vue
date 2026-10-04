@@ -196,6 +196,23 @@
             </td>
           </tr>
         </tbody>
+        <tfoot v-if="hasNumericColumns" class="bg-slate-50 dark:bg-slate-800/60 font-bold border-t-2 border-slate-200 dark:border-slate-700">
+          <tr>
+            <td class="py-2.5 px-3 text-xs uppercase text-slate-700 dark:text-slate-300">
+              {{ __('Total') }}
+            </td>
+            <td
+              v-for="col in matrixColumns"
+              :key="'tot_' + col.key"
+              class="py-2.5 px-3 text-xs text-right text-slate-900 dark:text-white"
+            >
+              <span v-if="col.type === 'number' || col.type === 'currency'">
+                {{ col.type === 'currency' ? '₹' : '' }}{{ getColumnTotal(col.key).toLocaleString() }}
+              </span>
+              <span v-else class="text-slate-400 font-normal">-</span>
+            </td>
+          </tr>
+        </tfoot>
       </table>
     </div>
 
@@ -302,6 +319,25 @@
               :placeholder="col.placeholder || __('Enter text')"
               class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 py-1 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none shrink-0"
             />
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobile Totals Summary Card -->
+      <div v-if="hasNumericColumns" class="p-3 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+        <div class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+          {{ __('Matrix Summary Totals') }}
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div
+            v-for="col in matrixColumns.filter(c => c.type === 'number' || c.type === 'currency')"
+            :key="'m_tot_' + col.key"
+            class="flex flex-col bg-white dark:bg-slate-900 p-2 rounded-lg border border-slate-200/80 dark:border-slate-700/80"
+          >
+            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">{{ col.label }}</span>
+            <span class="font-bold text-slate-900 dark:text-white">
+              {{ col.type === 'currency' ? '₹' : '' }}{{ getColumnTotal(col.key).toLocaleString() }}
+            </span>
           </div>
         </div>
       </div>
@@ -487,6 +523,21 @@ watch(
   },
   { deep: true }
 );
+
+const hasNumericColumns = computed(() => {
+  return matrixColumns.value.some((c) => c.type === "number" || c.type === "currency");
+});
+
+function getColumnTotal(colKey) {
+  let total = 0;
+  for (const row of matrixRows.value) {
+    const val = Number(getCellValue(row.id, colKey));
+    if (!isNaN(val)) {
+      total += val;
+    }
+  }
+  return total;
+}
 
 function getCellKey(rowId, colKey) {
   if (is4DMatrix.value) {

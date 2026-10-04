@@ -466,6 +466,52 @@ export function useSurvey() {
     });
   }
 
+  function evaluateFormula(expr, currentResponses) {
+    if (!expr || typeof expr !== "string") return null;
+    try {
+      // Replaces {question_code} with response numeric value (defaulting to 0)
+      const replaced = expr.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, code) => {
+        const val = currentResponses[code];
+        const num = Number(val);
+        return isNaN(num) ? 0 : num;
+      });
+      // Safe math evaluation with restricted characters (digits, math operators, parens, dots, spaces)
+      if (/^[\d\s+\-*/().%]+$/.test(replaced)) {
+        // eslint-disable-next-line no-eval
+        const res = Function(`"use strict"; return (${replaced});`)();
+        return typeof res === "number" && !isNaN(res) ? res : null;
+      }
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }
+
+  function validateCrossFieldRules() {
+    let isValid = true;
+    const questions = (activeTemplate.value && activeTemplate.value.questions) || [];
+    for (const q of questions) {
+      if (q.validation_rule && isQuestionVisible(q)) {
+        const rule = q.validation_rule;
+        // Example rule: { operator: "lte", compare_to: "q_income", message: "Expenses cannot exceed income" }
+        if (rule.compare_to && rule.operator) {
+          const valA = Number(responses.value[q.question_code]) || 0;
+          const valB = Number(responses.value[rule.compare_to]) || 0;
+          let failed = false;
+          if (rule.operator === "lte" && valA > valB) failed = true;
+          if (rule.operator === "gte" && valA < valB) failed = true;
+          if (rule.operator === "eq" && valA !== valB) failed = true;
+
+          if (failed) {
+            validationErrors.value[q.question_code] = rule.message || `Value must be ${rule.operator} ${rule.compare_to}`;
+            isValid = false;
+          }
+        }
+      }
+    }
+    return isValid;
+  }
+
   function validateCurrentSection() {
     validationErrors.value = {};
     let isValid = true;
@@ -478,6 +524,11 @@ export function useSurvey() {
         }
       }
     }
+
+    if (!validateCrossFieldRules()) {
+      isValid = false;
+    }
+
     return isValid;
   }
 
@@ -525,6 +576,8 @@ export function useSurvey() {
     toggleFullForm,
     isSectionComplete,
     validateCurrentSection,
+    evaluateFormula,
+    validateCrossFieldRules,
     nextSection,
     prevSection,
     cachedTemplatesMap,

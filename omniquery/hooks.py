@@ -90,6 +90,7 @@ after_migrate = "omniquery.install.after_migrate"
 
 website_route_rules = [
 	{"from_route": "/omniquery/<path:app_path>", "to_route": "omniquery"},
+	{"from_route": "/survey/<path:app_path>", "to_route": "omniquery"},
 ]
 
 # Fixtures

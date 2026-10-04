@@ -23,7 +23,9 @@ def get_context(context):
 			)
 			ctx.title = f"{proj_name} · OmniQuery"
 	elif app_path:
-		ctx.initial_survey_id = app_path
+		from omniquery.api.survey import resolve_template_name
+		resolved_id = resolve_template_name(app_path)
+		ctx.initial_survey_id = resolved_id or app_path
 		if frappe.db.exists("OmniQuery Template", ctx.initial_survey_id):
 			t_title = frappe.db.get_value("OmniQuery Template", ctx.initial_survey_id, "title")
 			if t_title:
