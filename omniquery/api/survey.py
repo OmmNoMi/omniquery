@@ -414,13 +414,19 @@ def get_surveyor_kpis(project=None):
 
 			total_res = build_query().run()
 			total_count = (total_res and total_res[0][0]) or 0
+
+			# Query supervisor approval count
+			appr_query = build_query().where(Response.survey_status == "Approved")
+			appr_res = appr_query.run()
+			approved_count = (appr_res and appr_res[0][0]) or 0
 		except Exception:
-			pass
+			approved_count = 0
 
 	return {
 		"today_count": today_count,
 		"week_count": week_count,
 		"total_count": total_count,
+		"approved_count": approved_count,
 		"daily_target": 10,
 	}
 

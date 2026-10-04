@@ -115,18 +115,107 @@ def set_field_value(doc, q, val):
 		doc.set(q, ", ".join(str(v) for v in val) if isinstance(val, list) else str(val))
 
 
-def map_to_native_survey(sub):
-	tmpl = sub.get("survey_template") or ""
-	if "SHG" not in tmpl and "Women Entrepreneur" not in tmpl:
-		return None
+def calculate_haversine_distance(lat1, lon1, lat2, lon2):
+	"""Calculates distance between two GPS coordinates in meters using Haversine formula."""
+	import math
 	try:
-		doc = frappe.new_doc("SHG Women Entrepreneur Survey")
-		for item in sub.get("items", []):
-			set_field_value(doc, item.get("question_code"), item.get("value"))
-		doc.insert(ignore_permissions=True)
-		return doc.name
+		lat1, lon1, lat2, lon2 = map(float, [lat1, lon1, lat2, lon2])
+		R = 6371000  # Radius of Earth in meters
+		phi1, phi2 = math.radians(lat1), math.radians(lat2)
+		delta_phi = math.radians(lat2 - lat1)
+		delta_lambda = math.radians(lon2 - lon1)
+
+		a = (
+			math.sin(delta_phi / 2.0) ** 2
+			+ math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0) ** 2
+		)
+		c = 2.0 * math.atan2(math.sqrt(a), math.sqrt(1.0 - a))
+		return round(R * c, 1)
+	except Exception:
+		return None
+
+
+def process_automated_audit(resp_doc, raw_sub):
+	"""
+	Analyzes field survey telemetry and generates an OmniQuery Supervisor Audit record.
+	Detects:
+	1. Speedrunning: Total time spent < (question_count * 3 seconds).
+	2. GPS Variance: Distance from respondent or project centroid > 5,000 meters.
+	"""
+	try:
+		if not resp_doc or not resp_doc.name:
+			return None
+
+		items_count = len(resp_doc.items or [])
+		time_spent_seconds = None
+
+		# Calculate time spent if timing metadata is available
+		if raw_sub.get("time_spent_seconds"):
+			time_spent_seconds = int(raw_sub.get("time_spent_seconds"))
+		elif resp_doc.captured_at_local and resp_doc.creation:
+			from frappe.utils import get_datetime
+			t_local = get_datetime(resp_doc.captured_at_local)
+			t_sync = get_datetime(resp_doc.synced_at or now_datetime())
+			diff = abs((t_sync - t_local).total_seconds())
+			# If local and sync happened within same hour, diff can approximate duration
+			if 5 <= diff <= 14400:
+				time_spent_seconds = int(diff)
+
+		# GPS Variance Check
+		gps_variance_m = None
+		lat = resp_doc.gps_latitude
+		lon = resp_doc.gps_longitude
+		if lat and lon and resp_doc.respondent:
+			resp_geo = frappe.db.get_value(
+				"OmniQuery Respondent", resp_doc.respondent, ["gps_latitude", "gps_longitude"], as_dict=True
+			)
+			if resp_geo and resp_geo.gps_latitude and resp_geo.gps_longitude:
+				gps_variance_m = calculate_haversine_distance(
+					lat, lon, resp_geo.gps_latitude, resp_geo.gps_longitude
+				)
+
+		# Evaluate Outlier Invariants
+		is_outlier = 0
+		remarks = []
+
+		# Speedrun check: < 3 seconds per question (min 10 questions)
+		if items_count >= 5 and time_spent_seconds is not None:
+			min_expected_sec = items_count * 3
+			if time_spent_seconds < min_expected_sec:
+				is_outlier = 1
+				remarks.append(f"Speedrun detected: {time_spent_seconds}s for {items_count} questions (min threshold: {min_expected_sec}s)")
+
+		# GPS Outlier check: > 5km from centroid
+		if gps_variance_m is not None and gps_variance_m > 5000:
+			is_outlier = 1
+			remarks.append(f"GPS variance high: {gps_variance_m}m from respondent centroid (>5km)")
+
+		audit_name = f"AUDIT-{resp_doc.name}"
+		if frappe.db.exists("OmniQuery Supervisor Audit", audit_name):
+			audit_doc = frappe.get_doc("OmniQuery Supervisor Audit", audit_name)
+		else:
+			audit_doc = frappe.new_doc("OmniQuery Supervisor Audit")
+			audit_doc.name = audit_name
+			audit_doc.survey_response = resp_doc.name
+
+		audit_doc.supervisor = frappe.session.user or "Administrator"
+		audit_doc.time_spent_seconds = time_spent_seconds or 0
+		audit_doc.gps_distance_variance_meters = gps_variance_m
+		audit_doc.is_outlier_flagged = is_outlier
+		audit_doc.audit_verdict = "Flagged for Re-Survey" if is_outlier else "Verified"
+		audit_doc.audit_remarks = "; ".join(remarks) if remarks else "Automated telemetry verified."
+
+		audit_doc.save(ignore_permissions=True)
+		frappe.db.commit()
+
+		# If outlier, also update response status to Audit Flagged
+		if is_outlier and resp_doc.survey_status != "Approved":
+			frappe.db.set_value("OmniQuery Response", resp_doc.name, "survey_status", "Audit Flagged")
+			frappe.db.commit()
+
+		return audit_doc.name
 	except Exception as e:
-		frappe.log_error("Native survey sync map error", str(e))
+		frappe.log_error("Process automated audit error", str(e))
 		return None
 
 
@@ -411,7 +500,8 @@ def batch_push(submissions=None):
 			else:
 				resp_doc.insert(ignore_permissions=True)
 
-			map_to_native_survey(sub)
+			# Phase 3: Telemetry Analysis & Supervisor Audit Synthesis
+			process_automated_audit(resp_doc, sub)
 
 			# Phase 2b: Update Audit to SUCCESS
 			if audit_doc_name:

@@ -149,7 +149,10 @@
           {{ totalCompleted }}
         </div>
         <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between gap-1 min-w-0">
-          <span class="truncate">{{ __('Submitted records') }}</span>
+          <span class="truncate">
+            <span v-if="serverApprovedCount > 0" class="text-emerald-700 dark:text-emerald-400 font-bold">✓ {{ serverApprovedCount }} {{ __('Approved') }}</span>
+            <span v-else>{{ __('Submitted records') }}</span>
+          </span>
           <span class="text-[10px] font-bold opacity-0 group-hover:opacity-100 transition shrink-0">→</span>
         </div>
       </div>
@@ -284,6 +287,7 @@ const { __ } = useTranslation();
 const dailyTarget = ref(10);
 const serverTodayCount = ref(0);
 const serverTotalCount = ref(0);
+const serverApprovedCount = ref(0);
 const localTodayCount = ref(0);
 const localTotalCount = ref(0);
 
@@ -358,6 +362,7 @@ async function fetchServerMetrics() {
       const msg = data.message || {};
       serverTodayCount.value = Number(msg.today_count) || 0;
       serverTotalCount.value = Number(msg.total_count) || 0;
+      serverApprovedCount.value = Number(msg.approved_count) || 0;
       if (msg.daily_target) {
         dailyTarget.value = Number(msg.daily_target);
       }
