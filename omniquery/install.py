@@ -4,9 +4,11 @@ import frappe
 
 def after_migrate():
 	ensure_roles()
-	ensure_desktop_icon()
+	# The icon links to the sidebar and the sidebar links to the workspace, so create them in
+	# that order. Inserting the icon first fails the whole migrate whenever the sidebar is missing.
 	ensure_workspace()
 	ensure_workspace_sidebar()
+	ensure_desktop_icon()
 	ensure_default_surveyor()
 	sync_app_fixtures()
 
@@ -71,9 +73,12 @@ def get_icon_payload():
 def ensure_desktop_icon():
 	if not frappe.db.exists("DocType", "Desktop Icon"):
 		return
+	payload = get_icon_payload()
+	if not frappe.db.exists(payload["link_type"], payload["link_to"]):
+		return
 	existing = frappe.db.exists("Desktop Icon", "OmniQuery")
 	doc = frappe.get_doc("Desktop Icon", "OmniQuery") if existing else frappe.new_doc("Desktop Icon")
-	doc.update(get_icon_payload())
+	doc.update(payload)
 	doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
 
 

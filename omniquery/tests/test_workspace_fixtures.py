@@ -44,3 +44,20 @@ class TestWorkspaceFixtures(FrappeTestCase):
 		icon = frappe.get_doc("Desktop Icon", "OmniQuery")
 		self.assertEqual(icon.link_type, "Workspace Sidebar")
 		self.assertEqual(icon.link_to, "OmniQuery")
+
+	def test_after_migrate_recreates_navigation_when_sidebar_is_missing(self):
+		# Production on 2026-10-08: the sidebar and icon were gone, and after_migrate inserted
+		# the icon before the sidebar it links to, so every migrate of the site failed.
+		from omniquery import install
+
+		frappe.delete_doc("Desktop Icon", "OmniQuery", force=True, ignore_missing=True)
+		frappe.delete_doc("Workspace Sidebar", "OmniQuery", force=True, ignore_missing=True)
+		previous = frappe.flags.in_migrate
+		frappe.flags.in_migrate = True  # the sidebar archive only accepts rows during a migrate
+		try:
+			install.after_migrate()
+		finally:
+			frappe.flags.in_migrate = previous
+
+		self.assertTrue(frappe.db.exists("Workspace Sidebar", "OmniQuery"))
+		self.assertTrue(frappe.db.exists("Desktop Icon", "OmniQuery"))
