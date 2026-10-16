@@ -32,8 +32,11 @@
       </div>
     </div>
 
-    <!-- Daily Target Goal Progress Strip -->
-    <div class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5">
+    <!-- Daily Target Goal Progress Strip (Field Surveyors) -->
+    <div
+      v-if="!isManager"
+      class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5"
+    >
       <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
         <div class="flex items-center gap-1.5">
           <span>🎯</span>
@@ -50,6 +53,37 @@
         />
       </div>
     </div>
+
+    <!-- Manager Review Queue & Desk Access Banner -->
+    <div
+      v-else
+      class="p-4 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 space-y-2"
+    >
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">📋</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-900 dark:text-blue-200">
+            {{ __('Manager Operations & Review Queue') }}
+          </span>
+        </div>
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
+          {{ __('Manager View') }}
+        </span>
+      </div>
+      <p class="text-xs text-blue-800 dark:text-blue-300">
+        {{ __('You are signed in with manager permissions. Review submitted responses, verify audits, and track team progress in the OmniQuery Desk Workspace.') }}
+      </p>
+      <div class="pt-1 flex items-center gap-2 flex-wrap">
+        <a
+          href="/desk/omniquery"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
+        >
+          <span>{{ __('Go to Review Queue') }}</span>
+          <span>↗</span>
+        </a>
+      </div>
+    </div>
+
 
     <!-- 4 KPI Performance Cards Grid (Clickable to open filtered view in Filled Forms) -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full min-w-0">
@@ -271,7 +305,12 @@ const props = defineProps({
     type: String,
     default: "ALL",
   },
+  userRoles: {
+    type: Array,
+    default: () => (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [],
+  },
 });
+
 
 const emit = defineEmits([
   "open-wal",
@@ -299,6 +338,17 @@ const displayName = computed(() => {
   if (user.value === "Administrator") return "Administrator";
   return user.value.split("@")[0] || user.value;
 });
+
+const roles = computed(() => {
+  if (props.userRoles && props.userRoles.length) return props.userRoles;
+  return (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [];
+});
+
+const isManager = computed(() => {
+  const r = roles.value;
+  return r.includes("OmniQuery Manager") || r.includes("OmniQuery Admin") || r.includes("System Manager");
+});
+
 
 const userInitial = computed(() => {
   return (displayName.value || "A").charAt(0).toUpperCase();
@@ -384,10 +434,14 @@ const targetProgressPct = computed(() => {
 });
 
 const remainingTodayText = computed(() => {
+  if (isManager.value) {
+    return `${completedToday.value} ${__("collected")}`;
+  }
   const left = dailyTarget.value - completedToday.value;
   if (left <= 0) return __("Target reached! 🎉");
   return `${left} ${__("left for target")}`;
 });
+
 
 const activeDraftsCount = computed(() => {
   let list = Object.values(props.activeDrafts || {});

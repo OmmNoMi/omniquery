@@ -53,6 +53,10 @@ def get_context(context):
 
 	ctx.current_user = frappe.session.user
 	try:
+		ctx.user_roles = json.dumps(frappe.get_roles(ctx.current_user))
+	except Exception:
+		ctx.user_roles = json.dumps([])
+	try:
 		import os
 		bundle_path = os.path.join(frappe.get_app_path("omniquery"), "public", "dist", "omniquery.bundle.js")
 		ctx.bundle_version = str(int(os.path.getmtime(bundle_path))) if os.path.exists(bundle_path) else "20261005_v33"

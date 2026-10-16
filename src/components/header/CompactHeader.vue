@@ -186,8 +186,9 @@
                     ]"
                   />
                   <span class="text-[11px] font-semibold text-slate-600">
-                    {{ isOnline ? __('Online') : __('Offline') }} · {{ __('Field Surveyor') }}
+                    {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
                   </span>
+
                 </div>
               </div>
             </div>
@@ -376,6 +377,19 @@
             </a>
           </div>
 
+          <!-- 6. Manager Review Workspace Link -->
+          <div v-if="isManager" class="pt-1 flex items-center justify-between text-xs px-1">
+            <span class="text-blue-700 font-semibold">{{ __('OmniQuery Review Workspace') }}</span>
+            <a
+              href="/desk/omniquery"
+              class="font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1"
+            >
+              <span>{{ __('Open Desk') }}</span>
+              <span>↗</span>
+            </a>
+          </div>
+
+
           <!-- Sheet Dismiss Button -->
           <button
             type="button"
@@ -455,6 +469,23 @@ const userInitial = computed(() => {
   const name = userDisplayName.value || "S";
   return name.charAt(0).toUpperCase();
 });
+
+const userRoles = computed(() => {
+  return (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [];
+});
+
+const isManager = computed(() => {
+  const r = userRoles.value;
+  return r.includes("OmniQuery Manager") || r.includes("OmniQuery Admin") || r.includes("System Manager");
+});
+
+const roleLabel = computed(() => {
+  const r = userRoles.value;
+  if (r.includes("OmniQuery Admin") || r.includes("System Manager")) return __("OmniQuery Admin");
+  if (r.includes("OmniQuery Manager")) return __("OmniQuery Manager");
+  return __("Field Surveyor");
+});
+
 
 function setTextScale(size) {
   emit("set-text-size", size);

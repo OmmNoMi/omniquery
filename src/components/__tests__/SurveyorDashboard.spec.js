@@ -116,4 +116,18 @@ describe("SurveyorDashboard", () => {
     expect(wrapper.emitted("start-new-survey")).toBeTruthy();
     expect(wrapper.emitted("start-new-survey")[0]).toEqual(["TMPL-SHG"]);
   });
+
+  it("does not render personal 'Daily Target' strip if user is not a surveyor", async () => {
+    // Issue #60: Manager or Analyst without OmniQuery User role must not see surveyor target
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+        userRoles: ["OmniQuery Manager", "Desk User"],
+      },
+    });
+
+    expect(wrapper.text()).not.toContain("Daily Target");
+  });
 });
+

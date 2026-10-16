@@ -101,3 +101,12 @@ class TestPermissions(unittest.TestCase):
 		self.assertIn("PROJ-Alpha Study", cond)
 		super_cond = get_template_query_conditions("Administrator")
 		self.assertEqual(super_cond, "")
+
+	def test_manager_docperms_and_capabilities(self):
+		# Issue #60: Manager must be able to create & write Surveyors, create Projects & Option Sets, and export Responses
+		self.assertTrue(frappe.has_permission("OmniQuery Surveyor", "create", user="admin_alpha@ommnomi.test"))
+		self.assertTrue(frappe.has_permission("OmniQuery Surveyor", "write", user="admin_alpha@ommnomi.test"))
+		self.assertTrue(frappe.has_permission("OmniQuery Project", "create", user="admin_alpha@ommnomi.test"))
+		self.assertTrue(frappe.has_permission("OmniQuery Option Set", "create", user="admin_alpha@ommnomi.test"))
+		self.assertTrue(frappe.has_permission("OmniQuery Response", "export", user="admin_alpha@ommnomi.test"))
+

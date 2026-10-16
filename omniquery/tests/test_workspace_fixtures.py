@@ -61,3 +61,16 @@ class TestWorkspaceFixtures(FrappeTestCase):
 
 		self.assertTrue(frappe.db.exists("Workspace Sidebar", "OmniQuery"))
 		self.assertTrue(frappe.db.exists("Desktop Icon", "OmniQuery"))
+
+	def test_manager_workspace_has_number_cards_and_review_shortcut(self):
+		# Issue #60: Workspace must have Number Cards ("Awaiting review", "Flagged", "Collected today")
+		# and a "To review" shortcut filtered to workflow_state = Submitted
+		ws = frappe.get_doc("Workspace", "OmniQuery")
+		card_names = [getattr(c, "number_card_name", None) or (c.get("number_card_name") if isinstance(c, dict) else str(c)) for c in (ws.number_cards or [])]
+		self.assertTrue(any("Awaiting" in str(name) for name in card_names), f"Missing Awaiting Review card in {card_names}")
+		self.assertTrue(any("Flagged" in str(name) for name in card_names), f"Missing Flagged card in {card_names}")
+		self.assertTrue(any("Collected" in str(name) for name in card_names), f"Missing Collected Today card in {card_names}")
+
+		shortcuts = [s.label if hasattr(s, "label") else s.get("label") for s in (ws.shortcuts or [])]
+		self.assertTrue(any("Review" in str(sc) for sc in shortcuts), f"Missing To Review shortcut in {shortcuts}")
+
