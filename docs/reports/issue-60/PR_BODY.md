@@ -4,14 +4,8 @@ Fixes #60
 
 ---
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/.agents/brand/ommnomi_logo.png" alt="OmmNoMi Automation LLP" width="220" />
-</div>
-
----
-
-
 ## 1. Executive Summary & Persona Impact
+
 
 * **Executive Summary**: Addressed GitHub Issue #60 where users possessing the `OmniQuery Manager` role encountered an unconfigured Desk Workspace devoid of operational review metrics and were incorrectly subjected to field surveyor daily quotas in the PWA. Surgical changes provisioned three live Number Cards (`Awaiting Review`, `Flagged Responses`, `Collected Today`), an active review queue shortcut (`To Review` filtered to `survey_status = 'Submitted'`), and context-aware role-gating across the field PWA.
 * **Persona Hurt**: The QA Lead / Operations Manager (`oq.manager.test@example.com`) was unable to access submitted field surveys for review or monitor team output from Desk, while simultaneously being treated as a field worker with an inappropriate "Daily Target 0/10" banner in the mobile app.
