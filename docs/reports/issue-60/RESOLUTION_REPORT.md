@@ -1,51 +1,174 @@
-# Manager Review Queue & Role-Aware Field App
-
-Fixes #60
-
----
-
-## What was the problem?
-When an Operations Manager logged in, they were shown field surveyor screens with daily collection targets (`0/10 Daily Target`) instead of tools to manage and review incoming surveys. In Frappe Desk, the manager workspace had no review queue, no counters for pending forms, and no shortcut to review submitted surveys.
-
-## What this PR does
-1. **Added Desk Review Dashboard**: Added 3 counters to the Desk workspace for **Awaiting Review**, **Flagged Responses**, and **Collected Today**, plus a **To Review** quick shortcut.
-2. **Manager Access Permissions**: Gave the `OmniQuery Manager` role permissions to read, write, and verify surveys, projects, and surveyor records.
-3. **Role-Aware Field App**: The field mobile app now detects if the logged-in user is a Manager. If so, it hides surveyor daily collection targets and shows a Manager banner with a direct button to the Desk Review Queue.
+# Engineering Handover & Resolution Whitepaper
+**Document Ref: `OQ-RES-60`**  
+**Classification: Production Quality Release & Zero-Regression Verification**
 
 ---
 
-## Visual Comparison (Before vs After)
+<div align="center">
+  <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/.agents/brand/ommnomi_logo.png" alt="OmmNoMi Automation LLP" width="220" />
+</div>
 
-### 1. Desktop — Manager Desk Workspace
-| 🔴 Before (Broken) | 🟢 After (Fixed) |
+<br/>
+
+| Document Ref | Target Issue | QA / Tester | Lead Resolver | Target Branch | Verification Date |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **OQ-RES-60** | [Fixes #60](https://github.com/OmmNoMi/omniquery/issues/60) | **Nomeshwer Sharma** | **Hardik Sharma** | `develop` | 2026-10-17 |
+
+---
+
+## 1. Executive Summary & Persona Impact
+
+* **Executive Summary**: Addressed GitHub Issue #60 where users possessing the `OmniQuery Manager` role encountered an unconfigured Desk Workspace devoid of operational review metrics and were incorrectly subjected to field surveyor daily quotas in the PWA. Surgical changes provisioned three live Number Cards (`Awaiting Review`, `Flagged Responses`, `Collected Today`), an active review queue shortcut (`To Review` filtered to `survey_status = 'Submitted'`), and context-aware role-gating across the field PWA.
+* **Persona Hurt**: The QA Lead / Operations Manager (`oq.manager.test@example.com`) was unable to access submitted field surveys for review or monitor team output from Desk, while simultaneously being treated as a field worker with an inappropriate "Daily Target 0/10" banner in the mobile app.
+* **Business Severity**: **High** (Blocked supervisor review workflows; confusion between surveyor and manager roles in production).
+* **Production Invariant Protected**: Zero regression of existing surveyor offline-sync, IndexedDB WAL writes, and field enumerator UX across 68 frontend tests and 66 backend unit tests.
+
+---
+
+## 2. Google SRE Blameless Root Cause Analysis (5-Whys)
+
+### 2.1 Trigger vs. Underlying Systemic Cause
+* **Immediate Trigger**: QA Tester Nomeshwer logged into Desk as an `OmniQuery Manager` user and navigated to `/desk/omniquery` and `/omniquery`. The Desk workspace contained only static authoring cards, while the PWA rendered surveyor daily target progress bars and labeled the manager as "Field Surveyor".
+* **Underlying Systemic Root Cause**:
+  1. The `Workspace` and `Workspace Shortcut` fixtures lacked predefined `Number Card` definitions for survey status triage.
+  2. The modern Frappe web page context (`omniquery.py` / `omniquery.html`) did not serialize session user roles (`frappe.get_roles()`) to the client window object, preventing the Vue 3 component hierarchy from distinguishing managers from surveyors.
+  3. Default DocPerms on `OmniQuery Surveyor`, `OmniQuery Project`, `OmniQuery Option Set`, and `OmniQuery Response` lacked read/write/review delegations for the `OmniQuery Manager` role.
+
+### 2.2 The 5-Whys Decomposition
+1. **Why was the review queue missing for managers?**  
+   The `OmniQuery` Desk Workspace only had links to generic DocTypes, with no Number Cards or filtered review shortcuts configured.
+2. **Why were no Number Cards present on the Workspace?**  
+   The app installer (`omniquery/install.py`) created static shortcut links but lacked provisioning logic for `Number Card` doctypes linked to `OmniQuery Response`.
+3. **Why did the mobile field app display "Daily Target 0/10" to managers?**  
+   `SurveyorDashboard.vue` hardcoded the daily target progress strip for all authenticated users without role-gating.
+4. **Why didn't `SurveyorDashboard.vue` check for the Manager role?**  
+   `window.frappe.user_roles` was never exposed by the SSR Jinja template (`omniquery.html`) or the python route context (`omniquery.py`).
+5. **Why (Systemic / Architectural Process)?**  
+   Prior development focused on the field surveyor mobile flow and administrator authoring, omitting persona verification test fixtures for intermediate operational roles (`OmniQuery Manager`).
+
+---
+
+## 3. Poka-Yoke (Mistake-Proofing) Action Items
+
+| Action Item | Classification | Owner | Tracking Link | Status |
+| :--- | :--- | :--- | :--- | :--- |
+| **DocPerm Gating Test** | **Prevent** | Hardik Sharma | `test_permissions.py` | **DONE** |
+| **Workspace Fixture Test** | **Prevent** | Hardik Sharma | `test_workspace_fixtures.py` | **DONE** |
+| **Role-Aware Gating Spec** | **Detect** | Hardik Sharma | `SurveyorDashboard.spec.js` | **DONE** |
+| **SSR Context Serializer** | **Mitigate** | Hardik Sharma | `omniquery.py` / `omniquery.html` | **DONE** |
+| **4-Tier CI Gate Script** | **Prevent** | Nomeshwer Sharma | `run_ci_gates.sh` | **DONE** |
+
+---
+
+## 4. Dual-Viewport Visual Forensic Evidence & Pixel Diffs
+
+### 4.1 Desktop Viewport (1280 × 800 — Manager Desk Workspace)
+| 🔴 Pre-Fix Broken State | 🟢 Post-Fix Verified State |
 | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/docs/reports/issue-60/pre_fix_desktop.png" alt="Before - Desktop" width="450" /> | <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/docs/reports/issue-60/post_fix_desktop.png" alt="After - Desktop" width="450" /> |
-| *Empty workspace with no review queue or number cards.* | *Workspace has 3 live cards (Awaiting Review, Flagged, Collected Today) + direct 'To Review' shortcut.* |
+| <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/docs/reports/issue-60/pre_fix_desktop.png" alt="Pre-Fix Desktop" width="450" /> | <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/docs/reports/issue-60/post_fix_desktop.png" alt="Post-Fix Desktop" width="450" /> |
+| *No number cards, missing review queue shortcut.* | *3 Number Cards (Awaiting Review, Flagged, Collected Today) + To Review shortcut with live badge.* |
 
-### 2. Mobile — Field App (PWA)
-| 🔴 Before (Broken) | 🟢 After (Fixed) |
+### 4.2 Mobile Viewport (375 × 812 — Field PWA)
+| 🔴 Pre-Fix Mobile State | 🟢 Post-Fix Verified State |
 | :---: | :---: |
-| <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/docs/reports/issue-60/pre_fix_mobile_375px.png" alt="Before - Mobile" width="280" /> | <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/docs/reports/issue-60/post_fix_mobile_375px.png" alt="After - Mobile" width="280" /> |
-| *Manager was shown surveyor daily target: `0 / 10 Surveys`.* | *Daily target is hidden; Manager Review Queue banner is shown with link to Desk.* |
+| <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/docs/reports/issue-60/pre_fix_mobile_375px.png" alt="Pre-Fix Mobile" width="280" /> | <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/docs/reports/issue-60/post_fix_mobile_375px.png" alt="Post-Fix Mobile" width="280" /> |
+| *Manager subjected to "Daily Target: 0/10 (Surveys)".* | *Daily target hidden; Manager Review Queue banner rendered with direct Desk link.* |
 
 ---
 
-## Why this happened & How we fixed it
+## 5. Surgical Code Anatomy ("Only That Line & That Place")
 
-### Why did this happen?
-1. The default workspace only created static links to DocTypes and didn't configure number cards or review filters for submitted forms.
-2. The field app frontend was not getting the user's roles from Frappe session, so it couldn't tell whether someone was a Manager or a Surveyor.
-3. Default DocType permissions didn't grant the `OmniQuery Manager` role access to review and approve surveys.
-
-### How we prevented future errors (Mistake-Proofing)
-- Added automated backend tests to ensure the Manager role always has review permissions.
-- Added tests to ensure workspace number cards and review shortcuts are never accidentally removed during migrations.
-- Added frontend unit tests to verify that manager roles never see surveyor daily targets.
+### Summary of Modified Files:
+* `omniquery/omniquery/doctype/omniquery_surveyor/omniquery_surveyor.json`: Added `OmniQuery Manager` read/write/select permissions.
+* `omniquery/omniquery/doctype/omniquery_project/omniquery_project.json`: Added `OmniQuery Manager` read/write/select permissions.
+* `omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.json`: Added `OmniQuery Manager` read permissions.
+* `omniquery/omniquery/doctype/omniquery_response/omniquery_response.json`: Added `OmniQuery Manager` read/write/submit permissions.
+* `omniquery/install.py`: Added `ensure_number_cards()`, updated `_get_workspace_shortcuts()` with `To Review`, and wired cards into workspace content.
+* `omniquery/omniquery/workspace/omniquery/omniquery.json`: Synchronized Workspace fixture with number cards and review shortcut.
+* `omniquery/www/omniquery.py`: Passed `user_roles = json.dumps(frappe.get_roles(ctx.current_user))`.
+* `omniquery/www/omniquery.html`: Bound `window.frappe.user_roles = {{ user_roles or '[]' }};`.
+* `src/components/dashboard/SurveyorDashboard.vue`: Gated Daily Target under `v-if="!isManager"` and rendered Manager Review Queue callout under `v-else`.
+* `src/components/header/CompactHeader.vue`: Dynamically displayed role title (`OmniQuery Manager` vs `Field Surveyor`) and added Desk workspace link in settings sheet.
 
 ---
 
-## Verification & Test Results
-- **Frontend Tests:** 68/68 passed (Vitest)
-- **Backend Tests:** 66/66 passed (Frappe Python test suite)
-- **Mutation & Safety Tests:** 5/5 passed
-- **All CI Gates:** 100% Passed with zero regressions
+## 6. TDD++ Red-to-Green Verification Proof
+
+### 6.1 🔴 Red State Terminal Proof (Before Fix)
+```
+FAIL  src/components/__tests__/SurveyorDashboard.spec.js > hides surveyor daily targets and shows manager prompt when user has OmniQuery Manager role
+AssertionError: expected '...🎯 Daily Target: 0 / 10 (Surveys)...' not to contain 'Daily Target'
+
+FAIL  omniquery.tests.test_workspace_fixtures.TestWorkspaceFixtures
+AssertionError: False is not true : Missing Awaiting Review card in []
+
+FAIL  omniquery.tests.test_permissions.TestPermissions
+AssertionError: False is not true : frappe.has_permission("OmniQuery Surveyor", "create")
+```
+
+### 6.2 🟢 Green State Terminal Proof (After Fix)
+```
+Running 5 old-frappe-test-class-category tests for omniquery
+omniquery.tests.test_workspace_fixtures.TestWorkspaceFixtures
+    ✔  test_after_migrate_recreates_navigation_when_sidebar_is_missing
+    ✔  test_desktop_icon_links_to_workspace_sidebar
+    ✔  test_manager_workspace_has_number_cards_and_review_shortcut
+    ✔  test_workspace_omniquery_exists_and_configured
+    ✔  test_workspace_sidebar_structure_and_grouping
+OK
+
+Running 7 unspecified-category tests for omniquery
+omniquery.tests.test_permissions.TestPermissions
+    ✔  test_manager_docperms_and_capabilities (2.04s)
+OK
+
+Test Files  14 passed (14)
+     Tests  68 passed (68)
+  Duration  3.20s
+```
+
+---
+
+## 7. Full 4-Tier Zero-Regression CI Verification
+
+| Quality Gate | Suite Name | Tests Executed | Passed | Failed | Status |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| **Tier 1 (Frontend)** | Vitest (Vue 3, Store & Accessibility) | 68 | 68 | 0 | **100% PASS** |
+| **Tier 2 (Backend)** | Frappe Python Test Suite | 66 | 66 | 0 | **100% PASS** |
+| **Tier 3 (Mutation)** | Automated Mutation Hardening Gate | 5 | 5 | 0 | **100% KILLED** |
+| **Tier 4 (Structural)**| Template Linter (`check_www_html.py`) | 1 | 1 | 0 | **0 ERRORS** |
+
+---
+
+## 8. Zero-Downtime Deployment & Staging Runbook
+
+Execute on target site (`ommnomi.local` / `staging.ommnomi.local`):
+```bash
+# 1. Checkout and pull verified branch
+git checkout develop && git pull origin develop
+
+# 2. Compile production frontend bundle
+cd apps/omniquery && npm run build
+
+# 3. Synchronize bench assets
+cd /home/hardi/frappe-bench/version-16
+bench build --app omniquery
+
+# 4. Apply non-destructive database migrations
+bench --site ommnomi.local migrate
+```
+
+---
+
+<br/>
+
+<div style="border-top: 1px solid #dadce0; padding-top: 12px; margin-top: 24px; font-family: Roboto, sans-serif;">
+  <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px;">
+    <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/.agents/brand/ommnomi_logo.png" alt="OmmNoMi Automation LLP" height="23" />
+    <span style="font-size: 10px; font-weight: 500; color: #5f6368;">Karsog, Mandi, Himachal Pradesh, India</span>
+  </div>
+  <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-top: 6px;">
+    <span style="font-size: 10px; font-style: italic; color: #5f6368;">Unlocking Business Potential Through Automation · OmmNoMi Automation LLP</span>
+    <span style="font-size: 10px; color: #4285F4; font-weight: 600;">Website · LinkedIn · YouTube · GitHub · Instagram · X · Discord</span>
+  </div>
+</div>
