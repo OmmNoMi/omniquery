@@ -138,37 +138,3 @@ Test Files  14 passed (14)
 | **Tier 3 (Mutation)** | Automated Mutation Hardening Gate | 5 | 5 | 0 | **100% KILLED** |
 | **Tier 4 (Structural)**| Template Linter (`check_www_html.py`) | 1 | 1 | 0 | **0 ERRORS** |
 
----
-
-## 8. Zero-Downtime Deployment & Staging Runbook
-
-Execute on target site (`ommnomi.local` / `staging.ommnomi.local`):
-```bash
-# 1. Checkout and pull verified branch
-git checkout develop && git pull origin develop
-
-# 2. Compile production frontend bundle
-cd apps/omniquery && npm run build
-
-# 3. Synchronize bench assets
-cd /home/hardi/frappe-bench/version-16
-bench build --app omniquery
-
-# 4. Apply non-destructive database migrations
-bench --site ommnomi.local migrate
-```
-
----
-
-<br/>
-
-<div style="border-top: 1px solid #dadce0; padding-top: 12px; margin-top: 24px; font-family: Roboto, sans-serif;">
-  <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px;">
-    <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/.agents/brand/ommnomi_logo.png" alt="OmmNoMi Automation LLP" height="23" />
-    <span style="font-size: 10px; font-weight: 500; color: #5f6368;">Karsog, Mandi, Himachal Pradesh, India</span>
-  </div>
-  <div style="display: flex; justify-content: space-between; align-items: center; min-height: 24px; margin-top: 6px;">
-    <span style="font-size: 10px; font-style: italic; color: #5f6368;">Unlocking Business Potential Through Automation · OmmNoMi Automation LLP</span>
-    <span style="font-size: 10px; color: #4285F4; font-weight: 600;">Website · LinkedIn · YouTube · GitHub · Instagram · X · Discord</span>
-  </div>
-</div>
