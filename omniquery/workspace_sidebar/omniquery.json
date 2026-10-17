@@ -1,6 +1,5 @@
 {
  "app": "omniquery",
- "creation": "2026-09-29 14:00:00",
  "docstatus": 0,
  "doctype": "Workspace Sidebar",
  "header_icon": "clipboard-list",
@@ -265,7 +264,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-10-05 00:54:41.377106",
+ "modified": "2026-10-17 03:35:44.943599",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery",

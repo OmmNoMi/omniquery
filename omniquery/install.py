@@ -6,11 +6,13 @@ def after_migrate():
 	ensure_roles()
 	# The icon links to the sidebar and the sidebar links to the workspace, so create them in
 	# that order. Inserting the icon first fails the whole migrate whenever the sidebar is missing.
+	ensure_number_cards()
 	ensure_workspace()
 	ensure_workspace_sidebar()
 	ensure_desktop_icon()
 	ensure_default_surveyor()
 	sync_app_fixtures()
+
 
 
 def ensure_default_surveyor():
@@ -154,8 +156,71 @@ def ensure_workspace_sidebar():
 	doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
 
 
+def ensure_number_cards():
+	if not frappe.db.exists("DocType", "Number Card"):
+		return
+	cards = [
+		{
+			"name": "Awaiting Review",
+			"label": "Awaiting Review",
+			"type": "Document Type",
+			"document_type": "OmniQuery Response",
+			"function": "Count",
+			"filters_json": json.dumps([["OmniQuery Response", "survey_status", "=", "Submitted"]]),
+			"is_public": 1,
+			"module": "OmniQuery",
+			"color": "#FBBC05",
+		},
+		{
+			"name": "Flagged Responses",
+			"label": "Flagged Responses",
+			"type": "Document Type",
+			"document_type": "OmniQuery Response",
+			"function": "Count",
+			"filters_json": json.dumps([["OmniQuery Response", "survey_status", "=", "Audit Flagged"]]),
+			"is_public": 1,
+			"module": "OmniQuery",
+			"color": "#EA4335",
+		},
+		{
+			"name": "Collected Today",
+			"label": "Collected Today",
+			"type": "Document Type",
+			"document_type": "OmniQuery Response",
+			"function": "Count",
+			"filters_json": json.dumps([["OmniQuery Response", "creation", "Timespan", "today"]]),
+			"is_public": 1,
+			"module": "OmniQuery",
+			"color": "#34A853",
+		},
+	]
+	for card in cards:
+		if not frappe.db.exists("Number Card", card["name"]):
+			frappe.get_doc({"doctype": "Number Card", **card}).insert(ignore_permissions=True)
+		else:
+			doc = frappe.get_doc("Number Card", card["name"])
+			doc.update(card)
+			doc.save(ignore_permissions=True)
+
+
+def _get_workspace_number_cards():
+	return [
+		{"number_card_name": "Awaiting Review", "label": "Awaiting Review"},
+		{"number_card_name": "Flagged Responses", "label": "Flagged Responses"},
+		{"number_card_name": "Collected Today", "label": "Collected Today"},
+	]
+
+
 def _get_workspace_shortcuts():
 	return [
+		{
+			"label": "To Review",
+			"type": "DocType",
+			"link_to": "OmniQuery Response",
+			"color": "Orange",
+			"doc_view": "List",
+			"stats_filter": json.dumps([["OmniQuery Response", "survey_status", "=", "Submitted"]]),
+		},
 		{"label": "Survey Templates", "type": "DocType", "link_to": "OmniQuery Template", "color": "Green"},
 		{"label": "Questions", "type": "DocType", "link_to": "OmniQuery Question", "color": "Blue"},
 		{"label": "Option Sets", "type": "DocType", "link_to": "OmniQuery Option Set", "color": "Purple"},
@@ -168,9 +233,22 @@ def _get_workspace_shortcuts():
 	]
 
 
-def _build_workspace_content(shortcuts):
-	header = [{"id": "hdr_actions", "type": "header", "data": {"text": "<span class=\"h4\">Quick Launch</span>", "col": 12}}]
-	cards = [
+def _build_workspace_content(shortcuts, number_cards):
+	metric_header = [{"id": "hdr_metrics", "type": "header", "data": {"text": "<span class=\"h4\">Review Queue & Activity</span>", "col": 12}}]
+	metric_cards = [
+		{
+			"id": f"nc_{i+1}",
+			"type": "number_card",
+			"data": {
+				"number_card_name": nc["number_card_name"],
+				"card_name": nc["number_card_name"],
+				"col": 4,
+			},
+		}
+		for i, nc in enumerate(number_cards)
+	]
+	action_header = [{"id": "hdr_actions", "type": "header", "data": {"text": "<span class=\"h4\">Quick Launch</span>", "col": 12}}]
+	action_cards = [
 		{
 			"id": f"sc_{i+1}",
 			"type": "shortcut",
@@ -185,13 +263,14 @@ def _build_workspace_content(shortcuts):
 		}
 		for i, sc in enumerate(shortcuts)
 	]
-	return json.dumps(header + cards)
+	return json.dumps(metric_header + metric_cards + action_header + action_cards)
 
 
 def ensure_workspace():
 	if not frappe.db.exists("DocType", "Workspace"):
 		return
 	shortcuts = _get_workspace_shortcuts()
+	number_cards = _get_workspace_number_cards()
 	existing = frappe.db.exists("Workspace", "OmniQuery")
 	doc = frappe.get_doc("Workspace", "OmniQuery") if existing else frappe.new_doc("Workspace")
 	doc.name = doc.label = doc.title = "OmniQuery"
@@ -199,6 +278,8 @@ def ensure_workspace():
 	doc.indicator_color = "blue"
 	doc.module = "OmniQuery"
 	doc.public = 1
-	doc.content = _build_workspace_content(shortcuts)
+	doc.content = _build_workspace_content(shortcuts, number_cards)
 	doc.set("shortcuts", shortcuts)
+	doc.set("number_cards", number_cards)
 	doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
+
