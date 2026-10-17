@@ -1,6 +1,6 @@
-# Engineering Handover & Resolution Whitepaper
-**Document Ref: `OQ-RES-60`**  
-**Classification: Production Quality Release & Zero-Regression Verification**
+# Engineering Handover & Resolution Report
+
+Fixes #60
 
 ---
 
@@ -8,13 +8,8 @@
   <img src="https://raw.githubusercontent.com/OmmNoMi/omniquery/fix/issue-60-manager-workspace-and-role-aware-app/.agents/brand/ommnomi_logo.png" alt="OmmNoMi Automation LLP" width="220" />
 </div>
 
-<br/>
-
-| Document Ref | Target Issue | QA / Tester | Lead Resolver | Target Branch | Verification Date |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **OQ-RES-60** | [Fixes #60](https://github.com/OmmNoMi/omniquery/issues/60) | **Nomeshwer Sharma** | **Hardik Sharma** | `develop` | 2026-10-17 |
-
 ---
+
 
 ## 1. Executive Summary & Persona Impact
 
