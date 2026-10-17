@@ -137,10 +137,13 @@ def calculate_haversine_distance(lat1, lon1, lat2, lon2):
 
 def process_automated_audit(resp_doc, raw_sub):
 	"""
-	Analyzes field survey telemetry and generates an OmniQuery Supervisor Audit record.
+	Analyzes field survey telemetry and records quality signals directly onto OmniQuery Response.
 	Detects:
-	1. Speedrunning: Total time spent < (question_count * 3 seconds).
-	2. GPS Variance: Distance from respondent or project centroid > 5,000 meters.
+	1. Speedrunning: Total time spent < (question_count * speed_threshold_sec_per_question).
+	2. GPS Variance: Distance from respondent or project centroid > gps_distance_threshold_m.
+
+	Does NOT forge human Supervisor Audit records. Real Supervisor Audits must only be created
+	by authorized human supervisors during review workflows.
 	"""
 	try:
 		if not resp_doc or not resp_doc.name:
@@ -174,48 +177,64 @@ def process_automated_audit(resp_doc, raw_sub):
 					lat, lon, resp_geo.gps_latitude, resp_geo.gps_longitude
 				)
 
+		# Retrieve configurable thresholds from OmniQuery Settings
+		speed_threshold_sec = 3
+		min_questions = 5
+		gps_threshold_m = 5000.0
+		try:
+			settings = frappe.get_cached_doc("OmniQuery Settings")
+			if hasattr(settings, "speed_threshold_sec_per_question") and settings.speed_threshold_sec_per_question:
+				speed_threshold_sec = int(settings.speed_threshold_sec_per_question)
+			if hasattr(settings, "min_questions_for_speed_check") and settings.min_questions_for_speed_check:
+				min_questions = int(settings.min_questions_for_speed_check)
+			if hasattr(settings, "gps_distance_threshold_m") and settings.gps_distance_threshold_m:
+				gps_threshold_m = float(settings.gps_distance_threshold_m)
+		except Exception:
+			pass
+
 		# Evaluate Outlier Invariants
 		is_outlier = 0
 		remarks = []
 
-		# Speedrun check: < 3 seconds per question (min 10 questions)
-		if items_count >= 5 and time_spent_seconds is not None:
-			min_expected_sec = items_count * 3
+		# Speedrun check: < speed_threshold_sec per question (min min_questions questions)
+		if items_count >= min_questions and time_spent_seconds is not None:
+			min_expected_sec = items_count * speed_threshold_sec
 			if time_spent_seconds < min_expected_sec:
 				is_outlier = 1
 				remarks.append(f"Speedrun detected: {time_spent_seconds}s for {items_count} questions (min threshold: {min_expected_sec}s)")
 
-		# GPS Outlier check: > 5km from centroid
-		if gps_variance_m is not None and gps_variance_m > 5000:
+		# GPS Outlier check: > gps_threshold_m from centroid
+		if gps_variance_m is not None and gps_variance_m > gps_threshold_m:
 			is_outlier = 1
-			remarks.append(f"GPS variance high: {gps_variance_m}m from respondent centroid (>5km)")
+			remarks.append(f"GPS variance high: {gps_variance_m}m from respondent centroid (>{gps_threshold_m}m)")
 
-		audit_name = f"AUDIT-{resp_doc.name}"
-		if frappe.db.exists("OmniQuery Supervisor Audit", audit_name):
-			audit_doc = frappe.get_doc("OmniQuery Supervisor Audit", audit_name)
-		else:
-			audit_doc = frappe.new_doc("OmniQuery Supervisor Audit")
-			audit_doc.name = audit_name
-			audit_doc.survey_response = resp_doc.name
+		outlier_reasons_str = "; ".join(remarks) if remarks else None
 
-		audit_doc.supervisor = frappe.session.user or "Administrator"
-		audit_doc.time_spent_seconds = time_spent_seconds or 0
-		audit_doc.gps_distance_variance_meters = gps_variance_m
-		audit_doc.is_outlier_flagged = is_outlier
-		audit_doc.audit_verdict = "Flagged for Re-Survey" if is_outlier else "Verified"
-		audit_doc.audit_remarks = "; ".join(remarks) if remarks else "Automated telemetry verified."
+		# Store telemetry signals directly on OmniQuery Response
+		updates = {
+			"time_spent_seconds": int(time_spent_seconds or 0),
+			"gps_distance_variance_meters": flt(gps_variance_m) if gps_variance_m is not None else 0.0,
+			"is_outlier_flagged": is_outlier,
+			"outlier_reasons": outlier_reasons_str,
+		}
 
-		audit_doc.save(ignore_permissions=True)
+		if is_outlier and resp_doc.survey_status != "Approved":
+			updates["survey_status"] = "Audit Flagged"
+
+		frappe.db.set_value("OmniQuery Response", resp_doc.name, updates)
 		frappe.db.commit()
 
-		# If outlier, also update response status to Audit Flagged
-		if is_outlier and resp_doc.survey_status != "Approved":
-			frappe.db.set_value("OmniQuery Response", resp_doc.name, "survey_status", "Audit Flagged")
-			frappe.db.commit()
+		# Update resp_doc in-memory attributes
+		resp_doc.time_spent_seconds = updates["time_spent_seconds"]
+		resp_doc.gps_distance_variance_meters = updates["gps_distance_variance_meters"]
+		resp_doc.is_outlier_flagged = updates["is_outlier_flagged"]
+		resp_doc.outlier_reasons = updates["outlier_reasons"]
+		if "survey_status" in updates:
+			resp_doc.survey_status = updates["survey_status"]
 
-		return audit_doc.name
+		return None
 	except Exception as e:
-		frappe.log_error("Process automated audit error", str(e))
+		frappe.log_error("Process automated audit error", frappe.get_traceback())
 		return None
 
 
