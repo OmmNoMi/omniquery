@@ -19,6 +19,12 @@
   "captured_at_local",
   "synced_at",
   "audio_recording",
+  "telemetry_section",
+  "time_spent_seconds",
+  "gps_distance_variance_meters",
+  "cb_telemetry",
+  "is_outlier_flagged",
+  "outlier_reasons",
   "items_tab",
   "items",
   "raw_payload_tab",
@@ -140,6 +146,42 @@
    "label": "Raw Immutable JSON",
    "options": "JSON",
    "read_only": 1
+  },
+  {
+   "fieldname": "telemetry_section",
+   "fieldtype": "Section Break",
+   "label": "Telemetry & Quality Signals"
+  },
+  {
+   "fieldname": "time_spent_seconds",
+   "fieldtype": "Int",
+   "label": "Time Spent (Seconds)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gps_distance_variance_meters",
+   "fieldtype": "Float",
+   "label": "GPS Variance vs Centroid (Meters)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_telemetry",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_outlier_flagged",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Outlier Flagged",
+   "read_only": 1
+  },
+  {
+   "fieldname": "outlier_reasons",
+   "fieldtype": "Small Text",
+   "label": "Outlier Reasons",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
@@ -167,6 +209,18 @@
    "create": 1,
    "read": 1,
    "role": "All",
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Manager",
+   "share": 1,
    "write": 1
   }
  ],

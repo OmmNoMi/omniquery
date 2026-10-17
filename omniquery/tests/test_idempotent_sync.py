@@ -32,11 +32,20 @@ class TestIdempotentSync(unittest.TestCase):
 
 		# Setup dummy surveyor
 		if not frappe.db.exists("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"}):
+			test_user = "test_surveyor_nomesh@example.com"
+			if not frappe.db.exists("User", test_user):
+				frappe.get_doc({
+					"doctype": "User",
+					"email": test_user,
+					"first_name": "Test Surveyor Nomesh",
+					"roles": [{"role": "OmniQuery User"}],
+				}).insert(ignore_permissions=True)
 			frappe.get_doc(
 				{
 					"doctype": "OmniQuery Surveyor",
+					"name": "SURV-Test Surveyor Nomesh",
 					"surveyor_name": "Test Surveyor Nomesh",
-					"user": "Administrator",
+					"user": test_user,
 					"status": "Active",
 				}
 			).insert(ignore_permissions=True)
