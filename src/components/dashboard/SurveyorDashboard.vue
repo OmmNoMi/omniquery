@@ -36,7 +36,7 @@
     <div class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5">
       <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
         <div class="flex items-center gap-1.5">
-          <span>🎯</span>
+          <Target class="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
           <span>{{ __('Daily Target') }}:</span>
           <span class="text-emerald-700 dark:text-emerald-400 font-extrabold">{{ completedToday }} / {{ dailyTarget }}</span>
           <span class="font-normal text-slate-500 dark:text-slate-400">({{ __('Surveys') }})</span>
@@ -63,7 +63,7 @@
       >
         <div class="flex items-center justify-between text-emerald-700 dark:text-emerald-400 min-w-0">
           <span class="text-xs font-bold uppercase tracking-wider truncate">{{ __('Today') }}</span>
-          <span class="text-base group-hover:scale-110 transition shrink-0">📋</span>
+          <ClipboardList class="w-4 h-4 group-hover:scale-110 transition shrink-0" />
         </div>
         <div class="text-2xl sm:text-3xl font-extrabold text-emerald-900 dark:text-emerald-100 font-mono">
           {{ completedToday }}
@@ -74,7 +74,7 @@
         </div>
       </div>
 
-      <!-- 2. Pending Offline Queue (⚡ N) -->
+      <!-- 2. Pending Offline Queue -->
       <div
         @click="$emit('open-filtered-forms', 'queue')"
         role="button"
@@ -91,7 +91,7 @@
           <span class="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400 truncate">
             {{ __('Queue') }}
           </span>
-          <span class="text-base group-hover:scale-110 transition shrink-0">⚡</span>
+          <Zap class="w-4 h-4 text-amber-500 group-hover:scale-110 transition shrink-0" />
         </div>
         <div class="text-2xl sm:text-3xl font-extrabold font-mono" :class="pendingWALCount > 0 ? 'text-amber-900 dark:text-amber-200' : 'text-slate-800 dark:text-slate-200'">
           {{ pendingWALCount }}
@@ -121,7 +121,7 @@
       >
         <div class="flex items-center justify-between text-blue-700 dark:text-blue-400 min-w-0">
           <span class="text-xs font-bold uppercase tracking-wider truncate">{{ __('Drafts') }}</span>
-          <span class="text-base group-hover:scale-110 transition shrink-0">📝</span>
+          <FileText class="w-4 h-4 text-blue-500 group-hover:scale-110 transition shrink-0" />
         </div>
         <div class="text-2xl sm:text-3xl font-extrabold text-blue-900 dark:text-blue-100 font-mono">
           {{ activeDraftsCount }}
@@ -142,14 +142,17 @@
       >
         <div class="flex items-center justify-between text-slate-600 dark:text-slate-400 min-w-0">
           <span class="text-xs font-bold uppercase tracking-wider truncate">{{ __('Total') }}</span>
-          <span class="text-base group-hover:scale-110 transition shrink-0">🏆</span>
+          <Trophy class="w-4 h-4 text-purple-500 group-hover:scale-110 transition shrink-0" />
         </div>
         <div class="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 font-mono">
           {{ totalCompleted }}
         </div>
         <div class="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex items-center justify-between gap-1 min-w-0">
           <span class="truncate">
-            <span v-if="serverApprovedCount > 0" class="text-emerald-700 dark:text-emerald-400 font-bold">✓ {{ serverApprovedCount }} {{ __('Approved') }}</span>
+            <span v-if="serverApprovedCount > 0" class="text-emerald-700 dark:text-emerald-400 font-bold inline-flex items-center gap-1">
+              <Check class="w-3 h-3" />
+              <span>{{ serverApprovedCount }} {{ __('Approved') }}</span>
+            </span>
             <span v-else>{{ __('Submitted records') }}</span>
           </span>
           <span class="text-[10px] font-bold opacity-0 group-hover:opacity-100 transition shrink-0">→</span>
@@ -165,7 +168,7 @@
       <!-- Top Row: Eyebrow Badge & Relative Time -->
       <div class="flex items-center justify-between gap-2 text-xs flex-wrap min-w-0">
         <div class="flex items-center gap-1.5 font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wider text-[11px] shrink-0">
-          <span>⏳</span>
+          <Clock class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
           <span>{{ __('In-Progress Draft') }}</span>
         </div>
         <span class="text-[11px] text-amber-700/90 dark:text-amber-400 font-medium shrink-0">
@@ -178,8 +181,9 @@
         <h4 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug break-words">
           {{ resolveResponseTitle(topDraft.responses, topDraft.response_title_format, topDraft.title || topDraft.template_name) }}
         </h4>
-        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-          📋 {{ topDraft.title || topDraft.template_name }}
+        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
+          <ClipboardList class="w-3.5 h-3.5 text-slate-400" />
+          <span>{{ topDraft.title || topDraft.template_name }}</span>
         </p>
       </div>
 
@@ -206,7 +210,7 @@
             class="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-amber-300 dark:border-amber-700 active:scale-95 text-slate-800 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
             :title="__('Start a fresh blank survey without discarding this draft')"
           >
-            <span>➕</span>
+            <Plus class="w-3.5 h-3.5" />
             <span>{{ __('Start New') }}</span>
           </Button>
 
@@ -215,7 +219,7 @@
             class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
             :title="__('Resume editing this saved draft')"
           >
-            <span>▶</span>
+            <Play class="w-3.5 h-3.5" />
             <span>{{ __('Resume Survey') }}</span>
             <span>→</span>
           </Button>
@@ -232,7 +236,7 @@
         @click="$emit('open-filled-forms')"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition active:scale-95 shadow-2xs cursor-pointer shrink-0"
       >
-        <span>📋</span>
+        <ClipboardList class="w-3.5 h-3.5 text-slate-500" />
         <span>{{ __('View Filled Forms & Recovery') }}</span>
         <span>→</span>
       </Button>
@@ -243,6 +247,7 @@
 <script setup>
 import { computed, ref, onMounted, watch } from "vue";
 import { Button, call } from "frappe-ui";
+import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db } from "../../services/db";
@@ -380,7 +385,7 @@ const targetProgressPct = computed(() => {
 
 const remainingTodayText = computed(() => {
   const left = dailyTarget.value - completedToday.value;
-  if (left <= 0) return __("Target reached! 🎉");
+  if (left <= 0) return __("Target reached!");
   return `${left} ${__("left for target")}`;
 });
 

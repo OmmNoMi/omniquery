@@ -28,8 +28,9 @@
             class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs transition border border-slate-700 active:scale-95 cursor-pointer"
             :aria-label="__('Exit Focus Mode')"
             :title="__('Exit Focus Mode')"
+            :label="__('Exit Focus Mode')"
           >
-            ✕
+            <X class="w-3.5 h-3.5" />
           </Button>
         </div>
 
@@ -56,7 +57,7 @@
           class="sticky top-0 z-20 mb-3 p-3.5 rounded-2xl bg-slate-900/95 border border-emerald-500/40 shadow-xl backdrop-blur-md text-left"
         >
           <div class="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400">
-            <span>📋</span>
+            <ClipboardList class="w-3.5 h-3.5" />
             <span>{{ __('Main Table Question') }}</span>
           </div>
           <div class="text-sm sm:text-base font-extrabold text-white mt-1 leading-snug">
@@ -115,7 +116,7 @@
             ]"
             :title="__('Survey Mode')"
           >
-            <span>{{ activeModeIcon }}</span>
+            <component :is="activeModeIcon" class="w-3.5 h-3.5" />
             <span class="font-extrabold tracking-tight">{{ activeModeTitle }}</span>
             <svg
               class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
@@ -143,7 +144,7 @@
               class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 hover:bg-slate-800 text-slate-200"
             >
               <div class="flex items-center gap-2">
-                <span class="text-sm">⚡</span>
+                <Zap class="w-4 h-4 text-amber-400" />
                 <div>
                   <div class="text-xs font-bold text-slate-100">{{ __('Auto Advance') }}</div>
                   <div class="text-[10px] text-slate-400">{{ __('Next question on answer') }}</div>
@@ -170,7 +171,7 @@
               class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 hover:bg-slate-800 text-slate-200"
             >
               <div class="flex items-center gap-2">
-                <span class="text-sm">📋</span>
+                <ClipboardList class="w-4 h-4 text-blue-400" />
                 <div>
                   <div class="text-xs font-bold text-slate-100">{{ __('Full Form') }}</div>
                   <div class="text-[10px] text-slate-400">{{ __('Show all fields (incl. N/A)') }}</div>
@@ -197,7 +198,7 @@
               class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-400"
             >
               <div class="flex items-center gap-2">
-                <span class="text-sm">🎯</span>
+                <Target class="w-4 h-4 text-emerald-400" />
                 <div>
                   <div class="text-xs font-bold text-slate-100">{{ __('Focus Form') }}</div>
                   <div class="text-[10px] text-slate-400">{{ __('One-by-one popup card') }}</div>
@@ -227,6 +228,7 @@
 <script setup>
 import { computed, ref, watch, nextTick, toRef, onMounted, onUnmounted } from "vue";
 import { Button } from "frappe-ui";
+import { X, ClipboardList, Zap, Target } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
@@ -336,9 +338,9 @@ const activeModeTitle = computed(() => {
 });
 
 const activeModeIcon = computed(() => {
-  if (props.autoAdvance) return '⚡';
-  if (props.isFullForm) return '📋';
-  return '🎯';
+  if (props.autoAdvance) return Zap;
+  if (props.isFullForm) return ClipboardList;
+  return Target;
 });
 
 const progressPercent = computed(() => {

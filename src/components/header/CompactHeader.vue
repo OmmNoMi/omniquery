@@ -38,7 +38,7 @@
           <span class="text-[11px] font-mono font-black text-emerald-700 dark:text-emerald-300">{{ progressPercent }}%</span>
         </div>
 
-        <!-- Pending WAL Queue Offline Badge Pill (⚡ N, only for logged-in surveyors) -->
+        <!-- Pending WAL Queue Offline Badge Pill -->
         <Button
           v-if="!isGuest && pendingWALCount > 0"
           @click="$emit('open-wal')"
@@ -46,7 +46,7 @@
           :title="`${pendingWALCount} ${__('Pending Offline Responses')} - ${__('Click to view & sync')}`"
           :aria-label="`${pendingWALCount} ${__('Pending Offline Responses')}`"
         >
-          <span class="text-xs leading-none">⚡</span>
+          <Zap class="w-3.5 h-3.5 leading-none" />
           <span class="font-bold text-xs leading-none text-amber-900 dark:text-amber-200">{{ pendingWALCount }}</span>
         </Button>
 
@@ -113,7 +113,7 @@
           class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition active:scale-95 no-underline"
           :title="__('Sign in with your OmniQuery surveyor or admin account')"
         >
-          <span>🔑</span>
+          <KeyRound class="w-3.5 h-3.5" />
           <span>{{ __('Login') }}</span>
         </a>
 
@@ -206,7 +206,7 @@
             <!-- 1. Language Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <span class="text-base">🌐</span>
+                <Globe class="w-4 h-4 text-slate-500" />
                 <span class="text-xs font-bold text-slate-800">{{ __('Language') || 'Language' }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
@@ -234,7 +234,7 @@
             <!-- 2. Text Scale Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <span class="text-base">🔤</span>
+                <Languages class="w-4 h-4 text-slate-500" />
                 <span class="text-xs font-bold text-slate-800">{{ __('Text Size') || 'Text Size' }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
@@ -271,7 +271,7 @@
             <!-- 3. Theme Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <span class="text-base">🎨</span>
+                <Palette class="w-4 h-4 text-slate-500" />
                 <span class="text-xs font-bold text-slate-800">{{ __('Theme') || 'Theme' }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
@@ -282,7 +282,7 @@
                     activeTheme === 'light' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   ]"
                 >
-                  <span>☀️</span>
+                  <Sun class="w-3.5 h-3.5" />
                   <span>Light</span>
                 </Button>
                 <Button
@@ -292,7 +292,7 @@
                     activeTheme === 'dark' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   ]"
                 >
-                  <span>🌙</span>
+                  <Moon class="w-3.5 h-3.5" />
                   <span>Dark</span>
                 </Button>
               </div>
@@ -301,7 +301,7 @@
             <!-- 4. Choice Layout Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <span class="text-base">⊞</span>
+                <LayoutGrid class="w-4 h-4 text-slate-500" />
                 <span class="text-xs font-bold text-slate-800">{{ __('Choice Layout') || 'Choice Layout' }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
@@ -312,7 +312,7 @@
                     activeChoiceMode === 'grid' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   ]"
                 >
-                  <span>⊞</span>
+                  <LayoutGrid class="w-3.5 h-3.5" />
                   <span>Grid</span>
                 </Button>
                 <Button
@@ -322,7 +322,7 @@
                     activeChoiceMode === 'combobox' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   ]"
                 >
-                  <span>▾</span>
+                  <ChevronDown class="w-3.5 h-3.5" />
                   <span>Dropdown</span>
                 </Button>
               </div>
@@ -333,7 +333,7 @@
           <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                <span>📦</span>
+                <Package class="w-4 h-4 text-slate-500" />
                 <span>{{ __('WAL Queue') }}</span>
               </div>
               <p class="text-[11px] text-slate-500 mt-0.5">
@@ -343,9 +343,10 @@
             <Button
               @click="triggerSync"
               :disabled="pendingWALCount === 0"
-              class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-xs disabled:opacity-40"
+              class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-xs disabled:opacity-40 flex items-center gap-1.5"
             >
-              ⚡ {{ __('Sync Now') }}
+              <Zap class="w-3.5 h-3.5" />
+              <span>{{ __('Sync Now') }}</span>
             </Button>
           </div>
 
@@ -377,6 +378,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { Button } from "frappe-ui";
+import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 
