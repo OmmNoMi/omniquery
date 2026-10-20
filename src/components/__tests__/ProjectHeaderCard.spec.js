@@ -7,17 +7,17 @@ describe("ProjectHeaderCard", () => {
     const templates = [
       {
         project: "PROJ-SHG",
-        project_name: "Rajasthan Women Entrepreneurs Study",
+        project_name: "Rural Women Entrepreneurs Study",
         template_name: "T1",
       },
       {
         project: "OQP-001-001",
-        project_name: "Rajasthan Women Entrepreneurs Study",
+        project_name: "Rural Women Entrepreneurs Study",
         template_name: "T2",
       },
       {
         project: "PROJ-SHG",
-        project_name: "Rajasthan Women Entrepreneurs Study",
+        project_name: "Rural Women Entrepreneurs Study",
         template_name: "T3",
       },
     ];
@@ -32,7 +32,7 @@ describe("ProjectHeaderCard", () => {
     // Even though 3 templates and 2 different project IDs exist,
     // they share the exact normalized project_name so only 1 card is rendered
     expect(wrapper.vm.projectList.length).toBe(1);
-    expect(wrapper.vm.projectList[0].project_name).toBe("Rajasthan Women Entrepreneurs Study");
+    expect(wrapper.vm.projectList[0].project_name).toBe("Rural Women Entrepreneurs Study");
     // Pagination controls should NOT be visible when length === 1
     expect(wrapper.find("button[title*='Project']").exists()).toBe(false);
   });
