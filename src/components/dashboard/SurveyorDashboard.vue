@@ -99,14 +99,13 @@
         <div class="flex items-center justify-between gap-1 text-[11px] text-amber-800/90 dark:text-amber-300 font-medium min-w-0">
           <span class="truncate">{{ pendingWALCount === 0 ? __('All synced') : __('Pending sync') }}</span>
           <div class="flex items-center gap-1 shrink-0">
-            <button
+            <Button
               v-if="pendingWALCount > 0"
-              type="button"
               @click.stop="$emit('sync-now')"
               class="px-2 py-0.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold shadow-2xs active:scale-95 transition cursor-pointer"
             >
               {{ __('Sync') }}
-            </button>
+            </Button>
             <span class="text-[10px] font-bold text-amber-700 dark:text-amber-400">View →</span>
           </div>
         </div>
@@ -202,18 +201,16 @@
 
         <!-- Start New and Resume Buttons -->
         <div class="flex items-center gap-2 shrink-0">
-          <button
-            type="button"
+          <Button
             @click="$emit('start-new-survey', topDraft.template_name)"
             class="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-amber-300 dark:border-amber-700 active:scale-95 text-slate-800 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
             :title="__('Start a fresh blank survey without discarding this draft')"
           >
             <span>➕</span>
             <span>{{ __('Start New') }}</span>
-          </button>
+          </Button>
 
-          <button
-            type="button"
+          <Button
             @click="$emit('resume-draft', topDraft.template_name)"
             class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
             :title="__('Resume editing this saved draft')"
@@ -221,7 +218,7 @@
             <span>▶</span>
             <span>{{ __('Resume Survey') }}</span>
             <span>→</span>
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -231,21 +228,21 @@
       <div class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate min-w-0">
         <span>{{ totalCompleted }} {{ __('total submitted forms stored on device') }}</span>
       </div>
-      <button
-        type="button"
+      <Button
         @click="$emit('open-filled-forms')"
         class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold transition active:scale-95 shadow-2xs cursor-pointer shrink-0"
       >
         <span>📋</span>
         <span>{{ __('View Filled Forms & Recovery') }}</span>
         <span>→</span>
-      </button>
+      </Button>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed, ref, onMounted, watch } from "vue";
+import { Button, call } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db } from "../../services/db";
@@ -352,14 +349,12 @@ async function refreshLocalMetrics() {
 async function fetchServerMetrics() {
   if (!props.isOnline) return;
   try {
-    const url =
+    const args =
       props.selectedProject && props.selectedProject !== "ALL"
-        ? `/api/method/omniquery.api.survey.get_surveyor_kpis?project=${encodeURIComponent(props.selectedProject)}`
-        : `/api/method/omniquery.api.survey.get_surveyor_kpis`;
-    const res = await fetch(url);
-    if (res.ok) {
-      const data = await res.json();
-      const msg = data.message || {};
+        ? { project: props.selectedProject }
+        : {};
+    const msg = await call("omniquery.api.survey.get_surveyor_kpis", args);
+    if (msg) {
       serverTodayCount.value = Number(msg.today_count) || 0;
       serverTotalCount.value = Number(msg.total_count) || 0;
       serverApprovedCount.value = Number(msg.approved_count) || 0;

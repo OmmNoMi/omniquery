@@ -5,11 +5,10 @@
       :aria-label="ariaLabel || __('Rating')"
       class="flex items-center gap-2"
     >
-      <button
+      <Button
         v-for="star in maxStars"
         :key="star"
-        :ref="(el) => { if (el) starRefs[star] = el; }"
-        type="button"
+        :ref="(el) => setStarRef(star, el)"
         role="radio"
         :aria-checked="modelValue === star ? 'true' : 'false'"
         :tabindex="modelValue === star || (modelValue === 0 && star === 1) ? 0 : -1"
@@ -20,15 +19,14 @@
       >
         <span v-if="star <= (modelValue || 0)" class="text-amber-400">★</span>
         <span v-else class="text-slate-300">☆</span>
-      </button>
-      <button
+      </Button>
+      <Button
         v-if="modelValue"
-        type="button"
         @click="clear"
         class="ml-2 text-xs font-medium text-slate-500 hover:text-slate-700 underline"
       >
         {{ __('Clear') }}
-      </button>
+      </Button>
     </div>
     <div v-if="modelValue" class="text-sm font-semibold text-amber-700">
       {{ verbalLabel }}
@@ -38,6 +36,7 @@
 
 <script setup>
 import { computed, ref, nextTick } from "vue";
+import { Button } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -60,6 +59,12 @@ const { __ } = useTranslation();
 
 const starRefs = ref({});
 
+function setStarRef(star, el) {
+  if (el) {
+    starRefs.value[star] = el.$el || el.el || el;
+  }
+}
+
 const verbalLabels = {
   1: "Poor",
   2: "Fair",
@@ -76,7 +81,9 @@ const verbalLabel = computed(() => {
 function selectStar(star) {
   emit("update:modelValue", star);
   nextTick(() => {
-    starRefs.value[star]?.focus();
+    const el = starRefs.value[star];
+    if (el?.focus) el.focus();
+    else if (el?.$el?.focus) el.$el.focus();
   });
 }
 

@@ -8,15 +8,14 @@
       <!-- 1. Full-Page Top App Bar -->
       <header class="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-xs">
         <div class="flex items-center gap-3 min-w-0">
-          <button
-            type="button"
+          <Button
             @click="$emit('close')"
             class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
             :title="__('Return to Dashboard')"
           >
             <span>←</span>
             <span>{{ __('Back') }}</span>
-          </button>
+          </Button>
 
           <div class="min-w-0">
             <h1 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
@@ -37,14 +36,13 @@
             <span class="text-xs">{{ isOnline ? __('Online') : __('Offline') }}</span>
           </span>
 
-          <button
-            type="button"
+          <Button
             @click="$emit('close')"
             class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center font-bold text-sm transition cursor-pointer"
             :title="__('Close')"
           >
             ✕
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -57,70 +55,63 @@
           <span>⚡</span>
           <span>{{ syncFeedbackMessage }}</span>
         </div>
-        <button
-          type="button"
+        <Button
           @click="syncFeedbackMessage = ''"
           class="text-xs opacity-80 hover:opacity-100 cursor-pointer"
         >
           ✕
-        </button>
+        </Button>
       </div>
 
       <!-- 3. Clean, Single-Row Toolbar (No Duplicate Badges, Compact Export Dropdown) -->
       <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 sm:px-6 shrink-0 flex items-center justify-between gap-3 flex-wrap">
         <!-- Clean Filter Tabs -->
         <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs font-semibold py-0.5">
-          <button
-            type="button"
+          <Button
             @click="activeFilter = 'all'"
             class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
             :class="activeFilter === 'all' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'"
           >
             {{ __('All') }} ({{ responsesList.length }})
-          </button>
-          <button
+          </Button>
+          <Button
             v-if="draftsCount > 0"
-            type="button"
             @click="activeFilter = 'drafts'"
             class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
             :class="activeFilter === 'drafts' ? 'bg-blue-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'"
           >
             {{ __('Drafts') }} ({{ draftsCount }})
-          </button>
-          <button
+          </Button>
+          <Button
             v-if="queuedCount > 0"
-            type="button"
             @click="activeFilter = 'queue'"
             class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
             :class="activeFilter === 'queue' ? 'bg-amber-600 text-white font-bold shadow-xs' : 'bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 hover:bg-amber-100'"
           >
             {{ __('In Queue') }} ({{ queuedCount }})
-          </button>
-          <button
+          </Button>
+          <Button
             v-if="quarantinedCount > 0"
-            type="button"
             @click="activeFilter = 'quarantined'"
             class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
             :class="activeFilter === 'quarantined' ? 'bg-rose-600 text-white font-bold shadow-xs' : 'bg-rose-50 dark:bg-rose-950/60 text-rose-900 dark:text-rose-200 hover:bg-rose-100'"
           >
             {{ __('Needs Review') }} ({{ quarantinedCount }})
-          </button>
-          <button
+          </Button>
+          <Button
             v-if="syncedCount > 0"
-            type="button"
             @click="activeFilter = 'synced'"
             class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
             :class="activeFilter === 'synced' ? 'bg-emerald-600 text-white font-bold shadow-xs' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'"
           >
             {{ __('Synced') }} ({{ syncedCount }})
-          </button>
+          </Button>
         </div>
 
         <!-- Clean Action Controls -->
         <div class="flex items-center gap-2 shrink-0">
-          <button
+          <Button
             v-if="queuedCount > 0"
-            type="button"
             @click="handleForceSync"
             :disabled="isSyncingLocal || !isOnline"
             class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-xs cursor-pointer disabled:opacity-50"
@@ -128,65 +119,59 @@
             <span v-if="isSyncingLocal" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full" />
             <span v-else>⚡</span>
             <span>{{ isSyncingLocal ? __('Syncing...') : __('Sync Queue') }}</span>
-          </button>
+          </Button>
 
           <!-- Consolidated Export Dropdown -->
           <div class="relative">
-            <button
-              type="button"
+            <Button
               @click.stop="isExportMenuOpen = !isExportMenuOpen"
               class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs cursor-pointer select-none active:scale-95"
             >
               <span>{{ __('Export') }}</span>
               <span class="text-[10px] text-slate-400">▾</span>
-            </button>
+            </Button>
 
             <div
               v-if="isExportMenuOpen"
               @click.stop
               class="absolute right-0 top-full mt-1.5 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl p-1.5 space-y-1 z-50 text-xs font-semibold animate-fade-in"
             >
-              <button
-                type="button"
+              <Button
                 @click="exportToZip(); isExportMenuOpen = false"
                 :disabled="isExportingZip || responsesList.length === 0"
                 class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer disabled:opacity-40"
               >
                 <span>{{ isExportingZip ? __('Compressing...') : __('ZIP Archive') }}</span>
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 @click="exportToCsv(); isExportMenuOpen = false"
                 :disabled="responsesList.length === 0"
                 class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer disabled:opacity-40"
               >
                 <span>{{ __('Spreadsheet (CSV)') }}</span>
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 @click="exportToJson(); isExportMenuOpen = false"
                 :disabled="responsesList.length === 0"
                 class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer disabled:opacity-40"
               >
                 <span>{{ __('JSON Backup') }}</span>
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 @click="copyFullBackupJson(); isExportMenuOpen = false"
                 :disabled="responsesList.length === 0"
                 class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer border-t border-slate-100 dark:border-slate-800 pt-2 disabled:opacity-40 text-emerald-700 dark:text-emerald-400"
               >
                 <span>{{ hasCopiedAll ? __('Copied!') : __('Copy All JSON') }}</span>
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 @click="handleCompactStorage(); isExportMenuOpen = false"
                 class="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 cursor-pointer border-t border-slate-100 dark:border-slate-800 pt-2 text-slate-600 dark:text-slate-400"
                 :title="__('Safely prune synced responses older than 30 days to free device storage')"
               >
                 <span>🧹</span>
                 <span>{{ __('Prune Old Synced Data') }}</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -288,14 +273,13 @@
                   {{ resp.quarantine_reason || __('Multiple sync failures. Please check survey values before retrying.') }}
                 </p>
                 <div class="pt-1 flex items-center gap-2">
-                  <button
-                    type="button"
+                  <Button
                     @click="handleRetryQuarantined(resp.wal_id)"
                     :disabled="!isOnline"
                     class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs transition cursor-pointer disabled:opacity-50 flex items-center gap-1 shadow-2xs"
                   >
                     <span>{{ __('Retry Sync') }}</span>
-                  </button>
+                  </Button>
                 </div>
               </div>
 
@@ -303,49 +287,45 @@
               <div class="pt-2.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap min-w-0">
                 <div class="flex items-center gap-2">
                   <!-- Draft: Resume button -->
-                  <button
+                  <Button
                     v-if="resp.status === 'Draft'"
-                    type="button"
                     @click="resumeSpecificDraft(resp.template_name, resp.response_uid)"
                     class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs active:scale-95 transition flex items-center gap-1 cursor-pointer"
                   >
                     <span>{{ __('Resume Draft') }}</span>
                     <span>→</span>
-                  </button>
+                  </Button>
 
                   <!-- View Answers (Primary for submitted, secondary for drafts) -->
-                  <button
-                    type="button"
+                  <Button
                     @click="inspectResponse(resp)"
                     class="px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer"
                     :class="resp.status === 'Draft' ? 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700' : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs font-bold'"
                   >
                     {{ __('View Answers') }}
-                  </button>
+                  </Button>
                 </div>
 
                 <div class="flex items-center gap-2">
                   <!-- Draft: Discard Option -->
-                  <button
+                  <Button
                     v-if="resp.status === 'Draft'"
-                    type="button"
                     @click="deleteSpecificDraft(resp.response_uid)"
                     class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-rose-600 text-xs font-medium transition cursor-pointer"
                     :title="__('Discard draft')"
                   >
                     {{ __('Discard') }}
-                  </button>
+                  </Button>
 
                   <!-- Submitted: Subtle Copy JSON -->
-                  <button
+                  <Button
                     v-else
-                    type="button"
                     @click="copyResponseJson(resp)"
                     class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition cursor-pointer font-medium"
                     :title="__('Copy raw JSON to clipboard')"
                   >
                     {{ copiedJsonId === resp.response_uid ? __('Copied') : __('Copy JSON') }}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
@@ -379,20 +359,18 @@
 
         <template #footer>
           <div v-if="selectedInspectResponse" class="w-full flex justify-between gap-2 items-center">
-            <button
-              type="button"
+            <Button
               @click="copyResponseJson(selectedInspectResponse)"
               class="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer"
             >
               {{ copiedJsonId === selectedInspectResponse.response_uid ? '✓ ' + __('Copied') : '📋 ' + __('Copy JSON') }}
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               @click="selectedInspectResponse = null"
               class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer"
             >
               {{ __('Verified Good') }} ✓
-            </button>
+            </Button>
           </div>
         </template>
       </BaseModal>
@@ -402,6 +380,7 @@
 
 <script setup>
 import { computed, ref, onMounted, watch, toRef } from "vue";
+import { Button } from "frappe-ui";
 import JSZip from "jszip";
 import BaseModal from "../common/BaseModal.vue";
 import { useScrollLock } from "../../composables/useScrollLock";

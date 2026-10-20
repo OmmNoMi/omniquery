@@ -40,15 +40,14 @@
               </div>
             </slot>
 
-            <button
+            <Button
               v-if="showCloseButton"
-              type="button"
               @click="$emit('close')"
               class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-sm transition shrink-0 cursor-pointer"
               :title="__('Close')"
             >
               ✕
-            </button>
+            </Button>
           </div>
 
           <!-- Modal Scrollable Content Body -->
@@ -65,13 +64,12 @@
             class="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex justify-end shrink-0"
           >
             <slot name="footer">
-              <button
-                type="button"
+              <Button
                 @click="$emit('close')"
                 class="px-5 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs sm:text-sm hover:opacity-90 active:scale-95 transition cursor-pointer"
               >
                 {{ __('Close') }}
-              </button>
+              </Button>
             </slot>
           </div>
         </div>
@@ -82,6 +80,7 @@
 
 <script setup>
 import { computed, toRef, onMounted, onUnmounted } from "vue";
+import { Button } from "frappe-ui";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 

@@ -66,14 +66,13 @@
             <span class="uppercase tracking-wider font-bold text-[10px] text-slate-400 dark:text-slate-500">
               {{ __('Survey Response Code') }}
             </span>
-            <button
+            <Button
               v-if="submittedResponseId"
-              type="button"
               @click="copyResponseCode"
               class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline cursor-pointer active:scale-95 transition"
             >
               <span>{{ hasCopiedCode ? '✓ ' + __('Copied') : '📋 ' + __('Copy Code') }}</span>
-            </button>
+            </Button>
           </div>
 
           <div class="flex items-center justify-between gap-2 bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700">
@@ -94,15 +93,14 @@
             <span class="text-amber-800 dark:text-amber-300 font-medium">
               {{ isOnline ? __('Pending server database sync') : __('Stored locally. Will auto-sync when online') }}
             </span>
-            <button
+            <Button
               v-if="isOnline"
-              type="button"
               @click="handleSyncSubmittedNow"
               :disabled="isSyncingSubmission"
               class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shrink-0 active:scale-95 transition cursor-pointer disabled:opacity-50"
             >
               {{ isSyncingSubmission ? __('Syncing...') : __('⚡ Sync Now') }}
-            </button>
+            </Button>
           </div>
 
           <div v-if="activeTemplate" class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
@@ -112,22 +110,20 @@
         </div>
 
         <div class="flex justify-center gap-3 pt-2">
-          <button
-            type="button"
+          <Button
             @click="resetSurvey"
             class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition shadow-xs cursor-pointer flex items-center gap-1.5"
           >
             <span>➕</span>
             <span>{{ isGuest ? __('Fill Again') : (__('New Response') || 'New Response') }}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             v-if="!isGuest"
-            type="button"
             @click="goHome"
             class="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition cursor-pointer"
           >
             {{ __('All Surveys') || 'All Surveys' }}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -259,21 +255,21 @@
 
           <div class="flex items-center gap-2">
             <div class="relative flex-1">
-              <input
+              <TextInput
                 type="text"
-                v-model="searchQuery"
+                :modelValue="searchQuery"
+                @update:modelValue="(val) => (searchQuery = val)"
                 :placeholder="__('Search surveys...')"
                 class="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-medium shadow-xs focus:border-emerald-500 focus:outline-none transition text-slate-900 dark:text-white"
               />
               <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
-              <button
+              <Button
                 v-if="searchQuery"
                 @click="searchQuery = ''"
-                type="button"
                 class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
               >
                 ✕
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -334,9 +330,8 @@
                 <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                 <span>{{ __('Offline Ready') }} ({{ cachedTemplatesMap[tmpl.name].questionCount }} {{ __('Q') }})</span>
               </span>
-              <button
+              <Button
                 v-else-if="isOnline"
-                type="button"
                 @click.stop="handleDownloadSurvey(tmpl.name)"
                 :disabled="downloadingSurveyId === tmpl.name"
                 class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs disabled:opacity-50"
@@ -345,7 +340,7 @@
                 <span v-if="downloadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full"></span>
                 <span v-else>⬇️</span>
                 <span>{{ downloadingSurveyId === tmpl.name ? __('Downloading...') : __('Download Offline') }}</span>
-              </button>
+              </Button>
               <span
                 v-else
                 class="text-[11px] font-medium text-amber-700 dark:text-amber-400"
@@ -354,18 +349,16 @@
               </span>
             </div>
             <div class="flex items-center gap-2">
-              <button
+              <Button
                 v-if="activeDrafts[tmpl.name]"
-                type="button"
                 @click.stop="selectSurvey(tmpl.name, { startNew: true })"
                 class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1"
                 :title="__('Start a fresh blank survey without discarding saved drafts')"
               >
                 <span>➕</span>
                 <span>{{ __('Start New') }}</span>
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
                 @click="selectSurvey(tmpl.name)"
                 :disabled="loadingSurveyId === tmpl.name"
                 class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
@@ -373,7 +366,7 @@
                 <span v-if="loadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
                 <span>{{ loadingSurveyId === tmpl.name ? __('Loading...') : (activeDrafts[tmpl.name] ? __('Resume Survey') : __('Start Survey')) }}</span>
                 <span v-if="loadingSurveyId !== tmpl.name">→</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -399,24 +392,22 @@
         </div>
 
         <div class="space-y-2 pt-1">
-          <button
-            type="button"
+          <Button
             @click="triggerSync"
             :disabled="!isOnline"
             class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <span>⚡</span>
             <span>{{ __('Force Sync All Now') }}</span>
-          </button>
+          </Button>
 
-          <button
-            type="button"
+          <Button
             @click="showWALDrawer = false; showFilledFormsModal = true"
             class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <span>📋</span>
             <span>{{ __('Open Recovery & Verification Suite') }}</span>
-          </button>
+          </Button>
         </div>
       </div>
     </BaseModal>
@@ -447,21 +438,19 @@
         </div>
 
         <div class="grid grid-cols-2 gap-2.5 pt-2">
-          <button
-            type="button"
+          <Button
             @click="showExitDialog = false"
             class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer"
           >
             {{ isGuest ? __('Stay Here') : __('Stay') }}
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
             @click="confirmExit"
             :class="isGuest ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'"
             class="w-full py-2.5 rounded-xl text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer"
           >
             {{ isGuest ? __('Login') : __('Exit') }}
-          </button>
+          </Button>
         </div>
       </div>
     </BaseModal>
@@ -483,6 +472,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
+import { Button, TextInput, call } from "frappe-ui";
 import { useSurvey } from "./composables/useSurvey";
 import { useWAL } from "./composables/useWAL";
 import { useGPS } from "./composables/useGPS";
@@ -1076,15 +1066,10 @@ async function syncDraftToServer() {
 
   try {
     isSyncingDraft.value = true;
-    const res = await fetch("/api/method/omniquery.api.sync.sync_draft", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Frappe-CSRF-Token": (window.frappe && window.frappe.csrf_token) || "",
-      },
-      body: JSON.stringify({ draft: draftPayload }),
+    const res = await call("omniquery.api.sync.sync_draft", {
+      draft: draftPayload,
     });
-    if (res.ok) {
+    if (res) {
       try {
         await db.responses.update(currentDraftId.value, { synced: true });
       } catch (e) {}

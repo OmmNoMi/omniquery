@@ -6,31 +6,30 @@
       :aria-label="__('Quick Amount Increments')"
       class="flex flex-wrap items-center gap-1.5 pb-0.5"
     >
-      <button
+      <Button
         v-for="(increment, idx) in increments"
         :key="increment"
-        :ref="(el) => { if (el) chipRefs[idx] = el; }"
-        type="button"
+        :ref="(el) => { if (el) chipRefs[idx] = el.$el || el; }"
         tabindex="-1"
+        :label="__('Add') + ' ₹' + increment.toLocaleString()"
         :aria-label="__('Add') + ' ₹' + increment.toLocaleString()"
         @keydown="handleChipKeydown($event, idx)"
         @click="addAmount(increment, idx)"
         class="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-black text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 active:scale-95 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer select-none"
       >
         +₹{{ increment.toLocaleString() }}
-      </button>
+      </Button>
 
-      <button
+      <Button
         v-if="Number(modelValue) > 0"
-        :ref="(el) => { if (el) clearChipRef = el; }"
-        type="button"
+        :ref="(el) => { if (el) clearChipRef = el.$el || el; }"
         tabindex="-1"
         @keydown="handleClearKeydown"
         @click="reset"
         class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 active:scale-95 transition focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer select-none"
       >
         {{ __('Clear') }}
-      </button>
+      </Button>
     </div>
 
     <!-- 2. Main Input Field Below Suggestion Chips (Primary Tab Stop) -->
@@ -38,14 +37,14 @@
       <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
         <span class="text-slate-400 dark:text-slate-500 font-extrabold text-xl">₹</span>
       </div>
-      <input
+      <TextInput
         ref="inputRef"
         :id="id"
         type="number"
-        :value="modelValue"
+        :modelValue="modelValue"
         :aria-label="ariaLabel || __('Amount in Indian Rupees')"
         :aria-describedby="ariaDescribedby"
-        @input="onInput"
+        @update:modelValue="onTextInput"
         @keydown="onInputKeydown"
         @keydown.enter="$emit('enter')"
         @keydown.esc.stop="$emit('esc')"
@@ -58,6 +57,7 @@
 
 <script setup>
 import { ref } from "vue";
+import { Button, TextInput } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -102,8 +102,17 @@ function getAllChipButtons() {
   return list;
 }
 
+function onTextInput(val) {
+  emit("update:modelValue", val);
+}
+
 function onInput(event) {
   emit("update:modelValue", event.target.value);
+}
+
+function focusInput() {
+  const target = inputRef.value?.el || inputRef.value?.$el?.querySelector("input") || inputRef.value;
+  target?.focus?.({ preventScroll: true });
 }
 
 function handleChipKeydown(e, idx) {
@@ -125,7 +134,7 @@ function handleChipKeydown(e, idx) {
   } else if (e.key === "ArrowDown") {
     e.preventDefault();
     e.stopPropagation();
-    inputRef.value?.focus({ preventScroll: true });
+    focusInput();
   } else if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
     e.stopPropagation();
@@ -151,12 +160,12 @@ function handleClearKeydown(e) {
   } else if (e.key === "ArrowDown") {
     e.preventDefault();
     e.stopPropagation();
-    inputRef.value?.focus({ preventScroll: true });
+    focusInput();
   } else if (e.key === "Enter" || e.key === " ") {
     e.preventDefault();
     e.stopPropagation();
     reset();
-    inputRef.value?.focus({ preventScroll: true });
+    focusInput();
   }
 }
 
