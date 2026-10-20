@@ -34,7 +34,7 @@
       class="mb-3 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs text-blue-950 dark:text-blue-200"
     >
       <div class="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-        <span>📋</span>
+        <ClipboardList class="w-3.5 h-3.5" />
         <span>{{ __('Main Table Question') }}</span>
       </div>
       <div class="font-extrabold text-sm text-slate-800 dark:text-slate-100 mt-0.5 leading-snug">
@@ -164,8 +164,9 @@
                 @click="onClearSearch"
                 class="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 text-xs font-bold cursor-pointer"
                 aria-label="Clear search"
+                :label="__('Clear search')"
               >
-                ✕
+                <X class="w-3.5 h-3.5" />
               </Button>
             </div>
             <!-- Filter summary if search is active -->
@@ -213,7 +214,7 @@
                     : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-emerald-400 group-hover:text-emerald-600'
                 ]"
               >
-                <span v-if="isOptionSelected(option.value)">✓</span>
+                <Check v-if="isOptionSelected(option.value)" class="w-3.5 h-3.5" />
                 <span v-else>{{ index + 1 }}</span>
               </span>
 
@@ -269,14 +270,15 @@
 
       <!-- 7. Geolocation Input -->
       <div v-else-if="isGeolocationControl" class="flex flex-col gap-2">
-        <div v-if="modelValue" class="p-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-900 dark:text-emerald-200">
-          ✓ {{ __('Location captured') }}: {{ formatCoords(modelValue) }}
+        <div v-if="modelValue" class="p-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+          <Check class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <span>{{ __('Location captured') }}: {{ formatCoords(modelValue) }}</span>
         </div>
         <Button
           @click="$emit('capture-gps')"
           class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-bold text-sm hover:bg-slate-800 transition"
         >
-          <span>📍</span>
+          <MapPin class="w-4 h-4" />
           <span>{{ modelValue ? __('Retry GPS') : __('Capturing GPS...') }}</span>
         </Button>
       </div>
@@ -352,7 +354,7 @@
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 px-2.5 py-0.5 rounded-full"
           :title="__('Skipped due to condition on another question')"
         >
-          <span>⊘</span>
+          <Ban class="w-3.5 h-3.5" />
           <span>{{ __('Not Applicable') }}</span>
         </span>
 
@@ -361,7 +363,7 @@
           v-else-if="isCompleted && !isInputFocused"
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full"
         >
-          <span>✓</span>
+          <Check class="w-3.5 h-3.5" />
           <span>{{ __('Answered') }}</span>
         </span>
       </div>
@@ -383,9 +385,10 @@
           </h3>
           <p
             v-if="questionDescription"
-            class="mt-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 leading-relaxed"
+            class="mt-2 text-xs text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800 leading-relaxed flex items-start gap-1.5"
           >
-            ℹ️ {{ questionDescription }}
+            <Info class="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+            <span>{{ questionDescription }}</span>
           </p>
         </div>
 
@@ -394,7 +397,7 @@
           <div class="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <span>📱</span>
+                <Smartphone class="w-3.5 h-3.5 text-slate-500" />
                 <span>{{ __('Display Style') }}</span>
               </div>
               <div class="text-[11px] text-slate-500 dark:text-slate-400">
@@ -415,7 +418,7 @@
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
-              <span>⊞</span>
+              <LayoutGrid class="w-3.5 h-3.5" />
               <span>{{ __('Button Grid') }}</span>
               <span v-if="templateDefaultMode === 'grid'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
             </Button>
@@ -428,7 +431,7 @@
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
-              <span>▾</span>
+              <ChevronDown class="w-3.5 h-3.5" />
               <span>{{ __('Dropdown') }}</span>
               <span v-if="templateDefaultMode === 'combobox'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
             </Button>
@@ -439,7 +442,7 @@
         <div v-if="isRangeControl" class="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 space-y-2">
           <div>
             <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <span>🎚</span>
+              <Sliders class="w-3.5 h-3.5 text-slate-500" />
               <span>{{ __('Range Presentation') }}</span>
             </div>
             <div class="text-[11px] text-slate-500 dark:text-slate-400">
@@ -456,7 +459,7 @@
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
-              <span>🔘</span>
+              <CircleDot class="w-3.5 h-3.5" />
               <span>{{ __('Button Pills') }}</span>
             </Button>
             <Button
@@ -468,7 +471,7 @@
                   : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
               ]"
             >
-              <span>🎚</span>
+              <Sliders class="w-3.5 h-3.5" />
               <span>{{ __('Slider Bar') }}</span>
             </Button>
           </div>
@@ -538,6 +541,19 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { Button, TextInput } from "frappe-ui";
+import {
+  ClipboardList,
+  X,
+  Check,
+  MapPin,
+  Ban,
+  Info,
+  Smartphone,
+  LayoutGrid,
+  ChevronDown,
+  Sliders,
+  CircleDot,
+} from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import BaseModal from "../common/BaseModal.vue";
 import FSwitch from "../common/FSwitch.vue";

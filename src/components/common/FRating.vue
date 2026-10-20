@@ -17,8 +17,16 @@
         class="p-2 text-3xl transition-transform active:scale-125 focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-lg cursor-pointer"
         :aria-label="`${star} of ${maxStars}`"
       >
-        <span v-if="star <= (modelValue || 0)" class="text-amber-400">★</span>
-        <span v-else class="text-slate-300">☆</span>
+        <Star
+          v-if="star <= (modelValue || 0)"
+          class="w-6 h-6 text-amber-400 fill-amber-400"
+          aria-hidden="true"
+        />
+        <Star
+          v-else
+          class="w-6 h-6 text-slate-300"
+          aria-hidden="true"
+        />
       </Button>
       <Button
         v-if="modelValue"
@@ -37,6 +45,7 @@
 <script setup>
 import { computed, ref, nextTick } from "vue";
 import { Button } from "frappe-ui";
+import { Star } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({

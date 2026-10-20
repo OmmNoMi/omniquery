@@ -45,8 +45,10 @@
               @click="$emit('close')"
               class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-sm transition shrink-0 cursor-pointer"
               :title="__('Close')"
+              :aria-label="__('Close')"
+              :label="__('Close')"
             >
-              ✕
+              <X class="w-4 h-4" />
             </Button>
           </div>
 
@@ -81,6 +83,7 @@
 <script setup>
 import { computed, toRef, onMounted, onUnmounted } from "vue";
 import { Button } from "frappe-ui";
+import { X } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 

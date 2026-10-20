@@ -49,7 +49,7 @@
       <!-- Submitted Success Card -->
       <div v-else-if="isSubmitted" class="p-6 sm:p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 shadow-sm space-y-4">
         <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl font-bold shadow-xs">
-          ✓
+          <Check class="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
         </div>
         <div>
           <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
@@ -71,7 +71,9 @@
               @click="copyResponseCode"
               class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline cursor-pointer active:scale-95 transition"
             >
-              <span>{{ hasCopiedCode ? '✓ ' + __('Copied') : '📋 ' + __('Copy Code') }}</span>
+              <Check v-if="hasCopiedCode" class="w-3.5 h-3.5" />
+              <ClipboardList v-else class="w-3.5 h-3.5" />
+              <span>{{ hasCopiedCode ? __('Copied') : __('Copy Code') }}</span>
             </Button>
           </div>
 
@@ -83,7 +85,8 @@
               class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 flex items-center gap-1"
               :class="isSubmissionSynced ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'"
             >
-              <span>{{ isSubmissionSynced ? '✓' : '⚡' }}</span>
+              <Check v-if="isSubmissionSynced" class="w-3 h-3 text-emerald-600" />
+              <Zap v-else class="w-3 h-3 text-amber-500" />
               <span>{{ isSubmissionSynced ? __('Synced') : __('Queued') }}</span>
             </span>
           </div>
@@ -97,14 +100,18 @@
               v-if="isOnline"
               @click="handleSyncSubmittedNow"
               :disabled="isSyncingSubmission"
-              class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shrink-0 active:scale-95 transition cursor-pointer disabled:opacity-50"
+              class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shrink-0 active:scale-95 transition cursor-pointer disabled:opacity-50 flex items-center gap-1"
             >
-              {{ isSyncingSubmission ? __('Syncing...') : __('⚡ Sync Now') }}
+              <Zap v-if="!isSyncingSubmission" class="w-3 h-3" />
+              <span>{{ isSyncingSubmission ? __('Syncing...') : __('Sync Now') }}</span>
             </Button>
           </div>
 
           <div v-if="activeTemplate" class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-            <span class="truncate pr-2">📋 {{ activeTemplate.title || activeTemplate.name }}</span>
+            <span class="truncate pr-2 flex items-center gap-1">
+              <ClipboardList class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span class="truncate">{{ activeTemplate.title || activeTemplate.name }}</span>
+            </span>
             <span class="shrink-0 font-mono">{{ submittedTimestamp || 'Just now' }}</span>
           </div>
         </div>
@@ -114,7 +121,7 @@
             @click="resetSurvey"
             class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition shadow-xs cursor-pointer flex items-center gap-1.5"
           >
-            <span>➕</span>
+            <Plus class="w-4 h-4" />
             <span>{{ isGuest ? __('Fill Again') : (__('New Response') || 'New Response') }}</span>
           </Button>
           <Button
@@ -248,8 +255,9 @@
         <!-- 2. Survey Templates Section Header & Search/Filter Controls -->
         <div class="space-y-2.5 pt-1">
           <div class="flex items-center justify-between text-xs font-bold px-1">
-            <span class="uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400">
-              📋 {{ __('Available Surveys') }} ({{ filteredTemplates.length }})
+            <span class="uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+              <ClipboardList class="w-3.5 h-3.5 text-slate-400" />
+              <span>{{ __('Available Surveys') }} ({{ filteredTemplates.length }})</span>
             </span>
           </div>
 
@@ -262,13 +270,16 @@
                 :placeholder="__('Search surveys...')"
                 class="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-medium shadow-xs focus:border-emerald-500 focus:outline-none transition text-slate-900 dark:text-white"
               />
-              <span class="absolute left-3 top-2.5 text-slate-400 text-xs">🔍</span>
+              <Search class="absolute left-3 top-3 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
               <Button
                 v-if="searchQuery"
                 @click="searchQuery = ''"
-                class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                :title="__('Clear search')"
+                :aria-label="__('Clear search')"
+                :label="__('Clear search')"
               >
-                ✕
+                <X class="w-3.5 h-3.5" />
               </Button>
             </div>
           </div>
@@ -298,7 +309,7 @@
                 v-if="activeDrafts[tmpl.name]"
                 class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs"
               >
-                <span>📝</span>
+                <FileText class="w-3 h-3 text-amber-600" />
                 <span>{{ __('Draft') }}: {{ activeDrafts[tmpl.name].progress_percent || 0 }}%</span>
               </span>
               <span class="text-xs font-medium text-slate-400">
@@ -314,9 +325,15 @@
 
           <!-- Workspace & Project Context Line -->
           <div class="text-xs text-slate-500 font-medium flex items-center gap-1.5 flex-wrap">
-            <span v-if="tmpl.workspace_title">🏛️ {{ tmpl.workspace_title }}</span>
+            <span v-if="tmpl.workspace_title" class="inline-flex items-center gap-1">
+              <Landmark class="w-3 h-3 text-slate-400" />
+              <span>{{ tmpl.workspace_title }}</span>
+            </span>
             <span v-if="tmpl.workspace_title && tmpl.project_name">·</span>
-            <span v-if="tmpl.project_name">📁 {{ tmpl.project_name }}</span>
+            <span v-if="tmpl.project_name" class="inline-flex items-center gap-1">
+              <Folder class="w-3 h-3 text-slate-400" />
+              <span>{{ tmpl.project_name }}</span>
+            </span>
           </div>
 
           <!-- Bottom Action Row -->
@@ -338,14 +355,15 @@
                 :title="__('Pre-cache survey questions so you can fill it without internet')"
               >
                 <span v-if="downloadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full"></span>
-                <span v-else>⬇️</span>
+                <Download v-else class="w-3.5 h-3.5" />
                 <span>{{ downloadingSurveyId === tmpl.name ? __('Downloading...') : __('Download Offline') }}</span>
               </Button>
               <span
                 v-else
-                class="text-[11px] font-medium text-amber-700 dark:text-amber-400"
+                class="text-[11px] font-medium text-amber-700 dark:text-amber-400 inline-flex items-center gap-1"
               >
-                ⚠️ {{ __('Requires Internet to Download') }}
+                <AlertTriangle class="w-3.5 h-3.5 text-amber-500" />
+                <span>{{ __('Requires Internet to Download') }}</span>
               </span>
             </div>
             <div class="flex items-center gap-2">
@@ -355,7 +373,7 @@
                 class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1"
                 :title="__('Start a fresh blank survey without discarding saved drafts')"
               >
-                <span>➕</span>
+                <Plus class="w-3.5 h-3.5" />
                 <span>{{ __('Start New') }}</span>
               </Button>
               <Button
@@ -378,7 +396,6 @@
       :isOpen="showWALDrawer"
       size="md"
       :title="__('Offline Sync Queue')"
-      icon="⚡"
       @close="showWALDrawer = false"
     >
       <div class="p-5 sm:p-6 space-y-4">
@@ -397,7 +414,7 @@
             :disabled="!isOnline"
             class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
-            <span>⚡</span>
+            <Zap class="w-4 h-4" />
             <span>{{ __('Force Sync All Now') }}</span>
           </Button>
 
@@ -405,7 +422,7 @@
             @click="showWALDrawer = false; showFilledFormsModal = true"
             class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <span>📋</span>
+            <ClipboardList class="w-4 h-4 text-emerald-600" />
             <span>{{ __('Open Recovery & Verification Suite') }}</span>
           </Button>
         </div>
@@ -425,7 +442,8 @@
           class="w-13 h-13 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-xs"
           :class="isGuest ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400'"
         >
-          {{ isGuest ? '🔑' : '⚠️' }}
+          <KeyRound v-if="isGuest" class="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+          <AlertTriangle v-else class="w-7 h-7 text-amber-600 dark:text-amber-400" />
         </div>
 
         <div class="space-y-1">
@@ -473,6 +491,19 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { Button, TextInput, call } from "frappe-ui";
+import {
+  AlertTriangle,
+  Check,
+  ClipboardList,
+  Download,
+  FileText,
+  Folder,
+  KeyRound,
+  Landmark,
+  Plus,
+  Search,
+  Zap,
+} from "lucide-vue-next";
 import { useSurvey } from "./composables/useSurvey";
 import { useWAL } from "./composables/useWAL";
 import { useGPS } from "./composables/useGPS";

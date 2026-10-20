@@ -307,7 +307,7 @@ export function useWAL() {
       if (summary.walErrors > 0) {
         summary.message = `Synced ${summary.walSynced} queue item(s), ${summary.draftsSynced} draft(s). ${summary.walErrors} item(s) had errors.`;
       } else {
-        summary.message = `✓ Successfully synced ${summary.walSynced} queue item(s) & ${summary.draftsSynced} draft(s) to server!`;
+        summary.message = `Successfully synced ${summary.walSynced} queue item(s) & ${summary.draftsSynced} draft(s) to server!`;
       }
       lastSyncResult.value = summary;
       return summary;

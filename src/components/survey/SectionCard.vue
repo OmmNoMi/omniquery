@@ -8,9 +8,10 @@
         </span>
         <span
           v-if="isComplete"
-          class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+          class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 inline-flex items-center gap-1"
         >
-          ✓ {{ __('Completed') }}
+          <Check class="w-3 h-3" />
+          <span>{{ __('Completed') }}</span>
         </span>
       </div>
       <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-snug">
@@ -67,7 +68,7 @@
             ]"
             :title="__('Survey Mode')"
           >
-            <span>{{ activeModeIcon }}</span>
+            <component :is="activeModeIcon" class="w-3.5 h-3.5" />
             <span class="font-extrabold tracking-tight">{{ activeModeLabel }}</span>
             <svg
               class="w-3.5 h-3.5 opacity-60 transition-transform duration-200 shrink-0"
@@ -95,7 +96,7 @@
               class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <div class="flex items-center gap-2">
-                <span class="text-sm">⚡</span>
+                <Zap class="w-4 h-4 text-amber-500" />
                 <div>
                   <div class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ __('Auto Advance') }}</div>
                   <div class="text-[10px] text-slate-500 dark:text-slate-400">{{ __('Next question on answer') }}</div>
@@ -122,7 +123,7 @@
               class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <div class="flex items-center gap-2">
-                <span class="text-sm">📋</span>
+                <ClipboardList class="w-4 h-4 text-blue-500" />
                 <div>
                   <div class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ __('Full Form') }}</div>
                   <div class="text-[10px] text-slate-500 dark:text-slate-400">{{ __('Show all fields (incl. N/A)') }}</div>
@@ -149,7 +150,7 @@
               class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500"
             >
               <div class="flex items-center gap-2">
-                <span class="text-sm">🎯</span>
+                <Target class="w-4 h-4 text-emerald-500" />
                 <div>
                   <div class="text-xs font-bold text-slate-800 dark:text-slate-100">{{ __('Focus Form') }}</div>
                   <div class="text-[10px] text-slate-500 dark:text-slate-400">{{ __('One-by-one popup card') }}</div>
@@ -193,6 +194,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { Button } from "frappe-ui";
+import { Check, Zap, ClipboardList, Target, FileText } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -345,9 +347,9 @@ const activeModeLabel = computed(() => {
 });
 
 const activeModeIcon = computed(() => {
-  if (props.isFocusMode) return '🎯';
-  if (props.autoAdvance) return '⚡';
-  if (props.isFullForm) return '📋';
-  return '📝';
+  if (props.isFocusMode) return Target;
+  if (props.autoAdvance) return Zap;
+  if (props.isFullForm) return ClipboardList;
+  return FileText;
 });
 </script>
