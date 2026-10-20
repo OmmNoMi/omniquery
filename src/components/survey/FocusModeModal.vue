@@ -23,15 +23,14 @@
           </div>
 
           <!-- Right: Close Button -->
-          <button
-            type="button"
+          <Button
             @click="onClose"
             class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs transition border border-slate-700 active:scale-95 cursor-pointer"
             :aria-label="__('Exit Focus Mode')"
             :title="__('Exit Focus Mode')"
           >
             ✕
-          </button>
+          </Button>
         </div>
 
         <!-- Section Title & Progress Bar -->
@@ -96,19 +95,17 @@
       <!-- Bottom Floating Navigation Bar: Tab sequence is Next (primary) -> Mode -> Previous -->
       <div class="max-w-2xl w-full mx-auto bg-slate-900/90 dark:bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-2xl backdrop-blur-md flex items-center justify-between gap-2 shrink-0">
         <!-- 1st in DOM (Focus 1): Next Question Button (Visual: Right) -->
-        <button
-          type="button"
+        <Button
           @click="nextQuestion"
           class="order-3 px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
         >
           <span>{{ currentIndex === questions.length - 1 ? __('Finish') : __('Next') }}</span>
           <span>→</span>
-        </button>
+        </Button>
 
         <!-- 2nd in DOM (Focus 2): Mode Dropdown Menu (Visual: Center) -->
         <div class="order-2 relative" ref="modeMenuRef">
-          <button
-            type="button"
+          <Button
             @click.stop="isModeMenuOpen = !isModeMenuOpen"
             class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-emerald-400"
             :class="[
@@ -128,7 +125,7 @@
             >
               <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
             </svg>
-          </button>
+          </Button>
 
           <!-- Dropdown Popover Menu (Upward) matching SectionCard.vue exactly -->
           <div
@@ -141,8 +138,7 @@
             </div>
 
             <!-- 1. Auto Advance Toggle -->
-            <button
-              type="button"
+            <Button
               @click="$emit('toggle-auto-advance')"
               class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 hover:bg-slate-800 text-slate-200"
             >
@@ -166,11 +162,10 @@
                   ]"
                 />
               </span>
-            </button>
+            </Button>
 
             <!-- 2. Full Form Toggle -->
-            <button
-              type="button"
+            <Button
               @click="$emit('toggle-full-form')"
               class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 hover:bg-slate-800 text-slate-200"
             >
@@ -194,11 +189,10 @@
                   ]"
                 />
               </span>
-            </button>
+            </Button>
 
             <!-- 3. Focus Form Toggle (Active - toggling exits Focus Mode) -->
-            <button
-              type="button"
+            <Button
               @click="onClose"
               class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-400"
             >
@@ -212,20 +206,19 @@
               <span class="w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 bg-emerald-600">
                 <span class="w-4 h-4 rounded-full bg-white transition-transform transform shadow-xs translate-x-4" />
               </span>
-            </button>
+            </Button>
           </div>
         </div>
 
         <!-- 3rd in DOM (Focus 3): Previous Question Button (Visual: Left) -->
-        <button
-          type="button"
+        <Button
           @click="prevQuestion"
           :disabled="currentIndex === 0"
           class="order-1 px-3 sm:px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-slate-400"
         >
           <span>←</span>
           <span>{{ __('Previous') }}</span>
-        </button>
+        </Button>
       </div>
     </div>
   </Teleport>
@@ -233,6 +226,7 @@
 
 <script setup>
 import { computed, ref, watch, nextTick, toRef, onMounted, onUnmounted } from "vue";
+import { Button } from "frappe-ui";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";

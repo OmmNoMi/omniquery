@@ -55,10 +55,9 @@
         <span class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-2">
           {{ __('Dimension') }}:
         </span>
-        <button
+        <Button
           v-for="(inst, idx) in matrixInstances"
           :key="inst"
-          type="button"
           @click="activeInstance = inst"
           class="px-3 py-1 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95"
           :class="[
@@ -72,17 +71,16 @@
             v-if="isInstanceCompleted(inst)"
             class="w-1.5 h-1.5 rounded-full bg-emerald-300 shrink-0"
           />
-        </button>
+        </Button>
       </div>
 
       <!-- 4D Toggle pill / add instance -->
-      <button
-        type="button"
+      <Button
         @click="addCustomInstance"
         class="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline px-2 py-0.5 cursor-pointer"
       >
         + {{ __('Add Instance') }}
-      </button>
+      </Button>
     </div>
 
     <!-- 3D / 4D Matrix Content: Desktop Table Grid (sm:block) -->
@@ -124,31 +122,29 @@
             >
               <!-- Number input / Stepper -->
               <div v-if="col.type === 'number'" class="flex items-center gap-1">
-                <button
-                  type="button"
+                <Button
                   tabindex="-1"
                   @click="stepCellValue(row.id, col.key, -1)"
                   class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 flex items-center justify-center cursor-pointer active:scale-95"
                 >
                   -
-                </button>
-                <input
+                </Button>
+                <TextInput
                   :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
                   type="number"
-                  :value="getCellValue(row.id, col.key)"
-                  @input="updateCellValue(row.id, col.key, $event.target.value)"
+                  :modelValue="getCellValue(row.id, col.key)"
+                  @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
                   :placeholder="col.placeholder || '0'"
-                  class="w-16 sm:w-20 text-center rounded-lg border border-slate-200 dark:border-slate-700 py-1.5 px-2 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                  class="w-16 sm:w-20 text-center rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
                 />
-                <button
-                  type="button"
+                <Button
                   tabindex="-1"
                   @click="stepCellValue(row.id, col.key, 1)"
                   class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-bold hover:bg-slate-200 flex items-center justify-center cursor-pointer active:scale-95"
                 >
                   +
-                </button>
+                </Button>
               </div>
 
               <!-- Currency input -->
@@ -156,42 +152,39 @@
                 <span class="absolute inset-y-0 left-0 flex items-center pl-2.5 text-slate-400 dark:text-slate-500 font-bold text-xs pointer-events-none">
                   ₹
                 </span>
-                <input
+                <TextInput
                   :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
                   type="number"
-                  :value="getCellValue(row.id, col.key)"
-                  @input="updateCellValue(row.id, col.key, $event.target.value)"
+                  :modelValue="getCellValue(row.id, col.key)"
+                  @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
                   :placeholder="col.placeholder || '0'"
-                  class="w-full text-right rounded-lg border border-slate-200 dark:border-slate-700 py-1.5 pl-6 pr-2.5 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                  class="w-full text-right rounded-lg border border-slate-200 dark:border-slate-700 pl-6 pr-2.5 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
                 />
               </div>
 
               <!-- Select Dropdown -->
-              <select
+              <Select
                 v-else-if="col.type === 'select'"
                 :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
-                :value="getCellValue(row.id, col.key)"
-                @change="updateCellValue(row.id, col.key, $event.target.value)"
+                :options="col.options || []"
+                :modelValue="getCellValue(row.id, col.key)"
+                @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 py-1.5 px-2 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:border-emerald-500 outline-none"
-              >
-                <option value="">{{ __('-- Select --') }}</option>
-                <option v-for="opt in col.options" :key="opt" :value="opt">
-                  {{ opt }}
-                </option>
-              </select>
+                :placeholder="__('-- Select --')"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:border-emerald-500 outline-none"
+              />
 
               <!-- Standard Text Input -->
-              <input
+              <TextInput
                 v-else
                 :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
                 type="text"
-                :value="getCellValue(row.id, col.key)"
-                @input="updateCellValue(row.id, col.key, $event.target.value)"
+                :modelValue="getCellValue(row.id, col.key)"
+                @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="col.placeholder || __('Enter text')"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 py-1.5 px-2.5 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none transition"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none transition"
               />
             </td>
           </tr>
@@ -250,31 +243,29 @@
 
             <!-- Number input / Stepper -->
             <div v-if="col.type === 'number'" class="flex items-center gap-1 shrink-0">
-              <button
-                type="button"
+              <Button
                 tabindex="-1"
                 @click="stepCellValue(row.id, col.key, -1)"
                 class="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center cursor-pointer active:scale-95"
               >
                 -
-              </button>
-              <input
+              </Button>
+              <TextInput
                 :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
                 type="number"
-                :value="getCellValue(row.id, col.key)"
-                @input="updateCellValue(row.id, col.key, $event.target.value)"
+                :modelValue="getCellValue(row.id, col.key)"
+                @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="col.placeholder || '0'"
-                class="w-14 text-center rounded-lg border border-slate-300 dark:border-slate-600 py-1 px-1.5 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none"
+                class="w-14 text-center rounded-lg border border-slate-300 dark:border-slate-600 px-1.5 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none"
               />
-              <button
-                type="button"
+              <Button
                 tabindex="-1"
                 @click="stepCellValue(row.id, col.key, 1)"
                 class="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold flex items-center justify-center cursor-pointer active:scale-95"
               >
                 +
-              </button>
+              </Button>
             </div>
 
             <!-- Currency input -->
@@ -282,42 +273,39 @@
               <span class="absolute inset-y-0 left-0 flex items-center pl-2 text-slate-400 dark:text-slate-500 font-bold text-xs pointer-events-none">
                 ₹
               </span>
-              <input
+              <TextInput
                 :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
                 type="number"
-                :value="getCellValue(row.id, col.key)"
-                @input="updateCellValue(row.id, col.key, $event.target.value)"
+                :modelValue="getCellValue(row.id, col.key)"
+                @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="col.placeholder || '0'"
-                class="w-full text-right rounded-lg border border-slate-300 dark:border-slate-600 py-1 pl-5 pr-2 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none"
+                class="w-full text-right rounded-lg border border-slate-300 dark:border-slate-600 pl-5 pr-2 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none"
               />
             </div>
 
             <!-- Select Dropdown -->
-            <select
+            <Select
               v-else-if="col.type === 'select'"
               :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
-              :value="getCellValue(row.id, col.key)"
-              @change="updateCellValue(row.id, col.key, $event.target.value)"
+              :options="col.options || []"
+              :modelValue="getCellValue(row.id, col.key)"
+              @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
-              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 py-1 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none shrink-0"
-            >
-              <option value="">{{ __('-- Select --') }}</option>
-              <option v-for="opt in col.options" :key="opt" :value="opt">
-                {{ opt }}
-              </option>
-            </select>
+              :placeholder="__('-- Select --')"
+              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none shrink-0"
+            />
 
             <!-- Standard Text Input -->
-            <input
+            <TextInput
               v-else
               :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
               type="text"
-              :value="getCellValue(row.id, col.key)"
-              @input="updateCellValue(row.id, col.key, $event.target.value)"
+              :modelValue="getCellValue(row.id, col.key)"
+              @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
               :placeholder="col.placeholder || __('Enter text')"
-              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 py-1 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none shrink-0"
+              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none shrink-0"
             />
           </div>
         </div>
@@ -373,6 +361,7 @@
 
 <script setup>
 import { computed, ref, reactive, watch, nextTick } from "vue";
+import { Button, TextInput, Select } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -599,7 +588,8 @@ const isCompleted = computed(() => {
 // Keyboard Matrix Navigation
 function setCellInputRef(rIdx, cIdx, el) {
   if (el) {
-    cellInputRefs.value[`${rIdx}_${cIdx}`] = el;
+    const target = el?.el || el?.$el?.querySelector?.("input, select, button") || el?.$el || el;
+    cellInputRefs.value[`${rIdx}_${cIdx}`] = target;
   }
 }
 

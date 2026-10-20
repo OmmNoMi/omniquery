@@ -2,14 +2,13 @@
   <div class="space-y-4 animate-fade-in pb-12">
     <!-- 1. Top Navigation Bar & Breadcrumb -->
     <div class="flex items-center justify-between gap-3 pt-1">
-      <button
-        type="button"
+      <Button
         @click="$emit('back')"
         class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-extrabold text-xs sm:text-sm transition shadow-xs active:scale-95 cursor-pointer"
       >
         <span>←</span>
         <span>{{ __('Back to Dashboard') }}</span>
-      </button>
+      </Button>
 
       <div class="flex items-center gap-2">
         <span
@@ -83,55 +82,50 @@
     <!-- 3. Tabbed Content Navigation -->
     <div class="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md pt-1 pb-1">
       <div class="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto no-scrollbar">
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'surveys'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'surveys' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
           <span>📋</span>
           <span>{{ __('Surveys in this Project') }} ({{ projectSurveys.length }})</span>
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'sops'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'sops' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
           <span>📜</span>
           <span>{{ __('Field SOPs & Code') }}</span>
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'finance'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'finance' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
           <span>💰</span>
           <span>{{ __('Turnover & Calculations') }}</span>
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'offline'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'offline' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
           <span>⚡</span>
           <span>{{ __('Offline Data Guidelines') }}</span>
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'helpline'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'helpline' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
           <span>📞</span>
           <span>{{ __('Supervisor Helpline') }}</span>
-        </button>
+        </Button>
       </div>
     </div>
 
@@ -149,15 +143,14 @@
           </div>
 
           <!-- Download All Button for this Project -->
-          <button
+          <Button
             v-if="cachedSurveysCount < projectSurveys.length && isOnline"
-            type="button"
             @click="$emit('download-project-surveys', projectId)"
             class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-xs transition active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-2xs"
           >
             <span>⬇️</span>
             <span>{{ __('Download All for Offline') }}</span>
-          </button>
+          </Button>
         </div>
 
         <div v-if="projectSurveys.length === 0" class="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
@@ -201,16 +194,15 @@
                   <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                   <span>{{ __('Offline Ready') }} ({{ cachedTemplatesMap[s.name].questionCount }} {{ __('Q') }})</span>
                 </span>
-                <button
+                <Button
                   v-else-if="isOnline"
-                  type="button"
                   @click.stop="$emit('download-survey', s.name)"
                   class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
                   :title="__('Pre-cache survey questions so you can fill it without internet')"
                 >
                   <span>⬇️</span>
                   <span>{{ __('Download for Offline') }}</span>
-                </button>
+                </Button>
                 <span
                   v-else
                   class="text-[11px] font-medium text-amber-700 dark:text-amber-400"
@@ -219,14 +211,13 @@
                 </span>
               </div>
 
-              <button
-                type="button"
+              <Button
                 @click="$emit('select-survey', s.name)"
                 class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <span>{{ __('Fill Survey') }}</span>
                 <span>→</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -381,6 +372,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { Button, call } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -466,15 +458,12 @@ const projectSurveys = computed(() => {
 async function fetchProjectMeta() {
   if (!props.projectId) return;
   try {
-    const res = await fetch(
-      `/api/method/omniquery.api.survey.get_project_details?project_id=${encodeURIComponent(props.projectId)}`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const proj = data?.message?.project || data?.message;
-      if (proj && (proj.name || proj.project_name)) {
-        remoteProjectMeta.value = proj;
-      }
+    const data = await call("omniquery.api.survey.get_project_details", {
+      project_id: props.projectId,
+    });
+    const proj = data?.project || data?.message?.project || data?.message || data;
+    if (proj && (proj.name || proj.project_name)) {
+      remoteProjectMeta.value = proj;
     }
   } catch (e) {
     console.warn("Could not fetch remote project details:", e);

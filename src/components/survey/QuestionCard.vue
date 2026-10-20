@@ -146,10 +146,11 @@
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
               </svg>
-              <input
+              <TextInput
                 ref="searchInputRef"
                 data-search-input
-                v-model="gridSearchQuery"
+                :modelValue="gridSearchQuery"
+                @update:modelValue="(val) => (gridSearchQuery = val)"
                 type="text"
                 :placeholder="__('Search options...')"
                 @keydown.esc.prevent.stop="onSearchInputEsc"
@@ -157,16 +158,15 @@
                 @keydown.down.prevent="focusFirstOption"
                 class="w-full text-xs sm:text-sm pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition shadow-2xs"
               />
-              <button
+              <Button
                 v-if="gridSearchQuery"
-                type="button"
                 @mousedown.prevent
                 @click="onClearSearch"
                 class="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 text-xs font-bold cursor-pointer"
                 aria-label="Clear search"
               >
                 ✕
-              </button>
+              </Button>
             </div>
             <!-- Filter summary if search is active -->
             <div v-if="gridSearchQuery" class="mt-1 px-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -181,11 +181,10 @@
             @keydown="onGridKeydown"
             @keydown.esc.stop="focusCard"
           >
-            <button
+            <Button
               v-for="(option, index) in displayedGridOptions"
               :key="option.value"
-              :ref="(el) => { if (el) optionButtonRefs[index] = el; }"
-              type="button"
+              :ref="(el) => { if (el) optionButtonRefs[index] = el.$el || el; }"
               :role="isMultiSelect ? 'checkbox' : 'radio'"
               :aria-checked="isOptionSelected(option.value)"
               :tabindex="getOptionTabindex(index)"
@@ -241,7 +240,7 @@
                   {{ option.description }}
                 </span>
               </div>
-            </button>
+            </Button>
 
             <!-- Empty search result fallback -->
             <div v-if="displayedGridOptions.length === 0" class="col-span-full py-6 text-center text-xs text-slate-400">
@@ -253,10 +252,9 @@
 
       <!-- 6. Year Selector -->
       <div v-else-if="isYearControl" class="flex flex-wrap gap-2">
-        <button
+        <Button
           v-for="year in yearOptions"
           :key="year"
-          type="button"
           @click="$emit('update:modelValue', year)"
           :class="[
             'px-4 py-2 rounded-xl text-sm font-bold border transition',
@@ -266,7 +264,7 @@
           ]"
         >
           {{ year }}
-        </button>
+        </Button>
       </div>
 
       <!-- 7. Geolocation Input -->
@@ -274,27 +272,26 @@
         <div v-if="modelValue" class="p-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-900 dark:text-emerald-200">
           ✓ {{ __('Location captured') }}: {{ formatCoords(modelValue) }}
         </div>
-        <button
-          type="button"
+        <Button
           @click="$emit('capture-gps')"
           class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-bold text-sm hover:bg-slate-800 transition"
         >
           <span>📍</span>
           <span>{{ modelValue ? __('Retry GPS') : __('Capturing GPS...') }}</span>
-        </button>
+        </Button>
       </div>
 
       <!-- 8. Number Input -->
-      <input
+      <TextInput
         v-else-if="isNumberControl"
         :id="'q_input_' + question.question_code"
         type="number"
-        :value="modelValue"
+        :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
         :aria-invalid="Boolean(errorMessage)"
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
-        @input="$emit('update:modelValue', $event.target.value)"
+        @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
         :placeholder="__('Enter value')"
@@ -302,32 +299,32 @@
       />
 
       <!-- 9. Date Input -->
-      <input
+      <TextInput
         v-else-if="isDateControl"
         :id="'q_input_' + question.question_code"
         type="date"
-        :value="modelValue"
+        :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
         :aria-invalid="Boolean(errorMessage)"
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
-        @input="$emit('update:modelValue', $event.target.value)"
+        @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
 
       <!-- 10. Default Text Input -->
-      <input
+      <TextInput
         v-else
         :id="'q_input_' + question.question_code"
         type="text"
-        :value="modelValue"
+        :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
         :aria-invalid="Boolean(errorMessage)"
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
-        @input="$emit('update:modelValue', $event.target.value)"
+        @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
         :placeholder="__('Enter value')"
@@ -409,8 +406,7 @@
             </span>
           </div>
           <div class="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-            <button
-              type="button"
+            <Button
               @click="setDisplayMode('grid')"
               :class="[
                 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
@@ -422,9 +418,8 @@
               <span>⊞</span>
               <span>{{ __('Button Grid') }}</span>
               <span v-if="templateDefaultMode === 'grid'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               @click="setDisplayMode('combobox')"
               :class="[
                 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
@@ -436,7 +431,7 @@
               <span>▾</span>
               <span>{{ __('Dropdown') }}</span>
               <span v-if="templateDefaultMode === 'combobox'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -452,8 +447,7 @@
             </div>
           </div>
           <div class="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-            <button
-              type="button"
+            <Button
               @click="setRangeFormat('buttons')"
               :class="[
                 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
@@ -464,9 +458,8 @@
             >
               <span>🔘</span>
               <span>{{ __('Button Pills') }}</span>
-            </button>
-            <button
-              type="button"
+            </Button>
+            <Button
               @click="setRangeFormat('slider')"
               :class="[
                 'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
@@ -477,7 +470,7 @@
             >
               <span>🎚</span>
               <span>{{ __('Slider Bar') }}</span>
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -530,13 +523,12 @@
             </svg>
             {{ __('Saved on your device') }}
           </span>
-          <button
-            type="button"
+          <Button
             @click="showConfigModal = false"
             class="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-bold text-xs shadow-xs transition cursor-pointer"
           >
             {{ __('Done') }}
-          </button>
+          </Button>
         </div>
       </template>
     </BaseModal>
@@ -545,6 +537,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
+import { Button, TextInput } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
 import BaseModal from "../common/BaseModal.vue";
 import FSwitch from "../common/FSwitch.vue";

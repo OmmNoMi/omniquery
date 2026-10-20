@@ -1,4 +1,5 @@
 import { ref, onMounted, onUnmounted, getCurrentInstance } from "vue";
+import { call, fileToBase64 } from "frappe-ui";
 import { db } from "../services/db";
 
 export function useWAL() {
@@ -98,15 +99,12 @@ export function useWAL() {
 
     if (!submissions.length) return null;
 
-    const res = await fetch("/api/method/omniquery.api.sync.batch_push", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Frappe-CSRF-Token": (window.frappe && window.frappe.csrf_token) || "",
-      },
-      body: JSON.stringify({ submissions }),
-    });
-    return res.ok ? await res.json() : null;
+    try {
+      const res = await call("omniquery.api.sync.batch_push", { submissions });
+      return res ? { message: res } : null;
+    } catch (e) {
+      return null;
+    }
   }
 
   async function markSynced(results, entries) {
@@ -210,15 +208,8 @@ export function useWAL() {
           captured_at_local: draft.updated_at || draft.created_at || new Date().toISOString(),
           items,
         };
-        const res = await fetch("/api/method/omniquery.api.sync.sync_draft", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Frappe-CSRF-Token": (window.frappe && window.frappe.csrf_token) || "",
-          },
-          body: JSON.stringify({ draft: payload }),
-        });
-        if (res.ok) {
+        const res = await call("omniquery.api.sync.sync_draft", { draft: payload });
+        if (res !== undefined && res !== null) {
           await db.responses.where("response_uid").equals(draft.response_uid).modify({ synced: true });
           syncedCount++;
         }
@@ -250,29 +241,25 @@ export function useWAL() {
       for (const rec of pendingAudios) {
         if (!rec.blob || !rec.response_uid) continue;
         try {
-          const formData = new FormData();
-          formData.append("response_name", rec.response_uid);
-          formData.append("file", rec.blob, rec.file_name || `interview_${rec.response_uid}.webm`);
+          let b64 = "";
+          try {
+            b64 = await fileToBase64(rec.blob);
+          } catch (b64Err) {}
 
-          const res = await fetch("/api/method/omniquery.api.sync.upload_response_audio", {
-            method: "POST",
-            headers: {
-              "X-Frappe-CSRF-Token": (window.frappe && window.frappe.csrf_token) || "",
-            },
-            body: formData,
+          const data = await call("omniquery.api.sync.upload_response_audio", {
+            response_name: rec.response_uid,
+            file_base64: b64,
+            filename: rec.file_name || `interview_${rec.response_uid}.webm`,
           });
 
-          if (res.ok) {
-            const data = await res.json();
-            const msg = data && (data.message || data);
-            if (msg && msg.status === "SUCCESS") {
-              await db.audio_recordings.where("response_uid").equals(rec.response_uid).modify({
-                status: "synced",
-                file_url: msg.file_url,
-                synced_at: new Date().toISOString(),
-              });
-              uploadedCount++;
-            }
+          const msg = data && (data.message || data);
+          if (msg && (msg.status === "SUCCESS" || msg.file_url)) {
+            await db.audio_recordings.where("response_uid").equals(rec.response_uid).modify({
+              status: "synced",
+              file_url: msg.file_url,
+              synced_at: new Date().toISOString(),
+            });
+            uploadedCount++;
           }
         } catch (uploadErr) {
           console.warn(`Failed to upload audio for ${rec.response_uid}:`, uploadErr);
