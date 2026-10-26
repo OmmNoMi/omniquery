@@ -74,3 +74,50 @@ class TestInFlightAndSubmit(FrappeTestCase):
 		if audit_name:
 			frappe.delete_doc("OmniQuery Sync Audit Log", audit_name, force=True)
 		frappe.db.commit()
+
+	def test_draft_owner_and_surveyor_use_session_user(self):
+		test_user = "field_surveyor_35@ommnomi.local"
+		if not frappe.db.exists("User", test_user):
+			user = frappe.new_doc("User")
+			user.email = test_user
+			user.first_name = "Field"
+			user.last_name = "Surveyor"
+			user.save(ignore_permissions=True)
+
+		template = frappe.db.get_value("OmniQuery Template", {"status": "Published"}, "name")
+		if not template:
+			template = frappe.db.get_value("OmniQuery Template", {}, "name")
+		if not template:
+			return
+
+		survey_id = f"OQS-TEST35-{uuid.uuid4().hex[:6]}"
+
+		frappe.set_user(test_user)
+		try:
+			# Client sends no surveyor identity or an outdated identity
+			draft_payload = {
+				"idempotency_key": survey_id,
+				"survey_template": template,
+				"template_version": 1,
+				"surveyor": "Administrator",
+				"items": [{"question_code": "district", "value": "Jaipur"}],
+			}
+
+			draft_result = sync_draft(data={"draft": draft_payload})
+			self.assertEqual(draft_result.get("status"), "SUCCESS")
+
+			resp_doc = frappe.get_doc("OmniQuery Response", survey_id)
+			self.assertEqual(resp_doc.owner, test_user)
+
+			surveyor_doc = frappe.get_doc("OmniQuery Surveyor", resp_doc.surveyor)
+			self.assertEqual(surveyor_doc.user, test_user)
+		finally:
+			frappe.set_user("Administrator")
+			if frappe.db.exists("OmniQuery Response", survey_id):
+				frappe.delete_doc("OmniQuery Response", survey_id, force=True)
+			if frappe.db.exists("User", test_user):
+				frappe.delete_doc("User", test_user, force=True)
+			surv_name = frappe.db.get_value("OmniQuery Surveyor", {"user": test_user}, "name")
+			if surv_name:
+				frappe.delete_doc("OmniQuery Surveyor", surv_name, force=True)
+			frappe.db.commit()

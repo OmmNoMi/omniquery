@@ -1064,11 +1064,15 @@ function confirmExit() {
 let draftSyncTimer = null;
 const isSyncingDraft = ref(false);
 
-async function syncDraftToServer() {
-  if (!isOnline.value || !activeTemplate.value || !currentDraftId.value || isSubmitted.value) return;
+async function syncDraftToServer(templateOverride = null, responsesOverride = null, draftIdOverride = null) {
+  const tpl = templateOverride || activeTemplate.value;
+  const draftId = draftIdOverride || currentDraftId.value;
+  const resp = responsesOverride || responses.value;
 
-  const qList = (activeTemplate.value && activeTemplate.value.questions) || [];
-  const items = Object.entries(responses.value)
+  if (!isOnline.value || !tpl || !draftId || isSubmitted.value) return;
+
+  const qList = (tpl && tpl.questions) || [];
+  const items = Object.entries(resp)
     .filter(([_, val]) => val !== undefined && val !== null && String(val).trim() !== "")
     .map(([code, val]) => {
       const q = qList.find((item) => item.question_code === code);
@@ -1081,13 +1085,12 @@ async function syncDraftToServer() {
 
   if (items.length === 0) return;
 
-  const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
+  const tmplName = tpl.name || tpl.template_name;
   const draftPayload = {
-    idempotency_key: currentDraftId.value,
+    idempotency_key: draftId,
     survey_template: tmplName,
-    template_version: activeTemplate.value.version || 1,
-    respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
-    surveyor: (window.frappe && window.frappe.session && window.frappe.session.user) || "Administrator",
+    template_version: tpl.version || 1,
+    respondent: resp.respondent_name || resp.entrepreneur_name || "",
     captured_at_local: new Date().toISOString(),
     gps_latitude: gpsCoords.value?.latitude || null,
     gps_longitude: gpsCoords.value?.longitude || null,
@@ -1102,7 +1105,7 @@ async function syncDraftToServer() {
     });
     if (res) {
       try {
-        await db.responses.update(currentDraftId.value, { synced: true });
+        await db.responses.update(draftId, { synced: 1 });
       } catch (e) {}
     }
   } catch (e) {
@@ -1140,10 +1143,17 @@ async function goHome() {
     window.location.href = "/login?redirect-to=/omniquery";
     return;
   }
-  if (!isSubmitted.value && activeTemplate.value) {
-    scheduleDraftSaveAndSync();
-  } else {
-    if (draftSyncTimer) clearTimeout(draftSyncTimer);
+  if (draftSyncTimer) {
+    clearTimeout(draftSyncTimer);
+    draftSyncTimer = null;
+  }
+  let syncPromise = null;
+  if (!isSubmitted.value && activeTemplate.value && currentDraftId.value) {
+    const tpl = activeTemplate.value;
+    const resp = { ...responses.value };
+    const draftId = currentDraftId.value;
+    saveDraftLocally(progressPercent.value);
+    syncPromise = syncDraftToServer(tpl, resp, draftId);
   }
   activeTemplate.value = null;
   activeProjectId.value = "";
@@ -1156,6 +1166,9 @@ async function goHome() {
     window.history.pushState({}, "", "/omniquery");
   }
   await loadAvailableTemplates();
+  if (syncPromise) {
+    await syncPromise;
+  }
 }
 
 async function selectSurvey(surveyName, options = {}) {
