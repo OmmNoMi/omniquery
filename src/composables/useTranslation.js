@@ -26,7 +26,7 @@ const CORE_HINDI = {
   "Online": "ऑनलाइन",
   "Offline": "ऑफ़लाइन",
   "Offline Ready": "ऑफ़लाइन तैयार",
-  "WAL Queue": "प्रतीक्षारत कतार",
+  "Waiting to upload": "अपलोड के लिए प्रतीक्षारत",
   "Pending": "प्रतीक्षारत",
   "Survey Responses": "सर्वेक्षण प्रतिक्रियाएं",
   "Sync Now": "अभी सिंक करें",

@@ -207,7 +207,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Globe class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Language') || 'Language' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Language') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -235,7 +235,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Languages class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Text Size') || 'Text Size' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Text Size') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -272,7 +272,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Palette class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Theme') || 'Theme' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Theme') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -302,7 +302,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <LayoutGrid class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Choice Layout') || 'Choice Layout' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Choice Layout') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -334,7 +334,7 @@
             <div>
               <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800">
                 <Package class="w-4 h-4 text-slate-500" />
-                <span>{{ __('WAL Queue') }}</span>
+                <span>{{ __('Waiting to upload') }}</span>
               </div>
               <p class="text-[11px] text-slate-500 mt-0.5">
                 {{ pendingWALCount }} {{ __('Pending Responses') }}
@@ -367,7 +367,7 @@
             @click="showConfigModal = false"
             class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm transition shadow-sm"
           >
-            {{ __('Done') || 'Done' }}
+            {{ __('Done') }}
           </Button>
         </div>
       </div>

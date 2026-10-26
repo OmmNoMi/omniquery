@@ -53,18 +53,18 @@
         </div>
         <div>
           <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-            {{ isGuest ? __('Thank You!') : __('Survey Submitted') }}
+            {{ isGuest ? __('Thank you') : __('Survey Submitted') }}
           </h2>
           <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mt-1">
             {{ isGuest ? __('Thank you for taking the time to complete this survey. Your response has been submitted successfully.') : __('Response recorded successfully in offline queue.') }}
           </p>
         </div>
 
-        <!-- Survey Response Code / Reference ID Card -->
+        <!-- Survey response code / Reference ID Card -->
         <div class="max-w-md mx-auto p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-left space-y-2.5 shadow-2xs">
           <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
             <span class="uppercase tracking-wider font-bold text-[10px] text-slate-400 dark:text-slate-500">
-              {{ __('Survey Response Code') }}
+              {{ __('Survey response code') }}
             </span>
             <Button
               v-if="submittedResponseId"
@@ -94,7 +94,7 @@
           <!-- Direct Sync Action if in offline queue -->
           <div v-if="!isSubmissionSynced" class="flex items-center justify-between gap-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-3 py-2 rounded-lg text-xs">
             <span class="text-amber-800 dark:text-amber-300 font-medium">
-              {{ isOnline ? __('Pending server database sync') : __('Stored locally. Will auto-sync when online') }}
+              {{ isOnline ? __('Waiting to upload to server') : __('Stored locally. Will auto-sync when online') }}
             </span>
             <Button
               v-if="isOnline"
@@ -122,14 +122,14 @@
             class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition shadow-xs cursor-pointer flex items-center gap-1.5"
           >
             <Plus class="w-4 h-4" />
-            <span>{{ isGuest ? __('Fill Again') : (__('New Response') || 'New Response') }}</span>
+            <span>{{ isGuest ? __('Fill Again') : __('New Response') }}</span>
           </Button>
           <Button
             v-if="!isGuest"
             @click="goHome"
             class="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition cursor-pointer"
           >
-            {{ __('All Surveys') || 'All Surveys' }}
+            {{ __('All Surveys') }}
           </Button>
         </div>
       </div>
@@ -415,7 +415,7 @@
             class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <Zap class="w-4 h-4" />
-            <span>{{ __('Force Sync All Now') }}</span>
+            <span>{{ __('Sync all records now') }}</span>
           </Button>
 
           <Button
@@ -423,7 +423,7 @@
             class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <ClipboardList class="w-4 h-4 text-emerald-600" />
-            <span>{{ __('Open Recovery & Verification Suite') }}</span>
+            <span>{{ __('View saved responses') }}</span>
           </Button>
         </div>
       </div>
@@ -468,6 +468,43 @@
             class="w-full py-2.5 rounded-xl text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer"
           >
             {{ isGuest ? __('Login') : __('Exit') }}
+          </Button>
+        </div>
+      </div>
+    </BaseModal>
+
+    <!-- Discard Draft Confirmation Dialog -->
+    <BaseModal
+      :isOpen="Boolean(draftToDiscard)"
+      size="sm"
+      hideHeader
+      :showCloseButton="false"
+      @close="draftToDiscard = null"
+    >
+      <div class="p-6 text-center space-y-4">
+        <div class="w-13 h-13 rounded-2xl mx-auto flex items-center justify-center bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 shadow-xs">
+          <AlertTriangle class="w-7 h-7 text-rose-600 dark:text-rose-400" />
+        </div>
+        <div class="space-y-1">
+          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">
+            {{ __('Discard Saved Draft?') }}
+          </h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+            {{ __('Discard saved draft for this survey?') }}
+          </p>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5 pt-2">
+          <Button
+            @click="draftToDiscard = null"
+            class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer"
+          >
+            {{ __('Cancel') }}
+          </Button>
+          <Button
+            @click="confirmDiscardDraft"
+            class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer"
+          >
+            {{ __('Discard') }}
           </Button>
         </div>
       </div>
@@ -1129,9 +1166,16 @@ watch(
   { deep: true }
 );
 
-async function onDiscardDraft(templateName) {
-  if (confirm(__("Discard saved draft for this survey?"))) {
-    await discardDraft(templateName);
+const draftToDiscard = ref(null);
+
+function onDiscardDraft(templateName) {
+  draftToDiscard.value = templateName;
+}
+
+async function confirmDiscardDraft() {
+  if (draftToDiscard.value) {
+    await discardDraft(draftToDiscard.value);
+    draftToDiscard.value = null;
   }
 }
 
@@ -1170,7 +1214,7 @@ async function selectSurvey(surveyName, options = {}) {
         indicator: "orange",
       });
     } else {
-      alert(__("This survey is not yet downloaded on your device. Please connect to the internet once to download it."));
+      console.warn(__("This survey is not yet downloaded on your device. Please connect to the internet once to download it."));
     }
     return;
   }
