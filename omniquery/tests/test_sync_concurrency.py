@@ -286,5 +286,18 @@ class TestSyncConcurrency(FrappeTestCase):
 		)
 		self.assertEqual(failed_audit_status, "FAILED")
 
+	def test_parse_local_datetime_timezone_conversion(self):
+		from omniquery.api.sync import parse_local_datetime
+		result = parse_local_datetime("2026-10-09T06:30:00Z")
+		self.assertEqual(result, "2026-10-09 12:00:00")
+
+	def test_parse_local_datetime_garbage_raises_validation_error(self):
+		from omniquery.api.sync import parse_local_datetime
+		with self.assertRaises(frappe.ValidationError):
+			parse_local_datetime("garbage")
+		error_logged = frappe.db.exists("Error Log", {"method": ["like", "%Invalid captured_at_local%"]})
+		self.assertTrue(error_logged)
+
+
 
 

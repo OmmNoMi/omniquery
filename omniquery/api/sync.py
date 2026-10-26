@@ -1,6 +1,7 @@
 import hashlib
 import json
 import uuid
+from datetime import date, datetime
 
 import frappe
 from frappe import _
@@ -10,6 +11,7 @@ from frappe.utils import (
 	get_datetime_str,
 	now_datetime,
 )
+from frappe.utils.data import convert_utc_to_system_timezone
 
 from .survey import resolve_template_name, user_has_template_permission
 
@@ -18,10 +20,25 @@ def parse_local_datetime(val):
 	"""Converts ISO-8601 string or date object into Frappe standard datetime string."""
 	if not val:
 		return now_datetime()
-	try:
-		return get_datetime_str(val)
-	except Exception:
-		return now_datetime()
+	if isinstance(val, (datetime, date)):
+		dt = val
+	elif isinstance(val, str):
+		val_str = val.strip()
+		try:
+			if val_str.endswith("Z"):
+				val_str = val_str[:-1] + "+00:00"
+			dt = datetime.fromisoformat(val_str)
+		except Exception:
+			frappe.log_error(title="Field Error: Invalid captured_at_local", message=f"Failed to parse datetime value: {val}\n{frappe.get_traceback()}")
+			frappe.throw(_("Invalid datetime value for captured_at_local: {0}").format(val), frappe.ValidationError)
+	else:
+		frappe.log_error(title="Field Error: Invalid captured_at_local", message=f"Unsupported datetime type: {type(val)}")
+		frappe.throw(_("Invalid datetime value for captured_at_local: {0}").format(val), frappe.ValidationError)
+
+	if getattr(dt, "tzinfo", None) is not None:
+		dt = convert_utc_to_system_timezone(dt)
+
+	return dt.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def log_raw_ingestion_dump(endpoint, raw_payload, client_ip=None, surveyor=None):
