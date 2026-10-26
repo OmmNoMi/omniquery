@@ -249,6 +249,7 @@ import { computed, ref, onMounted, watch } from "vue";
 import { Button, call } from "frappe-ui";
 import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { useDrafts } from "../../composables/useDrafts";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db } from "../../services/db";
 
@@ -285,6 +286,7 @@ const emit = defineEmits([
 ]);
 
 const { __ } = useTranslation();
+const { draftsList, draftsCount, loadDrafts } = useDrafts();
 
 const dailyTarget = ref(10);
 const serverTodayCount = ref(0);
@@ -345,6 +347,7 @@ async function refreshLocalMetrics() {
     });
 
     localTodayCount.value = todaySubmitted.length;
+    await loadDrafts();
   } catch (e) {
     localTotalCount.value = 0;
     localTodayCount.value = 0;
@@ -390,7 +393,9 @@ const remainingTodayText = computed(() => {
 });
 
 const activeDraftsCount = computed(() => {
-  let list = Object.values(props.activeDrafts || {});
+  let list = draftsList.value && draftsList.value.length > 0
+    ? draftsList.value
+    : (Array.isArray(props.activeDrafts) ? props.activeDrafts : Object.values(props.activeDrafts || {}));
   if (props.selectedProject && props.selectedProject !== "ALL") {
     const allowedTemplates = new Set(
       props.templates
