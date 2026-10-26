@@ -8,12 +8,10 @@ class OmniQueryResponse(Document):
 	def autoname(self):
 		if self.name:
 			return
-		if self.idempotency_key and self.idempotency_key.startswith("OQS-"):
+		if self.idempotency_key:
 			self.name = self.idempotency_key
 		else:
-			clean_tmpl = (self.survey_template or "SURVEY").replace("OQS-", "")
-			rand = uuid.uuid4().hex[:6]
-			self.name = f"OQS-{clean_tmpl}-{rand}"
+			self.name = str(uuid.uuid4())
 
 	def before_insert(self):
 		if not self.synced_at:
