@@ -9,7 +9,7 @@
     @focusin="onFocusIn"
     @focusout="onFocusOut"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-28',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-default scroll-mt-28',
       hasGroupError
         ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 border-l-4 border-l-rose-500 shadow-xs ring-1 ring-rose-500/20'
         : isFocused
@@ -103,7 +103,7 @@
               @keydown="onChoiceKeydown($event, q, optIdx, getQuestionOptions(q))"
               @click="onUpdateValue(q.question_code, opt.value)"
               :class="[
-                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900',
+                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900',
                 responses[q.question_code] === opt.value
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm hover:bg-emerald-700 hover:border-emerald-700 focus:bg-emerald-700'
                   : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600 focus:border-emerald-500'
@@ -130,7 +130,7 @@
               :modelValue="responses[q.question_code]"
               @update:modelValue="(val) => onUpdateValue(q.question_code, val)"
               :placeholder="__('0')"
-              class="w-20 sm:w-24 text-center rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:border-emerald-500 focus:outline-none"
+              class="w-20 sm:w-24 text-center rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
             />
             <Button
               @click="stepNumber(q.question_code, 1)"
@@ -148,7 +148,7 @@
               :modelValue="responses[q.question_code]"
               @update:modelValue="(val) => onUpdateValue(q.question_code, val)"
               :placeholder="__('Enter value')"
-              class="w-full sm:w-44 rounded-lg border border-slate-300 dark:border-slate-600 text-xs sm:text-sm font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:border-emerald-500 focus:outline-none"
+              class="w-full sm:w-44 rounded-lg border border-slate-300 dark:border-slate-600 text-xs sm:text-sm font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500"
             />
           </div>
         </div>

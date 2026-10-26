@@ -63,7 +63,7 @@
         <!-- Survey Response Code / Reference ID Card -->
         <div class="max-w-md mx-auto p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-left space-y-2.5 shadow-2xs">
           <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-            <span class="uppercase tracking-wider font-bold text-[10px] text-slate-400 dark:text-slate-500">
+            <span class="uppercase tracking-wider font-bold text-xs text-slate-600 dark:text-slate-300">
               {{ __('Survey Response Code') }}
             </span>
             <Button
@@ -82,7 +82,7 @@
               {{ submittedResponseId || __('Generating...') }}
             </code>
             <span
-              class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 flex items-center gap-1"
+              class="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider shrink-0 flex items-center gap-1"
               :class="isSubmissionSynced ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'"
             >
               <Check v-if="isSubmissionSynced" class="w-3 h-3 text-emerald-600" />
@@ -268,13 +268,14 @@
                 :modelValue="searchQuery"
                 @update:modelValue="(val) => (searchQuery = val)"
                 :placeholder="__('Search surveys...')"
-                class="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-medium shadow-xs focus:border-emerald-500 focus:outline-none transition text-slate-900 dark:text-white"
+                :aria-label="__('Search surveys')"
+                class="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-medium shadow-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500 transition text-slate-900 dark:text-white"
               />
               <Search class="absolute left-3 top-3 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
               <Button
                 v-if="searchQuery"
                 @click="searchQuery = ''"
-                class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
+                class="absolute right-3 top-2.5 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 text-xs font-bold cursor-pointer"
                 :title="__('Clear search')"
                 :aria-label="__('Clear search')"
                 :label="__('Clear search')"
@@ -285,46 +286,44 @@
           </div>
         </div>
 
-
-
         <!-- Empty State -->
-        <div v-if="filteredTemplates.length === 0" class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
-          <p class="text-sm font-bold text-slate-700">{{ __('No active surveys available.') }}</p>
-          <p class="text-xs text-slate-500">{{ __('Check your network connection or permissions.') }}</p>
+        <div v-if="filteredTemplates.length === 0" data-empty-templates class="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
+          <p class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ __('No active surveys available.') }}</p>
+          <p class="text-xs text-slate-600 dark:text-slate-400">{{ __('Check your network connection or permissions.') }}</p>
         </div>
 
         <!-- Sleek, Native-Grade Survey Cards -->
         <div
           v-for="tmpl in filteredTemplates"
           :key="tmpl.name"
-          class="p-5 bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-500/80 shadow-xs hover:shadow-md transition space-y-3"
+          class="p-5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 hover:border-emerald-500/80 dark:hover:border-emerald-500/80 shadow-xs hover:shadow-md transition space-y-3"
         >
           <!-- Category Pill, Version & Draft Badge -->
           <div class="flex items-center justify-between gap-2">
-            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">
+            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
               {{ tmpl.target_category || 'Survey' }}
             </span>
             <div class="flex items-center gap-2">
               <span
                 v-if="activeDrafts[tmpl.name]"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs"
+                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800 shadow-2xs"
               >
-                <FileText class="w-3 h-3 text-amber-600" />
+                <FileText class="w-3 h-3 text-amber-600 dark:text-amber-400" />
                 <span>{{ __('Draft') }}: {{ activeDrafts[tmpl.name].progress_percent || 0 }}%</span>
               </span>
-              <span class="text-xs font-medium text-slate-400">
+              <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
                 v{{ tmpl.version }}.0
               </span>
             </div>
           </div>
 
           <!-- Clean Survey Title -->
-          <h2 class="text-base sm:text-lg font-bold text-slate-900 leading-snug">
+          <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug">
             {{ tmpl.title }}
           </h2>
 
           <!-- Workspace & Project Context Line -->
-          <div class="text-xs text-slate-500 font-medium flex items-center gap-1.5 flex-wrap">
+          <div class="text-xs text-slate-600 dark:text-slate-400 font-medium flex items-center gap-1.5 flex-wrap">
             <span v-if="tmpl.workspace_title" class="inline-flex items-center gap-1">
               <Landmark class="w-3 h-3 text-slate-400" />
               <span>{{ tmpl.workspace_title }}</span>
@@ -337,7 +336,7 @@
           </div>
 
           <!-- Bottom Action Row -->
-          <div class="flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
+          <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2">
             <div class="flex items-center gap-1.5 flex-wrap">
               <span
                 v-if="cachedTemplatesMap[tmpl.name]"
@@ -502,6 +501,7 @@ import {
   Landmark,
   Plus,
   Search,
+  X,
   Zap,
 } from "lucide-vue-next";
 import { useSurvey } from "./composables/useSurvey";

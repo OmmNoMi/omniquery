@@ -98,7 +98,7 @@
         <!-- 1st in DOM (Focus 1): Next Question Button (Visual: Right) -->
         <Button
           @click="nextQuestion"
-          class="order-3 px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+          class="order-3 px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
         >
           <span>{{ currentIndex === questions.length - 1 ? __('Finish') : __('Next') }}</span>
           <span>→</span>
@@ -108,7 +108,7 @@
         <div class="order-2 relative" ref="modeMenuRef">
           <Button
             @click.stop="isModeMenuOpen = !isModeMenuOpen"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none focus:outline-none focus:ring-2 focus:ring-emerald-400"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
             :class="[
               (autoAdvance || isFullForm)
                 ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 ring-1 ring-emerald-500/30'
@@ -134,20 +134,20 @@
             @click.stop
             class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 space-y-1.5 z-50 animate-fade-in text-white"
           >
-            <div class="text-[10px] font-extrabold text-slate-400 uppercase px-2.5 py-1 tracking-wider">
+            <div class="text-xs font-extrabold text-slate-300 uppercase px-2.5 py-1 tracking-wider">
               {{ __('Survey Options') }}
             </div>
 
             <!-- 1. Auto Advance Toggle -->
             <Button
               @click="$emit('toggle-auto-advance')"
-              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 hover:bg-slate-800 text-slate-200"
+              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400 hover:bg-slate-800 text-slate-200"
             >
               <div class="flex items-center gap-2">
                 <Zap class="w-4 h-4 text-amber-400" />
                 <div>
                   <div class="text-xs font-bold text-slate-100">{{ __('Auto Advance') }}</div>
-                  <div class="text-[10px] text-slate-400">{{ __('Next question on answer') }}</div>
+                  <div class="text-xs text-slate-300">{{ __('Next question on answer') }}</div>
                 </div>
               </div>
               <span
@@ -168,13 +168,13 @@
             <!-- 2. Full Form Toggle -->
             <Button
               @click="$emit('toggle-full-form')"
-              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus:ring-1 focus:ring-emerald-400 hover:bg-slate-800 text-slate-200"
+              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400 hover:bg-slate-800 text-slate-200"
             >
               <div class="flex items-center gap-2">
                 <ClipboardList class="w-4 h-4 text-blue-400" />
                 <div>
                   <div class="text-xs font-bold text-slate-100">{{ __('Full Form') }}</div>
-                  <div class="text-[10px] text-slate-400">{{ __('Show all fields (incl. N/A)') }}</div>
+                  <div class="text-xs text-slate-300">{{ __('Show all fields (incl. N/A)') }}</div>
                 </div>
               </div>
               <span
@@ -195,13 +195,13 @@
             <!-- 3. Focus Form Toggle (Active - toggling exits Focus Mode) -->
             <Button
               @click="onClose"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-400"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400"
             >
               <div class="flex items-center gap-2">
                 <Target class="w-4 h-4 text-emerald-400" />
                 <div>
                   <div class="text-xs font-bold text-slate-100">{{ __('Focus Form') }}</div>
-                  <div class="text-[10px] text-slate-400">{{ __('One-by-one popup card') }}</div>
+                  <div class="text-xs text-slate-300">{{ __('One-by-one popup card') }}</div>
                 </div>
               </div>
               <span class="w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 bg-emerald-600">
@@ -215,7 +215,7 @@
         <Button
           @click="prevQuestion"
           :disabled="currentIndex === 0"
-          class="order-1 px-3 sm:px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus:ring-2 focus:ring-slate-400"
+          class="order-1 px-3 sm:px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
         >
           <span>←</span>
           <span>{{ __('Previous') }}</span>
