@@ -1,5 +1,5 @@
 <template>
-  <div class="space-y-2 w-full max-w-full min-w-0">
+  <div v-if="projectList.length > 0" class="space-y-2 w-full max-w-full min-w-0">
     <!-- Top Row Context: Project Counter & Quick Dots -->
     <div v-if="projectList.length > 1" class="flex items-center justify-between px-1 text-xs">
       <div class="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
@@ -93,7 +93,7 @@
             <p v-if="proj.grantor_organization" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
               {{ proj.grantor_organization }}
             </p>
-            <p v-if="proj.description" class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 pt-0.5">
+            <p v-if="proj.description && proj.description.trim().toLowerCase() !== proj.project_name.trim().toLowerCase()" class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 pt-0.5">
               {{ proj.description }}
             </p>
           </div>
@@ -238,28 +238,19 @@ const projectList = computed(() => {
   const map = new Map();
 
   for (const t of props.templates) {
-    const rawName = t.project_name || t.project || "SHG Rajasthan Women Entrepreneurs Study";
+    const rawName = t.project_name || t.project || "";
+    if (!rawName) continue;
     const normKey = rawName.toLowerCase().trim();
 
     if (!map.has(normKey)) {
       map.set(normKey, {
-        id: t.project || "OQP-001-001",
+        id: t.project || t.name,
         project_name: rawName,
-        grantor_organization: t.grantor_organization || "Rajasthan Grameen Aajeevika Vikas Parishad (RGAVP) / SVEP",
-        workspace_title: t.workspace_title || t.workspace || "National Rural Livelihoods Mission",
-        description: t.project_description || t.description || "Study on Performance of SHG-led Women Entrepreneurs in Rajasthan",
+        grantor_organization: t.grantor_organization || "",
+        workspace_title: t.workspace_title || t.workspace || "",
+        description: t.project_description || t.description || "",
       });
     }
-  }
-
-  if (map.size === 0) {
-    map.set("shg rajasthan women entrepreneurs study", {
-      id: "OQP-001-001",
-      project_name: "SHG Rajasthan Women Entrepreneurs Study",
-      grantor_organization: "Rajasthan Grameen Aajeevika Vikas Parishad (RGAVP) / SVEP",
-      workspace_title: "National Rural Livelihoods Mission",
-      description: "Study on Performance of SHG-led Women Entrepreneurs in Rajasthan",
-    });
   }
 
   return Array.from(map.values());
