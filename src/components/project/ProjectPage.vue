@@ -53,7 +53,7 @@
       </div>
 
       <!-- Project Slogan / Description -->
-      <p v-if="projectMeta.description" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
+      <p v-if="projectMeta.description && projectMeta.description.trim().toLowerCase() !== (projectMeta.project_name || projectMeta.name || '').trim().toLowerCase()" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
         {{ projectMeta.description }}
       </p>
 
@@ -165,8 +165,13 @@
                 {{ s.title || s.name }}
               </h3>
 
-              <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-                {{ s.description || projectMeta.description || __('Field data collection instrument for this study.') }}
+              <p
+                v-if="s.description &&
+                      s.description.trim().toLowerCase() !== (s.title || s.name || '').trim().toLowerCase() &&
+                      s.description.trim().toLowerCase() !== (projectMeta.project_name || projectMeta.name || '').trim().toLowerCase()"
+                class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2"
+              >
+                {{ s.description }}
               </p>
             </div>
 
@@ -202,7 +207,7 @@
                 @click="$emit('select-survey', s.name)"
                 class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
-                <span>{{ __('Fill Survey') }}</span>
+                <span>{{ __('Start Survey') }}</span>
                 <span>→</span>
               </Button>
             </div>

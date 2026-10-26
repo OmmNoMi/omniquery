@@ -199,4 +199,51 @@ describe("ProjectPage Component (Issue #14)", () => {
       expect(surveysTab.attributes("tabindex")).toBe("-1");
     });
   });
+
+  describe("Deduplication of facts and consistent verbs (Issue #18)", () => {
+    it("uses consistent 'Start Survey' verb instead of 'Fill Survey'", () => {
+      const wrapper = mount(ProjectPage, {
+        props: {
+          projectId: "PROJ-VERB",
+          templates: [
+            {
+              project: "PROJ-VERB",
+              project_name: "Artisan Study",
+              template_name: "T-ART",
+              title: "Artisan Baseline",
+            },
+          ],
+          cachedTemplatesMap: {},
+          isOnline: true,
+        },
+      });
+
+      // Validates single standard start verb (translated to Hindi in local locale) and zero 'Fill Survey'
+      expect(wrapper.text()).toContain("सर्वेक्षण शुरू करें");
+      expect(wrapper.text()).not.toContain("Fill Survey");
+    });
+
+    it("does not repeat title when description equals title", () => {
+      const wrapper = mount(ProjectPage, {
+        props: {
+          projectId: "PROJ-DUPE-TEXT",
+          templates: [
+            {
+              project: "PROJ-DUPE-TEXT",
+              project_name: "Rural Health Initiative",
+              description: "Rural Health Initiative",
+              template_name: "T-HLTH",
+              title: "Household Survey",
+            },
+          ],
+          cachedTemplatesMap: {},
+          isOnline: true,
+        },
+      });
+
+      // Rural Health Initiative must appear only as the h1 title, not duplicated in description or cards
+      const matches = wrapper.text().match(/Rural Health Initiative/g) || [];
+      expect(matches.length).toBe(1);
+    });
+  });
 });

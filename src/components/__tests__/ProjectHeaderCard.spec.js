@@ -65,4 +65,27 @@ describe("ProjectHeaderCard", () => {
     expect(wrapper.emitted("update:selectedProject")).toBeTruthy();
     expect(wrapper.emitted("update:selectedProject")[0]).toEqual(["PROJ-B"]);
   });
+
+  it("does not duplicate project title when description is identical to title (Issue #18)", () => {
+    const templates = [
+      {
+        project: "PROJ-DUPE",
+        project_name: "Clean Water Mission",
+        description: "Clean Water Mission",
+        grantor_organization: "State Health Dept",
+        template_name: "T1",
+      },
+    ];
+
+    const wrapper = mount(ProjectHeaderCard, {
+      props: {
+        templates,
+        selectedProject: "ALL",
+      },
+    });
+
+    const matches = wrapper.text().match(/Clean Water Mission/g) || [];
+    // Title must occur only once in the card, NOT repeated as description
+    expect(matches.length).toBe(1);
+  });
 });

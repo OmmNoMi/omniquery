@@ -93,7 +93,7 @@
             <p v-if="proj.grantor_organization" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
               {{ proj.grantor_organization }}
             </p>
-            <p v-if="proj.description" class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 pt-0.5">
+            <p v-if="proj.description && proj.description.trim().toLowerCase() !== proj.project_name.trim().toLowerCase()" class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 pt-0.5">
               {{ proj.description }}
             </p>
           </div>
