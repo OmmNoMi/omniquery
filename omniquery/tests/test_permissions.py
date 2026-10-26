@@ -101,3 +101,38 @@ class TestPermissions(unittest.TestCase):
 		self.assertIn("PROJ-Alpha Study", cond)
 		super_cond = get_template_query_conditions("Administrator")
 		self.assertEqual(super_cond, "")
+
+	def test_get_list_templates_as_project_member_executes_without_syntax_error(self):
+		orig_user = frappe.session.user
+		try:
+			self._make_template("Perm Test Template Alpha", "PROJ-Alpha Study")
+			frappe.set_user("admin_alpha@ommnomi.test")
+			templates = frappe.get_list("OmniQuery Template", fields=["name", "title", "project"])
+			self.assertIsInstance(templates, list)
+			titles = [t.title for t in templates]
+			self.assertIn("Perm Test Template Alpha", titles)
+		finally:
+			frappe.set_user(orig_user)
+
+	def test_get_list_responses_as_project_member_executes_without_syntax_error(self):
+		orig_user = frappe.session.user
+		try:
+			frappe.set_user("admin_alpha@ommnomi.test")
+			responses = frappe.get_list("OmniQuery Response", fields=["name", "survey_template"])
+			self.assertIsInstance(responses, list)
+		finally:
+			frappe.set_user(orig_user)
+
+	def test_has_template_permission_create_defers_to_docperm(self):
+		tmpl = frappe.new_doc("OmniQuery Template")
+		# The hook should return None (defer to DocPerm) rather than False
+		hook_result = has_template_permission(tmpl, "create", "admin_alpha@ommnomi.test")
+		self.assertIsNone(hook_result)
+
+		# Because admin_alpha has OmniQuery Manager role, standard has_permission for create should be True
+		has_perm = frappe.has_permission("OmniQuery Template", ptype="create", user="admin_alpha@ommnomi.test")
+		self.assertTrue(has_perm)
+
+	def test_public_citizen_link_included_in_query_conditions(self):
+		cond = get_template_query_conditions("admin_alpha@ommnomi.test")
+		self.assertIn("is_public_citizen_link", cond)
