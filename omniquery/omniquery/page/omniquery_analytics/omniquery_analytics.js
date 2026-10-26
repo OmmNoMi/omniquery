@@ -15,7 +15,7 @@ frappe.pages["omniquery-analytics"].on_page_load = function (wrapper) {
 		"refresh"
 	);
 
-	page.add_secondary_action(__("View Supervisor Audits"), () => {
+	page.set_secondary_action(__("View Supervisor Audits"), () => {
 		frappe.set_route("List", "OmniQuery Supervisor Audit");
 	});
 

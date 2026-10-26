@@ -10,7 +10,7 @@ def is_super_user(user: str) -> bool:
 	return bool(user_roles & SUPER_ROLES)
 
 
-def has_template_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
+def has_template_permission(doc, ptype: str = "read", user: str | None = None) -> bool | None:
 	user = user or frappe.session.user
 	if is_super_user(user):
 		return True
@@ -18,7 +18,7 @@ def has_template_permission(doc, ptype: str = "read", user: str | None = None) -
 		return _can_read_template(doc, user)
 	if ptype in ("write", "submit", "amend", "cancel", "delete"):
 		return _can_write_template(doc, user)
-	return False
+	return None
 
 
 def _can_read_template(doc, user: str) -> bool:
@@ -50,11 +50,11 @@ def get_template_query_conditions(user: str | None = None) -> str:
 	projects = frappe.get_all("OmniQuery Project Member", filters={"user": user}, pluck="parent")
 	if not projects:
 		return "(`tabOmniQuery Template`.`is_public` = 1 OR `tabOmniQuery Template`.`is_public_citizen_link` = 1)"
-	proj_list = "', '".join(frappe.db.escape(p) for p in projects)
-	return f"(`tabOmniQuery Template`.`is_public` = 1 OR `tabOmniQuery Template`.`project` IN ('{proj_list}'))"
+	proj_list = ", ".join(frappe.db.escape(p) for p in projects)
+	return f"(`tabOmniQuery Template`.`is_public` = 1 OR `tabOmniQuery Template`.`is_public_citizen_link` = 1 OR `tabOmniQuery Template`.`project` IN ({proj_list}))"
 
 
-def has_response_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
+def has_response_permission(doc, ptype: str = "read", user: str | None = None) -> bool | None:
 	user = user or frappe.session.user
 	if is_super_user(user):
 		return True
@@ -62,7 +62,7 @@ def has_response_permission(doc, ptype: str = "read", user: str | None = None) -
 		return _can_read_response(doc, user)
 	if ptype in ("write", "submit"):
 		return _can_write_response(doc, user)
-	return False
+	return None
 
 
 def _can_read_response(doc, user: str) -> bool:

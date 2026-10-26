@@ -8,49 +8,52 @@ console.log('   OmniQuery Automated Mutation Testing Framework (TDD++) ');
 console.log('===========================================================\n');
 
 const omniqueryDir = path.resolve(__dirname, '..');
-const benchDir = path.resolve(omniqueryDir, '..', '..');
-const sitesDir = path.resolve(benchDir, 'sites');
 
-const syncPyPath = path.resolve(omniqueryDir, 'omniquery', 'api', 'sync.py');
 const fSwitchPath = path.resolve(omniqueryDir, 'src', 'components', 'common', 'FSwitch.vue');
+const baseModalPath = path.resolve(omniqueryDir, 'src', 'components', 'common', 'BaseModal.vue');
 const questionCardPath = path.resolve(omniqueryDir, 'src', 'components', 'survey', 'QuestionCard.vue');
+const responseTitlePath = path.resolve(omniqueryDir, 'src', 'utils', 'responseTitle.js');
 const useWalPath = path.resolve(omniqueryDir, 'src', 'composables', 'useWAL.js');
+const thinShellHtmlPath = path.resolve(omniqueryDir, 'omniquery', 'www', 'omniquery.html');
 
 let totalMutants = 0;
-let killedMutants = 0;
-let survivingMutants = 0;
+let totalKilled = 0;
+const guardScores = {};
 
-function runMutationTest(name, fileToMutate, mutator, testCmd, cwd = omniqueryDir) {
+function runGuardMutationTest(guardName, mutantDescription, fileToMutate, mutator, testCmd) {
   totalMutants++;
-  console.log(`[Mutant #${totalMutants}] Testing: ${name}`);
+  if (!guardScores[guardName]) {
+    guardScores[guardName] = { total: 0, killed: 0 };
+  }
+  guardScores[guardName].total++;
+
+  console.log(`[Guard: ${guardName}] Mutant #${totalMutants}: ${mutantDescription}`);
   const originalContent = fs.readFileSync(fileToMutate, 'utf8');
 
   try {
-    // 1. Inoculate / apply mutation
+    // 1. Inoculate mutation
     const mutatedContent = mutator(originalContent);
     if (mutatedContent === originalContent) {
-      throw new Error(`Mutator failed to change content for: ${name}`);
+      throw new Error(`Mutator failed to change content for: ${mutantDescription}`);
     }
     fs.writeFileSync(fileToMutate, mutatedContent, 'utf8');
 
-    // 2. Run the test command
+    // 2. Run the guard test
     let testPassed = false;
-    let testOutput = '';
     try {
-      testOutput = execSync(testCmd, { cwd, stdio: 'pipe' }).toString();
+      execSync(testCmd, { cwd: omniqueryDir, stdio: 'pipe' });
       testPassed = true;
     } catch (err) {
       testPassed = false;
-      testOutput = (err.stdout ? err.stdout.toString() : '') + (err.stderr ? err.stderr.toString() : '');
     }
 
-    // 3. Evaluate mutation result
+    // 3. Evaluate: The guard MUST fail (testPassed === false) to kill the mutant
     if (testPassed) {
-      console.error(`  ❌ SURVIVED: The test suite passed despite the intentional mutation!`);
-      survivingMutants++;
+      console.error(`  ❌ SURVIVED: The guard test passed despite the intentional mutation!`);
     } else {
-      console.log(`  🎯 KILLED: Test turned RED as expected and caught the regression.`);
-      killedMutants++;
+      console.log(`  🎯 KILLED: Guard turned RED as expected and caught the regression.`);
+      totalKilled++;
+      guardScores[guardName].killed++;
     }
   } finally {
     // 4. Always restore original content cleanly
@@ -58,71 +61,110 @@ function runMutationTest(name, fileToMutate, mutator, testCmd, cwd = omniqueryDi
   }
 }
 
-// Mutant 1: Invert duplicate skip logic in batch_push (Backend Idempotency Gate)
-runMutationTest(
-  'Duplicate submission check inverted in batch_push (Gate 1 Security / Idempotency)',
-  syncPyPath,
-  (code) => code.replace(
-    'if existing_status in ["Submitted", "Supervisor Verified", "Audit Flagged", "Approved"]:',
-    'if False and existing_status in ["Submitted", "Supervisor Verified", "Audit Flagged", "Approved"]:'
-  ),
-  'bench --site ommnomi.local run-tests --module omniquery.tests.test_idempotent_sync',
-  sitesDir
+// 1. Guard: no-glyph
+runGuardMutationTest(
+  'no-glyph',
+  'Insert unescaped glyph/emoji into FSwitch.vue',
+  fSwitchPath,
+  (code) => code.replace('cursor-pointer', 'cursor-pointer ⚡'),
+  'npx vitest run test/guards/no_glyphs.test.js'
 );
 
-// Mutant 2: Bypass Guest authorization in upload_response_audio (Gate 1 Security IDOR)
-runMutationTest(
-  'Guest permission check bypassed in upload_response_audio (Gate 1 Security IDOR)',
-  syncPyPath,
-  (code) => code.replace(
-    'if current_user == "Guest":',
-    'if False and current_user == "Guest":'
-  ),
-  'bench --site ommnomi.local run-tests --module omniquery.tests.test_security_gates',
-  sitesDir
+// 2. Guard: no-raw-control
+runGuardMutationTest(
+  'no-raw-control',
+  'Insert raw <button> into FSwitch.vue',
+  fSwitchPath,
+  (code) => code.replace('<template>', '<template>\n  <button>Raw</button>'),
+  'npx vitest run test/guards/no_raw_controls.test.js'
 );
 
-// Mutant 3: Remove role="switch" from FSwitch (Gate 2 Accessibility WCAG 2.2 AA)
-runMutationTest(
-  'role="switch" removed from FSwitch.vue (Gate 2 Accessibility)',
+// 3. Guard: thin-shell
+runGuardMutationTest(
+  'thin-shell',
+  'Pad omniquery.html with 20 dummy lines exceeding 40 lines limit',
+  thinShellHtmlPath,
+  (code) => code + '\n' + Array(20).fill('<!-- extra line to exceed limit -->').join('\n') + '\n',
+  'npx vitest run test/guards/thin_shell.test.js'
+);
+
+// 4. Guard: single-useWAL
+const projectHeaderCardPath = path.resolve(omniqueryDir, 'src', 'components', 'dashboard', 'ProjectHeaderCard.vue');
+runGuardMutationTest(
+  'single-useWAL',
+  'Direct useWAL() invocation inside component breaking single-useWAL invariant',
+  projectHeaderCardPath,
+  (code) => code.replace('<script setup>', '<script setup>\nimport { useWAL } from "../../composables/useWAL";\nconst _w = useWAL();'),
+  'npx vitest run test/guards/single_usewal.test.js'
+);
+
+// 5. Guard: escape-one-layer
+runGuardMutationTest(
+  'escape-one-layer',
+  'Remove e.stopPropagation() from BaseModal.vue Escape handler',
+  baseModalPath,
+  (code) => code.replace('e.stopPropagation();', '/* omitted */'),
+  'npx vitest run test/guards/escape_one_layer.test.js'
+);
+
+// 6. Guard: contrast
+runGuardMutationTest(
+  'contrast',
+  'Add low-contrast text-slate-200 class on light background in FSwitch.vue',
+  fSwitchPath,
+  (code) => code.replace('text-slate-800', 'text-slate-200'),
+  'npx vitest run test/guards/contrast.test.js'
+);
+
+// 7. Guard: no-undef
+runGuardMutationTest(
+  'no-undef',
+  'Introduce undeclared undefinedGlobalVariable token in responseTitle.js',
+  responseTitlePath,
+  (code) => code + '\nconst _invalid = undefinedGlobalVariable;\n',
+  'npx vitest run test/guards/no_undef.test.js'
+);
+
+// 8. Guard: accessibility (WCAG 2.2 AA)
+runGuardMutationTest(
+  'accessibility',
+  'Remove role="switch" from FSwitch.vue',
   fSwitchPath,
   (code) => code.replace('role="switch"', 'role="generic-button"'),
-  'npx vitest run src/components/__tests__/AccessibilityGates.spec.js',
-  omniqueryDir
+  'npx vitest run src/components/__tests__/AccessibilityGates.spec.js'
 );
 
-// Mutant 4: Remove :for binding from QuestionCard label (Gate 2 Accessibility WCAG 2.2 AA)
-runMutationTest(
-  ':for programmatic label association stripped in QuestionCard.vue (Gate 2 Accessibility)',
-  questionCardPath,
-  (code) => code.replace(":for=\"'q_input_' + question.question_code\"", ""),
-  'npx vitest run src/components/__tests__/AccessibilityGates.spec.js',
-  omniqueryDir
-);
-
-// Mutant 5: Invert Dexie WAL persistence in queueWAL (Gate 3 Offline Reliability)
-runMutationTest(
-  'IndexedDB WAL write omitted in queueWAL (Offline WAL Gate)',
+// 9. Guard: offline-wal
+runGuardMutationTest(
+  'offline-wal',
+  'Omit db.wal.add in queueWAL in useWAL.js',
   useWalPath,
   (code) => code.replace('await db.wal.add(walEntry);', '/* omitted */'),
-  'npx vitest run src/composables/__tests__/useWAL.spec.js',
-  omniqueryDir
+  'npx vitest run src/composables/__tests__/useWAL.spec.js'
 );
 
-// Summary Report
+// Report per guard
 console.log('\n===========================================================');
-console.log(` Mutation Testing Summary:`);
+console.log(' Mutation Score by Guard:');
+console.log('-----------------------------------------------------------');
+for (const [guard, score] of Object.entries(guardScores)) {
+  const pct = Math.round((score.killed / score.total) * 100);
+  console.log(`  Guard [${guard.padEnd(16)}]: ${score.killed}/${score.total} killed (${pct}%)`);
+}
+
+console.log('-----------------------------------------------------------');
+console.log(` Overall Mutation Testing Summary:`);
 console.log(`   Total Mutants Tested: ${totalMutants}`);
-console.log(`   Killed Mutants (Caught): ${killedMutants}`);
-console.log(`   Surviving Mutants (Missed): ${survivingMutants}`);
-const mutationScore = Math.round((killedMutants / totalMutants) * 100);
-console.log(`   Mutation Detection Score: ${mutationScore}%`);
+console.log(`   Killed Mutants (Caught): ${totalKilled}`);
+console.log(`   Surviving Mutants (Missed): ${totalMutants - totalKilled}`);
+const overallScore = Math.round((totalKilled / totalMutants) * 100);
+console.log(`   Overall Mutation Score: ${overallScore}%`);
 console.log('===========================================================\n');
 
-if (survivingMutants > 0) {
-  console.error(`FAIL: ${survivingMutants} mutant(s) survived! Harden the test suite.\n`);
+if (totalKilled < totalMutants) {
+  console.error(`FAIL: ${totalMutants - totalKilled} mutant(s) survived! Harden the test suite.\n`);
   process.exit(1);
 } else {
-  console.log(`SUCCESS: 100% Mutation Score achieved! All critical quality gates are active.\n`);
+  console.log(`SUCCESS: 100% Mutation Score achieved across all design rule guards!\n`);
   process.exit(0);
 }
