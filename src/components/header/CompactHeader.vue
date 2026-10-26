@@ -354,10 +354,10 @@
           <div class="pt-1 flex items-center justify-between text-xs px-1">
             <span class="text-slate-500 font-medium">{{ __('Manage Profile & Credentials') }}</span>
             <a
-              href="/app/user-profile"
+              href="/me"
               class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
             >
-              <span>{{ __('ERPNext Profile') }}</span>
+              <span>{{ __('My Account') }}</span>
               <span>↗</span>
             </a>
           </div>
@@ -423,6 +423,11 @@ const { __, currentLang, setLanguage } = useTranslation();
 const showConfigModal = ref(false);
 useScrollLock(showConfigModal);
 const activeTheme = ref("light");
+
+const isGuest = computed(() => {
+  const u = (window.frappe && window.frappe.user) || "";
+  return !u || u === "Guest";
+});
 
 const userEmail = computed(() => {
   return (window.frappe && window.frappe.user) || "surveyor@ommnomi.in";
