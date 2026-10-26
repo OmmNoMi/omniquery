@@ -338,6 +338,43 @@
         </div>
       </main>
 
+      <!-- Discard Draft Confirmation Dialog -->
+      <BaseModal
+        :isOpen="Boolean(draftToDelete)"
+        size="sm"
+        hideHeader
+        :showCloseButton="false"
+        @close="draftToDelete = null"
+      >
+        <div class="p-6 text-center space-y-4">
+          <div class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
+            <Trash2 class="w-6 h-6" />
+          </div>
+          <div class="space-y-1">
+            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">
+              {{ __('Discard Saved Draft?') }}
+            </h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              {{ __('Are you sure you want to discard this saved draft? This action cannot be undone.') }}
+            </p>
+          </div>
+          <div class="grid grid-cols-2 gap-2.5 pt-2">
+            <Button
+              @click="draftToDelete = null"
+              class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs"
+            >
+              {{ __('Cancel') }}
+            </Button>
+            <Button
+              @click="confirmDeleteDraft"
+              class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs"
+            >
+              {{ __('Discard') }}
+            </Button>
+          </div>
+        </div>
+      </BaseModal>
+
       <!-- 5. Cross-Verification Inspector Dialog (Universal BaseModal with built-in scroll lock) -->
       <BaseModal
         :isOpen="Boolean(selectedInspectResponse)"
@@ -581,6 +618,8 @@ async function handleRetryQuarantined(walId) {
   }
 }
 
+const draftToDelete = ref(null);
+
 function resumeDraft(templateName) {
   emit("resume-draft", templateName);
   emit("close");
@@ -591,13 +630,19 @@ function resumeSpecificDraft(templateName, draftId) {
   emit("close");
 }
 
-async function deleteSpecificDraft(responseUid) {
-  if (confirm(__("Are you sure you want to discard this saved draft?"))) {
+function deleteSpecificDraft(responseUid) {
+  draftToDelete.value = responseUid;
+}
+
+async function confirmDeleteDraft() {
+  if (draftToDelete.value) {
     try {
-      await db.responses.delete(responseUid);
+      await db.responses.delete(draftToDelete.value);
       await loadResponses();
     } catch (e) {
       console.warn("Failed to delete draft:", e);
+    } finally {
+      draftToDelete.value = null;
     }
   }
 }
@@ -788,7 +833,7 @@ async function exportToJson() {
     downloadAnchor.click();
     downloadAnchor.remove();
   } catch (e) {
-    alert("Export failed: " + e.message);
+    syncFeedbackMessage.value = `${__("Export failed:")} ${e.message || e}`;
   }
 }
 
@@ -816,7 +861,7 @@ function exportToCsv() {
     link.click();
     link.remove();
   } catch (e) {
-    alert("CSV export failed: " + e.message);
+    syncFeedbackMessage.value = `${__("CSV export failed:")} ${e.message || e}`;
   }
 }
 
@@ -915,7 +960,7 @@ Individual JSON files can be ingested directly into the OmniQuery backend.
     downloadAnchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   } catch (e) {
-    alert("ZIP archive creation failed: " + (e.message || e));
+    syncFeedbackMessage.value = `${__("ZIP archive creation failed:")} ${e.message || e}`;
   } finally {
     isExportingZip.value = false;
   }

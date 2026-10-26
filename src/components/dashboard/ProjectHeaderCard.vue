@@ -118,7 +118,7 @@
               </span>
             </div>
 
-            <!-- Download All for Offline Button -->
+            <!-- Download all for offline button -->
             <Button
               v-if="!isProjectFullyCached(proj.id) && isOnline && getProjectSurveys(proj.id).length > 0"
               @click.stop="$emit('download-project-surveys', proj.id)"
@@ -126,7 +126,7 @@
               :title="__('Download all survey templates for this project so they can be filled offline')"
             >
               <Download class="w-3.5 h-3.5" />
-              <span>{{ __('Download All for Offline') }}</span>
+              <span>{{ __('Download all for offline') }}</span>
             </Button>
           </div>
 

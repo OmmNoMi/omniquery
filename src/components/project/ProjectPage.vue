@@ -150,7 +150,7 @@
             class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-xs transition active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-2xs"
           >
             <Download class="w-3.5 h-3.5" />
-            <span>{{ __('Download All for Offline') }}</span>
+            <span>{{ __('Download all for offline') }}</span>
           </Button>
         </div>
 
