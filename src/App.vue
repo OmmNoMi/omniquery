@@ -826,14 +826,10 @@ watch(activeSectionIndex, (idx) => {
 function isMatrixQuestion(q) {
   if (!q) return false;
   const type = (q.field_type || "").toLowerCase();
-  const code = (q.question_code || "").toLowerCase();
   return (
     type === "dynamic grid" ||
     type === "table" ||
     type === "matrix" ||
-    code.includes("turnover") ||
-    code.includes("involvement") ||
-    code.includes("capital_sources") ||
     Boolean(q.columns_schema_json) ||
     Boolean(q.matrix_schema)
   );
@@ -912,16 +908,13 @@ const displayQuestionItems = computed(() => {
         }
       }
       if (groupQuestions.length > 1) {
-        let groupTitle = `${baseNum}. Household & Member Demographics`;
-        if (baseNum.toUpperCase() === "Q6" && q.section_code === "SEC_B") {
-          groupTitle = `${baseNum}. Family Demographics & Member Breakdown`;
-        }
+        let groupTitle = q.group_title || q.parent_group_title || (q.section_title ? `${baseNum}. ${q.section_title}` : `${baseNum}. ${__('Group')}`);
         items.push({
           type: "group",
           group_code: `group_${baseNum}`,
           number: baseNum,
           title: groupTitle,
-          description: "Member count breakdown by demographic category",
+          description: q.group_description || "",
           questions: groupQuestions,
         });
         i = j;
