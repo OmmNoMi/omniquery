@@ -57,7 +57,6 @@ def resolve_surveyor(user_or_name=None):
 	s = (
 		frappe.db.get_value("OmniQuery Surveyor", {"user": user}, "name")
 		or frappe.db.get_value("OmniQuery Surveyor", {"surveyor_name": user}, "name")
-		or frappe.db.get_value("OmniQuery Surveyor", {"status": "Active"}, "name")
 	)
 	if s:
 		return s
@@ -277,7 +276,8 @@ def sync_draft(data=None):
 		resp_doc.idempotency_key = idempotency_key
 		resp_doc.survey_template = template_name
 		resp_doc.survey_status = "Draft"
-		resp_doc.surveyor = resolve_surveyor(sub.get("surveyor") or current_user)
+		resp_doc.owner = current_user
+		resp_doc.surveyor = resolve_surveyor(current_user)
 
 	resp_doc.template_version = sub.get("template_version") or 1
 	resp_doc.respondent = resolve_respondent(sub.get("respondent"))
