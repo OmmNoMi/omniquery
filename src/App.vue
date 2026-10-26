@@ -616,9 +616,6 @@ const isGuest = computed(() => {
 });
 
 function getRouteProjectId() {
-  if (window.frappe && window.frappe.initial_project_id) {
-    return window.frappe.initial_project_id;
-  }
   const path = (window.location && window.location.pathname) || "";
   const parts = path.split("/").filter(Boolean);
   if (parts.length >= 3 && parts[0] === "omniquery" && parts[1] === "project") {
@@ -781,9 +778,6 @@ const filteredTemplates = computed(() => {
 });
 
 function getRouteSurveyId() {
-  if (window.frappe && window.frappe.initial_survey_id) {
-    return window.frappe.initial_survey_id;
-  }
   const path = (window.location && window.location.pathname) || "";
   const parts = path.split("/").filter(Boolean);
   if (parts.length >= 2 && parts[0] === "omniquery") {
@@ -796,8 +790,14 @@ function getRouteSurveyId() {
 async function init() {
   isLoading.value = true;
   await loadAvailableTemplates();
-  const initialProjectId = getRouteProjectId();
-  const initialSurveyId = getRouteSurveyId();
+  const initialProjectId = getRouteProjectId() || (window.frappe && window.frappe.initial_project_id) || "";
+  const initialSurveyId = getRouteSurveyId() || (window.frappe && window.frappe.initial_survey_id) || "";
+  if (window.frappe) {
+    try {
+      delete window.frappe.initial_project_id;
+      delete window.frappe.initial_survey_id;
+    } catch (e) {}
+  }
   if (initialProjectId) {
     activeProjectId.value = initialProjectId;
   } else if (initialSurveyId) {
