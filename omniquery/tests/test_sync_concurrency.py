@@ -286,5 +286,32 @@ class TestSyncConcurrency(FrappeTestCase):
 		)
 		self.assertEqual(failed_audit_status, "FAILED")
 
+	def test_null_gps_stored_as_null_in_database(self):
+		idempotency_key = "TEST-CONC-GPS-NULL"
+		sub = {
+			"idempotency_key": idempotency_key,
+			"survey_template": self.test_template_name,
+			"template_version": 1,
+			"gps_latitude": None,
+			"gps_longitude": None,
+			"gps_accuracy": None,
+			"items": [],
+		}
+
+		res = batch_push([sub])
+		results = res.get("results", []) if isinstance(res, dict) else res
+		self.assertEqual(len(results), 1)
+		self.assertEqual(results[0]["status"], "SUCCESS")
+
+		raw = frappe.db.sql(
+			"SELECT gps_latitude, gps_longitude, gps_accuracy FROM `tabOmniQuery Response` WHERE name=%s",
+			results[0]["doc_name"],
+			as_dict=True,
+		)[0]
+		self.assertIsNone(raw["gps_latitude"])
+		self.assertIsNone(raw["gps_longitude"])
+		self.assertIsNone(raw["gps_accuracy"])
+
+
 
 

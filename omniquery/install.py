@@ -10,7 +10,22 @@ def after_migrate():
 	ensure_workspace_sidebar()
 	ensure_desktop_icon()
 	ensure_default_surveyor()
+	ensure_nullable_gps_columns()
 	sync_app_fixtures()
+
+
+def ensure_nullable_gps_columns():
+	if not frappe.db.exists("DocType", "OmniQuery Response"):
+		return
+	try:
+		frappe.db.sql("""
+			ALTER TABLE `tabOmniQuery Response`
+			MODIFY `gps_latitude` decimal(21,7) NULL DEFAULT NULL,
+			MODIFY `gps_longitude` decimal(21,7) NULL DEFAULT NULL,
+			MODIFY `gps_accuracy` decimal(21,2) NULL DEFAULT NULL
+		""")
+	except Exception:
+		pass
 
 
 def ensure_default_surveyor():
