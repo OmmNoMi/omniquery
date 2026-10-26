@@ -295,12 +295,12 @@
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
-        :aria-invalid="Boolean(errorMessage)"
-        :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
+        :aria-invalid="Boolean(effectiveErrorMessage)"
+        :aria-errormessage="effectiveErrorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
-        :placeholder="__('Enter value')"
+        :placeholder="inputPlaceholder"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
 
@@ -312,8 +312,8 @@
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
-        :aria-invalid="Boolean(errorMessage)"
-        :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
+        :aria-invalid="Boolean(effectiveErrorMessage)"
+        :aria-errormessage="effectiveErrorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
@@ -329,8 +329,8 @@
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
-        :aria-invalid="Boolean(phoneValidationError || errorMessage)"
-        :aria-errormessage="(phoneValidationError || errorMessage) ? 'q_err_' + question.question_code : undefined"
+        :aria-invalid="Boolean(effectiveErrorMessage)"
+        :aria-errormessage="effectiveErrorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="onPhoneInput"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
@@ -346,28 +346,28 @@
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
-        :aria-invalid="Boolean(errorMessage)"
-        :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
+        :aria-invalid="Boolean(effectiveErrorMessage)"
+        :aria-errormessage="effectiveErrorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
-        :placeholder="__('Enter value')"
+        :placeholder="inputPlaceholder"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-medium text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
     </div>
 
     <!-- Validation Error -->
     <p
-      v-if="phoneValidationError || errorMessage"
+      v-if="effectiveErrorMessage"
       :id="'q_err_' + question.question_code"
       role="alert"
       class="mt-2 text-xs font-semibold text-rose-600"
     >
-      {{ __(phoneValidationError || errorMessage) }}
+      {{ effectiveErrorMessage }}
     </p>
 
     <!-- Card Footer: Status Badge (Right) -->
-    <div v-if="notApplicable || (isCompleted && !isInputFocused)" class="flex items-center justify-end mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+    <div v-if="notApplicable || (isCompleted && !isInputFocused && !effectiveErrorMessage)" class="flex items-center justify-end mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
       <!-- Status Badge (Bottom-Right) -->
       <div class="min-h-[22px] flex items-center">
         <!-- Not Applicable Badge -->
@@ -382,7 +382,7 @@
 
         <!-- Answered Badge -->
         <span
-          v-else-if="isCompleted && !isInputFocused"
+          v-else-if="isCompleted && !isInputFocused && !effectiveErrorMessage"
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full"
         >
           <Check class="w-3.5 h-3.5" />
@@ -1294,6 +1294,54 @@ function onPhoneInput(val) {
   emit("update:modelValue", clean);
   emit("answered");
 }
+
+function getActionableRequiredError(question) {
+  const rawLabel = question.label_en || question.label || "this field";
+  const clean = rawLabel.replace(/^Q\d+[a-z]?\.\s*/i, "").replace(/[*:]/g, "").trim();
+  const lower = clean.toLowerCase();
+
+  const type = (question.field_type || "").toLowerCase();
+  const variant = (question.control_variant || "").toLowerCase();
+  const isChoice = type.includes("select") || type.includes("choice") || variant.includes("radio") || variant.includes("combobox") || (question.options && question.options.length > 0);
+
+  if (isChoice) {
+    const article = /^[aeiou]/i.test(lower) ? "an" : "a";
+    return `Choose ${article} ${lower}`;
+  }
+  if (type === "date" || variant === "date") {
+    return `Select date for ${lower}`;
+  }
+  if (type === "phone" || variant === "phone" || lower.includes("phone") || lower.includes("mobile")) {
+    return "Enter a 10-digit mobile number";
+  }
+  return `Enter ${lower}`;
+}
+
+const effectiveErrorMessage = computed(() => {
+  if (phoneValidationError.value) return phoneValidationError.value;
+  if (isCompleted.value) {
+    if (props.errorMessage && !props.errorMessage.toLowerCase().includes("required") && !props.errorMessage.toLowerCase().includes("choose") && !props.errorMessage.toLowerCase().includes("enter")) {
+      return props.errorMessage;
+    }
+    return "";
+  }
+  if (!props.errorMessage) return "";
+  if (props.errorMessage === "This field is required" || props.errorMessage.toLowerCase().includes("required")) {
+    return getActionableRequiredError(props.question);
+  }
+  return props.errorMessage;
+});
+
+const inputPlaceholder = computed(() => {
+  if (isPhoneControl.value) return __("Enter 10-digit mobile number");
+  if (isDateControl.value) return "";
+  const raw = props.question.label_en || props.question.label || "";
+  const clean = raw.replace(/^Q\d+[a-z]?\.\s*/i, "").replace(/[*:]/g, "").trim().toLowerCase();
+  if (isNumberControl.value) {
+    return clean ? `Enter ${clean}` : __("Enter number");
+  }
+  return clean ? `Enter ${clean}` : __("Enter value");
+});
 
 function formatCoords(coords) {
   if (typeof coords === "object" && coords.latitude) {

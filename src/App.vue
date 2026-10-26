@@ -994,8 +994,11 @@ function openFocusMode() {
 }
 
 function onQuestionAnswered(currentQuestion) {
-  if (!autoAdvance.value) return;
   const qCode = currentQuestion ? (currentQuestion.question_code || currentQuestion.code) : null;
+  if (qCode && validationErrors.value[qCode]) {
+    delete validationErrors.value[qCode];
+  }
+  if (!autoAdvance.value) return;
   if (!qCode) return;
   const currentIdx = activeQuestions.value.findIndex(
     (q) => q.question_code === qCode
