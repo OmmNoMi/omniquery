@@ -16,6 +16,8 @@
   "column_break_compat",
   "label_en",
   "field_type",
+  "group_title",
+  "group_code",
   "options_json",
   "conditional_logic_json",
   "validation_rules_json",
@@ -81,7 +83,17 @@
    "fieldname": "field_type",
    "fieldtype": "Select",
    "label": "Field Type",
-   "options": "Text\nLong Text\nInteger\nDecimal\nCurrency (INR)\nRange (Slider)\nSingle Choice (Radio)\nSingle Choice (Dropdown)\nMultiple Choice (Checkbox)\nDate\nTime\nGPS Location\nPhoto Upload\nDigital Signature\nDynamic Grid\nRating (1-5)"
+   "options": "Text\nLong Text\nInteger\nDecimal\nCurrency (INR)\nRange (Slider)\nSingle Choice (Radio)\nSingle Choice (Dropdown)\nMultiple Choice (Checkbox)\nDate\nTime\nGPS Location\nPhoto Upload\nDigital Signature\nDynamic Grid\nMatrix\nRating (1-5)"
+  },
+  {
+   "fieldname": "group_title",
+   "fieldtype": "Data",
+   "label": "Group Title"
+  },
+  {
+   "fieldname": "group_code",
+   "fieldtype": "Data",
+   "label": "Group Code"
   },
   {
    "fieldname": "options_json",
