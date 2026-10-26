@@ -129,7 +129,11 @@ class TestRajivikaBenchmark(unittest.TestCase):
 			self.assertEqual(resp2["results"][0]["status"], "DUPLICATE_SKIPPED")
 			self.assertEqual(frappe.db.count("OmniQuery Response", {"idempotency_key": test_uuid}), 1)
 		finally:
-			frappe.db.delete("OmniQuery Response Item", {"parent": doc_name})
-			frappe.db.delete("OmniQuery Response", {"name": doc_name})
-			frappe.db.delete("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"})
+			if frappe.db.exists("OmniQuery Response", doc_name):
+				doc = frappe.get_doc("OmniQuery Response", doc_name)
+				if doc.docstatus == 1:
+					doc.cancel()
+				frappe.delete_doc("OmniQuery Response", doc_name, force=True, ignore_permissions=True)
+			if frappe.db.exists("OmniQuery Sync Audit Log", f"SYNC-{test_uuid}"):
+				frappe.delete_doc("OmniQuery Sync Audit Log", f"SYNC-{test_uuid}", force=True, ignore_permissions=True)
 			frappe.db.commit()

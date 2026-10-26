@@ -5,8 +5,7 @@ from omniquery.api.survey import get_project_details
 
 class TestProjectAPI(unittest.TestCase):
 	def setUp(self):
-		frappe.db.delete("OmniQuery Template", {"title": "SHG Test Survey Unit"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Rajasthan Livelihood Project"})
+		self._cleanup_test_records()
 
 		frappe.get_doc(
 			{
@@ -50,6 +49,19 @@ class TestProjectAPI(unittest.TestCase):
 		self.assertIn("training_modules", details)
 
 	def tearDown(self):
-		frappe.db.delete("OmniQuery Template", {"title": "SHG Test Survey Unit"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Rajasthan Livelihood Project"})
+		self._cleanup_test_records()
+
+	def _cleanup_test_records(self):
+		for dt, filter_dict in [
+			("OmniQuery Template", {"title": "SHG Test Survey Unit"}),
+			("OmniQuery Project", {"project_name": "Rajasthan Livelihood Project"}),
+		]:
+			for name in frappe.get_all(dt, filters=filter_dict, pluck="name"):
+				try:
+					doc = frappe.get_doc(dt, name)
+					if getattr(doc, "docstatus", 0) == 1:
+						doc.cancel()
+					frappe.delete_doc(dt, name, force=True, ignore_permissions=True)
+				except Exception:
+					pass
 		frappe.db.commit()
