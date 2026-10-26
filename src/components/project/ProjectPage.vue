@@ -31,13 +31,13 @@
             <span>{{ projectMeta.name || projectId }}</span>
           </span>
           <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 shrink-0">
-            {{ projectMeta.status || __('Active Field Project') }}
+            {{ projectMeta.status || __('Active') }}
           </span>
         </div>
 
-        <span v-if="projectMeta.workspace" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
+        <span v-if="projectMeta.workspace_title" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
           <Building2 class="w-3.5 h-3.5 text-slate-400" />
-          <span>{{ projectMeta.workspace_title || projectMeta.workspace }}</span>
+          <span>{{ projectMeta.workspace_title }}</span>
         </span>
       </div>
 
@@ -46,9 +46,9 @@
         <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight break-words">
           {{ projectMeta.project_name || projectMeta.name || projectId }}
         </h1>
-        <p class="text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
+        <p v-if="projectMeta.grantor_organization" class="text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
           <Landmark class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-          <span>{{ projectMeta.grantor_organization || 'National Rural Livelihoods Mission / State Agency' }}</span>
+          <span>{{ projectMeta.grantor_organization }}</span>
         </p>
       </div>
 
@@ -71,7 +71,8 @@
         </div>
 
         <a
-          href="tel:18001026664"
+          v-if="projectMeta.helpline_phone"
+          :href="'tel:' + projectMeta.helpline_phone"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs transition shadow-xs cursor-pointer shrink-0 no-underline"
         >
           <Phone class="w-3.5 h-3.5" />
@@ -81,7 +82,7 @@
     </div>
 
     <!-- 3. Tabbed Content Navigation -->
-    <div class="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md pt-1 pb-1">
+    <div v-if="projectMeta.sop_sections || projectMeta.helpline_phone || projectMeta.helpline_email" class="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md pt-1 pb-1">
       <div class="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto no-scrollbar">
         <Button
           @click="activeTab = 'surveys'"
@@ -93,33 +94,17 @@
         </Button>
 
         <Button
+          v-if="projectMeta.sop_sections"
           @click="activeTab = 'sops'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'sops' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
           <Scroll class="w-3.5 h-3.5" />
-          <span>{{ __('Field SOPs & Code') }}</span>
+          <span>{{ __('Field SOPs & Protocols') }}</span>
         </Button>
 
         <Button
-          @click="activeTab = 'finance'"
-          class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-          :class="activeTab === 'finance' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
-        >
-          <CircleDollarSign class="w-3.5 h-3.5" />
-          <span>{{ __('Turnover & Calculations') }}</span>
-        </Button>
-
-        <Button
-          @click="activeTab = 'offline'"
-          class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-          :class="activeTab === 'offline' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
-        >
-          <Zap class="w-3.5 h-3.5" />
-          <span>{{ __('Offline Data Guidelines') }}</span>
-        </Button>
-
-        <Button
+          v-if="projectMeta.helpline_phone || projectMeta.helpline_email"
           @click="activeTab = 'helpline'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'helpline' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
@@ -134,7 +119,7 @@
     <div class="space-y-4">
       <!-- Tab 1: Surveys in this Project -->
       <div v-if="activeTab === 'surveys'" class="space-y-3">
-        <div class="flex items-center justify-between text-xs px-1 font-bold text-slate-600 dark:text-slate-300 flex-wrap gap-2">
+        <div v-if="projectSurveys.length > 0" class="flex items-center justify-between text-xs px-1 font-bold text-slate-600 dark:text-slate-300 flex-wrap gap-2">
           <div class="flex items-center gap-2">
             <span>{{ __('Select a survey to start collecting field data') }}</span>
             <span>·</span>
@@ -225,94 +210,19 @@
         </div>
       </div>
 
-      <!-- Tab 2: Field SOPs & Code of Conduct -->
-      <div v-if="activeTab === 'sops'" class="space-y-4">
-        <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs sm:text-sm text-emerald-900 dark:text-emerald-200 space-y-1 shadow-2xs">
-          <div class="font-extrabold flex items-center gap-1.5">
-            <ShieldCheck class="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
-            <span>{{ __('Core Ethical Principle') }}</span>
+      <!-- Tab 2: Field SOPs & Protocols -->
+      <div v-if="activeTab === 'sops' && projectMeta.sop_sections" class="space-y-4">
+        <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
+          <div class="flex items-center gap-2 text-slate-800 dark:text-slate-100 font-extrabold text-sm">
+            <Scroll class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <span>{{ __('Standard Operating Procedures') }}</span>
           </div>
-          <p class="text-emerald-800/90 dark:text-emerald-300">
-            {{ __('Field surveyors represent the institution. Maintain respect, confidentiality, and data integrity at all times.') }}
-          </p>
-        </div>
-
-        <div class="space-y-3">
-          <div
-            v-for="(item, idx) in sopsPoints"
-            :key="idx"
-            class="flex items-start gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs"
-          >
-            <span class="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-200 text-xs font-black flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-              {{ idx + 1 }}
-            </span>
-            <div class="space-y-1">
-              <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                {{ item.title }}
-              </h4>
-              <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                {{ item.desc }}
-              </p>
-            </div>
-          </div>
+          <div class="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed" v-html="projectMeta.sop_sections" />
         </div>
       </div>
 
-      <!-- Tab 3: Financial Calculations & Turnover Aids -->
-      <div v-if="activeTab === 'finance'" class="space-y-4">
-        <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs sm:text-sm text-amber-900 dark:text-amber-200 space-y-1 shadow-2xs">
-          <div class="font-extrabold flex items-center gap-1.5">
-            <CircleDollarSign class="w-4 h-4 text-amber-700 dark:text-amber-400" />
-            <span>{{ __('Multi-Year Turnover Formula') }}</span>
-          </div>
-          <p class="text-amber-800/90 dark:text-amber-300">
-            {{ __('If monthly receipts fluctuate, compute typical monthly turnover and multiply by active operating months in the financial year.') }}
-          </p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-          <div
-            v-for="(tip, idx) in financeTips"
-            :key="idx"
-            class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-2"
-          >
-            <component :is="tip.icon" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
-            <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{{ tip.title }}</h4>
-            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{{ tip.desc }}</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab 4: Offline Data Guidelines -->
-      <div v-if="activeTab === 'offline'" class="space-y-4">
-        <div class="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm text-blue-900 dark:text-blue-200 space-y-1 shadow-2xs">
-          <div class="font-extrabold flex items-center gap-1.5">
-            <Zap class="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span>{{ __('Zero-Data-Loss Architecture') }}</span>
-          </div>
-          <p class="text-blue-800/90 dark:text-blue-300">
-            {{ __('All surveys are buffered locally in SQLite/IndexedDB Write-Ahead Log. Even with zero mobile signal, your data is safe.') }}
-          </p>
-        </div>
-
-        <div class="space-y-3">
-          <div
-            v-for="(item, idx) in offlinePoints"
-            :key="idx"
-            class="flex items-start gap-3.5 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs"
-          >
-            <span class="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-200 text-xs font-black flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-              {{ idx + 1 }}
-            </span>
-            <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-              {{ item }}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tab 5: Supervisor Helpline -->
-      <div v-if="activeTab === 'helpline'" class="space-y-4">
+      <!-- Tab 3: Supervisor Helpline -->
+      <div v-if="activeTab === 'helpline' && (projectMeta.helpline_phone || projectMeta.helpline_email)" class="space-y-4">
         <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div class="flex items-center gap-3.5">
             <div class="w-14 h-14 rounded-2xl bg-emerald-600 text-white font-bold text-2xl flex items-center justify-center shrink-0 shadow-xs">
@@ -322,48 +232,50 @@
               <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
                 {{ __('Field Support & Supervisor Helpline') }}
               </h3>
-              <p class="text-xs text-slate-500 dark:text-slate-400">
-                {{ __('Available Mon–Sat, 8:00 AM – 7:00 PM IST') }}
+              <p v-if="projectMeta.helpline_hours" class="text-xs text-slate-500 dark:text-slate-400">
+                {{ projectMeta.helpline_hours }}
               </p>
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             <a
-              href="tel:18001026664"
+              v-if="projectMeta.helpline_phone"
+              :href="'tel:' + projectMeta.helpline_phone"
               class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition block text-left group cursor-pointer"
             >
               <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                {{ __('Toll-Free Helpline') }}
+                {{ __('Helpline Phone') }}
               </div>
               <div class="text-base sm:text-lg font-mono font-black text-emerald-600 dark:text-emerald-400 mt-1 group-hover:underline">
-                1800-102-OMNI (+91)
+                {{ projectMeta.helpline_phone }}
               </div>
               <div class="text-[11px] text-slate-500 mt-0.5">
-                {{ __('Direct telephone dispatch to state field supervisor') }}
+                {{ __('Direct telephone dispatch to field supervisor') }}
               </div>
             </a>
 
             <a
-              href="mailto:fieldsupport@ommnomi.in"
+              v-if="projectMeta.helpline_email"
+              :href="'mailto:' + projectMeta.helpline_email"
               class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition block text-left group cursor-pointer"
             >
               <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 {{ __('Email Dispatch') }}
               </div>
               <div class="text-sm sm:text-base font-mono font-black text-emerald-600 dark:text-emerald-400 mt-1 group-hover:underline break-all">
-                fieldsupport@ommnomi.in
+                {{ projectMeta.helpline_email }}
               </div>
               <div class="text-[11px] text-slate-500 mt-0.5">
-                {{ __('Official escalation & technical bug reports') }}
+                {{ __('Official escalation & technical queries') }}
               </div>
             </a>
           </div>
 
-          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs flex items-center justify-between gap-2 flex-wrap">
-            <span class="text-slate-500 dark:text-slate-400">{{ __('State Lead') }}:</span>
+          <div v-if="projectMeta.district_scope" class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs flex items-center justify-between gap-2 flex-wrap">
+            <span class="text-slate-500 dark:text-slate-400">{{ __('Target Scope') }}:</span>
             <span class="font-extrabold text-slate-800 dark:text-slate-200">
-              SVEP State Field Operations Desk · Rajasthan Cluster
+              {{ projectMeta.district_scope }}
             </span>
           </div>
         </div>
@@ -382,14 +294,9 @@ import {
   ShieldCheck,
   Phone,
   Scroll,
-  CircleDollarSign,
-  Zap,
   Download,
   Inbox,
   AlertTriangle,
-  Banknote,
-  BarChart3,
-  Building,
 } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 
@@ -445,32 +352,42 @@ const projectMeta = computed(() => {
     return {
       name: match.project || props.projectId,
       project_name: match.project_name || match.project || props.projectId,
-      grantor_organization: match.grantor_organization || "Rajasthan Grameen Aajeevika Vikas Parishad (RGAVP) / SVEP",
-      description: match.project_description || match.description || "Study on Performance of SHG-led Women Entrepreneurs in Rajasthan",
-      workspace: match.workspace || "OQW-001",
-      workspace_title: match.workspace_title || "Livelihoods Enterprise Study",
-      status: "Active",
+      grantor_organization: match.grantor_organization || "",
+      description: match.project_description || match.description || "",
+      workspace: match.workspace || "",
+      workspace_title: match.workspace_title || "",
+      status: match.project_status || match.status || "Active",
+      helpline_phone: match.helpline_phone || "",
+      helpline_email: match.helpline_email || "",
+      sop_sections: match.sop_sections || "",
+      training_materials: match.training_materials || "",
     };
   }
   return {
     name: props.projectId,
     project_name: props.projectId,
-    grantor_organization: "Rajasthan Grameen Aajeevika Vikas Parishad (RGAVP) / SVEP",
-    description: "Study on Performance of SHG-led Women Entrepreneurs in Rajasthan",
+    grantor_organization: "",
+    description: "",
+    workspace: "",
+    workspace_title: "",
     status: "Active",
+    helpline_phone: "",
+    helpline_email: "",
+    sop_sections: "",
+    training_materials: "",
   };
 });
 
 // Filter templates that belong to this project
 const projectSurveys = computed(() => {
   const targetId = props.projectId;
-  const filtered = props.templates.filter(
+  const filtered = (props.templates || []).filter(
     (t) =>
       t.project === targetId ||
       t.project_name === targetId ||
       (projectMeta.value.name && t.project === projectMeta.value.name)
   );
-  return filtered.length > 0 ? filtered : props.templates;
+  return filtered;
 });
 
 async function fetchProjectMeta() {
@@ -481,7 +398,14 @@ async function fetchProjectMeta() {
     });
     const proj = data?.project || data?.message?.project || data?.message || data;
     if (proj && (proj.name || proj.project_name)) {
-      remoteProjectMeta.value = proj;
+      remoteProjectMeta.value = {
+        ...proj,
+        status: proj.status || projectMeta.value.status || "Active",
+        workspace_title: proj.workspace_title || projectMeta.value.workspace_title || "",
+        helpline_phone: proj.helpline_phone || data?.helpline?.phone || "",
+        helpline_email: proj.helpline_email || data?.helpline?.email || "",
+        sop_sections: proj.sop_sections || "",
+      };
     }
   } catch (e) {
     console.warn("Could not fetch remote project details:", e);
@@ -494,52 +418,4 @@ onMounted(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 });
-
-const sopsPoints = [
-  {
-    title: "1. Identification & Non-Commercial Objective",
-    desc: "Always introduce yourself as an authorized field surveyor and explain the non-commercial research objectives before starting questions.",
-  },
-  {
-    title: "2. Voluntary Informed Consent",
-    desc: "Seek voluntary informed consent from the respondent or enterprise owner before recording any data.",
-  },
-  {
-    title: "3. Financial Privacy & Reassurance",
-    desc: "Never coerce or push respondents when they hesitate on personal financial queries. Reassure them of complete confidentiality under institutional research protocols.",
-  },
-  {
-    title: "4. Physical Real-Time Geolocation",
-    desc: "Capture GPS coordinates accurately while physically standing at the enterprise location to maintain spatial data fidelity.",
-  },
-  {
-    title: "5. Pre-Submission Cross-Verification",
-    desc: "Review all table sub-items (e.g. Q4 challenges and Q9 turnover categories) before advancing to the final submission step.",
-  },
-];
-
-const financeTips = [
-  {
-    icon: Banknote,
-    title: "Annual Turnover Estimation",
-    desc: "Multiply typical monthly business receipts by the number of active months in that specific financial year (e.g. FY 2022-23, FY 2023-24).",
-  },
-  {
-    icon: BarChart3,
-    title: "Percentage Distribution Verification",
-    desc: "For questions where multiple business activities or challenges are categorized, cross-check that totals make logical sense.",
-  },
-  {
-    icon: Building,
-    title: "Capital Sources & Borrowing",
-    desc: "Distinguish between SHG loans (CIF/RF), bank loans (Mudra/KCC), family borrowing, and private moneylenders.",
-  },
-];
-
-const offlinePoints = [
-  "OmniQuery runs 100% offline. All responses, in-progress draft edits, and GPS are recorded directly in device storage (IndexedDB).",
-  "Observe the offline queue badge in the header: it indicates how many completed responses are stored locally waiting to sync.",
-  "When returning to network coverage or Wi-Fi, tap 'Sync Now' in the header to push records to the server.",
-  "Before leaving the field, verify all completed forms in the 'Filled Forms' verification list.",
-];
 </script>
