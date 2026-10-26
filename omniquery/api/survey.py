@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe import _
+from omniquery.permissions import is_super_user
 
 
 def resolve_template_name(template_name: str) -> str:
@@ -273,6 +274,23 @@ def get_bootstrap_data():
 	"""Returns bootstrap user info and full authorized templates with compiled schema."""
 	current_user = frappe.session.user
 	user_info = get_current_user_info()
+
+	user_projects = []
+	if current_user != "Guest" and not is_super_user(current_user):
+		user_projects = frappe.get_all(
+			"OmniQuery Project Member",
+			filters={"user": current_user},
+			pluck="parent",
+		)
+		if not user_projects:
+			return {
+				"user": (user_info.get("full_name") or user_info.get("user") or "Surveyor")
+				if isinstance(user_info, dict)
+				else str(user_info),
+				"templates": [],
+				"is_unassigned": True,
+			}
+
 	templates = frappe.get_all(
 		"OmniQuery Template",
 		filters={"status": "Published"},
@@ -291,6 +309,10 @@ def get_bootstrap_data():
 		],
 		order_by="published_at desc",
 	)
+
+	if current_user != "Guest" and not is_super_user(current_user):
+		templates = [t for t in templates if (t.project in user_projects) or t.is_public]
+
 	authorized_raw = [t for t in templates if user_has_template_permission(t, current_user)]
 	p_ids = {t.project for t in authorized_raw if t.project}
 	p_map, w_map = fetch_project_workspace_meta(p_ids)
@@ -449,9 +471,23 @@ def get_project_details(project_id=None):
 	"""
 	Returns comprehensive project metadata, guidelines, SOPs, and training materials.
 	"""
-	if not project_id:
-		tmpl = frappe.db.get_value("OmniQuery Template", {"status": "Published"}, "project")
-		project_id = tmpl or "OQP-001-001"
+	user = frappe.session.user
+	if user != "Guest" and not is_super_user(user):
+		user_projects = frappe.get_all(
+			"OmniQuery Project Member",
+			filters={"user": user},
+			pluck="parent",
+		)
+		if not user_projects:
+			return {}
+		if not project_id:
+			project_id = user_projects[0]
+		elif project_id not in user_projects:
+			return {}
+	else:
+		if not project_id:
+			tmpl = frappe.db.get_value("OmniQuery Template", {"status": "Published"}, "project")
+			project_id = tmpl or "OQP-001-001"
 
 	proj = frappe.db.get_value(
 		"OmniQuery Project",

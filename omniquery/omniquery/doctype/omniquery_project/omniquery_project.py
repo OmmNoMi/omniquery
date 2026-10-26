@@ -14,6 +14,31 @@ class OmniQueryProject(Document):
 			return
 		workspace_sequence = self.workspace.replace("OQW-", "").replace("WSP-", "") if self.workspace else "001"
 		self.name = frappe.model.naming.make_autoname(f"OQP-{workspace_sequence}-.###")
+
+	def on_update(self):
+		self.ensure_surveyors()
+
+	def ensure_surveyors(self):
+		for m in self.members or []:
+			if not m.user:
+				continue
+			if not frappe.db.exists("OmniQuery Surveyor", {"user": m.user}):
+				user_info = frappe.db.get_value("User", m.user, ["first_name", "last_name", "full_name"], as_dict=True)
+				name_str = (user_info.full_name if user_info else None) or (user_info.first_name if user_info else None) or m.user.split("@")[0]
+				try:
+					surveyor = frappe.get_doc(
+						{
+							"doctype": "OmniQuery Surveyor",
+							"surveyor_name": name_str,
+							"user": m.user,
+							"status": "Active",
+						}
+					)
+					surveyor.flags.ignore_permissions = True
+					surveyor.insert(ignore_permissions=True)
+				except Exception as e:
+					frappe.log_error("Auto Surveyor Creation Error", str(e))
+
 	def has_project_role(self, user: str, role: str) -> bool:
 		if not user:
 			return False

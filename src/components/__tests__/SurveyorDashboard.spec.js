@@ -48,6 +48,7 @@ describe("SurveyorDashboard", () => {
       props: {
         pendingWALCount: 1,
         isOnline: true,
+        templates: [{ template_name: "TMPL-SHG", title: "SHG Study" }],
       },
     });
 
@@ -115,5 +116,19 @@ describe("SurveyorDashboard", () => {
     await startNewBtn.trigger("click");
     expect(wrapper.emitted("start-new-survey")).toBeTruthy();
     expect(wrapper.emitted("start-new-survey")[0]).toEqual(["TMPL-SHG"]);
+  });
+
+  it("renders empty state when templates list is empty (unassigned user)", async () => {
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+        templates: [],
+      },
+    });
+
+    expect(wrapper.text()).toContain("You are not assigned to a project yet. Ask your supervisor.");
+    expect(wrapper.text()).not.toContain("Start New");
+    expect(wrapper.text()).not.toContain("Start Survey");
   });
 });
