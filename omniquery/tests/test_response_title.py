@@ -72,3 +72,74 @@ class TestResponseTitleConfig(FrappeTestCase):
 		compiled = compile_template_schema(doc)
 		self.assertEqual(compiled.get("response_title_format"), hindi_format)
 		self.assertIsNotNone(doc.schema_hash_sha256)
+
+	def test_response_doctype_has_title_field_and_populates_from_format(self):
+		meta = frappe.get_meta("OmniQuery Response")
+		self.assertEqual(meta.title_field, "title")
+		self.assertEqual(meta.show_title_field_in_link, 1)
+
+		tmpl = frappe.get_doc({
+			"doctype": "OmniQuery Template",
+			"title": "Title Generator Test Template",
+			"project": self.project_name,
+			"status": "Draft",
+			"response_title_format": "{respondent_name} - {village_gp} ({enterprise_name})",
+		}).insert(ignore_permissions=True)
+		self.test_template_name = tmpl.name
+
+		surv_name = "SURV-TitleTest"
+		if not frappe.db.exists("OmniQuery Surveyor", surv_name):
+			surv = frappe.get_doc({
+				"doctype": "OmniQuery Surveyor",
+				"surveyor_name": "TitleTest",
+				"user": "Administrator",
+			}).insert(ignore_permissions=True)
+			surv_name = surv.name
+
+		import json
+		resp = frappe.get_doc({
+			"doctype": "OmniQuery Response",
+			"idempotency_key": "OQS-RESP-TEST-001",
+			"survey_template": tmpl.name,
+			"template_version": 1,
+			"surveyor": surv_name,
+			"survey_status": "Submitted",
+			"response_payload": json.dumps({
+				"responses": {
+					"respondent_name": "Meera Devi",
+					"village_gp": "Kotkhai",
+					"enterprise_name": "Meera Weaving",
+				}
+			}),
+		}).insert(ignore_permissions=True)
+
+		self.assertEqual(resp.title, "Meera Devi - Kotkhai (Meera Weaving)")
+		frappe.delete_doc("OmniQuery Response", resp.name, force=True)
+
+	def test_resolve_response_title_service_edge_cases(self):
+		from omniquery.services.response_title import resolve_response_title
+
+		# Empty / missing format falls back to standard
+		title1 = resolve_response_title(
+			{"respondent_name": "Kavita", "village_gp": "Rohru", "enterprise_name": "Woolens"},
+			"",
+		)
+		self.assertEqual(title1, "Kavita - Rohru (Woolens)")
+
+		# Partial answers cleans dangling artifacts
+		title2 = resolve_response_title(
+			{"respondent_name": "Kavita"},
+			"{respondent_name} - {village_gp} ({enterprise_name})",
+		)
+		self.assertEqual(title2, "Kavita")
+
+		# Custom format with Hindi tokens
+		title3 = resolve_response_title(
+			{"कारीगर": "मोहन", "गाँव": "मंडी"},
+			"{कारीगर} - {गाँव}",
+		)
+		self.assertEqual(title3, "मोहन - मंडी")
+
+		# Fallback when no tokens match
+		title4 = resolve_response_title({}, "", fallback_title="Fallback Title")
+		self.assertEqual(title4, "Fallback Title")
