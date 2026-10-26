@@ -17,14 +17,19 @@
         </Button>
 
         <!-- Official OmniQuery Cloud Icon & Brand Title -->
-        <div class="flex items-center gap-2 cursor-pointer select-none" @click="$emit('home')">
+        <a
+          href="/omniquery"
+          @click.prevent="$emit('home')"
+          class="flex items-center gap-2 cursor-pointer select-none rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          :aria-label="__('OmniQuery Home')"
+        >
           <img
             :src="'/assets/omniquery/icons/desktop_icons/solid/omniquery.svg'"
             alt="OmniQuery"
             class="w-7 h-7 rounded-lg shadow-xs"
           />
           <span class="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">OmniQuery</span>
-        </div>
+        </a>
       </div>
 
       <!-- Right: Progress Chip, Google Meet-style Microphone, and User Avatar -->
