@@ -316,6 +316,54 @@ def sync_draft(data=None):
 	return {"status": "SUCCESS", "doc_name": resp_doc.name, "survey_status": "Draft"}
 
 
+def normalize_submission_payload(sub):
+	"""
+	Adapts legacy offline write-ahead-log (WAL) shapes into canonical submission schema.
+	Legacy shape:
+	{
+		"template_name": "...",
+		"responses": {"q1": "val1"},
+		"gps_coordinates": {"latitude": ..., "longitude": ..., "accuracy": ...},
+		"saved_at": "..."
+	}
+	"""
+	if not isinstance(sub, dict):
+		return None
+
+	normalized = dict(sub)
+
+	# 1. Map template name
+	if not normalized.get("survey_template") and normalized.get("template_name"):
+		normalized["survey_template"] = normalized["template_name"]
+
+	# 2. Map items from responses dict or list
+	if not normalized.get("items") and "responses" in normalized:
+		resp_data = normalized.get("responses")
+		if isinstance(resp_data, dict):
+			normalized["items"] = [
+				{"question_code": str(k), "value": v}
+				for k, v in resp_data.items()
+			]
+		elif isinstance(resp_data, list):
+			normalized["items"] = resp_data
+
+	# 3. Map captured_at_local from saved_at
+	if not normalized.get("captured_at_local") and normalized.get("saved_at"):
+		normalized["captured_at_local"] = normalized["saved_at"]
+
+	# 4. Map GPS coordinates
+	gps = normalized.get("gps_coordinates")
+	if isinstance(gps, dict):
+		if normalized.get("gps_latitude") is None:
+			normalized["gps_latitude"] = gps.get("latitude") if "latitude" in gps else gps.get("lat")
+		if normalized.get("gps_longitude") is None:
+			normalized["gps_longitude"] = gps.get("longitude") if "longitude" in gps else (gps.get("lng") or gps.get("lon"))
+		if normalized.get("gps_accuracy") is None:
+			normalized["gps_accuracy"] = gps.get("accuracy")
+
+	return normalized
+
+
 @frappe.whitelist(allow_guest=True)
 def batch_push(submissions=None):
 	"""
@@ -360,15 +408,66 @@ def batch_push(submissions=None):
 
 	results = []
 
-	for sub in submissions:
-		template_name = resolve_template_name(sub.get("survey_template"))
-		idempotency_key = sub.get("idempotency_key")
-		if not idempotency_key:
-			clean_tmpl = (template_name or "SURVEY").replace("OQS-", "")
-			idempotency_key = f"OQS-{clean_tmpl}-{uuid.uuid4().hex[:6]}"
-
-		raw_payload_str = frappe.as_json(sub)
+	for raw_sub in submissions:
+		sub = normalize_submission_payload(raw_sub)
+		idempotency_key = (
+			(sub.get("idempotency_key") if sub else None)
+			or (raw_sub.get("idempotency_key") if isinstance(raw_sub, dict) else None)
+			or f"OQS-UNKNOWN-{uuid.uuid4().hex[:6]}"
+		)
+		raw_payload_str = frappe.as_json(raw_sub)
 		payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
+
+		# Check unknown/invalid shape
+		if not sub or not sub.get("survey_template"):
+			err_msg = "Unknown payload shape: missing survey_template"
+			try:
+				existing_audit = frappe.db.get_value(
+					"OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name"
+				)
+				if existing_audit:
+					audit = frappe.get_doc("OmniQuery Sync Audit Log", existing_audit)
+				else:
+					audit = frappe.new_doc("OmniQuery Sync Audit Log")
+					audit.idempotency_key = idempotency_key
+
+				audit.surveyor = resolve_surveyor(current_user)
+				audit.sync_status = "FAILED"
+				audit.client_ip = client_ip
+				audit.payload_hash_sha256 = payload_hash
+				audit.processed_at = now_datetime()
+				audit.raw_payload = raw_payload_str
+				audit.error_message = err_msg
+				if existing_audit:
+					audit.save(ignore_permissions=True)
+				else:
+					audit.insert(ignore_permissions=True)
+				frappe.db.commit()
+			except Exception:
+				pass
+
+			# Dedup Field Error Log on (idempotency_key, error)
+			try:
+				if not frappe.db.exists(
+					"OmniQuery Field Error Log",
+					{"question_code": idempotency_key, "error_message": err_msg},
+				):
+					field_err = frappe.new_doc("OmniQuery Field Error Log")
+					field_err.question_code = idempotency_key
+					field_err.surveyor = str(current_user)
+					field_err.logged_at = now_datetime()
+					field_err.error_message = err_msg
+					field_err.stack_trace = ""
+					field_err.device_info = raw_payload_str[:4000]
+					field_err.insert(ignore_permissions=True)
+					frappe.db.commit()
+			except Exception:
+				pass
+
+			results.append({"idempotency_key": idempotency_key, "status": "INVALID_SHAPE", "error": err_msg})
+			continue
+
+		template_name = resolve_template_name(sub.get("survey_template"))
 
 		# Security: Strict template RBAC validation
 		if not user_has_template_permission(template_name, user=current_user):
@@ -543,19 +642,24 @@ def batch_push(submissions=None):
 				except Exception:
 					pass
 
-			# Record Field Error Log so administrators can inspect failed submissions in Desk
+			# Record Field Error Log so administrators can inspect failed submissions in Desk (Dedup on idempotency_key + error)
 			try:
-				field_err = frappe.new_doc("OmniQuery Field Error Log")
-				field_err.survey_template = template_name
-				field_err.template_version = sub.get("template_version") or 1
-				field_err.question_code = idempotency_key
-				field_err.surveyor = str(sub.get("surveyor") or current_user)
-				field_err.logged_at = now_datetime()
-				field_err.error_message = str(e)[:1000]
-				field_err.stack_trace = frappe.get_traceback()
-				field_err.device_info = raw_payload_str[:4000]
-				field_err.insert(ignore_permissions=True)
-				frappe.db.commit()
+				err_summary = str(e)[:1000]
+				if not frappe.db.exists(
+					"OmniQuery Field Error Log",
+					{"question_code": idempotency_key, "error_message": err_summary},
+				):
+					field_err = frappe.new_doc("OmniQuery Field Error Log")
+					field_err.survey_template = template_name
+					field_err.template_version = sub.get("template_version") or 1
+					field_err.question_code = idempotency_key
+					field_err.surveyor = str(sub.get("surveyor") or current_user)
+					field_err.logged_at = now_datetime()
+					field_err.error_message = err_summary
+					field_err.stack_trace = frappe.get_traceback()
+					field_err.device_info = raw_payload_str[:4000]
+					field_err.insert(ignore_permissions=True)
+					frappe.db.commit()
 			except Exception as field_err_ex:
 				frappe.log_error("Field error log write failed", frappe.get_traceback())
 
