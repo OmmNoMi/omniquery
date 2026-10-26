@@ -1254,50 +1254,54 @@ onUnmounted(() => {
   window.removeEventListener("omniquery:choicemode", onGlobalChoiceMode);
 });
 
-function focusPrimaryInput() {
+function focusPrimaryInput(options = {}) {
+  const preventScroll = options && options.preventScroll !== undefined ? options.preventScroll : false;
   nextTick(() => {
     if (!cardRef.value) return;
+    if (preventScroll === false && typeof cardRef.value.scrollIntoView === "function") {
+      cardRef.value.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     // 0. Quick search bar at top of options
     if (searchInputRef.value) {
-      searchInputRef.value.focus({ preventScroll: true });
+      searchInputRef.value.focus({ preventScroll });
       return;
     }
     // 1. Standard text / number / date input or textarea (exclude quick search inputs)
     const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]):not([data-search-input]), textarea:not([disabled])");
     if (input) {
-      input.focus({ preventScroll: true });
+      input.focus({ preventScroll });
       return;
     }
     // 2. Combobox trigger button: [role="combobox"] (Multi-select or single-select combobox dropdown)
     const comboboxBtn = cardRef.value.querySelector("button[role=combobox]:not([disabled])");
     if (comboboxBtn) {
-      comboboxBtn.focus({ preventScroll: true });
+      comboboxBtn.focus({ preventScroll });
       return;
     }
     // 3. Option buttons grid: focus selected option button or first option button
     const checkedOptionBtn = cardRef.value.querySelector("button[role=radio][aria-checked=true], button[role=checkbox][aria-checked=true]");
     if (checkedOptionBtn) {
-      checkedOptionBtn.focus({ preventScroll: true });
+      checkedOptionBtn.focus({ preventScroll });
       return;
     }
     const firstOptionBtn = cardRef.value.querySelector("button[role=radio], button[role=checkbox]");
     if (firstOptionBtn) {
-      firstOptionBtn.focus({ preventScroll: true });
+      firstOptionBtn.focus({ preventScroll });
       return;
     }
     // 4. Binary switch control
     const switchBtn = cardRef.value.querySelector("button[role=switch]");
     if (switchBtn) {
-      switchBtn.focus({ preventScroll: true });
+      switchBtn.focus({ preventScroll });
       return;
     }
     // 5. Any interactive button inside control area
     const anyBtn = cardRef.value.querySelector("button:not([disabled])");
     if (anyBtn) {
-      anyBtn.focus({ preventScroll: true });
+      anyBtn.focus({ preventScroll });
       return;
     }
-    cardRef.value.focus({ preventScroll: true });
+    cardRef.value.focus({ preventScroll });
   });
 }
 

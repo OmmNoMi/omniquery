@@ -414,4 +414,24 @@ function onFocusOut(e) {
     isInputFocused.value = false;
   }
 }
+
+function focusPrimaryInput(options = {}) {
+  const preventScroll = options.preventScroll !== undefined ? options.preventScroll : false;
+  nextTick(() => {
+    if (!cardRef.value) return;
+    if (preventScroll === false) {
+      cardRef.value.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]), button:not([disabled])");
+    if (input) {
+      input.focus({ preventScroll });
+    } else {
+      cardRef.value.focus({ preventScroll });
+    }
+  });
+}
+
+defineExpose({
+  focus: focusPrimaryInput,
+});
 </script>

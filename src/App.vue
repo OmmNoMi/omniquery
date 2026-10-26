@@ -137,6 +137,7 @@
       <!-- Active Section View inside Survey -->
       <div v-else-if="activeSection">
         <SectionCard
+          ref="sectionCardRef"
           :section="activeSection"
           :currentIndex="activeSectionIndex"
           :totalSections="sections.length"
@@ -160,6 +161,7 @@
           <template v-for="item in displayQuestionItems" :key="item.type === 'group' ? item.group_code : (item.type === 'matrix' ? 'matrix_' + item.question.question_code : item.question.question_code)">
             <GroupedQuestionCard
               v-if="item.type === 'group'"
+              :ref="(el) => setQuestionCardRef(item.group_code, el)"
               :group="item"
               :responses="responses"
               :validationErrors="validationErrors"
@@ -169,6 +171,7 @@
             />
             <MatrixQuestionCard
               v-else-if="item.type === 'matrix'"
+              :ref="(el) => setQuestionCardRef(item.question.question_code, el)"
               :id="'qc_' + item.question.question_code"
               :question="item.question"
               v-model="responses[item.question.question_code]"
@@ -179,6 +182,7 @@
             />
             <QuestionCard
               v-else
+              :ref="(el) => setQuestionCardRef(item.question.question_code, el)"
               :id="'qc_' + item.question.question_code"
               :question="item.question"
               v-model="responses[item.question.question_code]"
@@ -489,7 +493,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import { Button, TextInput, call } from "frappe-ui";
 import {
   AlertTriangle,
@@ -802,6 +806,11 @@ async function init() {
     activeProjectId.value = initialProjectId;
   } else if (initialSurveyId) {
     await loadTemplate(initialSurveyId);
+    if (typeof window !== "undefined" && window.scrollTo) {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+    await nextTick();
+    await focusInitialSurveyElement();
   }
   isLoading.value = false;
 }
@@ -1151,6 +1160,59 @@ async function goHome() {
   await loadAvailableTemplates();
 }
 
+const sectionCardRef = ref(null);
+const questionCardRefs = ref({});
+
+function setQuestionCardRef(code, el) {
+  if (el) {
+    questionCardRefs.value[code] = el;
+  }
+}
+
+async function focusInitialSurveyElement(options = {}) {
+  await nextTick();
+  const isStartNew = options === false || (typeof options === "object" && options.startNew);
+  const hasExistingAnswers = Object.values(responses.value || {}).some(
+    (v) => v !== undefined && v !== null && String(v).trim() !== ""
+  );
+
+  // If starting a fresh survey or there are no answers yet, focus section heading
+  if (isStartNew || !hasExistingAnswers) {
+    sectionCardRef.value?.focusHeading?.();
+    return;
+  }
+
+  // If resuming a draft with existing responses: find the first unanswered required question
+  const currentQuestions = activeQuestions.value || [];
+  let targetQuestion = currentQuestions.find((q) => {
+    if (!q.is_mandatory && !q.reqd) return false;
+    if (typeof isQuestionVisible === "function" && !isQuestionVisible(q)) return false;
+    const val = responses.value[q.question_code];
+    return val === undefined || val === null || String(val).trim() === "";
+  });
+
+  // If all mandatory questions are answered, find any unanswered question
+  if (!targetQuestion) {
+    targetQuestion = currentQuestions.find((q) => {
+      if (typeof isQuestionVisible === "function" && !isQuestionVisible(q)) return false;
+      const val = responses.value[q.question_code];
+      return val === undefined || val === null || String(val).trim() === "";
+    });
+  }
+
+  if (targetQuestion) {
+    const targetCode = targetQuestion._parentCode || targetQuestion.question_code;
+    const cardEl = questionCardRefs.value[targetCode] || questionCardRefs.value[targetQuestion.question_code];
+    if (cardEl && typeof cardEl.focus === "function") {
+      cardEl.focus({ preventScroll: false });
+      return;
+    }
+  }
+
+  // Fallback: section heading
+  sectionCardRef.value?.focusHeading?.();
+}
+
 async function selectSurvey(surveyName, options = {}) {
   activeProjectId.value = "";
   loadingSurveyId.value = surveyName;
@@ -1170,6 +1232,11 @@ async function selectSurvey(surveyName, options = {}) {
   if (window.history && window.history.pushState) {
     window.history.pushState({ type: "survey", surveyName }, "", `/omniquery/${encodeURIComponent(surveyName)}`);
   }
+  if (typeof window !== "undefined" && window.scrollTo) {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }
+  await nextTick();
+  await focusInitialSurveyElement(options);
 }
 
 async function saveOfflineRecord() {
