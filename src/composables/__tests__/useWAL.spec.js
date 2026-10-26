@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useWAL } from "../useWAL";
+import { useWAL, _resetWALInstance } from "../useWAL";
 import { db } from "../../services/db";
 
 describe("useWAL", () => {
   beforeEach(async () => {
+    _resetWALInstance();
     await db.wal.clear();
     await db.responses.clear();
     vi.restoreAllMocks();

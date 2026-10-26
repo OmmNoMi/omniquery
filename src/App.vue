@@ -25,6 +25,27 @@
 
     <!-- 2. Main View Container -->
     <main :class="['flex-1 w-full min-w-0 mx-auto p-3 sm:p-6 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-3xl', activeSection ? 'pb-0' : 'pb-24']">
+      <!-- Auth Expired Banner / Alert -->
+      <div v-if="needsLogin" class="mb-4">
+        <Alert
+          theme="yellow"
+          :title="__('Session expired')"
+          :description="`Sign in again to upload ${pendingWALCount} ${pendingWALCount === 1 ? 'interview' : 'interviews'}`"
+          :dismissable="false"
+        >
+          <template #footer>
+            <div class="mt-2 flex justify-end">
+              <Button
+                @click="handleLoginRedirect"
+                class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 active:scale-95 transition cursor-pointer"
+              >
+                {{ __('Sign In') }}
+              </Button>
+            </div>
+          </template>
+        </Alert>
+      </div>
+
       <!-- Submission Error Alert -->
       <div v-if="submissionError" class="mb-4">
         <Alert
@@ -512,7 +533,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, provide } from "vue";
 import { Alert, Button, TextInput, call } from "frappe-ui";
 import {
   AlertTriangle,
@@ -559,7 +580,9 @@ function announce(message) {
 
 const { __ } = useTranslation();
 const { textSize, cycleTextSize, setTextSize } = useTextScale();
-const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
+const wal = useWAL();
+provide("omniquery_wal", wal);
+const { isOnline, pendingWALCount, needsLogin, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = wal;
 const { gpsCoords, captureGPS } = useGPS();
 const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
 
@@ -1156,6 +1179,12 @@ watch(
 async function onDiscardDraft(templateName) {
   if (confirm(__("Discard saved draft for this survey?"))) {
     await discardDraft(templateName);
+  }
+}
+
+function handleLoginRedirect() {
+  if (typeof window !== "undefined") {
+    window.location.href = "/login?redirect-to=/omniquery";
   }
 }
 

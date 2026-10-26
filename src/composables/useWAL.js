@@ -2,13 +2,34 @@ import { ref, onMounted, onUnmounted, getCurrentInstance } from "vue";
 import { call, fileToBase64 } from "frappe-ui";
 import { db } from "../services/db";
 
-export function useWAL() {
-  const isOnline = ref(typeof navigator !== "undefined" ? navigator.onLine : true);
-  const pendingWALCount = ref(0);
-  const quarantinedWALCount = ref(0);
-  const isSyncing = ref(false);
-  const lastSyncResult = ref(null);
+// Module-level singleton state to prevent duplicate intervals, listeners, and race conditions
+const isOnline = ref(typeof navigator !== "undefined" ? navigator.onLine : true);
+const pendingWALCount = ref(0);
+const quarantinedWALCount = ref(0);
+const isSyncing = ref(false);
+const needsLogin = ref(false);
+const lastSyncResult = ref(null);
 
+let serverBackoffUntil = 0;
+let syncInterval = null;
+let activeConsumers = 0;
+
+export function _resetWALInstance() {
+  if (syncInterval) {
+    clearInterval(syncInterval);
+    syncInterval = null;
+  }
+  isOnline.value = true;
+  pendingWALCount.value = 0;
+  quarantinedWALCount.value = 0;
+  activeConsumers = 0;
+  serverBackoffUntil = 0;
+  needsLogin.value = false;
+  isSyncing.value = false;
+  lastSyncResult.value = null;
+}
+
+export function useWAL() {
   async function updatePendingCount() {
     try {
       pendingWALCount.value = await db.wal.where("status").equals("pending").count();
@@ -81,6 +102,10 @@ export function useWAL() {
   }
 
   async function postWalEntries(entries) {
+    if (Date.now() < serverBackoffUntil) {
+      return { error: "SERVER_BACKOFF", results: [] };
+    }
+
     const submissions = entries
       .map((e) => {
         try {
@@ -90,23 +115,95 @@ export function useWAL() {
             ...payload,
           };
         } catch (err) {
-          db.wal.where("wal_id").equals(e.wal_id).modify({
-            status: "quarantined",
-            quarantine_reason: `Corrupt WAL payload: ${err.message}`,
-            quarantined_at: new Date().toISOString(),
-          }).catch(() => {});
+          db.wal
+            .where("wal_id")
+            .equals(e.wal_id)
+            .modify({
+              status: "quarantined",
+              quarantine_reason: `Corrupt WAL payload: ${err.message}`,
+              quarantined_at: new Date().toISOString(),
+            })
+            .catch(() => {});
           return null;
         }
       })
       .filter(Boolean);
 
-    if (!submissions.length) return null;
+    if (!submissions.length) return { results: [] };
 
     try {
       const res = await call("omniquery.api.sync.batch_push", { submissions });
-      return res ? { message: res } : null;
-    } catch (e) {
-      return null;
+      const results = (res && (Array.isArray(res) ? res : res.results)) || [];
+      return { results, message: res };
+    } catch (err) {
+      // 1. Auth failure: 401, 403, 417
+      if (err.status === 401 || err.status === 403 || err.status === 417) {
+        needsLogin.value = true;
+        return { error: "AUTH_EXPIRED", status: err.status, results: [] };
+      }
+
+      // 2. Server failure: 5xx
+      if (err.status >= 500) {
+        serverBackoffUntil = Date.now() + 30000;
+        return { error: "SERVER_ERROR", status: err.status, results: [] };
+      }
+
+      // 3. Client failure (4xx): Isolate individual entries if batch had multiple
+      if (err.status >= 400 && err.status < 500) {
+        if (entries.length > 1) {
+          const individualResults = [];
+          for (const entry of entries) {
+            let singleSub;
+            try {
+              const p = JSON.parse(entry.payload_json);
+              singleSub = { idempotency_key: p.idempotency_key || entry.wal_id, ...p };
+            } catch (e) {
+              continue;
+            }
+
+            try {
+              const singleRes = await call("omniquery.api.sync.batch_push", { submissions: [singleSub] });
+              const sResults = (singleRes && (Array.isArray(singleRes) ? singleRes : singleRes.results)) || [];
+              if (sResults.length) {
+                individualResults.push(...sResults);
+              } else {
+                individualResults.push({ idempotency_key: singleSub.idempotency_key, status: "SUCCESS" });
+              }
+            } catch (singleErr) {
+              if (singleErr.status === 401 || singleErr.status === 403 || singleErr.status === 417) {
+                needsLogin.value = true;
+                break;
+              } else if (singleErr.status >= 500) {
+                serverBackoffUntil = Date.now() + 30000;
+                break;
+              } else {
+                individualResults.push({
+                  idempotency_key: singleSub.idempotency_key,
+                  status: "FAILED_ATTEMPT",
+                  error: singleErr.message || "Client error (4xx)",
+                });
+              }
+            }
+          }
+          return { results: individualResults };
+        } else {
+          let pKey = entries[0].wal_id;
+          try {
+            pKey = JSON.parse(entries[0].payload_json).idempotency_key || entries[0].wal_id;
+          } catch (e) {}
+          return {
+            results: [
+              {
+                idempotency_key: pKey,
+                status: "FAILED_ATTEMPT",
+                error: err.message || "Client error (4xx)",
+              },
+            ],
+          };
+        }
+      }
+
+      return { error: "NETWORK_ERROR", results: [] };
     }
   }
 
@@ -154,22 +251,38 @@ export function useWAL() {
 
   async function syncWAL() {
     if (isSyncing.value || !isOnline.value) return null;
+    if (Date.now() < serverBackoffUntil) return null;
     isSyncing.value = true;
     let totalSynced = 0;
     const allResults = [];
+    const failedWalIds = new Set();
     try {
       while (true) {
-        const entries = await getPendingWalEntries();
+        const rawEntries = await getPendingWalEntries();
+        const entries = rawEntries.filter((e) => !failedWalIds.has(e.wal_id));
         if (!entries.length) break;
         const data = await postWalEntries(entries);
-        const msg = data && data.message;
-        const results = (msg && (Array.isArray(msg) ? msg : msg.results)) || [];
+        if (data && (data.error === "AUTH_EXPIRED" || data.error === "SERVER_BACKOFF" || data.error === "SERVER_ERROR")) {
+          break;
+        }
+        const results = (data && (data.results || (data.message && (Array.isArray(data.message) ? data.message : data.message.results)))) || [];
         if (!results.length) break;
         await markSynced(results, entries);
+        for (const r of results) {
+          if (r.status === "REJECTED" || r.status === "FAILED_ATTEMPT") {
+            const matched = entries.find((e) => {
+              try {
+                return JSON.parse(e.payload_json).idempotency_key === r.idempotency_key || e.wal_id === r.idempotency_key;
+              } catch (err) {
+                return e.wal_id === r.idempotency_key;
+              }
+            });
+            if (matched) failedWalIds.add(matched.wal_id);
+          }
+        }
         const chunkSynced = results.filter((r) => r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED").length;
         totalSynced += chunkSynced;
         allResults.push(...results);
-        // Break if no successful progress was made to avoid infinite retry loop
         if (chunkSynced === 0) break;
       }
       try {
@@ -183,44 +296,6 @@ export function useWAL() {
       isSyncing.value = false;
       await updatePendingCount();
     }
-  }
-
-  async function syncAllDrafts() {
-    const isGuest =
-      typeof window !== "undefined" &&
-      window.frappe &&
-      (window.frappe.user === "Guest" || (window.frappe.session && window.frappe.session.user === "Guest"));
-    if (isGuest) return 0;
-
-    let syncedCount = 0;
-    try {
-      const drafts = await db.responses.where("status").equals("Draft").toArray();
-      for (const draft of drafts) {
-        if (!draft.responses || Object.keys(draft.responses).length === 0) continue;
-        const items = Object.entries(draft.responses).map(([code, val]) => ({
-          question_code: code,
-          question_label: code,
-          value: val,
-        }));
-        const payload = {
-          idempotency_key: draft.response_uid,
-          survey_template: draft.template_name,
-          template_version: draft.template_version || 1,
-          respondent: draft.responses.respondent_name || draft.responses.entrepreneur_name || "",
-          surveyor: (window.frappe && window.frappe.user) || "Administrator",
-          captured_at_local: draft.updated_at || draft.created_at || new Date().toISOString(),
-          items,
-        };
-        const res = await call("omniquery.api.sync.sync_draft", { draft: payload });
-        if (res !== undefined && res !== null) {
-          await db.responses.where("response_uid").equals(draft.response_uid).modify({ synced: true });
-          syncedCount++;
-        }
-      }
-    } catch (e) {
-      console.warn("syncAllDrafts error:", e);
-    }
-    return syncedCount;
   }
 
   async function syncPendingAudio(targetResponseUid = null) {
@@ -264,18 +339,54 @@ export function useWAL() {
             });
             uploadedCount++;
           }
-        } catch (uploadErr) {
-          console.warn(`Failed to upload audio for ${rec.response_uid}:`, uploadErr);
+        } catch (singleErr) {
+          console.warn("Failed syncing individual audio:", singleErr);
         }
       }
-    } catch (e) {
-      console.warn("syncPendingAudio error:", e);
+    } catch (err) {
+      console.warn("syncPendingAudio error:", err);
     }
     return uploadedCount;
   }
 
+  async function syncAllDrafts() {
+    if (!isOnline.value) return 0;
+    let draftsCount = 0;
+    try {
+      const allDrafts = await db.responses.where("status").equals("Draft").toArray();
+      for (const draft of allDrafts) {
+        try {
+          const tmpl = await db.templates.get(draft.template_name);
+          const payload = {
+            idempotency_key: draft.response_uid,
+            survey_template: draft.template_name,
+            template_version: tmpl?.version || 1,
+            respondent: draft.responses?.respondent_name || draft.responses?.entrepreneur_name || "",
+            surveyor: (window.frappe && (window.frappe.user || (window.frappe.session && window.frappe.session.user))) || "Administrator",
+            captured_at_local: draft.updated_at || new Date().toISOString(),
+            items: Object.entries(draft.responses || {}).map(([code, val]) => ({
+              question_code: code,
+              value: val,
+            })),
+          };
+          const res = await call("omniquery.api.sync.sync_draft", { payload });
+          if (res && res.status === "SUCCESS") {
+            await db.responses.where("response_uid").equals(draft.response_uid).modify({ synced: true });
+            draftsCount++;
+          }
+        } catch (draftErr) {
+          console.warn(`Failed syncing draft ${draft.response_uid}:`, draftErr);
+        }
+      }
+    } catch (err) {
+      console.warn("syncAllDrafts error:", err);
+    }
+    return draftsCount;
+  }
+
   async function forceSyncAll() {
-    if (isSyncing.value) return { status: "IN_PROGRESS", message: "Sync already in progress" };
+    if (isSyncing.value || !isOnline.value) return null;
+    if (Date.now() < serverBackoffUntil) return null;
     isSyncing.value = true;
     const summary = {
       walCount: 0,
@@ -287,16 +398,32 @@ export function useWAL() {
       message: "",
     };
 
+    const failedWalIds = new Set();
     try {
       while (true) {
-        const entries = await getPendingWalEntries();
+        const rawEntries = await getPendingWalEntries();
+        const entries = rawEntries.filter((e) => !failedWalIds.has(e.wal_id));
         if (!entries.length) break;
         summary.walCount += entries.length;
         const data = await postWalEntries(entries);
-        const msg = data && data.message;
-        const results = (msg && (Array.isArray(msg) ? msg : msg.results)) || [];
+        if (data && (data.error === "AUTH_EXPIRED" || data.error === "SERVER_BACKOFF" || data.error === "SERVER_ERROR")) {
+          break;
+        }
+        const results = (data && (data.results || (data.message && (Array.isArray(data.message) ? data.message : data.message.results)))) || [];
         if (!results.length) break;
         await markSynced(results, entries);
+        for (const r of results) {
+          if (r.status === "REJECTED" || r.status === "FAILED_ATTEMPT") {
+            const matched = entries.find((e) => {
+              try {
+                return JSON.parse(e.payload_json).idempotency_key === r.idempotency_key || e.wal_id === r.idempotency_key;
+              } catch (err) {
+                return e.wal_id === r.idempotency_key;
+              }
+            });
+            if (matched) failedWalIds.add(matched.wal_id);
+          }
+        }
         const chunkSynced = results.filter((r) => r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED").length;
         summary.walSynced += chunkSynced;
         summary.walErrors += results.length - chunkSynced;
@@ -357,8 +484,6 @@ export function useWAL() {
     }
   }
 
-  let syncInterval = null;
-
   function handleOnline() {
     isOnline.value = true;
     syncWAL();
@@ -371,7 +496,7 @@ export function useWAL() {
   function handleVisibilityChange() {
     if (typeof document !== "undefined" && document.visibilityState === "visible") {
       updatePendingCount().then(() => {
-        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
+        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value && Date.now() >= serverBackoffUntil) {
           syncWAL();
         }
       });
@@ -380,31 +505,40 @@ export function useWAL() {
 
   if (getCurrentInstance()) {
     onMounted(() => {
-      if (typeof window !== "undefined") {
+      activeConsumers++;
+      if (typeof window !== "undefined" && activeConsumers === 1) {
         window.addEventListener("online", handleOnline);
         window.addEventListener("offline", handleOffline);
         document.addEventListener("visibilitychange", handleVisibilityChange);
       }
       updatePendingCount().then(() => {
-        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
+        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value && Date.now() >= serverBackoffUntil) {
           syncWAL();
         }
       });
 
-      // Continuous background auto-sync check every 15 seconds
-      syncInterval = setInterval(() => {
-        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
-          syncWAL();
-        }
-      }, 15000);
+      // Continuous background auto-sync check every 15 seconds (singleton interval)
+      if (!syncInterval) {
+        syncInterval = setInterval(() => {
+          if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value && Date.now() >= serverBackoffUntil) {
+            syncWAL();
+          }
+        }, 15000);
+      }
     });
 
     onUnmounted(() => {
-      if (syncInterval) clearInterval(syncInterval);
-      if (typeof window !== "undefined") {
-        window.removeEventListener("online", handleOnline);
-        window.removeEventListener("offline", handleOffline);
-        document.removeEventListener("visibilitychange", handleVisibilityChange);
+      activeConsumers = Math.max(0, activeConsumers - 1);
+      if (activeConsumers === 0) {
+        if (syncInterval) {
+          clearInterval(syncInterval);
+          syncInterval = null;
+        }
+        if (typeof window !== "undefined") {
+          window.removeEventListener("online", handleOnline);
+          window.removeEventListener("offline", handleOffline);
+          document.removeEventListener("visibilitychange", handleVisibilityChange);
+        }
       }
     });
   }
@@ -414,6 +548,7 @@ export function useWAL() {
     pendingWALCount,
     quarantinedWALCount,
     isSyncing,
+    needsLogin,
     lastSyncResult,
     queueWAL,
     syncWAL,
