@@ -14,6 +14,7 @@
   "start_date",
   "end_date",
   "target_beneficiaries",
+  "daily_target",
   "section_scope",
   "district_scope",
   "description",
@@ -72,6 +73,12 @@
    "fieldname": "target_beneficiaries",
    "fieldtype": "Int",
    "label": "Target Beneficiaries"
+  },
+  {
+   "fieldname": "daily_target",
+   "fieldtype": "Int",
+   "label": "Daily Target (Surveys/Day)",
+   "description": "Default daily target number of completed surveys per surveyor"
   },
   {
    "fieldname": "section_scope",
