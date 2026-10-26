@@ -6,7 +6,7 @@ import ProjectPage from "../project/ProjectPage.vue";
 vi.mock("frappe-ui", () => ({
   Button: {
     name: "Button",
-    template: "<button><slot /></button>",
+    template: "<button v-bind='$attrs'><slot /></button>",
   },
   call: vi.fn().mockResolvedValue({}),
 }));
@@ -144,6 +144,59 @@ describe("ProjectPage Component (Issue #14)", () => {
       expect(wrapper.text()).toContain("Active");
       expect(wrapper.text()).not.toContain("Active Field Project");
       expect(wrapper.text()).not.toContain(rawWsId);
+    });
+  });
+
+  describe("Project tabs semantics and single helpline action (Issue #17)", () => {
+    it("enforces role=tablist, roving tabindex, aria-selected, and no duplicate helpline tab", async () => {
+      const wrapper = mount(ProjectPage, {
+        props: {
+          projectId: "PROJ-TABS",
+          templates: [
+            {
+              project: "PROJ-TABS",
+              project_name: "Tabs Accessibility Study",
+              sop_sections: "<p>Field protocols here.</p>",
+              helpline_phone: "1800999000",
+            },
+          ],
+          cachedTemplatesMap: {},
+          isOnline: true,
+        },
+      });
+
+      // 1. Single action for helpline: exists in hero card as tel link, NOT in tab list
+      const helplineLinks = wrapper.findAll("a[href^='tel:']");
+      expect(helplineLinks.length).toBe(1);
+
+      // The tablist container must have role="tablist"
+      const tablist = wrapper.find("[role='tablist']");
+      expect(tablist.exists()).toBe(true);
+
+      // Tab list must NOT have a duplicate helpline tab
+      const tabButtons = tablist.findAll("[role='tab']");
+      expect(tabButtons.length).toBe(2); // Surveys and SOPs only
+      expect(tabButtons.some((b) => b.text().includes("Helpline"))).toBe(false);
+
+      // 2. Tab semantics & roving tabindex
+      const surveysTab = tabButtons[0];
+      const sopsTab = tabButtons[1];
+
+      expect(surveysTab.attributes("aria-selected")).toBe("true");
+      expect(surveysTab.attributes("tabindex")).toBe("0");
+      expect(sopsTab.attributes("aria-selected")).toBe("false");
+      expect(sopsTab.attributes("tabindex")).toBe("-1");
+
+      // 3. Tab panels must have role="tabpanel"
+      const panels = wrapper.findAll("[role='tabpanel']");
+      expect(panels.length).toBeGreaterThanOrEqual(1);
+
+      // 4. Keyboard navigation (ArrowRight moves focus and selection)
+      await surveysTab.trigger("keydown", { key: "ArrowRight" });
+      expect(sopsTab.attributes("aria-selected")).toBe("true");
+      expect(sopsTab.attributes("tabindex")).toBe("0");
+      expect(surveysTab.attributes("aria-selected")).toBe("false");
+      expect(surveysTab.attributes("tabindex")).toBe("-1");
     });
   });
 });

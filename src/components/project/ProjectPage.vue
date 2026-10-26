@@ -82,35 +82,28 @@
     </div>
 
     <!-- 3. Tabbed Content Navigation -->
-    <div v-if="projectMeta.sop_sections || projectMeta.helpline_phone || projectMeta.helpline_email" class="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md pt-1 pb-1">
-      <div class="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto no-scrollbar">
+    <div v-if="availableTabs.length > 1" class="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md pt-1 pb-1">
+      <div
+        role="tablist"
+        aria-label="Project Sections"
+        class="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto no-scrollbar"
+      >
         <Button
-          @click="activeTab = 'surveys'"
-          class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-          :class="activeTab === 'surveys' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
+          v-for="t in availableTabs"
+          :key="t.id"
+          :id="'tab-' + t.id"
+          role="tab"
+          type="button"
+          :aria-selected="activeTab === t.id ? 'true' : 'false'"
+          :aria-controls="'panel-' + t.id"
+          :tabindex="activeTab === t.id ? 0 : -1"
+          @click="activeTab = t.id"
+          @keydown="onTabKeydown($event, t.id)"
+          class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-t-lg"
+          :class="activeTab === t.id ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
-          <ClipboardList class="w-3.5 h-3.5" />
-          <span>{{ __('Surveys in this Project') }} ({{ projectSurveys.length }})</span>
-        </Button>
-
-        <Button
-          v-if="projectMeta.sop_sections"
-          @click="activeTab = 'sops'"
-          class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-          :class="activeTab === 'sops' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
-        >
-          <Scroll class="w-3.5 h-3.5" />
-          <span>{{ __('Field SOPs & Protocols') }}</span>
-        </Button>
-
-        <Button
-          v-if="projectMeta.helpline_phone || projectMeta.helpline_email"
-          @click="activeTab = 'helpline'"
-          class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-          :class="activeTab === 'helpline' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
-        >
-          <Phone class="w-3.5 h-3.5" />
-          <span>{{ __('Supervisor Helpline') }}</span>
+          <component :is="t.icon" class="w-3.5 h-3.5" />
+          <span>{{ t.label }}</span>
         </Button>
       </div>
     </div>
@@ -118,7 +111,14 @@
     <!-- 4. Tab Content Panels -->
     <div class="space-y-4">
       <!-- Tab 1: Surveys in this Project -->
-      <div v-if="activeTab === 'surveys'" class="space-y-3">
+      <div
+        v-if="activeTab === 'surveys'"
+        id="panel-surveys"
+        role="tabpanel"
+        aria-labelledby="tab-surveys"
+        tabindex="0"
+        class="space-y-3 focus:outline-none"
+      >
         <div v-if="projectSurveys.length > 0" class="flex items-center justify-between text-xs px-1 font-bold text-slate-600 dark:text-slate-300 flex-wrap gap-2">
           <div class="flex items-center gap-2">
             <span>{{ __('Select a survey to start collecting field data') }}</span>
@@ -211,7 +211,14 @@
       </div>
 
       <!-- Tab 2: Field SOPs & Protocols -->
-      <div v-if="activeTab === 'sops' && projectMeta.sop_sections" class="space-y-4">
+      <div
+        v-if="activeTab === 'sops' && projectMeta.sop_sections"
+        id="panel-sops"
+        role="tabpanel"
+        aria-labelledby="tab-sops"
+        tabindex="0"
+        class="space-y-4 focus:outline-none"
+      >
         <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div class="flex items-center gap-2 text-slate-800 dark:text-slate-100 font-extrabold text-sm">
             <Scroll class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -220,72 +227,12 @@
           <div class="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed" v-html="projectMeta.sop_sections" />
         </div>
       </div>
-
-      <!-- Tab 3: Supervisor Helpline -->
-      <div v-if="activeTab === 'helpline' && (projectMeta.helpline_phone || projectMeta.helpline_email)" class="space-y-4">
-        <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-          <div class="flex items-center gap-3.5">
-            <div class="w-14 h-14 rounded-2xl bg-emerald-600 text-white font-bold text-2xl flex items-center justify-center shrink-0 shadow-xs">
-              <Phone class="w-7 h-7" />
-            </div>
-            <div>
-              <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                {{ __('Field Support & Supervisor Helpline') }}
-              </h3>
-              <p v-if="projectMeta.helpline_hours" class="text-xs text-slate-500 dark:text-slate-400">
-                {{ projectMeta.helpline_hours }}
-              </p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-            <a
-              v-if="projectMeta.helpline_phone"
-              :href="'tel:' + projectMeta.helpline_phone"
-              class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition block text-left group cursor-pointer"
-            >
-              <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                {{ __('Helpline Phone') }}
-              </div>
-              <div class="text-base sm:text-lg font-mono font-black text-emerald-600 dark:text-emerald-400 mt-1 group-hover:underline">
-                {{ projectMeta.helpline_phone }}
-              </div>
-              <div class="text-[11px] text-slate-500 mt-0.5">
-                {{ __('Direct telephone dispatch to field supervisor') }}
-              </div>
-            </a>
-
-            <a
-              v-if="projectMeta.helpline_email"
-              :href="'mailto:' + projectMeta.helpline_email"
-              class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition block text-left group cursor-pointer"
-            >
-              <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                {{ __('Email Dispatch') }}
-              </div>
-              <div class="text-sm sm:text-base font-mono font-black text-emerald-600 dark:text-emerald-400 mt-1 group-hover:underline break-all">
-                {{ projectMeta.helpline_email }}
-              </div>
-              <div class="text-[11px] text-slate-500 mt-0.5">
-                {{ __('Official escalation & technical queries') }}
-              </div>
-            </a>
-          </div>
-
-          <div v-if="projectMeta.district_scope" class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs flex items-center justify-between gap-2 flex-wrap">
-            <span class="text-slate-500 dark:text-slate-400">{{ __('Target Scope') }}:</span>
-            <span class="font-extrabold text-slate-800 dark:text-slate-200">
-              {{ projectMeta.district_scope }}
-            </span>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, nextTick } from "vue";
 import { Button, call } from "frappe-ui";
 import {
   Landmark,
@@ -329,6 +276,54 @@ const emit = defineEmits([
 const { __ } = useTranslation();
 const activeTab = ref("surveys");
 const remoteProjectMeta = ref(null);
+
+const availableTabs = computed(() => {
+  const list = [
+    {
+      id: "surveys",
+      label: `${__("Surveys in this Project")} (${projectSurveys.value.length})`,
+      icon: ClipboardList,
+    },
+  ];
+  if (projectMeta.value.sop_sections) {
+    list.push({
+      id: "sops",
+      label: __("Field SOPs & Protocols"),
+      icon: Scroll,
+    });
+  }
+  return list;
+});
+
+function onTabKeydown(e, tabId) {
+  const tabs = availableTabs.value;
+  const currentIndex = tabs.findIndex((t) => t.id === tabId);
+  if (currentIndex === -1) return;
+
+  let nextIndex = currentIndex;
+  if (e.key === "ArrowRight") {
+    nextIndex = (currentIndex + 1) % tabs.length;
+    e.preventDefault();
+  } else if (e.key === "ArrowLeft") {
+    nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    e.preventDefault();
+  } else if (e.key === "Home") {
+    nextIndex = 0;
+    e.preventDefault();
+  } else if (e.key === "End") {
+    nextIndex = tabs.length - 1;
+    e.preventDefault();
+  }
+
+  if (nextIndex !== currentIndex) {
+    const nextTab = tabs[nextIndex];
+    activeTab.value = nextTab.id;
+    nextTick(() => {
+      const el = typeof document !== "undefined" ? document.getElementById(`tab-${nextTab.id}`) : null;
+      if (el) el.focus();
+    });
+  }
+}
 
 // Count of surveys in this project ready offline
 const cachedSurveysCount = computed(() => {
