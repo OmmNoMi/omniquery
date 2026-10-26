@@ -177,6 +177,7 @@ function handleBackdropClick() {
 
 function handleKeyDown(e) {
   if (props.isOpen && props.closeOnEsc && e.key === "Escape") {
+    e.stopPropagation();
     emit("close");
   }
 }

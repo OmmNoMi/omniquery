@@ -386,14 +386,13 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch, toRef } from "vue";
+import { computed, ref, onMounted, watch, toRef, inject } from "vue";
 import { Button } from "frappe-ui";
 import { X, Zap, ChevronDown, Trash2, FileText, Calendar, Check, Copy } from "lucide-vue-next";
 import JSZip from "jszip";
 import BaseModal from "../common/BaseModal.vue";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
-import { useWAL } from "../../composables/useWAL";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db, compactLocalStorage } from "../../services/db";
 
@@ -419,7 +418,12 @@ const props = defineProps({
 const emit = defineEmits(["close", "sync-all", "resume-draft"]);
 
 const { __ } = useTranslation();
-const { forceSyncAll, retryQuarantinedEntry } = useWAL();
+const omniqueryContext = inject("omniqueryContext", null);
+const forceSyncAll = omniqueryContext?.forceSyncAll || (() => emit("sync-all"));
+const retryQuarantinedEntry = omniqueryContext?.retryQuarantinedEntry || (async (walId) => {
+  await db.wal.where("wal_id").equals(walId).modify({ status: "pending", attempts: 0, last_error: null });
+  emit("sync-all");
+});
 
 // Universal scroll locking: strictly prevents background scrolling while open
 useScrollLock(toRef(props, "isOpen"));

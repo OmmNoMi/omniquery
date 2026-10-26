@@ -23,7 +23,7 @@ export function useSurveyApp() {
 
   const { __ } = useTranslation();
   const { textSize, cycleTextSize, setTextSize } = useTextScale();
-  const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
+  const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio, retryQuarantinedEntry } = useWAL();
   const { gpsCoords, captureGPS } = useGPS();
   const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
 
@@ -826,6 +826,8 @@ export function useSurveyApp() {
   const omniqueryContext = {
     isOnline,
     pendingWALCount,
+    forceSyncAll,
+    retryQuarantinedEntry,
     textSize,
     progressPercent,
     isRecording,
