@@ -25,6 +25,29 @@
 
     <!-- 2. Main View Container -->
     <main :class="['flex-1 w-full min-w-0 mx-auto p-3 sm:p-6 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-3xl', activeSection ? 'pb-0' : 'pb-24']">
+      <!-- Submission Error Alert -->
+      <div v-if="submissionError" class="mb-4">
+        <Alert
+          theme="red"
+          :title="__('Failed to save survey locally')"
+          :description="submissionError"
+          :dismissable="true"
+          @dismiss="submissionError = null"
+        >
+          <template #footer>
+            <div class="mt-2 flex justify-end">
+              <Button
+                @click="submitForm"
+                :disabled="isSubmitting"
+                class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shrink-0 active:scale-95 transition cursor-pointer"
+              >
+                {{ __('Try again') }}
+              </Button>
+            </div>
+          </template>
+        </Alert>
+      </div>
+
       <!-- Loading State with Branded OmniQuery Logo & Spinner -->
       <div v-if="isLoading" class="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center select-none">
         <div class="relative mb-3">
@@ -490,7 +513,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
-import { Button, TextInput, call } from "frappe-ui";
+import { Alert, Button, TextInput, call } from "frappe-ui";
 import {
   AlertTriangle,
   Check,
@@ -573,6 +596,7 @@ const {
 } = useSurvey();
 
 const isLoading = ref(true);
+const submissionError = ref(null);
 const loadingSurveyId = ref("");
 const downloadingSurveyId = ref("");
 
@@ -1149,6 +1173,7 @@ async function goHome() {
   activeProjectId.value = "";
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
+  submissionError.value = null;
   isSubmissionSynced.value = false;
   currentDraftId.value = "";
   responses.value = {};
@@ -1282,22 +1307,30 @@ async function submitForm() {
   }
   if (draftSyncTimer) clearTimeout(draftSyncTimer);
   isSubmitting.value = true;
+  submissionError.value = null;
 
   const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name || "";
   const draftKey = currentDraftId.value || generateSurveyId(tmplName);
 
   try {
-    const recordedBlob = await stopRecording();
-    if (recordedBlob && recordedBlob.size > 0) {
-      await saveAudioForResponse(draftKey, recordedBlob);
+    try {
+      const recordedBlob = await stopRecording();
+      if (recordedBlob && recordedBlob.size > 0) {
+        await saveAudioForResponse(draftKey, recordedBlob);
+      }
+    } catch (audioErr) {
+      console.warn("Failed saving audio recording:", audioErr);
     }
-  } catch (audioErr) {
-    console.warn("Failed saving audio recording:", audioErr);
-  }
 
-  await saveOfflineRecord();
-  isSubmitting.value = false;
-  isSubmitted.value = true;
+    await saveOfflineRecord();
+    isSubmitted.value = true;
+  } catch (err) {
+    console.error("Failed to submit survey:", err);
+    isSubmitted.value = false;
+    submissionError.value = err?.message || __("Storage may be full or unavailable. Please try again.");
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 function resetSurvey() {
@@ -1306,6 +1339,7 @@ function resetSurvey() {
   responses.value = {};
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
+  submissionError.value = null;
   isSubmissionSynced.value = false;
   submittedResponseId.value = "";
   hasCopiedCode.value = false;
