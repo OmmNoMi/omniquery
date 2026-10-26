@@ -184,6 +184,7 @@
               v-model="responses[item.question.question_code]"
               :errorMessage="validationErrors[item.question.question_code]"
               :notApplicable="!isQuestionVisible(item.question)"
+              :allResponses="responses"
               @answered="onQuestionAnswered(item.question)"
               @next="onQuestionAnswered(item.question)"
               @capture-gps="captureGPS"
