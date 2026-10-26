@@ -38,10 +38,19 @@ def check_html_file(file_path):
 	return output
 
 
+MAX_SHELL_LINES = 40
+
+
 def main():
 	root_directory = Path(__file__).resolve().parent.parent / "omniquery" / "www"
 	has_failures = False
 	for html_path in sorted(root_directory.glob("*.html")):
+		lines = html_path.read_text(encoding="utf-8").splitlines()
+		if len(lines) > MAX_SHELL_LINES:
+			has_failures = True
+			print(f"\n{html_path}:")
+			print(f"  Shell length is {len(lines)} lines (exceeds limit of {MAX_SHELL_LINES} lines)")
+
 		errors = check_html_file(html_path)
 		if errors:
 			has_failures = True
@@ -50,7 +59,7 @@ def main():
 				print(f"  {error}")
 	if has_failures:
 		sys.exit(1)
-	print("✓ Zero structural HTML5 errors found in omniquery/www/*.html")
+	print("✓ Zero structural HTML5 errors found in omniquery/www/*.html (all shells <= 40 lines)")
 
 
 if __name__ == "__main__":
