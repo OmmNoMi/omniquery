@@ -834,6 +834,7 @@ const rangeStep = computed(() => {
 });
 
 const rangeUnit = computed(() => {
+  if (props.question.unit) return props.question.unit;
   const label = (props.question.label_en || "").toLowerCase();
   if (label.includes("year")) return "Years";
   if (label.includes("month")) return "Months";
