@@ -119,7 +119,7 @@
     <div class="space-y-4">
       <!-- Tab 1: Surveys in this Project -->
       <div v-if="activeTab === 'surveys'" class="space-y-3">
-        <div class="flex items-center justify-between text-xs px-1 font-bold text-slate-600 dark:text-slate-300 flex-wrap gap-2">
+        <div v-if="projectSurveys.length > 0" class="flex items-center justify-between text-xs px-1 font-bold text-slate-600 dark:text-slate-300 flex-wrap gap-2">
           <div class="flex items-center gap-2">
             <span>{{ __('Select a survey to start collecting field data') }}</span>
             <span>·</span>
@@ -381,13 +381,13 @@ const projectMeta = computed(() => {
 // Filter templates that belong to this project
 const projectSurveys = computed(() => {
   const targetId = props.projectId;
-  const filtered = props.templates.filter(
+  const filtered = (props.templates || []).filter(
     (t) =>
       t.project === targetId ||
       t.project_name === targetId ||
       (projectMeta.value.name && t.project === projectMeta.value.name)
   );
-  return filtered.length > 0 ? filtered : props.templates;
+  return filtered;
 });
 
 async function fetchProjectMeta() {

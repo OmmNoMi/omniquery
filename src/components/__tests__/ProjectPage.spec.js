@@ -64,4 +64,42 @@ describe("ProjectPage Component (Issue #14)", () => {
     expect(telLinks.length).toBeGreaterThanOrEqual(1);
     expect(telLinks[0].attributes("href")).toBe("tel:1800999000");
   });
+
+  describe("Project templates filtering (Issue #15)", () => {
+    it("shows empty state and zero surveys when project has no templates of its own", () => {
+      const wrapper = mount(ProjectPage, {
+        props: {
+          projectId: "PROJ-EMPTY",
+          templates: [
+            {
+              name: "T-OTHER-1",
+              template_name: "T-OTHER-1",
+              project: "PROJ-OTHER",
+              project_name: "Other Enterprise Study",
+              title: "Other Project Survey",
+            },
+            {
+              name: "T-OTHER-2",
+              template_name: "T-OTHER-2",
+              project: "PROJ-OTHER-2",
+              project_name: "Second Other Study",
+              title: "Second Other Survey",
+            },
+          ],
+          cachedTemplatesMap: {},
+          isOnline: true,
+        },
+      });
+
+      // Must NOT display surveys belonging to other projects
+      expect(wrapper.text()).not.toContain("Other Project Survey");
+      expect(wrapper.text()).not.toContain("Second Other Survey");
+
+      // Header survey count must be 0
+      expect(wrapper.text()).toContain("0 Surveys Assigned");
+
+      // Empty state copy must be visible
+      expect(wrapper.text()).toContain("No published surveys found for this project");
+    });
+  });
 });
