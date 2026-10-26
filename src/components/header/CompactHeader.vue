@@ -173,7 +173,7 @@
               </div>
               <div>
                 <h3 class="text-sm font-bold text-slate-900 leading-tight">{{ userDisplayName }}</h3>
-                <p class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
+                <p v-if="userEmail && userEmail !== userDisplayName" class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
                 <div class="flex items-center gap-1.5 mt-1">
                   <span
                     :class="[
@@ -381,6 +381,7 @@ import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
+import { useSession } from "../../composables/useSession";
 
 const props = defineProps({
   surveyTitle: {
@@ -424,24 +425,12 @@ const showConfigModal = ref(false);
 useScrollLock(showConfigModal);
 const activeTheme = ref("light");
 
-const userEmail = computed(() => {
-  return (window.frappe && window.frappe.user) || "surveyor@ommnomi.in";
-});
-
-const userDisplayName = computed(() => {
-  const f = window.frappe;
-  if (f && f.user_info && f.user && f.user_info[f.user]?.fullname) {
-    return f.user_info[f.user].fullname;
-  }
-  return (f && f.user) || "Surveyor";
-});
-
+const session = useSession();
+const isGuest = session.isGuest;
+const userEmail = session.email;
+const userDisplayName = session.displayName;
 const userName = userDisplayName;
-
-const userInitial = computed(() => {
-  const name = userDisplayName.value || "S";
-  return name.charAt(0).toUpperCase();
-});
+const userInitial = session.userInitial;
 
 function setTextScale(size) {
   emit("set-text-size", size);
