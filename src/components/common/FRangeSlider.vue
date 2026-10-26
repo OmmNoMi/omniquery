@@ -32,7 +32,7 @@
           :aria-valuetext="`${displayValue} ${unit ? __(unit) : ''}`.trim()"
           :aria-describedby="ariaDescribedby"
           @update:modelValue="(val) => emit('update:modelValue', Number(val))"
-          class="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-grab active:cursor-grabbing accent-emerald-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 transition shadow-inner"
+          class="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-grab active:cursor-grabbing accent-emerald-600 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/30 transition shadow-inner"
         />
       </div>
 
@@ -70,7 +70,7 @@
         @click="selectValue(val)"
         @keydown="handleKeydown"
         :class="[
-          'py-3 text-center rounded-xl border-2 text-sm sm:text-base font-bold transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500',
+          'py-3 text-center rounded-xl border-2 text-sm sm:text-base font-bold transition active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500',
           numericValue === val
             ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-slate-900 font-black'
             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-emerald-400'

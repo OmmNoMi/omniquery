@@ -16,7 +16,7 @@
     @touchcancel="onTouchCancel"
     @contextmenu.prevent="openConfigModal"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-28',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-default scroll-mt-28',
       notApplicable
         ? 'bg-slate-50/70 dark:bg-slate-900/60 border-dashed border-slate-300 dark:border-slate-700 opacity-75'
         : errorMessage
@@ -176,7 +176,7 @@
           </div>
 
           <div
-            class="grid gap-2.5 focus:outline-none outline-none"
+            class="grid gap-2.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400/50 rounded-xl outline-none"
             :class="displayedGridOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
             :role="isMultiSelect ? 'group' : 'radiogroup'"
             @keydown="onGridKeydown"

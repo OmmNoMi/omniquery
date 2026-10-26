@@ -15,7 +15,7 @@
         :aria-label="__('Add') + ' ₹' + increment.toLocaleString()"
         @keydown="handleChipKeydown($event, idx)"
         @click="addAmount(increment, idx)"
-        class="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-black text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 active:scale-95 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer select-none"
+        class="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-black text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 active:scale-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:border-emerald-500 cursor-pointer select-none"
       >
         +₹{{ increment.toLocaleString() }}
       </Button>
@@ -26,7 +26,7 @@
         tabindex="-1"
         @keydown="handleClearKeydown"
         @click="reset"
-        class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 active:scale-95 transition focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer select-none"
+        class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 active:scale-95 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 cursor-pointer select-none"
       >
         {{ __('Clear') }}
       </Button>

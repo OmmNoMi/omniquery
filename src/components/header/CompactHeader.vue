@@ -191,7 +191,7 @@
             <!-- Accessible WCAG 2.2 AA Close Button (44x44px target) -->
             <Button
               @click="showConfigModal = false"
-              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
               :aria-label="__('Close settings')"
               :title="__('Close settings')"
             >

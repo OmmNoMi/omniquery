@@ -14,7 +14,7 @@
         :tabindex="modelValue === star || (modelValue === 0 && star === 1) ? 0 : -1"
         @click="selectStar(star)"
         @keydown="handleKeydown"
-        class="p-2 text-3xl transition-transform active:scale-125 focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-lg cursor-pointer"
+        class="p-2 text-3xl transition-transform active:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded-lg cursor-pointer"
         :aria-label="`${star} of ${maxStars}`"
       >
         <Star
