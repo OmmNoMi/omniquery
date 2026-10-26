@@ -87,6 +87,7 @@ def _get_sidebar_overview_items():
 		{"type": "Section Break", "label": "Overview", "icon": "home", "indent": 1, "collapsible": 1},
 		{"type": "Link", "label": "Home", "link_type": "Workspace", "link_to": "OmniQuery", "icon": "home", "child": 1},
 		{"type": "Link", "label": "Field App (PWA)", "link_type": "URL", "url": "/omniquery", "icon": "tablet-smartphone", "child": 1},
+		{"type": "Link", "label": "Analytics & Telemetry", "link_type": "Page", "link_to": "omniquery-analytics", "icon": "activity", "child": 1},
 	]
 
 
