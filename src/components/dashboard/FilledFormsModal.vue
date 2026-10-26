@@ -386,7 +386,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch, toRef } from "vue";
+import { computed, ref, onMounted, watch, toRef, inject } from "vue";
 import { Button } from "frappe-ui";
 import { X, Zap, ChevronDown, Trash2, FileText, Calendar, Check, Copy } from "lucide-vue-next";
 import JSZip from "jszip";
@@ -419,7 +419,8 @@ const props = defineProps({
 const emit = defineEmits(["close", "sync-all", "resume-draft"]);
 
 const { __ } = useTranslation();
-const { forceSyncAll, retryQuarantinedEntry } = useWAL();
+const wal = inject("omniquery_wal", null) || useWAL();
+const { forceSyncAll, retryQuarantinedEntry } = wal;
 
 // Universal scroll locking: strictly prevents background scrolling while open
 useScrollLock(toRef(props, "isOpen"));
