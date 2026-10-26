@@ -181,7 +181,7 @@
         <h4 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug break-words">
           {{ resolveResponseTitle(topDraft.responses, topDraft.response_title_format, topDraft.title || topDraft.template_name) }}
         </h4>
-        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
+        <p v-if="(topDraft.title || topDraft.template_name) && (topDraft.title || topDraft.template_name).trim().toLowerCase() !== resolveResponseTitle(topDraft.responses, topDraft.response_title_format, topDraft.title || topDraft.template_name).trim().toLowerCase()" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
           <ClipboardList class="w-3.5 h-3.5 text-slate-400" />
           <span>{{ topDraft.title || topDraft.template_name }}</span>
         </p>

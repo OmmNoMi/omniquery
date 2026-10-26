@@ -85,4 +85,46 @@ describe("FRangeSlider Roving Tabindex & Accessibility (WCAG 2.2 AA)", () => {
     await radios[2].trigger("keydown", { key: "End" });
     expect(wrapper.emitted("update:modelValue")[1]).toEqual([5]);
   });
+
+  describe("Unanswered range question state (Issue #21)", () => {
+    it("renders as 'Not answered' with no option marked aria-checked=true when modelValue is empty", () => {
+      const wrapper = mount(FRangeSlider, {
+        props: {
+          modelValue: "",
+          min: 0,
+          max: 7,
+          step: 1,
+          format: "buttons",
+        },
+      });
+
+      // Display shows "Not answered"
+      expect(wrapper.text()).toContain("Not answered");
+
+      // No radio button has aria-checked="true"
+      const checkedRadios = wrapper.findAll('[role="radio"][aria-checked="true"]');
+      expect(checkedRadios.length).toBe(0);
+
+      // The first radio has tabindex 0 for roving tabindex entry
+      const radios = wrapper.findAll('[role="radio"]');
+      expect(radios[0].attributes("tabindex")).toBe("0");
+
+      // Unit is empty unless explicitly provided
+      expect(wrapper.text()).not.toContain("Years");
+    });
+
+    it("renders unit only when passed and answered", () => {
+      const wrapper = mount(FRangeSlider, {
+        props: {
+          modelValue: 4,
+          min: 0,
+          max: 10,
+          unit: "Months",
+        },
+      });
+
+      expect(wrapper.text()).toContain("4");
+      expect(wrapper.text()).toContain("Months");
+    });
+  });
 });
