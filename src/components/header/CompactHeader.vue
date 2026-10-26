@@ -376,7 +376,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, inject } from "vue";
 import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
@@ -391,31 +391,16 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  isOnline: {
-    type: Boolean,
-    default: true,
-  },
-  pendingWALCount: {
-    type: Number,
-    default: 0,
-  },
-  textSize: {
-    type: String,
-    default: "md",
-  },
-  progressPercent: {
-    type: Number,
-    default: 0,
-  },
-  isRecording: {
-    type: Boolean,
-    default: false,
-  },
-  isAudioPaused: {
-    type: Boolean,
-    default: false,
-  },
 });
+
+const omniqueryContext = inject("omniqueryContext", null);
+
+const isOnline = computed(() => (omniqueryContext?.isOnline ? omniqueryContext.isOnline.value : true));
+const pendingWALCount = computed(() => (omniqueryContext?.pendingWALCount ? omniqueryContext.pendingWALCount.value : 0));
+const textSize = computed(() => (omniqueryContext?.textSize ? omniqueryContext.textSize.value : "md"));
+const progressPercent = computed(() => (omniqueryContext?.progressPercent ? omniqueryContext.progressPercent.value : 0));
+const isRecording = computed(() => (omniqueryContext?.isRecording ? omniqueryContext.isRecording.value : false));
+const isAudioPaused = computed(() => (omniqueryContext?.isAudioPaused ? omniqueryContext.isAudioPaused.value : false));
 
 const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-text-size", "toggle-audio"]);
 const { __, currentLang, setLanguage } = useTranslation();
