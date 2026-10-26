@@ -72,6 +72,7 @@
    "default": "Submitted",
    "fieldname": "survey_status",
    "fieldtype": "Select",
+   "allow_on_submit": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
@@ -146,12 +147,15 @@
  "links": [],
  "modified": "2026-09-10 01:00:00.000000",
  "modified_by": "Administrator",
+ "is_submittable": 1,
  "module": "OmniQuery",
  "name": "OmniQuery Response",
  "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -161,12 +165,14 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
    "create": 1,
    "read": 1,
    "role": "All",
+   "submit": 1,
    "write": 1
   }
  ],

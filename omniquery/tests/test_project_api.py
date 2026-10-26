@@ -29,11 +29,11 @@ class TestProjectAPI(unittest.TestCase):
 				"title": "SHG Test Survey Unit",
 				"project": proj_name,
 				"version": 1,
-				"status": "Published",
 				"sections": [{"section_code": "SEC_1", "section_title": "Basic Section"}],
 				"questions": [{"section_code": "SEC_1", "question_code": "q1", "label_en": "Question 1"}],
 			}
 		).insert(ignore_permissions=True)
+		template.submit()
 
 		details = get_project_details(proj_name)
 		self.assertIn("project", details)

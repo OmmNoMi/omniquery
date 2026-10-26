@@ -24,8 +24,8 @@ class TestSupervisorAudit(FrappeTestCase):
 			"title": "Speedrun Audit Test Template",
 			"project": self.proj,
 			"version": 1,
-			"status": "Published",
 		}).insert(ignore_permissions=True)
+		t.submit()
 		self.tmpl = t.name
 		self.test_records.append(("OmniQuery Template", self.tmpl))
 
@@ -33,9 +33,15 @@ class TestSupervisorAudit(FrappeTestCase):
 		for dt, dn in reversed(self.test_records):
 			try:
 				if frappe.db.exists(dt, dn):
+					doc = frappe.get_doc(dt, dn)
+					if getattr(doc, "docstatus", 0) == 1:
+						doc.cancel()
 					frappe.delete_doc(dt, dn, force=True)
 			except Exception:
-				pass
+				try:
+					frappe.db.delete(dt, {"name": dn})
+				except Exception:
+					pass
 		frappe.db.commit()
 
 	def test_automated_speedrun_outlier_detection(self):

@@ -27,7 +27,7 @@ class TestSchemaCompiler(unittest.TestCase):
 				"title": "Test Women Dairy Assessment 2026",
 				"project": "PROJ-Test Dairy Initiative",
 				"version": 1,
-				"status": "Published",
+				"status": "Draft",
 				"sections": [
 					{
 						"section_code": "SEC_GENERAL",

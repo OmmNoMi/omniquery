@@ -18,6 +18,16 @@ class OmniQueryTemplate(Document):
 			project_sequence = project_parts[-1] if len(project_parts) >= 2 and project_parts[-1].isdigit() else "001"
 		self.name = frappe.model.naming.make_autoname(f"OQS-{workspace_sequence}-{project_sequence}-.###")
 
+	def validate(self):
+		if self.docstatus == 0 and not self.flags.in_submit:
+			if self.amended_from:
+				self.status = "Draft"
+			elif self.status == "Published":
+				frappe.throw(
+					frappe._("A template with status 'Published' must have docstatus 1. Use Submit to publish."),
+					frappe.ValidationError,
+				)
+
 	def before_save(self):
 		self._validate_immutability()
 		self._compile_schema()

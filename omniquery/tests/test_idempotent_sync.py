@@ -20,15 +20,15 @@ class TestIdempotentSync(unittest.TestCase):
 			).insert(ignore_permissions=True)
 
 		if not frappe.db.exists("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}):
-			frappe.get_doc(
+			t = frappe.get_doc(
 				{
 					"doctype": "OmniQuery Template",
 					"title": "Test Women Dairy Assessment 2026",
 					"project": "PROJ-Test Dairy Initiative",
 					"version": 1,
-					"status": "Published",
 				}
 			).insert(ignore_permissions=True)
+			t.submit()
 
 		# Setup dummy surveyor
 		if not frappe.db.exists("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"}):

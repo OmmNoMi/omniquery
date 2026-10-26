@@ -62,7 +62,7 @@ class TestRajivikaBenchmark(unittest.TestCase):
 	def test_04_schema_compilation_benchmark(self):
 		tmpl = frappe.get_doc("OmniQuery Template", RAJIVIKA_TEMPLATE)
 		start_time = time.perf_counter()
-		tmpl.before_save()
+		tmpl._compile_schema()
 		elapsed_ms = (time.perf_counter() - start_time) * 1000
 
 		self.assertLess(elapsed_ms, 50.0, f"Compilation took {elapsed_ms:.2f}ms (>50ms limit)")
