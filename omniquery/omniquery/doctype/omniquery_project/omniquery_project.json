@@ -17,6 +17,10 @@
   "section_scope",
   "district_scope",
   "description",
+  "helpline_phone",
+  "helpline_email",
+  "sop_sections",
+  "training_materials",
   "members_tab",
   "members"
  ],
@@ -88,6 +92,28 @@
    "fieldname": "description",
    "fieldtype": "Text Editor",
    "label": "Project Description / Objectives"
+  },
+  {
+   "fieldname": "helpline_phone",
+   "fieldtype": "Phone",
+   "label": "Helpline Phone",
+   "description": "Field supervisor / helpline phone number"
+  },
+  {
+   "fieldname": "helpline_email",
+   "fieldtype": "Data",
+   "label": "Helpline Email",
+   "options": "Email"
+  },
+  {
+   "fieldname": "sop_sections",
+   "fieldtype": "Text Editor",
+   "label": "Standard Operating Procedures (SOPs)"
+  },
+  {
+   "fieldname": "training_materials",
+   "fieldtype": "Small Text",
+   "label": "Training Materials & Notes"
   },
   {
    "fieldname": "members_tab",
