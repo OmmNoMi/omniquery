@@ -1,1340 +1,166 @@
 <template>
-  <div class="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
+  <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
     <!-- Live Region for Screen Readers (WCAG 2.2 AA) -->
     <div id="omniquery-live-region" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
-      {{ liveAnnouncementText }}
+      {{ s.liveAnnouncementText }}
     </div>
 
-    <!-- 1. Sleek Native Mobile Header with Official OmniQuery Cloud Brand -->
+    <!-- 1. Sleek Native Mobile Header (At most 2 props; session & WAL injected) -->
     <CompactHeader
-      :surveyTitle="activeTemplate ? activeTemplate.title : (activeProjectId ? (activeProjectTitle || __('Project Details')) : '')"
-      :showBack="Boolean(activeTemplate || activeProjectId)"
-      :isOnline="isOnline"
-      :pendingWALCount="pendingWALCount"
-      :textSize="textSize"
-      :progressPercent="activeTemplate ? progressPercent : 0"
-      :isRecording="isRecording"
-      :isAudioPaused="isAudioPaused"
-      @exit="onExit"
-      @home="onHome"
-      @open-wal="showWALDrawer = true"
-      @cycle-text-size="cycleTextSize"
-      @set-text-size="setTextSize"
-      @toggle-audio="toggleAudio"
+      :surveyTitle="s.headerTitle"
+      :showBack="Boolean(s.activeTemplate || s.activeProjectId)"
+      @exit="s.onExit"
+      @home="s.onHome"
+      @open-wal="s.showWALDrawer = true"
+      @cycle-text-size="s.cycleTextSize"
+      @set-text-size="s.setTextSize"
+      @toggle-audio="s.toggleAudio"
     />
 
     <!-- 2. Main View Container -->
-    <main :class="['flex-1 w-full min-w-0 mx-auto p-3 sm:p-6 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-3xl', activeSection ? 'pb-0' : 'pb-24']">
-      <!-- Loading State with Branded OmniQuery Logo & Spinner -->
-      <div v-if="isLoading" class="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center select-none">
+    <main :class="['flex-1 w-full min-w-0 mx-auto p-3 sm:p-6 transition-all', s.activeProjectId ? 'max-w-4xl' : 'max-w-3xl', s.activeSection ? 'pb-0' : 'pb-24']">
+      <!-- Loading State -->
+      <div v-if="s.isLoading" class="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center select-none">
         <div class="relative mb-3">
-          <img
-            :src="'/assets/omniquery/icons/desktop_icons/solid/omniquery.svg'"
-            alt="OmniQuery"
-            class="w-16 h-16 rounded-2xl shadow-sm"
-            onerror="this.onerror=null; this.src='/assets/omniquery/pwa/icon-192.png';"
-          />
+          <img :src="'/assets/omniquery/icons/desktop_icons/solid/omniquery.svg'" alt="OmniQuery" class="w-16 h-16 rounded-2xl shadow-sm" onerror="this.onerror=null; this.src='/assets/omniquery/pwa/icon-192.png';" />
           <div class="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-slate-100 dark:border-slate-900" />
         </div>
         <h2 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">OmniQuery</h2>
-        <p class="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-4">
-          Field Intelligence Platform
-        </p>
+        <p class="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider mb-4">Field Intelligence Platform</p>
         <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-semibold">
           <div class="animate-spin inline-block w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full" />
-          <span>{{ __('Loading surveys & workspace...') }}</span>
+          <span>{{ s.__('Loading surveys & workspace...') }}</span>
         </div>
       </div>
 
-      <!-- Submitted Success Card -->
-      <div v-else-if="isSubmitted" class="p-6 sm:p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 shadow-sm space-y-4">
-        <div class="w-16 h-16 bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto text-3xl font-bold shadow-xs">
-          <Check class="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-        </div>
-        <div>
-          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">
-            {{ isGuest ? __('Thank You!') : __('Survey Submitted') }}
-          </h2>
-          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-md mx-auto mt-1">
-            {{ isGuest ? __('Thank you for taking the time to complete this survey. Your response has been submitted successfully.') : __('Response recorded successfully in offline queue.') }}
-          </p>
-        </div>
-
-        <!-- Survey Response Code / Reference ID Card -->
-        <div class="max-w-md mx-auto p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-left space-y-2.5 shadow-2xs">
-          <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-            <span class="uppercase tracking-wider font-bold text-[10px] text-slate-400 dark:text-slate-500">
-              {{ __('Survey Response Code') }}
-            </span>
-            <Button
-              v-if="submittedResponseId"
-              @click="copyResponseCode"
-              class="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:underline cursor-pointer active:scale-95 transition"
-            >
-              <Check v-if="hasCopiedCode" class="w-3.5 h-3.5" />
-              <ClipboardList v-else class="w-3.5 h-3.5" />
-              <span>{{ hasCopiedCode ? __('Copied') : __('Copy Code') }}</span>
-            </Button>
-          </div>
-
-          <div class="flex items-center justify-between gap-2 bg-white dark:bg-slate-900 px-3.5 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700">
-            <code class="font-mono text-xs sm:text-sm font-extrabold text-emerald-700 dark:text-emerald-400 select-all tracking-tight break-all">
-              {{ submittedResponseId || __('Generating...') }}
-            </code>
-            <span
-              class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 flex items-center gap-1"
-              :class="isSubmissionSynced ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'"
-            >
-              <Check v-if="isSubmissionSynced" class="w-3 h-3 text-emerald-600" />
-              <Zap v-else class="w-3 h-3 text-amber-500" />
-              <span>{{ isSubmissionSynced ? __('Synced') : __('Queued') }}</span>
-            </span>
-          </div>
-
-          <!-- Direct Sync Action if in offline queue -->
-          <div v-if="!isSubmissionSynced" class="flex items-center justify-between gap-2 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-3 py-2 rounded-lg text-xs">
-            <span class="text-amber-800 dark:text-amber-300 font-medium">
-              {{ isOnline ? __('Pending server database sync') : __('Stored locally. Will auto-sync when online') }}
-            </span>
-            <Button
-              v-if="isOnline"
-              @click="handleSyncSubmittedNow"
-              :disabled="isSyncingSubmission"
-              class="px-2.5 py-1 rounded bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shrink-0 active:scale-95 transition cursor-pointer disabled:opacity-50 flex items-center gap-1"
-            >
-              <Zap v-if="!isSyncingSubmission" class="w-3 h-3" />
-              <span>{{ isSyncingSubmission ? __('Syncing...') : __('Sync Now') }}</span>
-            </Button>
-          </div>
-
-          <div v-if="activeTemplate" class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1 border-t border-slate-200/60 dark:border-slate-700/60">
-            <span class="truncate pr-2 flex items-center gap-1">
-              <ClipboardList class="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span class="truncate">{{ activeTemplate.title || activeTemplate.name }}</span>
-            </span>
-            <span class="shrink-0 font-mono">{{ submittedTimestamp || 'Just now' }}</span>
-          </div>
-        </div>
-
-        <div class="flex justify-center gap-3 pt-2">
-          <Button
-            @click="resetSurvey"
-            class="px-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 active:scale-95 transition shadow-xs cursor-pointer flex items-center gap-1.5"
-          >
-            <Plus class="w-4 h-4" />
-            <span>{{ isGuest ? __('Fill Again') : (__('New Response') || 'New Response') }}</span>
-          </Button>
-          <Button
-            v-if="!isGuest"
-            @click="goHome"
-            class="px-5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-slate-700 dark:text-slate-300 text-sm hover:bg-slate-50 dark:hover:bg-slate-800 active:scale-95 transition cursor-pointer"
-          >
-            {{ __('All Surveys') || 'All Surveys' }}
-          </Button>
-        </div>
-      </div>
-
-      <!-- Active Section View inside Survey -->
-      <div v-else-if="activeSection">
-        <SectionCard
-          :section="activeSection"
-          :currentIndex="activeSectionIndex"
-          :totalSections="sections.length"
-          :isComplete="isSectionComplete(activeSection)"
-          :isSubmitting="isSubmitting"
-          :autoAdvance="autoAdvance"
-          :isFullForm="isFullForm"
-          :isFocusMode="isFocusMode"
-          :isRecording="isRecording"
-          :isAudioPaused="isAudioPaused"
-          :isGuest="isGuest"
-          @open-focus-mode="openFocusMode"
-          @toggle-focus-mode="toggleFocusMode"
-          @toggle-auto-advance="autoAdvance = !autoAdvance"
-          @toggle-full-form="toggleFullForm"
-          @toggle-audio="toggleAudio"
-          @prev="handlePrevSection"
-          @next="handleNextSection"
-          @submit="submitForm"
-        >
-          <template v-for="item in displayQuestionItems" :key="item.type === 'group' ? item.group_code : (item.type === 'matrix' ? 'matrix_' + item.question.question_code : item.question.question_code)">
-            <GroupedQuestionCard
-              v-if="item.type === 'group'"
-              :group="item"
-              :responses="responses"
-              :validationErrors="validationErrors"
-              :notApplicable="item.questions && item.questions.every(q => !isQuestionVisible(q))"
-              @update-response="onGroupResponseUpdate"
-              @answered="onQuestionAnswered"
-            />
-            <MatrixQuestionCard
-              v-else-if="item.type === 'matrix'"
-              :id="'qc_' + item.question.question_code"
-              :question="item.question"
-              v-model="responses[item.question.question_code]"
-              :errorMessage="validationErrors[item.question.question_code]"
-              :notApplicable="!isQuestionVisible(item.question)"
-              @answered="onQuestionAnswered(item.question)"
-              @next="onQuestionAnswered(item.question)"
-            />
-            <QuestionCard
-              v-else
-              :id="'qc_' + item.question.question_code"
-              :question="item.question"
-              v-model="responses[item.question.question_code]"
-              :errorMessage="validationErrors[item.question.question_code]"
-              :notApplicable="!isQuestionVisible(item.question)"
-              @answered="onQuestionAnswered(item.question)"
-              @next="onQuestionAnswered(item.question)"
-              @capture-gps="captureGPS"
-            />
-          </template>
-        </SectionCard>
-
-        <!-- Focus Mode / Auto Form Popup Modal -->
-        <FocusModeModal
-          :isOpen="isFocusMode"
-          :questions="activeQuestions"
-          :currentIndex="focusQuestionIndex"
-          :responses="responses"
-          :validationErrors="validationErrors"
-          :autoAdvance="autoAdvance"
-          :isFullForm="isFullForm"
-          :sectionTitle="activeSection ? activeSection.section_title || activeSection.section_code : ''"
-          @close="isFocusMode = false"
-          @prev-question="focusQuestionIndex = Math.max(0, focusQuestionIndex - 1)"
-          @next-question="focusQuestionIndex = Math.min(activeQuestions.length - 1, focusQuestionIndex + 1)"
-          @finish-section="onFocusModeFinishSection"
-          @update-response="onFocusModeUpdateResponse"
-          @toggle-auto-advance="autoAdvance = !autoAdvance"
-          @toggle-full-form="toggleFullForm"
-          @capture-gps="captureGPS"
-        />
-      </div>
-
-      <!-- Dedicated Full Project Page (Route: /omniquery/project/:projectId) -->
-      <ProjectPage
-        v-else-if="activeProjectId"
-        :projectId="activeProjectId"
-        :templates="availableTemplates"
-        :cachedTemplatesMap="cachedTemplatesMap"
-        :isOnline="isOnline"
-        @back="closeProjectPage"
-        @select-survey="selectSurvey"
-        @download-survey="handleDownloadSurvey"
-        @download-project-surveys="handleDownloadProjectSurveys"
+      <!-- Submitted Success View -->
+      <SuccessView
+        v-else-if="s.isSubmitted"
+        :isGuest="s.isGuest" :submittedResponseId="s.submittedResponseId" :hasCopiedCode="s.hasCopiedCode"
+        :isSubmissionSynced="s.isSubmissionSynced" :isOnline="s.isOnline" :isSyncingSubmission="s.isSyncingSubmission"
+        :activeTemplate="s.activeTemplate" :submittedTimestamp="s.submittedTimestamp"
+        @copy-response-code="s.copyResponseCode" @sync-submitted-now="s.handleSyncSubmittedNow"
+        @reset-survey="s.resetSurvey" @go-home="s.goHome"
       />
 
-      <!-- Modern, High-Clarity Survey Catalog Hub, Project Header & Surveyor KPI Dashboard -->
-      <div v-else class="space-y-4">
-        <!-- 0. Active Project Header Section with Persistent Switcher & Training Material Link -->
-        <ProjectHeaderCard
-          :templates="availableTemplates"
-          :cachedTemplatesMap="cachedTemplatesMap"
-          :isOnline="isOnline"
-          v-model:selectedProject="selectedProject"
-          @open-project-details="openProjectPage"
-          @download-project-surveys="handleDownloadProjectSurveys"
-        />
+      <!-- Active Survey View -->
+      <SurveyView
+        v-else-if="s.activeSection"
+        :activeSection="s.activeSection" :activeSectionIndex="s.activeSectionIndex" :sections="s.sections"
+        :responses="s.responses" :validationErrors="s.validationErrors" :isSubmitting="s.isSubmitting"
+        :autoAdvance="s.autoAdvance" :isFullForm="s.isFullForm" :isFocusMode="s.isFocusMode"
+        :isRecording="s.isRecording" :isAudioPaused="s.isAudioPaused" :isGuest="s.isGuest"
+        :displayQuestionItems="s.displayQuestionItems" :activeQuestions="s.activeQuestions"
+        :focusQuestionIndex="s.focusQuestionIndex" :isQuestionVisible="s.isQuestionVisible" :isSectionComplete="s.isSectionComplete"
+        @open-focus-mode="s.openFocusMode" @toggle-focus-mode="s.toggleFocusMode"
+        @toggle-auto-advance="s.autoAdvance = !s.autoAdvance" @toggle-full-form="s.toggleFullForm"
+        @toggle-audio="s.toggleAudio" @prev-section="s.handlePrevSection" @next-section="s.handleNextSection"
+        @submit-form="s.submitForm" @group-response-update="s.onGroupResponseUpdate"
+        @question-answered="s.onQuestionAnswered" @capture-gps="s.captureGPS"
+        @close-focus-mode="s.isFocusMode = false"
+        @prev-focus-question="s.focusQuestionIndex = Math.max(0, s.focusQuestionIndex - 1)"
+        @next-focus-question="s.focusQuestionIndex = Math.min(s.activeQuestions.length - 1, s.focusQuestionIndex + 1)"
+        @finish-focus-section="s.onFocusModeFinishSection" @update-focus-response="s.onFocusModeUpdateResponse"
+      />
 
-        <!-- 1. Surveyor Daily KPI Dashboard -->
-        <SurveyorDashboard
-          :pendingWALCount="pendingWALCount"
-          :isOnline="isOnline"
-          :activeDrafts="activeDrafts"
-          :templates="availableTemplates"
-          :selectedProject="selectedProject"
-          @open-wal="showWALDrawer = true"
-          @sync-now="triggerSync"
-          @resume-draft="selectSurvey"
-          @start-new-survey="selectSurvey($event, { startNew: true })"
-          @open-filled-forms="openFilteredFilledForms('all')"
-          @open-filtered-forms="openFilteredFilledForms"
-        />
+      <!-- Dedicated Project Page View -->
+      <ProjectPage
+        v-else-if="s.activeProjectId"
+        :projectId="s.activeProjectId" :templates="s.availableTemplates" :cachedTemplatesMap="s.cachedTemplatesMap" :isOnline="s.isOnline"
+        @back="s.closeProjectPage" @select-survey="s.selectSurvey" @download-survey="s.handleDownloadSurvey" @download-project-surveys="s.handleDownloadProjectSurveys"
+      />
 
-        <!-- 2. Survey Templates Section Header & Search/Filter Controls -->
-        <div class="space-y-2.5 pt-1">
-          <div class="flex items-center justify-between text-xs font-bold px-1">
-            <span class="uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-              <ClipboardList class="w-3.5 h-3.5 text-slate-400" />
-              <span>{{ __('Available Surveys') }} ({{ filteredTemplates.length }})</span>
-            </span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <div class="relative flex-1">
-              <TextInput
-                type="text"
-                :modelValue="searchQuery"
-                @update:modelValue="(val) => (searchQuery = val)"
-                :placeholder="__('Search surveys...')"
-                class="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-medium shadow-xs focus:border-emerald-500 focus:outline-none transition text-slate-900 dark:text-white"
-              />
-              <Search class="absolute left-3 top-3 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-              <Button
-                v-if="searchQuery"
-                @click="searchQuery = ''"
-                class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
-                :title="__('Clear search')"
-                :aria-label="__('Clear search')"
-                :label="__('Clear search')"
-              >
-                <X class="w-3.5 h-3.5" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-
-
-        <!-- Empty State -->
-        <div v-if="filteredTemplates.length === 0" class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
-          <p class="text-sm font-bold text-slate-700">{{ __('No active surveys available.') }}</p>
-          <p class="text-xs text-slate-500">{{ __('Check your network connection or permissions.') }}</p>
-        </div>
-
-        <!-- Sleek, Native-Grade Survey Cards -->
-        <div
-          v-for="tmpl in filteredTemplates"
-          :key="tmpl.name"
-          class="p-5 bg-white rounded-2xl border border-slate-200/90 hover:border-emerald-500/80 shadow-xs hover:shadow-md transition space-y-3"
-        >
-          <!-- Category Pill, Version & Draft Badge -->
-          <div class="flex items-center justify-between gap-2">
-            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/60">
-              {{ tmpl.target_category || 'Survey' }}
-            </span>
-            <div class="flex items-center gap-2">
-              <span
-                v-if="activeDrafts[tmpl.name]"
-                class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs"
-              >
-                <FileText class="w-3 h-3 text-amber-600" />
-                <span>{{ __('Draft') }}: {{ activeDrafts[tmpl.name].progress_percent || 0 }}%</span>
-              </span>
-              <span class="text-xs font-medium text-slate-400">
-                v{{ tmpl.version }}.0
-              </span>
-            </div>
-          </div>
-
-          <!-- Clean Survey Title -->
-          <h2 class="text-base sm:text-lg font-bold text-slate-900 leading-snug">
-            {{ tmpl.title }}
-          </h2>
-
-          <!-- Workspace & Project Context Line -->
-          <div class="text-xs text-slate-500 font-medium flex items-center gap-1.5 flex-wrap">
-            <span v-if="tmpl.workspace_title" class="inline-flex items-center gap-1">
-              <Landmark class="w-3 h-3 text-slate-400" />
-              <span>{{ tmpl.workspace_title }}</span>
-            </span>
-            <span v-if="tmpl.workspace_title && tmpl.project_name">·</span>
-            <span v-if="tmpl.project_name" class="inline-flex items-center gap-1">
-              <Folder class="w-3 h-3 text-slate-400" />
-              <span>{{ tmpl.project_name }}</span>
-            </span>
-          </div>
-
-          <!-- Bottom Action Row -->
-          <div class="flex items-center justify-between pt-3 border-t border-slate-100 flex-wrap gap-2">
-            <div class="flex items-center gap-1.5 flex-wrap">
-              <span
-                v-if="cachedTemplatesMap[tmpl.name]"
-                class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400"
-                :title="__('Survey questions and schema downloaded in device memory')"
-              >
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                <span>{{ __('Offline Ready') }} ({{ cachedTemplatesMap[tmpl.name].questionCount }} {{ __('Q') }})</span>
-              </span>
-              <Button
-                v-else-if="isOnline"
-                @click.stop="handleDownloadSurvey(tmpl.name)"
-                :disabled="downloadingSurveyId === tmpl.name"
-                class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs disabled:opacity-50"
-                :title="__('Pre-cache survey questions so you can fill it without internet')"
-              >
-                <span v-if="downloadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full"></span>
-                <Download v-else class="w-3.5 h-3.5" />
-                <span>{{ downloadingSurveyId === tmpl.name ? __('Downloading...') : __('Download Offline') }}</span>
-              </Button>
-              <span
-                v-else
-                class="text-[11px] font-medium text-amber-700 dark:text-amber-400 inline-flex items-center gap-1"
-              >
-                <AlertTriangle class="w-3.5 h-3.5 text-amber-500" />
-                <span>{{ __('Requires Internet to Download') }}</span>
-              </span>
-            </div>
-            <div class="flex items-center gap-2">
-              <Button
-                v-if="activeDrafts[tmpl.name]"
-                @click.stop="selectSurvey(tmpl.name, { startNew: true })"
-                class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1"
-                :title="__('Start a fresh blank survey without discarding saved drafts')"
-              >
-                <Plus class="w-3.5 h-3.5" />
-                <span>{{ __('Start New') }}</span>
-              </Button>
-              <Button
-                @click="selectSurvey(tmpl.name)"
-                :disabled="loadingSurveyId === tmpl.name"
-                class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-              >
-                <span v-if="loadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
-                <span>{{ loadingSurveyId === tmpl.name ? __('Loading...') : (activeDrafts[tmpl.name] ? __('Resume Survey') : __('Start Survey')) }}</span>
-                <span v-if="loadingSurveyId !== tmpl.name">→</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <!-- Survey Catalog Hub & Surveyor KPI Dashboard View -->
+      <CatalogView
+        v-else
+        :availableTemplates="s.availableTemplates" :cachedTemplatesMap="s.cachedTemplatesMap" :isOnline="s.isOnline"
+        :pendingWALCount="s.pendingWALCount" :activeDrafts="s.activeDrafts" :downloadingSurveyId="s.downloadingSurveyId"
+        :loadingSurveyId="s.loadingSurveyId" v-model:selectedProject="s.selectedProject" :selectedWorkspace="s.selectedWorkspace"
+        @open-project-details="s.openProjectPage" @download-project-surveys="s.handleDownloadProjectSurveys"
+        @download-survey="s.handleDownloadSurvey" @select-survey="s.selectSurvey"
+        @open-wal="s.showWALDrawer = true" @open-filled-forms="s.openFilteredFilledForms" @sync-now="s.triggerSync"
+      />
     </main>
 
-    <!-- WAL Drawer / Offline Queue Modal (Universal BaseModal with built-in scroll lock) -->
-    <BaseModal
-      :isOpen="showWALDrawer"
-      size="md"
-      :title="__('Offline Sync Queue')"
-      @close="showWALDrawer = false"
-    >
+    <!-- Offline WAL Queue Drawer Modal -->
+    <BaseModal :isOpen="s.showWALDrawer" size="md" :title="s.__('Offline Sync Queue')" @close="s.showWALDrawer = false">
       <div class="p-5 sm:p-6 space-y-4">
         <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1">
           <div class="font-extrabold flex items-center justify-between">
-            <span>{{ pendingWALCount }} {{ __('Pending Submissions In Device Memory') }}</span>
+            <span>{{ s.pendingWALCount }} {{ s.__('Pending Submissions In Device Memory') }}</span>
           </div>
           <p class="text-[11px] text-amber-800/80 dark:text-amber-300">
-            {{ __('These records are saved safely in local offline storage. When connected, tap Force Sync All to push to the server.') }}
+            {{ s.__('These records are saved safely in local offline storage. When connected, tap Force Sync All to push to the server.') }}
           </p>
         </div>
-
         <div class="space-y-2 pt-1">
-          <Button
-            @click="triggerSync"
-            :disabled="!isOnline"
-            class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
-          >
+          <Button @click="s.triggerSync" :disabled="!s.isOnline" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer">
             <Zap class="w-4 h-4" />
-            <span>{{ __('Force Sync All Now') }}</span>
+            <span>{{ s.__('Sync all records now') }}</span>
           </Button>
-
-          <Button
-            @click="showWALDrawer = false; showFilledFormsModal = true"
-            class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
-          >
+          <Button @click="s.showWALDrawer = false; s.showFilledFormsModal = true" class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
             <ClipboardList class="w-4 h-4 text-emerald-600" />
-            <span>{{ __('Open Recovery & Verification Suite') }}</span>
+            <span>{{ s.__('View saved responses') }}</span>
           </Button>
         </div>
       </div>
     </BaseModal>
 
-    <!-- Native In-App Exit Confirmation Dialog (Universal BaseModal with built-in scroll lock) -->
-    <BaseModal
-      :isOpen="showExitDialog"
-      size="sm"
-      hideHeader
-      :showCloseButton="false"
-      @close="showExitDialog = false"
-    >
+    <!-- Exit Survey Dialog -->
+    <BaseModal :isOpen="s.showExitDialog" size="sm" hideHeader :showCloseButton="false" @close="s.showExitDialog = false">
       <div class="p-6 text-center space-y-4">
-        <div
-          class="w-13 h-13 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-xs"
-          :class="isGuest ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400'"
-        >
-          <KeyRound v-if="isGuest" class="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+        <div class="w-13 h-13 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-xs" :class="s.isGuest ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400'">
+          <KeyRound v-if="s.isGuest" class="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
           <AlertTriangle v-else class="w-7 h-7 text-amber-600 dark:text-amber-400" />
         </div>
-
         <div class="space-y-1">
-          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">
-            {{ isGuest ? __('Go to Login?') : __('Exit Survey?') }}
-          </h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            {{ isGuest ? __('Sign in with your OmniQuery account for full surveyor and management access.') : __('Your responses are saved in offline drafts. Return to the survey list?') }}
-          </p>
+          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">{{ s.isGuest ? s.__('Go to Login?') : s.__('Exit Survey?') }}</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{{ s.isGuest ? s.__('Sign in with your OmniQuery account for full surveyor and management access.') : s.__('Your responses are saved in offline drafts. Return to the survey list?') }}</p>
         </div>
-
         <div class="grid grid-cols-2 gap-2.5 pt-2">
-          <Button
-            @click="showExitDialog = false"
-            class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer"
-          >
-            {{ isGuest ? __('Stay Here') : __('Stay') }}
-          </Button>
-          <Button
-            @click="confirmExit"
-            :class="isGuest ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'"
-            class="w-full py-2.5 rounded-xl text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer"
-          >
-            {{ isGuest ? __('Login') : __('Exit') }}
-          </Button>
+          <Button @click="s.showExitDialog = false" class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer">{{ s.isGuest ? s.__('Stay Here') : s.__('Stay') }}</Button>
+          <Button @click="s.confirmExit" :class="s.isGuest ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'" class="w-full py-2.5 rounded-xl text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer">{{ s.isGuest ? s.__('Login') : s.__('Exit') }}</Button>
         </div>
       </div>
     </BaseModal>
 
-
+    <!-- Discard Draft Confirmation Dialog -->
+    <BaseModal :isOpen="Boolean(s.draftToDiscard)" size="sm" hideHeader :showCloseButton="false" @close="s.draftToDiscard = null">
+      <div class="p-6 text-center space-y-4">
+        <div class="w-13 h-13 rounded-2xl mx-auto flex items-center justify-center bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 shadow-xs">
+          <AlertTriangle class="w-7 h-7 text-rose-600 dark:text-rose-400" />
+        </div>
+        <div class="space-y-1">
+          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">{{ s.__('Discard Saved Draft?') }}</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{{ s.__('Discard saved draft for this survey?') }}</p>
+        </div>
+        <div class="grid grid-cols-2 gap-2.5 pt-2">
+          <Button @click="s.draftToDiscard = null" class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer">{{ s.__('Cancel') }}</Button>
+          <Button @click="s.confirmDiscardDraft" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer">{{ s.__('Discard') }}</Button>
+        </div>
+      </div>
+    </BaseModal>
 
     <!-- Filled Forms Verification & Data Recovery Modal -->
-    <FilledFormsModal
-      :isOpen="showFilledFormsModal"
-      :initialFilter="filledFormsInitialFilter"
-      :isOnline="isOnline"
-      :templates="availableTemplates"
-      @close="showFilledFormsModal = false"
-      @sync-all="triggerSync"
-      @resume-draft="handleResumeDraftFromModal"
-    />
+    <FilledFormsModal :isOpen="s.showFilledFormsModal" :initialFilter="s.filledFormsInitialFilter" :isOnline="s.isOnline" :templates="s.availableTemplates" @close="s.showFilledFormsModal = false" @sync-all="s.triggerSync" @resume-draft="s.handleResumeDraftFromModal" />
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
-import { Button, TextInput, call } from "frappe-ui";
-import {
-  AlertTriangle,
-  Check,
-  ClipboardList,
-  Download,
-  FileText,
-  Folder,
-  KeyRound,
-  Landmark,
-  Plus,
-  Search,
-  Zap,
-} from "lucide-vue-next";
-import { useSurvey } from "./composables/useSurvey";
-import { useWAL } from "./composables/useWAL";
-import { useGPS } from "./composables/useGPS";
-import { useTextScale } from "./composables/useTextScale";
-import { useTranslation } from "./composables/useTranslation";
-import { useAudioRecorder } from "./composables/useAudioRecorder";
+import { provide } from "vue";
+import { Button } from "frappe-ui";
+import { AlertTriangle, ClipboardList, KeyRound, Zap } from "lucide-vue-next";
+import { useSurveyApp } from "./composables/useSurveyApp";
 import CompactHeader from "./components/header/CompactHeader.vue";
-import SectionCard from "./components/survey/SectionCard.vue";
-import QuestionCard from "./components/survey/QuestionCard.vue";
-import GroupedQuestionCard from "./components/survey/GroupedQuestionCard.vue";
-import MatrixQuestionCard from "./components/survey/MatrixQuestionCard.vue";
-import FocusModeModal from "./components/survey/FocusModeModal.vue";
-import SurveyorDashboard from "./components/dashboard/SurveyorDashboard.vue";
-import ProjectHeaderCard from "./components/dashboard/ProjectHeaderCard.vue";
 import BaseModal from "./components/common/BaseModal.vue";
 import ProjectPage from "./components/project/ProjectPage.vue";
 import FilledFormsModal from "./components/dashboard/FilledFormsModal.vue";
+import CatalogView from "./views/Catalog.vue";
+import SurveyView from "./views/Survey.vue";
+import SuccessView from "./views/Success.vue";
 
-const autoAdvance = ref(true);
-const isFocusMode = ref(false);
-const focusQuestionIndex = ref(0);
+const s = useSurveyApp();
 
-const showExitDialog = ref(false);
-const liveAnnouncementText = ref("");
-
-function announce(message) {
-  liveAnnouncementText.value = message;
-}
-
-
-const { __ } = useTranslation();
-const { textSize, cycleTextSize, setTextSize } = useTextScale();
-const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
-const { gpsCoords, captureGPS } = useGPS();
-const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
-
-const {
-  activeTemplate,
-  activeSectionIndex,
-  availableTemplates,
-  sections,
-  activeSection,
-  activeQuestions,
-  responses,
-  validationErrors,
-  isSubmitting,
-  isSubmitted,
-  currentDraftId,
-  activeDrafts,
-  loadActiveDrafts,
-  loadAvailableTemplates,
-  loadTemplate,
-  saveDraftLocally,
-  discardDraft,
-  generateSurveyId,
-  isQuestionVisible,
-  isFullForm,
-  toggleFullForm,
-  isSectionComplete,
-  validateCurrentSection,
-  nextSection,
-  prevSection,
-  cachedTemplatesMap,
-  refreshCachedTemplatesMap,
-  downloadSurveyForOffline,
-  downloadProjectSurveysForOffline,
-} = useSurvey();
-
-const isLoading = ref(true);
-const loadingSurveyId = ref("");
-const downloadingSurveyId = ref("");
-
-async function handleDownloadSurvey(surveyId) {
-  if (!surveyId) return;
-  downloadingSurveyId.value = surveyId;
-  try {
-    await downloadSurveyForOffline(surveyId);
-  } catch (e) {
-    console.warn("Failed downloading survey offline:", e);
-  } finally {
-    downloadingSurveyId.value = "";
-  }
-}
-
-async function handleDownloadProjectSurveys(projectId) {
-  if (!projectId) return;
-  try {
-    await downloadProjectSurveysForOffline(projectId);
-  } catch (e) {
-    console.warn("Failed downloading project surveys:", e);
-  }
-}
-
-const showWALDrawer = ref(false);
-const searchQuery = ref("");
-const selectedWorkspace = ref("ALL");
-
-const selectedProject = ref("ALL");
-if (typeof localStorage !== "undefined") {
-  const savedProj = localStorage.getItem("omniquery_selected_project");
-  if (savedProj) selectedProject.value = savedProj;
-}
-
-const activeProjectId = ref("");
-
-const isGuest = computed(() => {
-  if (typeof window === "undefined") return true;
-  const user = (window.frappe && (window.frappe.user || (window.frappe.session && window.frappe.session.user))) || "Guest";
-  return user === "Guest";
-});
-
-function getRouteProjectId() {
-  if (window.frappe && window.frappe.initial_project_id) {
-    return window.frappe.initial_project_id;
-  }
-  const path = (window.location && window.location.pathname) || "";
-  const parts = path.split("/").filter(Boolean);
-  if (parts.length >= 3 && parts[0] === "omniquery" && parts[1] === "project") {
-    return decodeURIComponent(parts[2]);
-  }
-  return "";
-}
-
-const activeProjectTitle = computed(() => {
-  if (!activeProjectId.value) return "";
-  const match = availableTemplates.value.find(
-    (t) =>
-      t.project === activeProjectId.value ||
-      t.project_name === activeProjectId.value ||
-      t.name === activeProjectId.value
-  );
-  return match?.project_name || activeProjectId.value;
-});
-
-function openProjectPage(projectIdOrData) {
-  const pId =
-    typeof projectIdOrData === "string"
-      ? projectIdOrData
-      : projectIdOrData?.name || projectIdOrData?.id || projectIdOrData?.project_name || selectedProject.value;
-  activeProjectId.value = pId;
-  activeTemplate.value = null;
-  if (window.history && window.history.pushState) {
-    window.history.pushState({ type: "project", projectId: pId }, "", `/omniquery/project/${encodeURIComponent(pId)}`);
-  }
-  if (typeof window !== "undefined") {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }
-}
-
-function closeProjectPage() {
-  activeProjectId.value = "";
-  if (window.history && window.history.pushState) {
-    window.history.pushState({}, "", "/omniquery");
-  }
-}
-
-const showFilledFormsModal = ref(false);
-const filledFormsInitialFilter = ref("all");
-
-function openFilteredFilledForms(filter = "all") {
-  filledFormsInitialFilter.value = filter;
-  showFilledFormsModal.value = true;
-}
-
-function handleResumeDraftFromModal(templateName, draftId) {
-  showFilledFormsModal.value = false;
-  selectSurvey(templateName, { draftId });
-}
-
-const submittedResponseId = ref("");
-const submittedTimestamp = ref("");
-const hasCopiedCode = ref(false);
-const isSubmissionSynced = ref(false);
-const isSyncingSubmission = ref(false);
-
-async function handleSyncSubmittedNow() {
-  if (isSyncingSubmission.value || !isOnline.value) return;
-  isSyncingSubmission.value = true;
-  try {
-    const res = await syncWAL();
-    if (res && res.syncedCount > 0) {
-      isSubmissionSynced.value = true;
-      if (window.frappe && window.frappe.show_alert) {
-        window.frappe.show_alert({ message: __("Survey synced to server successfully!"), indicator: "green" });
-      }
-    }
-  } catch (e) {
-  } finally {
-    isSyncingSubmission.value = false;
-  }
-}
-
-function copyResponseCode() {
-  if (!submittedResponseId.value) return;
-  try {
-    if (window.frappe && window.frappe.utils && window.frappe.utils.copy_to_clipboard) {
-      window.frappe.utils.copy_to_clipboard(submittedResponseId.value);
-    } else if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(submittedResponseId.value);
-    } else {
-      const textarea = document.createElement("textarea");
-      textarea.value = submittedResponseId.value;
-      document.body.appendChild(textarea);
-      textarea.select();
-      document.execCommand("copy");
-      document.body.removeChild(textarea);
-    }
-    hasCopiedCode.value = true;
-    if (window.frappe && window.frappe.show_alert) {
-      window.frappe.show_alert({ message: __("Response Code copied to clipboard"), indicator: "green" });
-    }
-    setTimeout(() => {
-      hasCopiedCode.value = false;
-    }, 2000);
-  } catch (e) {}
-}
-
-async function restoreSubmittedResponseId() {
-  if (submittedResponseId.value) return;
-  try {
-    const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name;
-    if (!tmplName) return;
-    const latest = await db.responses
-      .where("template_name")
-      .equals(tmplName)
-      .reverse()
-      .sortBy("updated_at");
-    if (latest && latest.length > 0) {
-      submittedResponseId.value = latest[0].response_uid;
-      submittedTimestamp.value = new Date(latest[0].updated_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-  } catch (e) {}
-}
-
-watch(isSubmitted, (val) => {
-  if (val) {
-    restoreSubmittedResponseId();
-  }
-});
-
-const progressPercent = computed(() => {
-  if (!activeTemplate.value) return 0;
-  const questions = activeTemplate.value.questions || [];
-  if (!questions.length) return 0;
-  let filled = 0;
-  for (const q of questions) {
-    const val = responses.value[q.question_code];
-    if (val !== undefined && val !== null && String(val).trim() !== "") filled++;
-  }
-  return Math.round((filled / questions.length) * 100);
-});
-
-const workspacesList = computed(() => {
-  const map = new Map();
-  for (const t of availableTemplates.value) {
-    const id = t.workspace || "default";
-    const title = t.workspace_title || t.workspace || "General";
-    if (!map.has(id)) map.set(id, { id, title });
-  }
-  return Array.from(map.values());
-});
-
-const filteredTemplates = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase();
-  return availableTemplates.value.filter((t) => {
-    if (selectedProject.value !== "ALL" && t.project !== selectedProject.value && t.project_name !== selectedProject.value) return false;
-    if (selectedWorkspace.value !== "ALL" && t.workspace !== selectedWorkspace.value) return false;
-    if (!q) return true;
-    const title = (t.title || "").toLowerCase();
-    const name = (t.name || "").toLowerCase();
-    const pName = (t.project_name || t.project || "").toLowerCase();
-    const cat = (t.target_category || "").toLowerCase();
-    return title.includes(q) || name.includes(q) || pName.includes(q) || cat.includes(q);
-  });
-});
-
-function getRouteSurveyId() {
-  if (window.frappe && window.frappe.initial_survey_id) {
-    return window.frappe.initial_survey_id;
-  }
-  const path = (window.location && window.location.pathname) || "";
-  const parts = path.split("/").filter(Boolean);
-  if (parts.length >= 2 && parts[0] === "omniquery") {
-    if (parts[1] === "project") return "";
-    return decodeURIComponent(parts[1]);
-  }
-  return "";
-}
-
-async function init() {
-  isLoading.value = true;
-  await loadAvailableTemplates();
-  const initialProjectId = getRouteProjectId();
-  const initialSurveyId = getRouteSurveyId();
-  if (initialProjectId) {
-    activeProjectId.value = initialProjectId;
-  } else if (initialSurveyId) {
-    await loadTemplate(initialSurveyId);
-  }
-  isLoading.value = false;
-}
-
-watch(activeTemplate, (tmpl) => {
-  if (!tmpl) return;
-  autoAdvance.value = tmpl.auto_advance !== false;
-  if (tmpl.presentation_mode === "One-by-One Focus Popup") {
-    isFocusMode.value = true;
-    focusQuestionIndex.value = 0;
-  }
-  announce(`${__('Loaded survey')}: ${tmpl.title || tmpl.name}`);
-});
-
-watch(activeSectionIndex, (idx) => {
-  if (activeSection.value && sections.value.length > 0) {
-    const title = activeSection.value.section_title || activeSection.value.section_code || "";
-    announce(`${__('Section')} ${idx + 1} ${__('of')} ${sections.value.length}: ${title}`);
-  }
-});
-
-function isMatrixQuestion(q) {
-  if (!q) return false;
-  const type = (q.field_type || "").toLowerCase();
-  const code = (q.question_code || "").toLowerCase();
-  return (
-    type === "dynamic grid" ||
-    type === "table" ||
-    type === "matrix" ||
-    code.includes("turnover") ||
-    code.includes("involvement") ||
-    code.includes("capital_sources") ||
-    Boolean(q.columns_schema_json) ||
-    Boolean(q.matrix_schema)
-  );
-}
-
-const displayQuestionItems = computed(() => {
-  const questions = activeQuestions.value || [];
-  const items = [];
-  let i = 0;
-  while (i < questions.length) {
-    const q = questions[i];
-    const label = q.label_en || q.label || "";
-    const type = q.field_type || "";
-
-    if (type === "Dynamic Grid" || type === "Table") {
-      const groupQuestions = [];
-      let j = i + 1;
-      while (j < questions.length) {
-        const nextQ = questions[j];
-        const nextLabel = nextQ.label_en || nextQ.label || "";
-        if (/^[a-z][.\s]\s*/i.test(nextLabel)) {
-          nextQ._parentTitle = label;
-          nextQ._parentDescription = q.description || "";
-          nextQ._parentCode = q.question_code;
-          groupQuestions.push(nextQ);
-          j++;
-        } else {
-          break;
-        }
-      }
-      if (groupQuestions.length > 0) {
-        items.push({
-          type: "group",
-          group_code: q.question_code,
-          number: "GRID",
-          title: label,
-          description: q.description || "",
-          questions: groupQuestions,
-        });
-        i = j;
-        continue;
-      }
-
-      // Standalone Dynamic Grid / Table -> Render as 3D / 4D Matrix Table
-      items.push({
-        type: "matrix",
-        question: q,
-      });
-      i++;
-      continue;
-    }
-
-    if (isMatrixQuestion(q)) {
-      items.push({
-        type: "matrix",
-        question: q,
-      });
-      i++;
-      continue;
-    }
-
-    const qSubMatch = label.match(/^(Q\d+)([a-z])\.\s*(.*)$/i);
-    if (qSubMatch) {
-      const baseNum = qSubMatch[1];
-      const groupQuestions = [q];
-      let j = i + 1;
-      while (j < questions.length) {
-        const nextQ = questions[j];
-        const nextLabel = nextQ.label_en || nextQ.label || "";
-        const nextMatch = nextLabel.match(/^(Q\d+)([a-z])\.\s*(.*)$/i);
-        if (nextMatch && nextMatch[1].toLowerCase() === baseNum.toLowerCase()) {
-          groupQuestions.push(nextQ);
-          j++;
-        } else {
-          break;
-        }
-      }
-      if (groupQuestions.length > 1) {
-        let groupTitle = `${baseNum}. Household & Member Demographics`;
-        if (baseNum.toUpperCase() === "Q6" && q.section_code === "SEC_B") {
-          groupTitle = `${baseNum}. Family Demographics & Member Breakdown`;
-        }
-        items.push({
-          type: "group",
-          group_code: `group_${baseNum}`,
-          number: baseNum,
-          title: groupTitle,
-          description: "Member count breakdown by demographic category",
-          questions: groupQuestions,
-        });
-        i = j;
-        continue;
-      }
-    }
-
-    if (/^[a-z]\.\s+/i.test(label)) {
-      const groupQuestions = [q];
-      let j = i + 1;
-      while (j < questions.length) {
-        const nextQ = questions[j];
-        const nextLabel = nextQ.label_en || nextQ.label || "";
-        if (/^[a-z]\.\s+/i.test(nextLabel)) {
-          groupQuestions.push(nextQ);
-          j++;
-        } else {
-          break;
-        }
-      }
-      if (groupQuestions.length > 1) {
-        let groupTitle = "Breakdown Table";
-        const prevItem = items[items.length - 1];
-        if (prevItem && prevItem.question) {
-          const prevLabel = prevItem.question.label_en || prevItem.question.label || "";
-          groupTitle = `${prevLabel} (Details & Share)`;
-        }
-        items.push({
-          type: "group",
-          group_code: `group_${q.question_code}`,
-          number: "TABLE",
-          title: groupTitle,
-          description: "",
-          questions: groupQuestions,
-        });
-        i = j;
-        continue;
-      }
-    }
-
-    items.push({
-      type: "single",
-      question: q,
-    });
-    i++;
-  }
-  return items;
-});
-
-function onGroupResponseUpdate({ code, value }) {
-  responses.value[code] = value;
-}
-
-function toggleFocusMode() {
-  if (isFocusMode.value) {
-    isFocusMode.value = false;
-  } else {
-    openFocusMode();
-  }
-}
-
-function openFocusMode() {
-  const firstUnanswered = activeQuestions.value.findIndex(
-    (q) => !responses.value[q.question_code]
-  );
-  focusQuestionIndex.value = firstUnanswered >= 0 ? firstUnanswered : 0;
-  isFocusMode.value = true;
-}
-
-function onQuestionAnswered(currentQuestion) {
-  if (!autoAdvance.value) return;
-  const qCode = currentQuestion ? (currentQuestion.question_code || currentQuestion.code) : null;
-  if (!qCode) return;
-  const currentIdx = activeQuestions.value.findIndex(
-    (q) => q.question_code === qCode
-  );
-  if (currentIdx >= 0 && currentIdx < activeQuestions.value.length - 1) {
-    const nextQ = activeQuestions.value[currentIdx + 1];
-    scrollAndHighlightQuestion(nextQ.question_code);
-  }
-}
-
-function scrollAndHighlightQuestion(code) {
-  setTimeout(() => {
-    const el = document.getElementById("qc_" + code);
-    if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "start" });
-    const searchInput = el.querySelector("input[data-search-input]");
-    const target = searchInput || el.querySelector("input:not([type=hidden]):not([disabled]), select, textarea, button[role='radio'][aria-checked='true'], button[role='checkbox'][aria-checked='true'], button[role='radio'], button[role='checkbox'], [role='combobox'], [tabindex='0']");
-    if (target && typeof target.focus === "function") {
-      target.focus({ preventScroll: true });
-    }
-  }, 100);
-}
-
-function onFocusModeUpdateResponse({ code, value }) {
-  responses.value[code] = value;
-}
-
-function onFocusModeFinishSection() {
-  if (activeSectionIndex.value < sections.value.length - 1) {
-    nextSection();
-    focusQuestionIndex.value = 0;
-  } else {
-    isFocusMode.value = false;
-  }
-}
-
-function onExit() {
-  if (isGuest.value) {
-    showExitDialog.value = true;
-  } else if (activeTemplate.value) {
-    showExitDialog.value = true;
-  } else if (activeProjectId.value) {
-    closeProjectPage();
-  } else {
-    goHome();
-  }
-}
-
-function onHome() {
-  if (isGuest.value) {
-    showExitDialog.value = true;
-  } else if (activeTemplate.value) {
-    showExitDialog.value = true;
-  } else {
-    goHome();
-  }
-}
-
-function confirmExit() {
-  showExitDialog.value = false;
-  if (isGuest.value) {
-    window.location.href = "/login?redirect-to=/omniquery";
-    return;
-  }
-  goHome();
-}
-
-let draftSyncTimer = null;
-const isSyncingDraft = ref(false);
-
-async function syncDraftToServer() {
-  if (!isOnline.value || !activeTemplate.value || !currentDraftId.value || isSubmitted.value) return;
-
-  const qList = (activeTemplate.value && activeTemplate.value.questions) || [];
-  const items = Object.entries(responses.value)
-    .filter(([_, val]) => val !== undefined && val !== null && String(val).trim() !== "")
-    .map(([code, val]) => {
-      const q = qList.find((item) => item.question_code === code);
-      return {
-        question_code: code,
-        question_label: q ? (q.label_en || q.label || code) : code,
-        value: val,
-      };
-    });
-
-  if (items.length === 0) return;
-
-  const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
-  const draftPayload = {
-    idempotency_key: currentDraftId.value,
-    survey_template: tmplName,
-    template_version: activeTemplate.value.version || 1,
-    respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
-    surveyor: (window.frappe && window.frappe.session && window.frappe.session.user) || "Administrator",
-    captured_at_local: new Date().toISOString(),
-    gps_latitude: gpsCoords.value?.latitude || null,
-    gps_longitude: gpsCoords.value?.longitude || null,
-    gps_accuracy: gpsCoords.value?.accuracy || null,
-    items: items,
-  };
-
-  try {
-    isSyncingDraft.value = true;
-    const res = await call("omniquery.api.sync.sync_draft", {
-      draft: draftPayload,
-    });
-    if (res) {
-      try {
-        await db.responses.update(currentDraftId.value, { synced: true });
-      } catch (e) {}
-    }
-  } catch (e) {
-    console.warn("In-flight draft sync non-critical warning:", e);
-  } finally {
-    isSyncingDraft.value = false;
-  }
-}
-
-function scheduleDraftSaveAndSync() {
-  if (!activeTemplate.value || isSubmitted.value) return;
-  saveDraftLocally(progressPercent.value);
-  if (draftSyncTimer) clearTimeout(draftSyncTimer);
-  draftSyncTimer = setTimeout(() => {
-    syncDraftToServer();
-  }, 1200);
-}
-
-watch(
-  responses,
-  () => {
-    scheduleDraftSaveAndSync();
-  },
-  { deep: true }
-);
-
-async function onDiscardDraft(templateName) {
-  if (confirm(__("Discard saved draft for this survey?"))) {
-    await discardDraft(templateName);
-  }
-}
-
-async function goHome() {
-  if (isGuest.value) {
-    window.location.href = "/login?redirect-to=/omniquery";
-    return;
-  }
-  if (!isSubmitted.value && activeTemplate.value) {
-    scheduleDraftSaveAndSync();
-  } else {
-    if (draftSyncTimer) clearTimeout(draftSyncTimer);
-  }
-  activeTemplate.value = null;
-  activeProjectId.value = "";
-  activeSectionIndex.value = 0;
-  isSubmitted.value = false;
-  isSubmissionSynced.value = false;
-  currentDraftId.value = "";
-  responses.value = {};
-  if (window.history && window.history.pushState) {
-    window.history.pushState({}, "", "/omniquery");
-  }
-  await loadAvailableTemplates();
-}
-
-async function selectSurvey(surveyName, options = {}) {
-  activeProjectId.value = "";
-  loadingSurveyId.value = surveyName;
-  const tmpl = await loadTemplate(surveyName, options);
-  loadingSurveyId.value = "";
-  if (!tmpl) {
-    if (window.frappe && window.frappe.show_alert) {
-      window.frappe.show_alert({
-        message: __("This survey is not yet downloaded on your device. Please connect to the internet once to download it."),
-        indicator: "orange",
-      });
-    } else {
-      alert(__("This survey is not yet downloaded on your device. Please connect to the internet once to download it."));
-    }
-    return;
-  }
-  if (window.history && window.history.pushState) {
-    window.history.pushState({ type: "survey", surveyName }, "", `/omniquery/${encodeURIComponent(surveyName)}`);
-  }
-}
-
-async function saveOfflineRecord() {
-  if (draftSyncTimer) clearTimeout(draftSyncTimer);
-  const qList = (activeTemplate.value && activeTemplate.value.questions) || [];
-  const items = Object.entries(responses.value)
-    .filter(([_, val]) => val !== undefined && val !== null && String(val).trim() !== "")
-    .map(([code, val]) => {
-      const q = qList.find((item) => item.question_code === code);
-      return {
-        question_code: code,
-        question_label: q ? (q.label_en || q.label || code) : code,
-        value: val,
-      };
-    });
-
-  const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
-  const draftKey = currentDraftId.value || generateSurveyId(tmplName);
-  submittedResponseId.value = draftKey;
-  submittedTimestamp.value = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-
-  const payload = {
-    idempotency_key: draftKey,
-    survey_template: tmplName,
-    template_version: activeTemplate.value.version || 1,
-    respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
-    surveyor: (window.frappe && (window.frappe.user || (window.frappe.session && window.frappe.session.user))) || "Administrator",
-    captured_at_local: new Date().toISOString(),
-    gps_latitude: gpsCoords.value?.latitude || null,
-    gps_longitude: gpsCoords.value?.longitude || null,
-    gps_accuracy: gpsCoords.value?.accuracy || null,
-    items: items,
-  };
-
-  try {
-    await db.responses.put({
-      response_uid: draftKey,
-      template_name: tmplName,
-      title: activeTemplate.value.title || tmplName,
-      response_title_format: activeTemplate.value.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
-      responses: JSON.parse(JSON.stringify(responses.value)),
-      active_section_index: activeSectionIndex.value,
-      progress_percent: 100,
-      status: "Submitted",
-      updated_at: new Date().toISOString(),
-      synced: false,
-    });
-    await loadActiveDrafts();
-  } catch (e) {}
-
-  await queueWAL("OmniQuery Response", payload, false);
-  if (isOnline.value) {
-    const res = await syncWAL();
-    if (res && res.syncedCount > 0) {
-      isSubmissionSynced.value = true;
-      try {
-        await syncPendingAudio(draftKey);
-      } catch (audioSyncErr) {}
-      if (window.frappe && window.frappe.show_alert) {
-        window.frappe.show_alert({ message: __("Survey synced to server successfully!"), indicator: "green" });
-      }
-    } else {
-      isSubmissionSynced.value = false;
-    }
-  } else {
-    isSubmissionSynced.value = false;
-  }
-}
-
-function scrollToFirstPendingQuestion() {
-  const firstPending = activeQuestions.value.find((q) => {
-    if (validationErrors.value[q.question_code]) return true;
-    if (!q.is_mandatory) return false;
-    const val = responses.value[q.question_code];
-    return val === undefined || val === null || String(val).trim() === "";
-  });
-  if (firstPending) {
-    const groupItem = displayQuestionItems.value.find(
-      (item) => item.type === "group" && item.questions.some((q) => q.question_code === firstPending.question_code)
-    );
-    const targetCode = groupItem ? groupItem.group_code : firstPending.question_code;
-    scrollAndHighlightQuestion(targetCode);
-  }
-}
-
-function handlePrevSection() {
-  scheduleDraftSaveAndSync();
-  prevSection();
-}
-
-function handleNextSection() {
-  scheduleDraftSaveAndSync();
-  const ok = nextSection();
-  if (!ok) {
-    scrollToFirstPendingQuestion();
-  }
-}
-
-async function submitForm() {
-  if (!validateCurrentSection()) {
-    scrollToFirstPendingQuestion();
-    return;
-  }
-  if (draftSyncTimer) clearTimeout(draftSyncTimer);
-  isSubmitting.value = true;
-
-  const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name || "";
-  const draftKey = currentDraftId.value || generateSurveyId(tmplName);
-
-  try {
-    const recordedBlob = await stopRecording();
-    if (recordedBlob && recordedBlob.size > 0) {
-      await saveAudioForResponse(draftKey, recordedBlob);
-    }
-  } catch (audioErr) {
-    console.warn("Failed saving audio recording:", audioErr);
-  }
-
-  await saveOfflineRecord();
-  isSubmitting.value = false;
-  isSubmitted.value = true;
-}
-
-function resetSurvey() {
-  if (draftSyncTimer) clearTimeout(draftSyncTimer);
-  discardAudio();
-  responses.value = {};
-  activeSectionIndex.value = 0;
-  isSubmitted.value = false;
-  isSubmissionSynced.value = false;
-  submittedResponseId.value = "";
-  hasCopiedCode.value = false;
-  currentDraftId.value = generateSurveyId(activeTemplate.value?.name || activeTemplate.value?.template_name || "");
-}
-
-async function triggerSync() {
-  await forceSyncAll();
-  await loadActiveDrafts();
-}
-
-onMounted(() => {
-  init();
-  if (typeof window !== "undefined") {
-    window.addEventListener("popstate", async () => {
-      const projId = getRouteProjectId();
-      const survId = getRouteSurveyId();
-      if (projId) {
-        activeProjectId.value = projId;
-        activeTemplate.value = null;
-      } else if (survId) {
-        activeProjectId.value = "";
-        await loadTemplate(survId);
-      } else {
-        activeProjectId.value = "";
-        activeTemplate.value = null;
-        await loadAvailableTemplates();
-      }
-    });
-  }
-});
+provide("omniqueryContext", s.omniqueryContext);
+provide("surveySession", s);
 </script>
