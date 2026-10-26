@@ -8,7 +8,7 @@
     @click="onCardClick"
     @focusin="onFocusIn"
     @focusout="onFocusOut"
-    @keydown.esc.stop="onCardEsc"
+    @keydown.esc="onCardEsc"
     @keydown="onCardKeydown"
     @touchstart="onTouchStart"
     @touchmove="onTouchMove"
@@ -134,7 +134,7 @@
           :options="normalizedOptions"
           :multiple="isMultiSelect"
           @update:modelValue="onComboboxUpdate"
-          @keydown.esc.stop="focusCard"
+          @keydown.esc="focusCard"
         />
 
         <!-- 5B. Interactive Option Grid with Quick Search & Explicit Checkbox vs Radio Distinction -->
@@ -180,7 +180,7 @@
             :class="displayedGridOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
             :role="isMultiSelect ? 'group' : 'radiogroup'"
             @keydown="onGridKeydown"
-            @keydown.esc.stop="focusCard"
+            @keydown.esc="focusCard"
           >
             <Button
               v-for="(option, index) in displayedGridOptions"
@@ -295,7 +295,7 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
-        @keydown.esc.stop="focusCard"
+        @keydown.esc="focusCard"
         :placeholder="__('Enter value')"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
@@ -312,7 +312,7 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
-        @keydown.esc.stop="focusCard"
+        @keydown.esc="focusCard"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
 
@@ -328,7 +328,7 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
-        @keydown.esc.stop="focusCard"
+        @keydown.esc="focusCard"
         :placeholder="__('Enter value')"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-medium text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
@@ -662,9 +662,10 @@ function onFocusOut(e) {
   }
 }
 
-function onCardEsc() {
+function onCardEsc(e) {
   if (showConfigModal.value) {
     showConfigModal.value = false;
+    e?.stopPropagation?.();
   }
 }
 

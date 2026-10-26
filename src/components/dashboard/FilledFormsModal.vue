@@ -2,7 +2,11 @@
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 h-screen w-screen flex flex-col overflow-hidden animate-fade-in select-none overscroll-contain"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="filled-forms-title"
+      tabindex="-1"
+      class="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 h-screen w-screen flex flex-col overflow-hidden animate-fade-in select-none overscroll-contain focus:outline-none"
       @wheel.stop
     >
       <!-- 1. Full-Page Top App Bar -->
@@ -18,7 +22,7 @@
           </Button>
 
           <div class="min-w-0">
-            <h1 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+            <h1 id="filled-forms-title" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
               {{ __('Saved Responses & Drafts') }}
             </h1>
             <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
@@ -386,7 +390,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch, toRef } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch, toRef } from "vue";
 import { Button } from "frappe-ui";
 import { X, Zap, ChevronDown, Trash2, FileText, Calendar, Check, Copy } from "lucide-vue-next";
 import JSZip from "jszip";
@@ -394,6 +398,7 @@ import BaseModal from "../common/BaseModal.vue";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import { useWAL } from "../../composables/useWAL";
+import { registerModal, unregisterModal } from "../../composables/useModalStack";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db, compactLocalStorage } from "../../services/db";
 
@@ -942,14 +947,27 @@ watch(
   () => props.isOpen,
   (open) => {
     if (open) {
+      registerModal({
+        id: "filled_forms_modal",
+        close: () => {
+          emit("close");
+        },
+      });
       loadResponses();
+    } else {
+      unregisterModal("filled_forms_modal");
     }
-  }
+  },
+  { immediate: true }
 );
 
 onMounted(() => {
   if (props.isOpen) {
     loadResponses();
   }
+});
+
+onUnmounted(() => {
+  unregisterModal("filled_forms_modal");
 });
 </script>

@@ -7,7 +7,7 @@
     :aria-label="parsedMeta.text"
     @focusin="onFocusIn"
     @focusout="onFocusOut"
-    @keydown.esc.stop="focusCard"
+    @keydown.esc="focusCard"
     :class="[
       'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-20',
       notApplicable
