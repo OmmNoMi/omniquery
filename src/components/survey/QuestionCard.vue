@@ -320,7 +320,25 @@
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
 
-      <!-- 10. Default Text Input -->
+      <!-- 10. Phone Input -->
+      <TextInput
+        v-else-if="isPhoneControl"
+        :id="'q_input_' + question.question_code"
+        type="tel"
+        inputmode="tel"
+        :modelValue="modelValue"
+        :aria-label="questionLabel"
+        :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
+        :aria-invalid="Boolean(phoneValidationError || errorMessage)"
+        :aria-errormessage="(phoneValidationError || errorMessage) ? 'q_err_' + question.question_code : undefined"
+        @update:modelValue="onPhoneInput"
+        @keydown.enter="onInputEnter"
+        @keydown.esc.stop="focusCard"
+        :placeholder="__('Enter 10-digit mobile number')"
+        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
+      />
+
+      <!-- 11. Default Text Input -->
       <TextInput
         v-else
         :id="'q_input_' + question.question_code"
@@ -340,12 +358,12 @@
 
     <!-- Validation Error -->
     <p
-      v-if="errorMessage"
+      v-if="phoneValidationError || errorMessage"
       :id="'q_err_' + question.question_code"
       role="alert"
       class="mt-2 text-xs font-semibold text-rose-600"
     >
-      {{ __(errorMessage) }}
+      {{ __(phoneValidationError || errorMessage) }}
     </p>
 
     <!-- Card Footer: Status Badge (Right) -->
@@ -729,6 +747,7 @@ const inputTypeLabel = computed(() => {
   if (isYearControl.value) return __("Year");
   if (isGeolocationControl.value) return __("GPS");
   if (isChoiceControl.value) return isMultiSelect.value ? __("Multi-select") : __("Select");
+  if (isPhoneControl.value) return __("Phone");
   if (isDateControl.value) return __("Date");
   if (isNumberControl.value) return __("Number");
   return __("Text");
@@ -1236,6 +1255,45 @@ const isDateControl = computed(() => {
   const type = (props.question.field_type || "").toLowerCase();
   return type.includes("date");
 });
+
+const isPhoneControl = computed(() => {
+  const type = (props.question.field_type || "").toLowerCase();
+  const variant = (props.question.control_variant || "").toLowerCase();
+  const code = (props.question.question_code || "").toLowerCase();
+  const label = (props.question.label_en || "").toLowerCase();
+  return (
+    type === "phone" ||
+    variant === "phone" ||
+    code.includes("phone") ||
+    code.includes("mobile") ||
+    label.includes("phone number") ||
+    label.includes("mobile number") ||
+    label.includes("contact number")
+  );
+});
+
+const phoneValidationError = ref("");
+
+function onPhoneInput(val) {
+  if (!val || String(val).trim() === "") {
+    phoneValidationError.value = "";
+    emit("update:modelValue", "");
+    return;
+  }
+  const clean = String(val).trim();
+  if (/[a-zA-Z]/.test(clean)) {
+    phoneValidationError.value = __("Enter a 10-digit mobile number");
+    return;
+  }
+  const digitsOnly = clean.replace(/\D/g, "");
+  if (digitsOnly.length !== 10 && clean.length !== 10) {
+    phoneValidationError.value = __("Enter a 10-digit mobile number");
+    return;
+  }
+  phoneValidationError.value = "";
+  emit("update:modelValue", clean);
+  emit("answered");
+}
 
 function formatCoords(coords) {
   if (typeof coords === "object" && coords.latitude) {
