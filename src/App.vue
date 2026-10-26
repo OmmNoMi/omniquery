@@ -9,6 +9,7 @@
     <CompactHeader
       :surveyTitle="activeTemplate ? activeTemplate.title : (activeProjectId ? (activeProjectTitle || __('Project Details')) : '')"
       :showBack="Boolean(activeTemplate || activeProjectId)"
+      :isSurveyActive="Boolean(activeTemplate)"
       :isOnline="isOnline"
       :pendingWALCount="pendingWALCount"
       :textSize="textSize"
@@ -25,6 +26,17 @@
 
     <!-- 2. Main View Container -->
     <main :class="['flex-1 w-full min-w-0 mx-auto p-3 sm:p-6 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-3xl', activeSection ? 'pb-0' : 'pb-24']">
+      <!-- Microphone Permission / State Error Alert -->
+      <div v-if="audioErrorMessage && Boolean(activeTemplate)" class="mb-4">
+        <Alert
+          :title="audioState === 'denied' ? __('Microphone Permission Denied') : __('Microphone Unavailable')"
+          :message="audioErrorMessage"
+          theme="red"
+          variant="subtle"
+          :dismissable="true"
+          @dismiss="audioErrorMessage = ''"
+        />
+      </div>
       <!-- Loading State with Branded OmniQuery Logo & Spinner -->
       <div v-if="isLoading" class="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center select-none">
         <div class="relative mb-3">
@@ -490,7 +502,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
-import { Button, TextInput, call } from "frappe-ui";
+import { Button, TextInput, Alert, call } from "frappe-ui";
 import {
   AlertTriangle,
   Check,
@@ -538,7 +550,17 @@ const { __ } = useTranslation();
 const { textSize, cycleTextSize, setTextSize } = useTextScale();
 const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
 const { gpsCoords, captureGPS } = useGPS();
-const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
+const {
+  state: audioState,
+  errorMessage: audioErrorMessage,
+  isRecording,
+  isPaused: isAudioPaused,
+  toggleAudio,
+  stopRecording,
+  discardAudio,
+  saveAudioForResponse,
+  stopAllTracks,
+} = useAudioRecorder();
 
 const {
   activeTemplate,
@@ -1136,6 +1158,8 @@ async function onDiscardDraft(templateName) {
 }
 
 async function goHome() {
+  stopAllTracks();
+  audioErrorMessage.value = "";
   if (isGuest.value) {
     window.location.href = "/login?redirect-to=/omniquery";
     return;

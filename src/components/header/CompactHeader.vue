@@ -50,9 +50,9 @@
           <span class="font-bold text-xs leading-none text-amber-900 dark:text-amber-200">{{ pendingWALCount }}</span>
         </Button>
 
-        <!-- Chip 2: Microphone Recording Button (only for logged-in surveyors) -->
+        <!-- Chip 2: Microphone Recording Button (only for logged-in surveyors during active surveys) -->
         <Button
-          v-if="showBack && !isGuest"
+          v-if="isSurveyActive && !isGuest"
           @click="$emit('toggle-audio')"
           class="relative w-8 h-8 rounded-full flex items-center justify-center transition active:scale-95 shadow-2xs cursor-pointer"
           :class="[
@@ -388,6 +388,10 @@ const props = defineProps({
     default: "",
   },
   showBack: {
+    type: Boolean,
+    default: false,
+  },
+  isSurveyActive: {
     type: Boolean,
     default: false,
   },
