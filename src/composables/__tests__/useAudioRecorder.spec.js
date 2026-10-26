@@ -136,4 +136,27 @@ describe("useAudioRecorder", () => {
     discardAudio();
     expect(audioBlob.value).toBeNull();
   });
+
+  it("when getUserMedia rejects with NotAllowedError, the state is denied and the message reads 'Allow microphone access in your browser settings to record'", async () => {
+    const error = new Error("Permission denied");
+    error.name = "NotAllowedError";
+    navigator.mediaDevices.getUserMedia.mockRejectedValue(error);
+
+    const { state, errorMessage, startRecording } = useAudioRecorder();
+
+    await startRecording();
+
+    expect(state.value).toBe("denied");
+    expect(errorMessage.value).toBe("Allow microphone access in your browser settings to record");
+  });
+
+  it("ending a survey stops all tracks", async () => {
+    const { startRecording, stopAllTracks } = useAudioRecorder();
+
+    await startRecording();
+    expect(mockTrack.stop).not.toHaveBeenCalled();
+
+    stopAllTracks();
+    expect(mockTrack.stop).toHaveBeenCalled();
+  });
 });

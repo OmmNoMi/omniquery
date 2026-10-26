@@ -4,6 +4,8 @@ import { db } from "../services/db";
 const isRecording = ref(false);
 const isPaused = ref(false);
 const audioBlob = ref(null);
+const state = ref("idle"); // 'idle' | 'requesting' | 'recording' | 'denied' | 'unsupported' | 'error'
+const errorMessage = ref("");
 let mediaRecorder = null;
 let audioChunks = [];
 let mediaStream = null;
@@ -57,9 +59,20 @@ export function useAudioRecorder() {
   }
 
   async function startRecording() {
+    errorMessage.value = "";
+    if (typeof navigator === "undefined" || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      state.value = "unsupported";
+      errorMessage.value = "Microphone recording is not supported in this browser";
+      return;
+    }
+    state.value = "requesting";
     try {
       const stream = await initStream();
-      if (!stream) return;
+      if (!stream) {
+        state.value = "unsupported";
+        errorMessage.value = "Microphone recording is not supported in this browser";
+        return;
+      }
       audioChunks = [];
       currentMimeType = getSupportedMimeType();
       const recorderOptions = {
@@ -80,7 +93,20 @@ export function useAudioRecorder() {
       mediaRecorder.start(1000);
       isRecording.value = true;
       isPaused.value = false;
+      state.value = "recording";
     } catch (e) {
+      isRecording.value = false;
+      isPaused.value = false;
+      if (e.name === "NotAllowedError" || e.name === "PermissionDeniedError") {
+        state.value = "denied";
+        errorMessage.value = "Allow microphone access in your browser settings to record";
+      } else if (e.name === "NotFoundError" || e.name === "DevicesNotFoundError") {
+        state.value = "unsupported";
+        errorMessage.value = "No microphone found on your device";
+      } else {
+        state.value = "error";
+        errorMessage.value = e.message || "Microphone recording error";
+      }
       console.warn("Audio recording unavailable or denied:", e);
     }
   }
@@ -109,7 +135,26 @@ export function useAudioRecorder() {
     }
   }
 
+  function stopAllTracks() {
+    if (mediaStream) {
+      try {
+        mediaStream.getTracks().forEach((track) => track.stop());
+      } catch (e) {}
+      mediaStream = null;
+    }
+    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+      try {
+        mediaRecorder.stop();
+      } catch (e) {}
+    }
+    mediaRecorder = null;
+    isRecording.value = false;
+    isPaused.value = false;
+    state.value = "idle";
+  }
+
   async function stopRecording() {
+    state.value = "idle";
     if (!mediaRecorder || mediaRecorder.state === "inactive") {
       if (mediaStream) {
         mediaStream.getTracks().forEach((track) => track.stop());
@@ -135,22 +180,11 @@ export function useAudioRecorder() {
   }
 
   function discardAudio() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
-      try {
-        mediaRecorder.stop();
-      } catch (e) {}
-    }
-    if (mediaStream) {
-      try {
-        mediaStream.getTracks().forEach((track) => track.stop());
-      } catch (e) {}
-      mediaStream = null;
-    }
-    mediaRecorder = null;
+    stopAllTracks();
     audioChunks = [];
     audioBlob.value = null;
-    isRecording.value = false;
-    isPaused.value = false;
+    errorMessage.value = "";
+    state.value = "idle";
   }
 
   async function saveAudioForResponse(responseUid, blob = null, mimeType = null) {
@@ -177,6 +211,9 @@ export function useAudioRecorder() {
   }
 
   return {
+    state,
+    errorMessage,
+    stopAllTracks,
     isRecording,
     isPaused,
     audioBlob,
