@@ -57,6 +57,7 @@
         </span>
 
         <label
+          :id="'q_label_' + question.question_code"
           :for="'q_input_' + question.question_code"
           class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug cursor-pointer"
         >
@@ -179,6 +180,9 @@
             class="grid gap-2.5 focus:outline-none outline-none"
             :class="displayedGridOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
             :role="isMultiSelect ? 'group' : 'radiogroup'"
+            :aria-labelledby="'q_label_' + question.question_code"
+            :aria-label="parsedQuestionMeta.text"
+            :aria-required="Boolean(question.is_mandatory || question.reqd)"
             @keydown="onGridKeydown"
             @keydown.esc.stop="focusCard"
           >

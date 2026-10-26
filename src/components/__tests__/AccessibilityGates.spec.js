@@ -4,6 +4,7 @@ import FSwitch from "../common/FSwitch.vue";
 import FCurrencyInput from "../common/FCurrencyInput.vue";
 import FRangeSlider from "../common/FRangeSlider.vue";
 import QuestionCard from "../survey/QuestionCard.vue";
+import GroupedQuestionCard from "../survey/GroupedQuestionCard.vue";
 
 describe("Gate 2: Accessibility Invariants (WCAG 2.2 AA)", () => {
   describe("FSwitch", () => {
@@ -109,6 +110,87 @@ describe("Gate 2: Accessibility Invariants (WCAG 2.2 AA)", () => {
       const err = wrapper.find("#q_err_q_business_name");
       expect(err.exists()).toBe(true);
       expect(err.attributes("role")).toBe("alert");
+    });
+  });
+
+  describe("Survey Choice / Radio Group Accessibility (Issue #19)", () => {
+    it("renders choice questions with role radiogroup, aria-labelledby, and aria-required", () => {
+      const question = {
+        question_code: "q_district",
+        label_en: "District",
+        field_type: "Select",
+        options: ["Jaipur", "Jodhpur", "Kota"],
+        is_mandatory: 1,
+      };
+
+      const wrapper = mount(QuestionCard, {
+        props: {
+          question,
+          modelValue: "",
+        },
+      });
+
+      const label = wrapper.find("#q_label_q_district");
+      expect(label.exists()).toBe(true);
+      expect(label.text()).toContain("District");
+
+      const radiogroup = wrapper.find('[role="radiogroup"]');
+      expect(radiogroup.exists()).toBe(true);
+      expect(radiogroup.attributes("aria-labelledby")).toBe("q_label_q_district");
+      expect(radiogroup.attributes("aria-required")).toBe("true");
+    });
+
+    it("renders group role with aria-labelledby and aria-required when multi-select is enabled", () => {
+      const question = {
+        question_code: "q_sectors",
+        label_en: "Business Sectors",
+        field_type: "MultiSelect",
+        options: ["Retail", "Manufacturing", "Services"],
+        is_mandatory: 1,
+      };
+
+      const wrapper = mount(QuestionCard, {
+        props: {
+          question,
+          modelValue: [],
+        },
+      });
+
+      const label = wrapper.find("#q_label_q_sectors");
+      expect(label.exists()).toBe(true);
+
+      const group = wrapper.find('[role="group"]');
+      expect(group.exists()).toBe(true);
+      expect(group.attributes("aria-labelledby")).toBe("q_label_q_sectors");
+      expect(group.attributes("aria-required")).toBe("true");
+    });
+
+    it("renders grouped sub-question choice radiogroup with aria-required and aria-labelledby", () => {
+      const group = {
+        group_code: "g_operations",
+        label_en: "Operations Group",
+        questions: [
+          {
+            question_code: "q_sub_1",
+            label_en: "Operating Status",
+            field_type: "Select",
+            options: ["Active", "Inactive"],
+            is_mandatory: 1,
+          },
+        ],
+      };
+
+      const wrapper = mount(GroupedQuestionCard, {
+        props: {
+          group,
+          responses: {},
+        },
+      });
+
+      const radiogroup = wrapper.find('[role="radiogroup"]');
+      expect(radiogroup.exists()).toBe(true);
+      expect(radiogroup.attributes("aria-labelledby")).toBe("sub_label_q_sub_1");
+      expect(radiogroup.attributes("aria-required")).toBe("true");
     });
   });
 });
