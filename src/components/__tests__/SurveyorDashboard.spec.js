@@ -116,4 +116,57 @@ describe("SurveyorDashboard", () => {
     expect(wrapper.emitted("start-new-survey")).toBeTruthy();
     expect(wrapper.emitted("start-new-survey")[0]).toEqual(["TMPL-SHG"]);
   });
+
+  it("hides daily target progress strip and shows simple count when daily_target is null", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          today_count: 3,
+          total_count: 12,
+          daily_target: null,
+        },
+      }),
+    });
+
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("3 surveys today");
+    });
+
+    expect(wrapper.text()).not.toContain("Daily Target");
+    expect(wrapper.text()).not.toContain("left for target");
+  });
+
+  it("renders daily target strip and remaining count when daily_target is configured", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        message: {
+          today_count: 2,
+          total_count: 10,
+          daily_target: 6,
+        },
+      }),
+    });
+
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+      },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("Daily Target");
+      expect(wrapper.text()).toContain("2 / 6");
+      expect(wrapper.text()).toContain("4 left for target");
+    });
+  });
 });

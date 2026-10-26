@@ -7,11 +7,12 @@
  "field_order": [
   "user",
   "project_role",
+  "daily_target",
   "assigned_on"
  ],
  "fields": [
   {
-   "columns": 5,
+   "columns": 4,
    "fieldname": "user",
    "fieldtype": "Link",
    "in_list_view": 1,
@@ -20,7 +21,7 @@
    "reqd": 1
   },
   {
-   "columns": 4,
+   "columns": 3,
    "default": "Project User",
    "fieldname": "project_role",
    "fieldtype": "Select",
@@ -28,6 +29,14 @@
    "label": "Project Role",
    "options": "Project Admin\nProject Manager\nProject Analyst\nProject Viewer\nProject User",
    "reqd": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "daily_target",
+   "fieldtype": "Int",
+   "in_list_view": 1,
+   "label": "Daily Target",
+   "description": "Optional surveyor-specific daily target override"
   },
   {
    "columns": 3,

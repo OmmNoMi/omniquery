@@ -384,17 +384,63 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 
 
 @frappe.whitelist(allow_guest=True)
-def get_surveyor_kpis(project=None):
+def get_surveyor_kpis(project=None, surveyor=None):
 	"""
 	Returns daily and aggregate KPI statistics for the current surveyor, optionally filtered by project.
 	"""
-	user = frappe.session.user
+	user = surveyor or frappe.session.user
 	today_start = frappe.utils.today() + " 00:00:00"
 	week_start = frappe.utils.add_days(frappe.utils.today(), -frappe.utils.get_datetime().weekday()) + " 00:00:00"
 
 	today_count = 0
 	week_count = 0
 	total_count = 0
+	approved_count = 0
+
+	# Resolve configured daily target for surveyor/project
+	daily_target = None
+	target_project = None
+	if project and project != "ALL":
+		if frappe.db.exists("OmniQuery Project", project):
+			target_project = project
+		else:
+			target_project = frappe.db.get_value("OmniQuery Template", project, "project")
+	elif user and user != "Guest":
+		member_with_target = frappe.db.get_value(
+			"OmniQuery Project Member",
+			{"user": user, "daily_target": [">", 0]},
+			["parent", "daily_target"],
+			as_dict=True,
+			order_by="creation desc",
+		)
+		if member_with_target:
+			daily_target = int(member_with_target.daily_target)
+			target_project = member_with_target.parent
+		else:
+			membership = frappe.db.get_value(
+				"OmniQuery Project Member",
+				{"user": user},
+				["parent"],
+				as_dict=True,
+				order_by="creation desc",
+			)
+			if membership:
+				target_project = membership.parent
+
+	if target_project:
+		if daily_target is None and user and user != "Guest":
+			member_target = frappe.db.get_value(
+				"OmniQuery Project Member",
+				{"parent": target_project, "user": user},
+				"daily_target",
+			)
+			if member_target and int(member_target) > 0:
+				daily_target = int(member_target)
+
+		if daily_target is None:
+			proj_target = frappe.db.get_value("OmniQuery Project", target_project, "daily_target")
+			if proj_target and int(proj_target) > 0:
+				daily_target = int(proj_target)
 
 	if user != "Guest":
 		try:
@@ -440,7 +486,7 @@ def get_surveyor_kpis(project=None):
 		"week_count": week_count,
 		"total_count": total_count,
 		"approved_count": approved_count,
-		"daily_target": 10,
+		"daily_target": daily_target,
 	}
 
 
