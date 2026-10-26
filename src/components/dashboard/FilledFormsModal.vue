@@ -2,14 +2,20 @@
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 h-screen w-screen flex flex-col overflow-hidden animate-fade-in select-none overscroll-contain"
+      ref="dialogRef"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="filled-forms-modal-title"
+      tabindex="-1"
+      class="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 h-screen w-screen flex flex-col overflow-hidden animate-fade-in select-none overscroll-contain focus:outline-none"
+      @keydown.esc.stop="closeModal"
       @wheel.stop
     >
       <!-- 1. Full-Page Top App Bar -->
       <header class="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-xs">
         <div class="flex items-center gap-3 min-w-0">
           <Button
-            @click="$emit('close')"
+            @click="closeModal"
             class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
             :title="__('Return to Dashboard')"
           >
@@ -18,11 +24,11 @@
           </Button>
 
           <div class="min-w-0">
-            <h1 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
-              {{ __('Saved Responses & Drafts') }}
+            <h1 id="filled-forms-modal-title" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+              {{ __('On this device') }}
             </h1>
             <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              {{ responsesList.length }} {{ __('records stored on this device') }}
+              {{ responsesList.length }} {{ __('records') }}
             </p>
           </div>
         </div>
@@ -37,7 +43,7 @@
           </span>
 
           <Button
-            @click="$emit('close')"
+            @click="closeModal"
             class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center font-bold text-sm transition cursor-pointer"
             :title="__('Close')"
             :aria-label="__('Close')"
@@ -386,7 +392,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch, toRef } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch, toRef, nextTick } from "vue";
 import { Button } from "frappe-ui";
 import { X, Zap, ChevronDown, Trash2, FileText, Calendar, Check, Copy } from "lucide-vue-next";
 import JSZip from "jszip";
@@ -394,6 +400,7 @@ import BaseModal from "../common/BaseModal.vue";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import { useWAL } from "../../composables/useWAL";
+import { useDrafts } from "../../composables/useDrafts";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db, compactLocalStorage } from "../../services/db";
 
@@ -420,6 +427,21 @@ const emit = defineEmits(["close", "sync-all", "resume-draft"]);
 
 const { __ } = useTranslation();
 const { forceSyncAll, retryQuarantinedEntry } = useWAL();
+const { setDrafts } = useDrafts();
+
+const dialogRef = ref(null);
+let openerElement = null;
+
+function closeModal() {
+  emit("close");
+}
+
+function handleKeyDown(e) {
+  if (props.isOpen && e.key === "Escape") {
+    e.stopPropagation();
+    closeModal();
+  }
+}
 
 // Universal scroll locking: strictly prevents background scrolling while open
 useScrollLock(toRef(props, "isOpen"));
@@ -439,6 +461,8 @@ async function loadResponses() {
   try {
     // 1. Fetch all records from db.responses
     const localResponses = await db.responses.toArray();
+    const drafts = localResponses.filter((r) => r.status === "Draft");
+    setDrafts(drafts);
 
     // 2. Fetch all records from db.wal
     const walEntries = await db.wal.toArray();
@@ -940,16 +964,48 @@ async function handleCompactStorage() {
 
 watch(
   () => props.isOpen,
-  (open) => {
+  async (open) => {
     if (open) {
+      if (typeof document !== "undefined") {
+        openerElement = document.activeElement;
+      }
       loadResponses();
+      await nextTick();
+      if (dialogRef.value) {
+        const firstFocusable = dialogRef.value.querySelector("button, [tabindex='0']");
+        if (firstFocusable && typeof firstFocusable.focus === "function") {
+          firstFocusable.focus();
+        } else if (typeof dialogRef.value.focus === "function") {
+          dialogRef.value.focus();
+        }
+      }
+    } else {
+      if (openerElement && typeof openerElement.focus === "function") {
+        openerElement.focus();
+        openerElement = null;
+      }
     }
   }
 );
 
 onMounted(() => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("keydown", handleKeyDown);
+  }
   if (props.isOpen) {
+    if (typeof document !== "undefined") {
+      openerElement = document.activeElement;
+    }
     loadResponses();
+  }
+});
+
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("keydown", handleKeyDown);
+  }
+  if (openerElement && typeof openerElement.focus === "function") {
+    openerElement.focus();
   }
 });
 </script>

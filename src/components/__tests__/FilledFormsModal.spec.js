@@ -106,8 +106,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     await wrapper.vm.$nextTick();
 
-    expect(document.body.textContent).toContain("Saved Responses & Drafts");
-    expect(document.body.textContent).toContain("records stored on this device");
+    expect(document.body.textContent).toContain("On this device");
+    expect(document.body.textContent).toContain("records");
     expect(document.body.textContent).toContain("All (4)");
     expect(document.body.textContent).toContain("Drafts (1)");
     expect(document.body.textContent).toContain("In Queue (1)");

@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
 import { call } from "frappe-ui";
 import { db } from "../services/db";
+import { useDrafts } from "./useDrafts";
 
 export function generateSurveyId(templateName) {
   const cleanId = (templateName || "SURVEY").replace(/^OQS-/, "");
@@ -83,6 +84,7 @@ export function useSurvey() {
       // Sort drafts descending by most recently updated
       drafts.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
       allDrafts.value = drafts;
+      useDrafts().setDrafts(drafts);
       const draftMap = {};
       for (const d of drafts) {
         if (d.template_name && !draftMap[d.template_name]) {
