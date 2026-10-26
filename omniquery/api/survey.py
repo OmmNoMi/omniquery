@@ -146,7 +146,7 @@ def enrich_template_meta(tmpl, p_map, w_map):
 @frappe.whitelist(allow_guest=True)
 def list_active_templates(project=None):
 	"""Returns all published survey templates accessible to current user according to RBAC."""
-	filters = {"status": "Published"}
+	filters = {"status": "Published", "docstatus": 1}
 	if project:
 		filters["project"] = project
 
@@ -275,7 +275,7 @@ def get_bootstrap_data():
 	user_info = get_current_user_info()
 	templates = frappe.get_all(
 		"OmniQuery Template",
-		filters={"status": "Published"},
+		filters={"status": "Published", "docstatus": 1},
 		fields=[
 			"name",
 			"title",

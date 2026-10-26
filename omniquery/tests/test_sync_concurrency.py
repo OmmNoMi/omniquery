@@ -21,9 +21,10 @@ class TestSyncConcurrency(FrappeTestCase):
 				"doctype": "OmniQuery Template",
 				"title": "Sync Concurrency Test",
 				"project": self.project_name,
-				"status": "Published",
+				"status": "Draft",
 			})
 			doc.insert(ignore_permissions=True)
+			doc.submit()
 			self.test_template_name = doc.name
 
 	def tearDown(self):
@@ -34,14 +35,26 @@ class TestSyncConcurrency(FrappeTestCase):
 			pluck="name"
 		)
 		for r in responses:
-			frappe.delete_doc("OmniQuery Response", r, force=True)
+			try:
+				doc = frappe.get_doc("OmniQuery Response", r)
+				if doc.docstatus == 1:
+					doc.cancel()
+				doc.delete(force=True)
+			except Exception:
+				frappe.db.delete("OmniQuery Response", {"name": r})
 
 		frappe.db.delete("OmniQuery Sync Audit Log", {"idempotency_key": ["like", "TEST-CONC-%"]})
 		frappe.db.delete("OmniQuery Field Error Log", {"question_code": ["like", "TEST-CONC-%"]})
 		frappe.db.delete("OmniQuery Response", {"name": "TEMP_SP_003"})
 
 		if frappe.db.exists("OmniQuery Template", self.test_template_name):
-			frappe.delete_doc("OmniQuery Template", self.test_template_name, force=True)
+			try:
+				tmpl = frappe.get_doc("OmniQuery Template", self.test_template_name)
+				if tmpl.docstatus == 1:
+					tmpl.cancel()
+				tmpl.delete(force=True)
+			except Exception:
+				frappe.db.delete("OmniQuery Template", {"name": self.test_template_name})
 
 
 	def test_duplicate_submission_is_skipped(self):
@@ -285,6 +298,35 @@ class TestSyncConcurrency(FrappeTestCase):
 			"sync_status",
 		)
 		self.assertEqual(failed_audit_status, "FAILED")
+
+	def test_synced_final_response_has_docstatus_1_and_locked(self):
+		idempotency_key = "TEST-CONC-SUBMIT-DOCSTATUS"
+		sub = {
+			"idempotency_key": idempotency_key,
+			"survey_template": self.test_template_name,
+			"template_version": 1,
+			"items": [],
+		}
+		res = batch_push([sub])
+		results = res.get("results", []) if isinstance(res, dict) else res
+		self.assertEqual(results[0]["status"], "SUCCESS")
+
+		doc_name = results[0]["doc_name"]
+		resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
+		self.assertEqual(resp_doc.docstatus, 1)
+
+		resp_doc.template_version = 99
+		with self.assertRaises(frappe.UpdateAfterSubmitError):
+			resp_doc.save()
+
+	def test_template_with_status_published_requires_docstatus_1(self):
+		tmpl = frappe.new_doc("OmniQuery Template")
+		tmpl.title = "Test Published Docstatus Requirement"
+		tmpl.project = self.project_name
+		tmpl.status = "Published"
+		with self.assertRaises(frappe.ValidationError):
+			tmpl.insert(ignore_permissions=True)
+
 
 
 

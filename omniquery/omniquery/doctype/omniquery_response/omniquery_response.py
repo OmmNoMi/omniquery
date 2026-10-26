@@ -18,3 +18,9 @@ class OmniQueryResponse(Document):
 	def before_insert(self):
 		if not self.synced_at:
 			self.synced_at = now_datetime()
+
+	def before_submit(self):
+		if not self.synced_at:
+			self.synced_at = now_datetime()
+		if not self.survey_status or self.survey_status == "Draft":
+			self.survey_status = "Submitted"

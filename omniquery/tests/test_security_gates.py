@@ -17,9 +17,15 @@ class TestSecurityGates(FrappeTestCase):
 		for dt, dn in reversed(self.test_records):
 			try:
 				if frappe.db.exists(dt, dn):
+					doc = frappe.get_doc(dt, dn)
+					if getattr(doc, "docstatus", 0) == 1:
+						doc.cancel()
 					frappe.delete_doc(dt, dn, force=True)
 			except Exception:
-				pass
+				try:
+					frappe.db.delete(dt, {"name": dn})
+				except Exception:
+					pass
 		frappe.db.commit()
 
 	def _get_or_create_project(self):
@@ -77,10 +83,10 @@ class TestSecurityGates(FrappeTestCase):
 			"title": f"Private Staff Survey {rand_id}",
 			"project": proj,
 			"version": 1,
-			"status": "Published",
 			"is_public_citizen_link": 0,
 			"is_public": 0,
 		}).insert(ignore_permissions=True)
+		tmpl.submit()
 		self.test_records.append(("OmniQuery Template", tmpl.name))
 
 		resp = frappe.get_doc({
@@ -119,8 +125,8 @@ class TestSecurityGates(FrappeTestCase):
 			"title": f"Test Ext Template {rand_id}",
 			"project": proj,
 			"version": 1,
-			"status": "Published",
 		}).insert(ignore_permissions=True)
+		tmpl.submit()
 		self.test_records.append(("OmniQuery Template", tmpl.name))
 
 		resp = frappe.get_doc({
@@ -155,8 +161,8 @@ class TestSecurityGates(FrappeTestCase):
 			"title": f"Test Size Template {rand_id}",
 			"project": proj,
 			"version": 1,
-			"status": "Published",
 		}).insert(ignore_permissions=True)
+		tmpl.submit()
 		self.test_records.append(("OmniQuery Template", tmpl.name))
 
 		resp = frappe.get_doc({
@@ -193,8 +199,8 @@ class TestSecurityGates(FrappeTestCase):
 			"title": f"Test XSS Template {rand_id}",
 			"project": proj,
 			"version": 1,
-			"status": "Published",
 		}).insert(ignore_permissions=True)
+		tmpl.submit()
 		self.test_records.append(("OmniQuery Template", tmpl.name))
 
 		payload = {

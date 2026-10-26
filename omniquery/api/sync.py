@@ -500,6 +500,9 @@ def batch_push(submissions=None):
 			else:
 				resp_doc.insert(ignore_permissions=True)
 
+			if resp_doc.docstatus == 0:
+				resp_doc.submit()
+
 			# Phase 3: Telemetry Analysis & Supervisor Audit Synthesis
 			process_automated_audit(resp_doc, sub)
 
