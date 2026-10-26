@@ -9,6 +9,7 @@ from frappe.utils import (
 	flt,
 	get_datetime_str,
 	now_datetime,
+	validate_phone_number,
 )
 
 from .survey import resolve_template_name, user_has_template_permission
@@ -479,6 +480,13 @@ def batch_push(submissions=None):
 			resp_doc.set("items", [])
 			for item in sub.get("items", []):
 				val_raw = item.get("value")
+				q_code = (item.get("question_code") or "").lower()
+				f_type = (item.get("field_type") or "").lower()
+				is_phone = f_type == "phone" or "phone" in q_code or "mobile" in q_code
+				if is_phone and val_raw:
+					val_clean = str(val_raw).strip()
+					validate_phone_number(val_clean, throw=True)
+
 				val_num = flt(val_raw) if isinstance(val_raw, (int, float)) else None
 				# Security: Strip HTML and script tags to eliminate stored XSS in Desk reports and print views
 				val_text = sanitize_value_text(val_raw)

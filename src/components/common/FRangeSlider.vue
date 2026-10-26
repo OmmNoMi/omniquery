@@ -1,15 +1,27 @@
 <template>
   <div class="space-y-4 pt-1">
     <!-- Selected Value Hero Badge -->
-    <div class="flex items-center justify-between bg-emerald-50 dark:bg-emerald-950/40 border-2 border-emerald-200 dark:border-emerald-800/80 rounded-2xl px-5 py-3.5 shadow-xs">
-      <span class="text-xs font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider">
+    <div
+      class="flex items-center justify-between border-2 rounded-2xl px-5 py-3.5 shadow-xs transition"
+      :class="isAnswered
+        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/80'
+        : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/80'"
+    >
+      <span
+        class="text-xs font-black uppercase tracking-wider"
+        :class="isAnswered ? 'text-emerald-800 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'"
+      >
         {{ __('Selected Value') }}
       </span>
       <div class="flex items-baseline space-x-1.5">
-        <span class="text-2xl sm:text-3xl font-black text-emerald-950 dark:text-emerald-100">
+        <span
+          :class="isAnswered
+            ? 'text-2xl sm:text-3xl font-black text-emerald-950 dark:text-emerald-100'
+            : 'text-base sm:text-lg font-bold text-slate-500 dark:text-slate-400 italic'"
+        >
           {{ displayValue }}
         </span>
-        <span v-if="unit" class="text-sm sm:text-base font-black text-emerald-700 dark:text-emerald-400">
+        <span v-if="unit && isAnswered" class="text-sm sm:text-base font-black text-emerald-700 dark:text-emerald-400">
           {{ __(unit) }}
         </span>
       </div>
@@ -24,12 +36,12 @@
           :min="min"
           :max="max"
           :step="step"
-          :modelValue="numericValue"
+          :modelValue="isAnswered ? numericValue : min"
           :aria-label="ariaLabel || __('Range value')"
           :aria-valuemin="min"
           :aria-valuemax="max"
-          :aria-valuenow="numericValue"
-          :aria-valuetext="`${displayValue} ${unit ? __(unit) : ''}`.trim()"
+          :aria-valuenow="isAnswered ? numericValue : undefined"
+          :aria-valuetext="isAnswered ? `${displayValue} ${unit ? __(unit) : ''}`.trim() : __('Not answered')"
           :aria-describedby="ariaDescribedby"
           @update:modelValue="(val) => emit('update:modelValue', Number(val))"
           class="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-grab active:cursor-grabbing accent-emerald-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 transition shadow-inner"
@@ -44,7 +56,7 @@
           @click="selectValue(val)"
           :class="[
             'px-2 py-0.5 rounded-md transition font-mono',
-            numericValue === val
+            isAnswered && numericValue === val
               ? 'bg-emerald-600 text-white font-black shadow-xs scale-110'
               : 'hover:text-emerald-700 dark:hover:text-emerald-300'
           ]"
@@ -61,17 +73,17 @@
       class="grid grid-flow-col auto-cols-fr gap-1.5 sm:gap-2 pt-1"
     >
       <Button
-        v-for="val in steps"
+        v-for="(val, idx) in steps"
         :key="val"
         :ref="(el) => setBtnRef(val, el)"
         role="radio"
-        :aria-checked="numericValue === val"
-        :tabindex="numericValue === val ? 0 : -1"
+        :aria-checked="isAnswered && numericValue === val ? 'true' : 'false'"
+        :tabindex="(isAnswered && numericValue === val) || (!isAnswered && idx === 0) ? 0 : -1"
         @click="selectValue(val)"
         @keydown="handleKeydown"
         :class="[
           'py-3 text-center rounded-xl border-2 text-sm sm:text-base font-bold transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500',
-          numericValue === val
+          isAnswered && numericValue === val
             ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-slate-900 font-black'
             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-emerald-400'
         ]"
@@ -90,7 +102,7 @@ import { useTranslation } from "../../composables/useTranslation";
 const props = defineProps({
   modelValue: {
     type: [Number, String],
-    default: 0,
+    default: null,
   },
   min: {
     type: Number,
@@ -106,7 +118,7 @@ const props = defineProps({
   },
   unit: {
     type: String,
-    default: "Years",
+    default: "",
   },
   format: {
     type: String,
@@ -139,16 +151,25 @@ function setBtnRef(val, el) {
 
 const activeFormat = computed(() => (props.format === "slider" ? "slider" : "buttons"));
 
+const isAnswered = computed(() => {
+  return (
+    props.modelValue !== "" &&
+    props.modelValue !== null &&
+    props.modelValue !== undefined &&
+    !isNaN(Number(props.modelValue))
+  );
+});
+
 const numericValue = computed(() => {
-  const v = Number(props.modelValue);
-  return isNaN(v) ? props.min : v;
+  if (!isAnswered.value) return null;
+  return Number(props.modelValue);
 });
 
 const displayValue = computed(() => {
-  if (props.modelValue !== "" && props.modelValue !== null && props.modelValue !== undefined) {
+  if (isAnswered.value) {
     return props.modelValue;
   }
-  return props.min;
+  return __("Not answered");
 });
 
 const steps = computed(() => {
@@ -174,9 +195,26 @@ function selectValue(val) {
 
 function handleKeydown(e) {
   const s = steps.value;
-  const current = Number(numericValue.value);
-  const idx = s.indexOf(current);
-  if (idx === -1) return;
+  const current = numericValue.value;
+  const idx = current === null ? -1 : s.indexOf(current);
+  if (idx === -1) {
+    if (["ArrowRight", "ArrowDown", "Enter", " "].includes(e.key)) {
+      e.preventDefault();
+      selectValue(s[0]);
+    } else if (["ArrowLeft", "ArrowUp"].includes(e.key)) {
+      e.preventDefault();
+      selectValue(s[0]);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      selectValue(s[0]);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      selectValue(s[s.length - 1]);
+    } else if (e.key === "Escape") {
+      emit("esc");
+    }
+    return;
+  }
   if (["ArrowRight", "ArrowDown"].includes(e.key) && idx < s.length - 1) {
     e.preventDefault();
     selectValue(s[idx + 1]);
