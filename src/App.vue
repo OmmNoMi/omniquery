@@ -510,6 +510,7 @@ import { useGPS } from "./composables/useGPS";
 import { useTextScale } from "./composables/useTextScale";
 import { useTranslation } from "./composables/useTranslation";
 import { useAudioRecorder } from "./composables/useAudioRecorder";
+import { db } from "./services/db";
 import CompactHeader from "./components/header/CompactHeader.vue";
 import SectionCard from "./components/survey/SectionCard.vue";
 import QuestionCard from "./components/survey/QuestionCard.vue";
@@ -691,6 +692,7 @@ async function handleSyncSubmittedNow() {
       }
     }
   } catch (e) {
+    console.warn("Sync submission failed:", e);
   } finally {
     isSyncingSubmission.value = false;
   }
@@ -718,7 +720,9 @@ function copyResponseCode() {
     setTimeout(() => {
       hasCopiedCode.value = false;
     }, 2000);
-  } catch (e) {}
+  } catch (e) {
+    console.warn("Failed to copy code to clipboard:", e);
+  }
 }
 
 async function restoreSubmittedResponseId() {
@@ -735,7 +739,9 @@ async function restoreSubmittedResponseId() {
       submittedResponseId.value = latest[0].response_uid;
       submittedTimestamp.value = new Date(latest[0].updated_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
-  } catch (e) {}
+  } catch (e) {
+    console.error("Failed to restore submitted response ID from local database:", e);
+  }
 }
 
 watch(isSubmitted, (val) => {
@@ -1103,7 +1109,9 @@ async function syncDraftToServer() {
     if (res) {
       try {
         await db.responses.update(currentDraftId.value, { synced: true });
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Failed to mark draft as synced in local database:", e);
+      }
     }
   } catch (e) {
     console.warn("In-flight draft sync non-critical warning:", e);
@@ -1225,7 +1233,12 @@ async function saveOfflineRecord() {
       synced: false,
     });
     await loadActiveDrafts();
-  } catch (e) {}
+  } catch (e) {
+    console.error("Failed to save submitted response to local database:", e);
+    if (window.frappe && window.frappe.show_alert) {
+      window.frappe.show_alert({ message: __("Failed to save response locally: {0}", [e.message]), indicator: "red" });
+    }
+  }
 
   await queueWAL("OmniQuery Response", payload, false);
   if (isOnline.value) {
@@ -1234,7 +1247,9 @@ async function saveOfflineRecord() {
       isSubmissionSynced.value = true;
       try {
         await syncPendingAudio(draftKey);
-      } catch (audioSyncErr) {}
+      } catch (audioSyncErr) {
+        console.warn("Failed to sync pending audio:", audioSyncErr);
+      }
       if (window.frappe && window.frappe.show_alert) {
         window.frappe.show_alert({ message: __("Survey synced to server successfully!"), indicator: "green" });
       }
