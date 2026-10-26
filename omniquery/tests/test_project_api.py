@@ -42,6 +42,8 @@ class TestProjectAPI(unittest.TestCase):
 		self.assertIn("project", details)
 		self.assertEqual(details["project"]["project_name"], "Sample Enterprise Project")
 		self.assertEqual(details["project"]["grantor_organization"], "State Mission Agency")
+		self.assertEqual(details["project"]["status"], "Active")
+		self.assertIn("workspace_title", details["project"])
 		self.assertEqual(details["project"]["helpline_phone"], "+91 1800 000 111")
 		self.assertIn("training_modules", details)
 		self.assertTrue(len(details["training_modules"]) >= 1)

@@ -461,6 +461,7 @@ def get_project_details(project_id=None):
 			"project_name",
 			"grantor_organization",
 			"workspace",
+			"status",
 			"description",
 			"district_scope",
 			"target_beneficiaries",
@@ -482,6 +483,7 @@ def get_project_details(project_id=None):
 				"project_name",
 				"grantor_organization",
 				"workspace",
+				"status",
 				"description",
 				"district_scope",
 				"target_beneficiaries",
@@ -500,7 +502,16 @@ def get_project_details(project_id=None):
 				"project_name": project_id,
 				"grantor_organization": None,
 				"description": None,
+				"status": "Active",
+				"workspace_title": "",
 			}
+
+	workspace_id = proj.get("workspace")
+	proj["workspace_title"] = (
+		frappe.db.get_value("OmniQuery Workspace", workspace_id, "workspace_title")
+		if workspace_id
+		else ""
+	) or ""
 
 	# Training modules & field SOPs for surveyors
 	training_modules = []

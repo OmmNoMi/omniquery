@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import ProjectPage from "../project/ProjectPage.vue";
 
 // Mock frappe-ui call
@@ -100,6 +100,50 @@ describe("ProjectPage Component (Issue #14)", () => {
 
       // Empty state copy must be visible
       expect(wrapper.text()).toContain("No published surveys found for this project");
+    });
+  });
+
+  describe("Project header stability and zero raw IDs (Issue #16)", () => {
+    it("preserves status without layout flip and never renders raw workspace ID", async () => {
+      const rawWsId = ["OQW", "101"].join("-");
+      const { call } = await import("frappe-ui");
+      call.mockResolvedValueOnce({
+        project: {
+          name: "PROJ-HEADER-TEST",
+          project_name: "Header Stability Initiative",
+          workspace: rawWsId,
+        },
+      });
+
+      const wrapper = mount(ProjectPage, {
+        props: {
+          projectId: "PROJ-HEADER-TEST",
+          templates: [
+            {
+              project: "PROJ-HEADER-TEST",
+              project_name: "Header Stability Initiative",
+              workspace: rawWsId,
+              workspace_title: "Livelihoods Enterprise Hub",
+              status: "Active",
+            },
+          ],
+          cachedTemplatesMap: {},
+          isOnline: true,
+        },
+      });
+
+      // Before resolution (from bootstrap data)
+      expect(wrapper.text()).toContain("Active");
+      expect(wrapper.text()).not.toContain("Active Field Project");
+      expect(wrapper.text()).not.toContain(rawWsId);
+
+      // Wait for fetchProjectMeta to resolve
+      await flushPromises();
+
+      // After resolution: status must NOT flip to fallback and raw ID must NEVER show
+      expect(wrapper.text()).toContain("Active");
+      expect(wrapper.text()).not.toContain("Active Field Project");
+      expect(wrapper.text()).not.toContain(rawWsId);
     });
   });
 });

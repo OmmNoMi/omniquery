@@ -31,13 +31,13 @@
             <span>{{ projectMeta.name || projectId }}</span>
           </span>
           <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 shrink-0">
-            {{ projectMeta.status || __('Active Field Project') }}
+            {{ projectMeta.status || __('Active') }}
           </span>
         </div>
 
-        <span v-if="projectMeta.workspace" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
+        <span v-if="projectMeta.workspace_title" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
           <Building2 class="w-3.5 h-3.5 text-slate-400" />
-          <span>{{ projectMeta.workspace_title || projectMeta.workspace }}</span>
+          <span>{{ projectMeta.workspace_title }}</span>
         </span>
       </div>
 
@@ -400,6 +400,8 @@ async function fetchProjectMeta() {
     if (proj && (proj.name || proj.project_name)) {
       remoteProjectMeta.value = {
         ...proj,
+        status: proj.status || projectMeta.value.status || "Active",
+        workspace_title: proj.workspace_title || projectMeta.value.workspace_title || "",
         helpline_phone: proj.helpline_phone || data?.helpline?.phone || "",
         helpline_email: proj.helpline_email || data?.helpline?.email || "",
         sop_sections: proj.sop_sections || "",
