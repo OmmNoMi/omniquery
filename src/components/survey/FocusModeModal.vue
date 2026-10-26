@@ -231,6 +231,7 @@ import { Button } from "frappe-ui";
 import { X, ClipboardList, Zap, Target } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
+import { registerModal, unregisterModal } from "../../composables/useModalStack";
 import QuestionCard from "./QuestionCard.vue";
 import MatrixQuestionCard from "./MatrixQuestionCard.vue";
 
@@ -396,8 +397,12 @@ function nextQuestion() {
   advanceToNext();
 }
 
-function onClose() {
-  isModeMenuOpen.value = false;
+function onClose(e) {
+  if (isModeMenuOpen.value) {
+    isModeMenuOpen.value = false;
+    e?.stopPropagation?.();
+    return;
+  }
   emit("close");
 }
 
@@ -415,7 +420,13 @@ watch(
   () => props.isOpen,
   (open) => {
     if (open) {
+      registerModal({
+        id: "focus_mode_modal",
+        close: (e) => onClose(e),
+      });
       focusCurrentQuestion();
+    } else {
+      unregisterModal("focus_mode_modal");
     }
   },
   { immediate: true }
@@ -428,6 +439,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  unregisterModal("focus_mode_modal");
   if (typeof document !== "undefined") {
     document.removeEventListener("click", handleOutsideClick);
   }

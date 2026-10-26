@@ -14,12 +14,16 @@
         @click.self="handleBackdropClick"
         @wheel.stop
         @touchmove.self.prevent
-        role="dialog"
-        aria-modal="true"
       >
         <div
-          class="bg-white dark:bg-slate-900 w-full rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-scale-up overscroll-contain"
+          ref="cardRef"
+          role="dialog"
+          aria-modal="true"
+          :aria-labelledby="title ? titleId : undefined"
+          tabindex="-1"
+          class="bg-white dark:bg-slate-900 w-full rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200 dark:border-slate-800 animate-scale-up overscroll-contain focus:outline-none"
           :class="[sizeClass, maxHeightClass, customClass]"
+          @keydown="handleCardKeydown"
         >
           <!-- Modal Header -->
           <div
@@ -30,7 +34,7 @@
               <div class="flex items-center gap-2.5 min-w-0">
                 <span v-if="icon" class="text-2xl shrink-0">{{ icon }}</span>
                 <div class="min-w-0">
-                  <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
+                  <h3 :id="titleId" class="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
                     {{ title }}
                   </h3>
                   <p v-if="subtitle" class="text-xs text-slate-500 dark:text-slate-400 truncate">
@@ -42,11 +46,12 @@
 
             <Button
               v-if="showCloseButton"
+              ref="closeButtonRef"
               @click="$emit('close')"
               class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-sm transition shrink-0 cursor-pointer"
-              :title="__('Close')"
-              :aria-label="__('Close')"
-              :label="__('Close')"
+              :title="__('Close dialog')"
+              :aria-label="__('Close dialog')"
+              :label="__('Close dialog')"
             >
               <X class="w-4 h-4" />
             </Button>
@@ -81,11 +86,12 @@
 </template>
 
 <script setup>
-import { computed, toRef, onMounted, onUnmounted } from "vue";
+import { computed, toRef, ref, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { Button } from "frappe-ui";
 import { X } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
+import { registerModal, unregisterModal } from "../../composables/useModalStack";
 
 const props = defineProps({
   isOpen: {
@@ -145,6 +151,14 @@ const props = defineProps({
 const emit = defineEmits(["close"]);
 const { __ } = useTranslation();
 
+// Unique identifier for modal title and stacking registry
+const modalId = `modal_${Math.random().toString(36).substring(2, 9)}`;
+const titleId = `modal_title_${modalId}`;
+
+const cardRef = ref(null);
+const closeButtonRef = ref(null);
+const triggerElement = ref(null);
+
 // Automatic body scroll locking: strictly prevents background scrolling while open
 useScrollLock(toRef(props, "isOpen"));
 
@@ -175,21 +189,72 @@ function handleBackdropClick() {
   }
 }
 
-function handleKeyDown(e) {
-  if (props.isOpen && props.closeOnEsc && e.key === "Escape") {
-    emit("close");
+// Trap focus inside modal on Tab key
+function handleCardKeydown(e) {
+  if (e.key !== "Tab" || !cardRef.value) return;
+
+  const focusables = cardRef.value.querySelectorAll(
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  );
+  if (!focusables || focusables.length === 0) return;
+
+  const firstEl = focusables[0];
+  const lastEl = focusables[focusables.length - 1];
+
+  if (e.shiftKey) {
+    if (document.activeElement === firstEl) {
+      e.preventDefault();
+      lastEl.focus();
+    }
+  } else {
+    if (document.activeElement === lastEl) {
+      e.preventDefault();
+      firstEl.focus();
+    }
   }
 }
 
-onMounted(() => {
-  if (typeof window !== "undefined") {
-    window.addEventListener("keydown", handleKeyDown);
-  }
-});
+watch(
+  () => props.isOpen,
+  (open) => {
+    if (open) {
+      if (typeof document !== "undefined" && document.activeElement) {
+        triggerElement.value = document.activeElement;
+      }
+      registerModal({
+        id: modalId,
+        close: () => {
+          if (props.closeOnEsc) {
+            emit("close");
+          }
+        },
+        triggerEl: triggerElement.value,
+      });
+
+      nextTick(() => {
+        // Move focus into the modal card or close button
+        const btnEl = closeButtonRef.value?.$el || closeButtonRef.value;
+        if (btnEl && typeof btnEl.focus === "function") {
+          btnEl.focus();
+        } else if (cardRef.value && typeof cardRef.value.focus === "function") {
+          cardRef.value.focus();
+        }
+      });
+    } else {
+      unregisterModal(modalId);
+      if (triggerElement.value && typeof triggerElement.value.focus === "function") {
+        nextTick(() => {
+          try {
+            triggerElement.value.focus();
+          } catch (e) {}
+        });
+      }
+    }
+  },
+  { immediate: true }
+);
 
 onUnmounted(() => {
-  if (typeof window !== "undefined") {
-    window.removeEventListener("keydown", handleKeyDown);
-  }
+  unregisterModal(modalId);
 });
 </script>
