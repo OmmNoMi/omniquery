@@ -120,9 +120,11 @@
         <!-- User Avatar Icon with Live Green Dot (Logged-in surveyor only) -->
         <Button
           v-else
-          @click="showConfigModal = true"
+          ref="avatarButtonRef"
+          @click="openConfigModal"
           class="relative w-9 h-9 rounded-full bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-black text-xs flex items-center justify-center shadow-xs ring-2 ring-[#b8cdbf] transition cursor-pointer select-none"
           :title="__('Settings & Configuration')"
+          :aria-label="__('Settings & Configuration')"
         >
           <span>{{ userInitial }}</span>
 
@@ -151,29 +153,29 @@
       <div
         v-if="showConfigModal"
         class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-end justify-center overscroll-contain select-none"
-        @click.self="showConfigModal = false"
+        @click.self="closeConfigModal"
         @wheel.stop
         @touchmove.self.prevent
       >
-        <div class="bg-white w-full max-w-lg rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto pb-safe overscroll-contain">
+        <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white w-full max-w-lg rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto pb-safe overscroll-contain border-t border-slate-200 dark:border-slate-800">
           <!-- iOS Grabber Bar -->
-          <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto"></div>
+          <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto"></div>
 
           <!-- Sheet Header: User Avatar & Live Status & WCAG 44x44 Close Button -->
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-3">
-              <div class="relative w-12 h-12 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shadow-xs ring-2 ring-emerald-100">
+              <div class="relative w-12 h-12 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shadow-xs ring-2 ring-emerald-100 dark:ring-emerald-900/60">
                 {{ userInitial }}
                 <span
                   :class="[
-                    'absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white',
+                    'absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900',
                     isOnline ? 'bg-emerald-500' : 'bg-amber-500'
                   ]"
                 />
               </div>
               <div>
-                <h3 class="text-sm font-bold text-slate-900 leading-tight">{{ userDisplayName }}</h3>
-                <p class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">{{ userDisplayName }}</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ userEmail }}</p>
                 <div class="flex items-center gap-1.5 mt-1">
                   <span
                     :class="[
@@ -181,8 +183,8 @@
                       isOnline ? 'bg-emerald-500' : 'bg-amber-500'
                     ]"
                   />
-                  <span class="text-[11px] font-semibold text-slate-600">
-                    {{ isOnline ? __('Online') : __('Offline') }} · {{ __('Field Surveyor') }}
+                  <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                    {{ isOnline ? __('Online') : __('Offline') }} · {{ __(userRoleLabel) || userRoleLabel }}
                   </span>
                 </div>
               </div>
@@ -190,8 +192,8 @@
 
             <!-- Accessible WCAG 2.2 AA Close Button (44x44px target) -->
             <Button
-              @click="showConfigModal = false"
-              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              @click="closeConfigModal"
+              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-95 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition flex items-center justify-center border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               :aria-label="__('Close settings')"
               :title="__('Close settings')"
             >
@@ -329,12 +331,12 @@
             </div>
           </div>
 
-          <!-- 4. Offline WAL Queue & Sync Status -->
+          <!-- 4. Offline Responses & Sync Status -->
           <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800">
                 <Package class="w-4 h-4 text-slate-500" />
-                <span>{{ __('WAL Queue') }}</span>
+                <span>{{ __('Waiting to upload') }}</span>
               </div>
               <p class="text-[11px] text-slate-500 mt-0.5">
                 {{ pendingWALCount }} {{ __('Pending Responses') }}
@@ -352,20 +354,20 @@
 
           <!-- 5. Profile Details & Manage Link -->
           <div class="pt-1 flex items-center justify-between text-xs px-1">
-            <span class="text-slate-500 font-medium">{{ __('Manage Profile & Credentials') }}</span>
+            <span class="text-slate-500 font-medium">{{ __('User Profile & Account') }}</span>
             <a
               href="/app/user-profile"
               class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
             >
-              <span>{{ __('ERPNext Profile') }}</span>
+              <span>{{ __('View Profile') }}</span>
               <span>↗</span>
             </a>
           </div>
 
           <!-- Sheet Dismiss Button -->
           <Button
-            @click="showConfigModal = false"
-            class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm transition shadow-sm"
+            @click="closeConfigModal"
+            class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm transition shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
           >
             {{ __('Done') || 'Done' }}
           </Button>
@@ -376,7 +378,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
@@ -415,14 +417,40 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isGuest: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-text-size", "toggle-audio"]);
 const { __, currentLang, setLanguage } = useTranslation();
 
+const avatarButtonRef = ref(null);
 const showConfigModal = ref(false);
 useScrollLock(showConfigModal);
 const activeTheme = ref("light");
+
+function openConfigModal() {
+  showConfigModal.value = true;
+}
+
+function closeConfigModal() {
+  showConfigModal.value = false;
+  if (avatarButtonRef.value) {
+    const el = avatarButtonRef.value.$el || avatarButtonRef.value;
+    if (el && typeof el.focus === "function") {
+      el.focus();
+    }
+  }
+}
+
+function onKeydown(e) {
+  if (e.key === "Escape" && showConfigModal.value) {
+    e.stopPropagation();
+    closeConfigModal();
+  }
+}
 
 const userEmail = computed(() => {
   return (window.frappe && window.frappe.user) || "surveyor@ommnomi.in";
@@ -443,6 +471,26 @@ const userInitial = computed(() => {
   return name.charAt(0).toUpperCase();
 });
 
+const userRoleLabel = computed(() => {
+  const f = window.frappe;
+  if (!f) return "Field Surveyor";
+  if (f.user === "Administrator") return "Administrator";
+
+  const roles = (f.boot && f.boot.user && f.boot.user.roles) || f.user_roles || f.roles || [];
+  if (Array.isArray(roles)) {
+    if (roles.includes("Administrator")) return "Administrator";
+    if (roles.includes("System Manager")) return "System Manager";
+    if (roles.includes("OmniQuery Manager")) return "OmniQuery Manager";
+    if (roles.includes("Project Admin")) return "Project Admin";
+    if (roles.includes("Project Analyst")) return "Project Analyst";
+    if (roles.includes("Field Supervisor")) return "Field Supervisor";
+    if (roles.includes("Field Surveyor")) return "Field Surveyor";
+    const nonStandard = roles.find((r) => r !== "All" && r !== "Guest");
+    if (nonStandard) return nonStandard;
+  }
+  return "Field Surveyor";
+});
+
 function setTextScale(size) {
   emit("set-text-size", size);
 }
@@ -459,7 +507,7 @@ function setAppTheme(theme) {
 
 function triggerSync() {
   emit("open-wal");
-  showConfigModal.value = false;
+  closeConfigModal();
 }
 
 const activeChoiceMode = ref(
@@ -478,12 +526,25 @@ watch(showConfigModal, (isOpen) => {
   if (typeof document !== "undefined") {
     document.body.style.overflow = isOpen ? "hidden" : "";
   }
+  if (typeof window !== "undefined") {
+    if (isOpen) {
+      window.addEventListener("keydown", onKeydown);
+    } else {
+      window.removeEventListener("keydown", onKeydown);
+    }
+  }
 });
 
 onMounted(() => {
   if (typeof localStorage !== "undefined") {
     const savedTheme = localStorage.getItem("omniquery_theme") || "light";
     setAppTheme(savedTheme);
+  }
+});
+
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("keydown", onKeydown);
   }
 });
 </script>

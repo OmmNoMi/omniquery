@@ -15,6 +15,7 @@
       :progressPercent="activeTemplate ? progressPercent : 0"
       :isRecording="isRecording"
       :isAudioPaused="isAudioPaused"
+      :isGuest="isGuest"
       @exit="onExit"
       @home="onHome"
       @open-wal="showWALDrawer = true"
