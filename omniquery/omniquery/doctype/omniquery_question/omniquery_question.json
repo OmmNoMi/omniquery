@@ -341,10 +341,6 @@
    "share": 0,
    "submit": 1,
    "write": 1
-  },
-  {
-   "read": 1,
-   "role": "OmniQuery User"
   }
  ],
  "sort_field": "creation",

@@ -199,6 +199,11 @@ def ensure_workspace():
 	doc.indicator_color = "blue"
 	doc.module = "OmniQuery"
 	doc.public = 1
+	doc.set("roles", [
+		{"role": "OmniQuery Admin"},
+		{"role": "OmniQuery Manager"},
+		{"role": "System Manager"},
+	])
 	doc.content = _build_workspace_content(shortcuts)
 	doc.set("shortcuts", shortcuts)
 	doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
