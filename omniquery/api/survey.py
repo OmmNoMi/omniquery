@@ -395,18 +395,31 @@ def get_surveyor_kpis(project=None):
 	today_count = 0
 	week_count = 0
 	total_count = 0
+	approved_count = 0
 
 	if user != "Guest":
 		try:
+			from frappe.query_builder import functions as fn
+
 			Response = frappe.qb.DocType("OmniQuery Response")
+
+			linked_surveyors = set(frappe.get_all("OmniQuery Surveyor", filters={"user": user}, pluck="name"))
+			if frappe.db.exists("OmniQuery Surveyor", f"SURV-{user}"):
+				linked_surveyors.add(f"SURV-{user}")
+			if frappe.db.exists("OmniQuery Surveyor", user):
+				linked_surveyors.add(user)
 
 			def build_query(since=None):
 				query = (
 					frappe.qb.from_(Response)
-					.select(frappe.qb.fn.Count("*"))
+					.select(fn.Count(Response.name))
 					.where(Response.survey_status != "Draft")
-					.where((Response.owner == user) | (Response.surveyor.like(f"%{user}%")))
 				)
+				user_filter = (Response.owner == user)
+				if linked_surveyors:
+					user_filter = user_filter | (Response.surveyor.isin(list(linked_surveyors)))
+				query = query.where(user_filter)
+
 				if since:
 					query = query.where(Response.creation >= since)
 				if project and project != "ALL":
@@ -432,8 +445,8 @@ def get_surveyor_kpis(project=None):
 			appr_query = build_query().where(Response.survey_status == "Approved")
 			appr_res = appr_query.run()
 			approved_count = (appr_res and appr_res[0][0]) or 0
-		except Exception:
-			approved_count = 0
+		except Exception as e:
+			frappe.log_error("OmniQuery get_surveyor_kpis Error", str(e))
 
 	return {
 		"today_count": today_count,

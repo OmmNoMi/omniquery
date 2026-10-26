@@ -1,5 +1,6 @@
 import frappe
 from frappe import _
+from frappe.query_builder import Case, Order, functions as fn
 from frappe.utils import add_days, nowdate
 
 
@@ -13,7 +14,6 @@ def get_project_analytics(project_id=None):
 	Zero raw SQL: Uses parameterized frappe.qb (Frappe Query Builder).
 	"""
 	Response = frappe.qb.DocType("OmniQuery Response")
-	Audit = frappe.qb.DocType("OmniQuery Supervisor Audit")
 
 	# Base query filtering
 	base_query = frappe.qb.from_(Response).where(Response.survey_status != "Draft")
@@ -29,7 +29,7 @@ def get_project_analytics(project_id=None):
 	# 1. Status Distribution
 	status_query = (
 		base_query
-		.select(Response.survey_status, frappe.qb.fn.Count(Response.name).as_("count"))
+		.select(Response.survey_status, fn.Count(Response.name).as_("count"))
 		.groupby(Response.survey_status)
 	)
 	status_rows = status_query.run(as_dict=True) or []
@@ -45,37 +45,27 @@ def get_project_analytics(project_id=None):
 	velocity_query = (
 		base_query
 		.select(
-			frappe.qb.fn.Date(Response.creation).as_("date"),
-			frappe.qb.fn.Count(Response.name).as_("count")
+			fn.Date(Response.creation).as_("date"),
+			fn.Count(Response.name).as_("count")
 		)
 		.where(Response.creation >= start_date)
-		.groupby(frappe.qb.fn.Date(Response.creation))
-		.orderby(frappe.qb.fn.Date(Response.creation))
+		.groupby(fn.Date(Response.creation))
+		.orderby(fn.Date(Response.creation))
 	)
 	velocity_rows = velocity_query.run(as_dict=True) or []
 	daily_velocity = [{"date": str(r.date), "count": r.count} for r in velocity_rows]
 
-	# 3. Surveyor Leaderboard
-	leaderboard_query = (
+	# 3. Surveyor Leaderboard (fully scoped to base_query / project)
+	surveyor_totals = (
 		base_query
 		.select(
 			Response.surveyor,
-			frappe.qb.fn.Count(Response.name).as_("total"),
-			frappe.qb.terms.Case()
-			.when(Response.survey_status == "Approved", 1)
-			.else_(0)
-			.as_("approved_weight")
+			fn.Count(Response.name).as_("total"),
+			fn.Sum(Case().when(Response.survey_status == "Approved", 1).else_(0)).as_("approved"),
+			fn.Sum(Case().when(Response.survey_status == "Audit Flagged", 1).else_(0)).as_("flagged"),
 		)
 		.groupby(Response.surveyor)
-		.orderby("total", order=frappe.qb.desc)
-		.limit(10)
-	)
-	# Simplified surveyor count aggregation
-	surveyor_totals = (
-		base_query
-		.select(Response.surveyor, frappe.qb.fn.Count(Response.name).as_("total"))
-		.groupby(Response.surveyor)
-		.orderby("total", order=frappe.qb.desc)
+		.orderby("total", order=Order.desc)
 		.limit(10)
 		.run(as_dict=True) or []
 	)
@@ -83,12 +73,13 @@ def get_project_analytics(project_id=None):
 	leaderboard = []
 	for s in surveyor_totals:
 		surv_name = s.surveyor or "Unassigned"
-		appr = frappe.db.count("OmniQuery Response", {"surveyor": surv_name, "survey_status": "Approved"})
-		flagged = frappe.db.count("OmniQuery Response", {"surveyor": surv_name, "survey_status": "Audit Flagged"})
-		score = round((appr / s.total) * 100, 1) if s.total > 0 else 0
+		total = int(s.total or 0)
+		appr = int(s.approved or 0)
+		flagged = int(s.flagged or 0)
+		score = round((appr / total) * 100, 1) if total > 0 else 0
 		leaderboard.append({
 			"surveyor": surv_name,
-			"total_responses": s.total,
+			"total_responses": total,
 			"approved": appr,
 			"flagged": flagged,
 			"quality_score": score,
