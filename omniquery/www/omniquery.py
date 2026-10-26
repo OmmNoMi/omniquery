@@ -52,6 +52,12 @@ def get_context(context):
 	ctx.current_lang = user_lang
 
 	ctx.current_user = frappe.session.user
+	if frappe.session.user and frappe.session.user != "Guest":
+		ctx.current_user_fullname = frappe.utils.get_fullname(frappe.session.user)
+		ctx.current_user_image = frappe.db.get_value("User", frappe.session.user, "user_image") or ""
+	else:
+		ctx.current_user_fullname = "Guest Surveyor"
+		ctx.current_user_image = ""
 	try:
 		import os
 		bundle_path = os.path.join(frappe.get_app_path("omniquery"), "public", "dist", "omniquery.bundle.js")

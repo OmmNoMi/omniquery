@@ -510,6 +510,7 @@ import { useGPS } from "./composables/useGPS";
 import { useTextScale } from "./composables/useTextScale";
 import { useTranslation } from "./composables/useTranslation";
 import { useAudioRecorder } from "./composables/useAudioRecorder";
+import { provideSession } from "./composables/useSession";
 import CompactHeader from "./components/header/CompactHeader.vue";
 import SectionCard from "./components/survey/SectionCard.vue";
 import QuestionCard from "./components/survey/QuestionCard.vue";
@@ -609,11 +610,8 @@ if (typeof localStorage !== "undefined") {
 
 const activeProjectId = ref("");
 
-const isGuest = computed(() => {
-  if (typeof window === "undefined") return true;
-  const user = (window.frappe && (window.frappe.user || (window.frappe.session && window.frappe.session.user))) || "Guest";
-  return user === "Guest";
-});
+const session = provideSession();
+const isGuest = session.isGuest;
 
 function getRouteProjectId() {
   if (window.frappe && window.frappe.initial_project_id) {

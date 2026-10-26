@@ -10,6 +10,21 @@
     window.frappe = window.frappe || {};
     window.frappe.csrf_token = "{{ csrf_token or frappe.session.data.csrf_token or '' }}";
     window.frappe.user = "{{ current_user or frappe.session.user or '' }}";
+    window.frappe.user_full_name = "{{ current_user_fullname or '' }}";
+    window.frappe.user_image = "{{ current_user_image or '' }}";
+    window.frappe.user_info = window.frappe.user_info || {};
+    {% if current_user and current_user != 'Guest' %}
+    window.frappe.user_info["{{ current_user }}"] = {
+      fullname: "{{ current_user_fullname or current_user }}",
+      image: "{{ current_user_image or '' }}"
+    };
+    {% endif %}
+    window.frappe.boot = window.frappe.boot || {};
+    window.frappe.boot.user = {
+      name: "{{ current_user or '' }}",
+      full_name: "{{ current_user_fullname or current_user }}",
+      image: "{{ current_user_image or '' }}"
+    };
     window.frappe.initial_survey_id = "{{ initial_survey_id or '' }}";
     window.frappe.initial_project_id = "{{ initial_project_id or '' }}";
     window.__messages = {{ translations or '{}' }};

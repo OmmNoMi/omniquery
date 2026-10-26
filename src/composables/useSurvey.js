@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
 import { call } from "frappe-ui";
 import { db } from "../services/db";
+import { useSession } from "./useSession";
 
 export function generateSurveyId(templateName) {
   const cleanId = (templateName || "SURVEY").replace(/^OQS-/, "");
@@ -124,6 +125,12 @@ export function useSurvey() {
     // 2. Fetch fresh bootstrap data from server if online
     try {
       const data = await call("omniquery.api.survey.get_bootstrap_data");
+      const bootUser = (data && data.user) || (data && data.message && data.message.user);
+      if (bootUser) {
+        try {
+          useSession().setBootstrapUser(bootUser);
+        } catch (_) {}
+      }
       const templates = (data && data.templates) || (data && data.message && data.message.templates) || [];
       if (templates.length > 0) {
         const formatted = [];
