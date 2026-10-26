@@ -1149,7 +1149,7 @@ async function syncDraftToServer() {
     });
     if (res) {
       try {
-        await db.responses.update(currentDraftId.value, { synced: true });
+        await db.responses.update(currentDraftId.value, { synced: 1 });
       } catch (e) {}
     }
   } catch (e) {
@@ -1159,9 +1159,14 @@ async function syncDraftToServer() {
   }
 }
 
+let draftSaveTimer = null;
 function scheduleDraftSaveAndSync() {
   if (!activeTemplate.value || isSubmitted.value) return;
-  saveDraftLocally(progressPercent.value);
+  if (draftSaveTimer) clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(() => {
+    saveDraftLocally(progressPercent.value);
+  }, 300);
+
   if (draftSyncTimer) clearTimeout(draftSyncTimer);
   draftSyncTimer = setTimeout(() => {
     syncDraftToServer();
@@ -1265,7 +1270,11 @@ async function saveOfflineRecord() {
     items: items,
   };
 
+  let createdAt = new Date().toISOString();
   try {
+    const existing = await db.responses.get(draftKey);
+    if (existing?.created_at) createdAt = existing.created_at;
+
     await db.responses.put({
       response_uid: draftKey,
       template_name: tmplName,
@@ -1275,11 +1284,14 @@ async function saveOfflineRecord() {
       active_section_index: activeSectionIndex.value,
       progress_percent: 100,
       status: "Submitted",
+      created_at: createdAt,
       updated_at: new Date().toISOString(),
-      synced: false,
+      synced: 0,
     });
     await loadActiveDrafts();
-  } catch (e) {}
+  } catch (e) {
+    console.warn("Failed to update local response status:", e);
+  }
 
   await queueWAL("OmniQuery Response", payload, false);
   if (isOnline.value) {

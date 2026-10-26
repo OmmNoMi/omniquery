@@ -222,12 +222,13 @@ export function useWAL() {
       if (r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED") {
         if (entry) {
           try {
-            await db.wal.where("wal_id").equals(entry.wal_id).modify({ status: "synced" });
+            await db.wal.delete(entry.wal_id);
           } catch (e) {}
         }
         try {
           if (r.idempotency_key) {
-            await db.responses.where("response_uid").equals(r.idempotency_key).modify({ synced: true });
+            await db.responses.where("response_uid").equals(r.idempotency_key).modify({ synced: 1 });
+            await db.audio_recordings.where("response_uid").equals(r.idempotency_key).delete();
           }
         } catch (e) {}
       } else if (entry) {
@@ -371,7 +372,7 @@ export function useWAL() {
           };
           const res = await call("omniquery.api.sync.sync_draft", { payload });
           if (res && res.status === "SUCCESS") {
-            await db.responses.where("response_uid").equals(draft.response_uid).modify({ synced: true });
+            await db.responses.where("response_uid").equals(draft.response_uid).modify({ synced: 1 });
             draftsCount++;
           }
         } catch (draftErr) {

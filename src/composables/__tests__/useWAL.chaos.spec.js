@@ -84,9 +84,9 @@ describe("useWAL Chaos & Durability Engineering", () => {
     // Run sync - should not throw unhandled syntax error
     await syncWAL();
 
-    // Verify healthy entry was synced
+    // Verify healthy entry was synced and pruned
     const healthy = await db.wal.get("WAL-HEALTHY-001");
-    expect(healthy.status).toBe("synced");
+    expect(healthy).toBeUndefined();
 
     // Verify corrupt entry was quarantined
     const corrupt = await db.wal.get("WAL-CORRUPT-999");

@@ -101,11 +101,10 @@ describe("useWAL Sync Queue & Invariants (#33)", () => {
     expect(entry1.attempts).toBe(1);
     expect(entry1.status).toBe("pending");
 
-    // Verify entries 2 through 5 are marked synced
+    // Verify entries 2 through 5 are pruned upon server acknowledgement
     for (let i = 2; i <= 5; i++) {
       const entry = allWal.find((e) => JSON.parse(e.payload_json).idempotency_key === `IDEM-4XX-${i}`);
-      expect(entry).toBeDefined();
-      expect(entry.status).toBe("synced");
+      expect(entry).toBeUndefined();
     }
 
     // Pending count should now be 1 (only entry 1 remains pending)
