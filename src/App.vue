@@ -25,6 +25,50 @@
 
     <!-- 2. Main View Container -->
     <main :class="['flex-1 w-full min-w-0 mx-auto p-3 sm:p-6 transition-all', activeProjectId ? 'max-w-4xl' : 'max-w-3xl', activeSection ? 'pb-0' : 'pb-24']">
+      <!-- Auth Expired Banner / Alert -->
+      <div v-if="needsLogin" class="mb-4">
+        <Alert
+          theme="yellow"
+          :title="__('Session expired')"
+          :description="`Sign in again to upload ${pendingWALCount} ${pendingWALCount === 1 ? 'interview' : 'interviews'}`"
+          :dismissable="false"
+        >
+          <template #footer>
+            <div class="mt-2 flex justify-end">
+              <Button
+                @click="handleLoginRedirect"
+                class="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0 active:scale-95 transition cursor-pointer"
+              >
+                {{ __('Sign In') }}
+              </Button>
+            </div>
+          </template>
+        </Alert>
+      </div>
+
+      <!-- Submission Error Alert -->
+      <div v-if="submissionError" class="mb-4">
+        <Alert
+          theme="red"
+          :title="__('Failed to save survey locally')"
+          :description="submissionError"
+          :dismissable="true"
+          @dismiss="submissionError = null"
+        >
+          <template #footer>
+            <div class="mt-2 flex justify-end">
+              <Button
+                @click="submitForm"
+                :disabled="isSubmitting"
+                class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white font-bold text-xs shrink-0 active:scale-95 transition cursor-pointer"
+              >
+                {{ __('Try again') }}
+              </Button>
+            </div>
+          </template>
+        </Alert>
+      </div>
+
       <!-- Loading State with Branded OmniQuery Logo & Spinner -->
       <div v-if="isLoading" class="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center select-none">
         <div class="relative mb-3">
@@ -489,8 +533,8 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
-import { Button, TextInput, call } from "frappe-ui";
+import { ref, computed, watch, onMounted, provide } from "vue";
+import { Alert, Button, TextInput, call } from "frappe-ui";
 import {
   AlertTriangle,
   Check,
@@ -536,7 +580,9 @@ function announce(message) {
 
 const { __ } = useTranslation();
 const { textSize, cycleTextSize, setTextSize } = useTextScale();
-const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
+const wal = useWAL();
+provide("omniquery_wal", wal);
+const { isOnline, pendingWALCount, needsLogin, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = wal;
 const { gpsCoords, captureGPS } = useGPS();
 const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
 
@@ -573,6 +619,7 @@ const {
 } = useSurvey();
 
 const isLoading = ref(true);
+const submissionError = ref(null);
 const loadingSurveyId = ref("");
 const downloadingSurveyId = ref("");
 
@@ -1102,7 +1149,7 @@ async function syncDraftToServer() {
     });
     if (res) {
       try {
-        await db.responses.update(currentDraftId.value, { synced: true });
+        await db.responses.update(currentDraftId.value, { synced: 1 });
       } catch (e) {}
     }
   } catch (e) {
@@ -1112,9 +1159,14 @@ async function syncDraftToServer() {
   }
 }
 
+let draftSaveTimer = null;
 function scheduleDraftSaveAndSync() {
   if (!activeTemplate.value || isSubmitted.value) return;
-  saveDraftLocally(progressPercent.value);
+  if (draftSaveTimer) clearTimeout(draftSaveTimer);
+  draftSaveTimer = setTimeout(() => {
+    saveDraftLocally(progressPercent.value);
+  }, 300);
+
   if (draftSyncTimer) clearTimeout(draftSyncTimer);
   draftSyncTimer = setTimeout(() => {
     syncDraftToServer();
@@ -1135,6 +1187,12 @@ async function onDiscardDraft(templateName) {
   }
 }
 
+function handleLoginRedirect() {
+  if (typeof window !== "undefined") {
+    window.location.href = "/login?redirect-to=/omniquery";
+  }
+}
+
 async function goHome() {
   if (isGuest.value) {
     window.location.href = "/login?redirect-to=/omniquery";
@@ -1149,6 +1207,7 @@ async function goHome() {
   activeProjectId.value = "";
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
+  submissionError.value = null;
   isSubmissionSynced.value = false;
   currentDraftId.value = "";
   responses.value = {};
@@ -1211,7 +1270,11 @@ async function saveOfflineRecord() {
     items: items,
   };
 
+  let createdAt = new Date().toISOString();
   try {
+    const existing = await db.responses.get(draftKey);
+    if (existing?.created_at) createdAt = existing.created_at;
+
     await db.responses.put({
       response_uid: draftKey,
       template_name: tmplName,
@@ -1221,11 +1284,14 @@ async function saveOfflineRecord() {
       active_section_index: activeSectionIndex.value,
       progress_percent: 100,
       status: "Submitted",
+      created_at: createdAt,
       updated_at: new Date().toISOString(),
-      synced: false,
+      synced: 0,
     });
     await loadActiveDrafts();
-  } catch (e) {}
+  } catch (e) {
+    console.warn("Failed to update local response status:", e);
+  }
 
   await queueWAL("OmniQuery Response", payload, false);
   if (isOnline.value) {
@@ -1282,22 +1348,30 @@ async function submitForm() {
   }
   if (draftSyncTimer) clearTimeout(draftSyncTimer);
   isSubmitting.value = true;
+  submissionError.value = null;
 
   const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name || "";
   const draftKey = currentDraftId.value || generateSurveyId(tmplName);
 
   try {
-    const recordedBlob = await stopRecording();
-    if (recordedBlob && recordedBlob.size > 0) {
-      await saveAudioForResponse(draftKey, recordedBlob);
+    try {
+      const recordedBlob = await stopRecording();
+      if (recordedBlob && recordedBlob.size > 0) {
+        await saveAudioForResponse(draftKey, recordedBlob);
+      }
+    } catch (audioErr) {
+      console.warn("Failed saving audio recording:", audioErr);
     }
-  } catch (audioErr) {
-    console.warn("Failed saving audio recording:", audioErr);
-  }
 
-  await saveOfflineRecord();
-  isSubmitting.value = false;
-  isSubmitted.value = true;
+    await saveOfflineRecord();
+    isSubmitted.value = true;
+  } catch (err) {
+    console.error("Failed to submit survey:", err);
+    isSubmitted.value = false;
+    submissionError.value = err?.message || __("Storage may be full or unavailable. Please try again.");
+  } finally {
+    isSubmitting.value = false;
+  }
 }
 
 function resetSurvey() {
@@ -1306,6 +1380,7 @@ function resetSurvey() {
   responses.value = {};
   activeSectionIndex.value = 0;
   isSubmitted.value = false;
+  submissionError.value = null;
   isSubmissionSynced.value = false;
   submittedResponseId.value = "";
   hasCopiedCode.value = false;

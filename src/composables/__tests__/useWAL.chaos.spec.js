@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useWAL } from "../useWAL";
+import { useWAL, _resetWALInstance } from "../useWAL";
 import { db } from "../../services/db";
 
 describe("useWAL Chaos & Durability Engineering", () => {
   beforeEach(async () => {
+    _resetWALInstance();
     await db.wal.clear();
     await db.responses.clear();
     vi.restoreAllMocks();
@@ -83,9 +84,9 @@ describe("useWAL Chaos & Durability Engineering", () => {
     // Run sync - should not throw unhandled syntax error
     await syncWAL();
 
-    // Verify healthy entry was synced
+    // Verify healthy entry was synced and pruned
     const healthy = await db.wal.get("WAL-HEALTHY-001");
-    expect(healthy.status).toBe("synced");
+    expect(healthy).toBeUndefined();
 
     // Verify corrupt entry was quarantined
     const corrupt = await db.wal.get("WAL-CORRUPT-999");

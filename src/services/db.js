@@ -48,7 +48,7 @@ export async function compactLocalStorage(retentionDays = 30) {
       .equals(1)
       .or("status")
       .equals("Submitted")
-      .filter((r) => r.synced === true && r.updated_at && r.updated_at < cutoffIso)
+      .filter((r) => (r.synced === 1 || r.synced === true) && r.updated_at && r.updated_at < cutoffIso)
       .toArray();
 
     if (oldSyncedResponses.length > 0) {
@@ -56,9 +56,8 @@ export async function compactLocalStorage(retentionDays = 30) {
       await db.responses.bulkDelete(uidsToDelete);
       // Clean up corresponding synced audio recordings
       await db.audio_recordings
-        .where("status")
-        .equals("synced")
-        .filter((a) => uidsToDelete.includes(a.response_uid))
+        .where("response_uid")
+        .anyOf(uidsToDelete)
         .delete();
       return uidsToDelete.length;
     }
