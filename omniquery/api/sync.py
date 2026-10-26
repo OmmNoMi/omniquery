@@ -219,6 +219,17 @@ def process_automated_audit(resp_doc, raw_sub):
 		return None
 
 
+def is_valid_uuid(val):
+	"""Validates that val is a valid UUIDv4 string."""
+	if not val or not isinstance(val, str):
+		return False
+	try:
+		u = uuid.UUID(str(val).strip())
+		return u.version == 4
+	except (ValueError, AttributeError):
+		return False
+
+
 @frappe.whitelist(allow_guest=True)
 def sync_draft(data=None):
 	"""
@@ -244,9 +255,8 @@ def sync_draft(data=None):
 
 	template_name = resolve_template_name(sub.get("survey_template"))
 	idempotency_key = sub.get("idempotency_key")
-	if not idempotency_key:
-		clean_tmpl = (template_name or "SURVEY").replace("OQS-", "")
-		idempotency_key = f"OQS-{clean_tmpl}-{uuid.uuid4().hex[:6]}"
+	if not idempotency_key or not is_valid_uuid(idempotency_key):
+		return {"status": "REJECTED", "error": "Invalid idempotency_key: must be a valid UUIDv4"}
 
 	current_user = frappe.session.user
 
@@ -363,9 +373,10 @@ def batch_push(submissions=None):
 	for sub in submissions:
 		template_name = resolve_template_name(sub.get("survey_template"))
 		idempotency_key = sub.get("idempotency_key")
-		if not idempotency_key:
-			clean_tmpl = (template_name or "SURVEY").replace("OQS-", "")
-			idempotency_key = f"OQS-{clean_tmpl}-{uuid.uuid4().hex[:6]}"
+		if not idempotency_key or not is_valid_uuid(idempotency_key):
+			err_msg = "Invalid idempotency_key: must be a valid UUIDv4"
+			results.append({"idempotency_key": idempotency_key or "UNKNOWN", "status": "REJECTED", "error": err_msg})
+			continue
 
 		raw_payload_str = frappe.as_json(sub)
 		payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()

@@ -185,7 +185,7 @@ class TestSecurityGates(FrappeTestCase):
 		"""Security Gate: Stored XSS tags are stripped in in-flight draft sync."""
 		frappe.set_user("Administrator")
 		rand_id = uuid.uuid4().hex[:6]
-		draft_id = f"OQS-XSSTEST-{rand_id}"
+		draft_id = str(uuid.uuid4())
 
 		proj = self._get_or_create_project()
 		tmpl = frappe.get_doc({

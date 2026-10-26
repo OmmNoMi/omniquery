@@ -43,7 +43,7 @@ class TestSupervisorAudit(FrappeTestCase):
 		Telemetry Invariant: A survey with 6 questions submitted with time_spent_seconds=5
 		must automatically trigger an outlier flag (< 18 seconds) and mark status as Audit Flagged.
 		"""
-		key = f"TEST-SPEEDRUN-{uuid.uuid4().hex[:6]}"
+		key = str(uuid.uuid4())
 		payload = {
 			"idempotency_key": key,
 			"survey_template": self.tmpl,
@@ -80,7 +80,7 @@ class TestSupervisorAudit(FrappeTestCase):
 		Telemetry Invariant: A survey submitted with reasonable time (60 seconds for 6 questions)
 		must be marked Verified without outlier flags.
 		"""
-		key = f"TEST-NORMAL-{uuid.uuid4().hex[:6]}"
+		key = str(uuid.uuid4())
 		payload = {
 			"idempotency_key": key,
 			"survey_template": self.tmpl,
