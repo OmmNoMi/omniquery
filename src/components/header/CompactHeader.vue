@@ -155,25 +155,25 @@
         @wheel.stop
         @touchmove.self.prevent
       >
-        <div class="bg-white w-full max-w-lg rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto pb-safe overscroll-contain">
+        <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white w-full max-w-lg rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto pb-safe overscroll-contain border-t border-slate-200 dark:border-slate-800">
           <!-- iOS Grabber Bar -->
-          <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto"></div>
+          <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto"></div>
 
           <!-- Sheet Header: User Avatar & Live Status & WCAG 44x44 Close Button -->
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-3">
-              <div class="relative w-12 h-12 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shadow-xs ring-2 ring-emerald-100">
+              <div class="relative w-12 h-12 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shadow-xs ring-2 ring-emerald-100 dark:ring-emerald-900/60">
                 {{ userInitial }}
                 <span
                   :class="[
-                    'absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white',
+                    'absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900',
                     isOnline ? 'bg-emerald-500' : 'bg-amber-500'
                   ]"
                 />
               </div>
               <div>
-                <h3 class="text-sm font-bold text-slate-900 leading-tight">{{ userDisplayName }}</h3>
-                <p class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
+                <h3 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">{{ userDisplayName }}</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ userEmail }}</p>
                 <div class="flex items-center gap-1.5 mt-1">
                   <span
                     :class="[
@@ -181,7 +181,7 @@
                       isOnline ? 'bg-emerald-500' : 'bg-amber-500'
                     ]"
                   />
-                  <span class="text-[11px] font-semibold text-slate-600">
+                  <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
                     {{ isOnline ? __('Online') : __('Offline') }} · {{ __('Field Surveyor') }}
                   </span>
                 </div>
@@ -191,7 +191,7 @@
             <!-- Accessible WCAG 2.2 AA Close Button (44x44px target) -->
             <Button
               @click="showConfigModal = false"
-              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-95 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition flex items-center justify-center border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               :aria-label="__('Close settings')"
               :title="__('Close settings')"
             >
@@ -202,19 +202,19 @@
           </div>
 
           <!-- Grouped Native Settings Rows -->
-          <div class="bg-slate-50 rounded-2xl border border-slate-200/80 divide-y divide-slate-200/60 overflow-hidden">
+          <div class="bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-800 divide-y divide-slate-200/60 dark:divide-slate-800 overflow-hidden">
             <!-- 1. Language Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <Globe class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Language') || 'Language' }}</span>
+                <Globe class="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ __('Language') || 'Language' }}</span>
               </div>
-              <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
+              <div class="inline-flex items-center p-0.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xs text-xs font-bold">
                 <Button
                   @click="setLanguage('en')"
                   :class="[
                     'px-3.5 py-1.5 rounded-lg transition font-bold',
-                    currentLang === 'en' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    currentLang === 'en' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
                   English
@@ -223,7 +223,7 @@
                   @click="setLanguage('hi')"
                   :class="[
                     'px-3.5 py-1.5 rounded-lg transition font-bold',
-                    currentLang === 'hi' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    currentLang === 'hi' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
                   हिन्दी
@@ -234,15 +234,15 @@
             <!-- 2. Text Scale Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <Languages class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Text Size') || 'Text Size' }}</span>
+                <Languages class="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ __('Text Size') || 'Text Size' }}</span>
               </div>
-              <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
+              <div class="inline-flex items-center p-0.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xs text-xs font-bold">
                 <Button
                   @click="setTextScale('md')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold',
-                    textSize === 'md' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    textSize === 'md' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
                   A
@@ -251,7 +251,7 @@
                   @click="setTextScale('lg')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold',
-                    textSize === 'lg' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    textSize === 'lg' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
                   A+
@@ -260,7 +260,7 @@
                   @click="setTextScale('xl')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold',
-                    textSize === 'xl' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    textSize === 'xl' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
                   A++
@@ -271,15 +271,25 @@
             <!-- 3. Theme Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <Palette class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Theme') || 'Theme' }}</span>
+                <Palette class="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ __('Theme') || 'Theme' }}</span>
               </div>
-              <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
+              <div class="inline-flex items-center p-0.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xs text-xs font-bold">
+                <Button
+                  @click="setAppTheme('system')"
+                  :class="[
+                    'px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 font-bold',
+                    activeTheme === 'system' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                  ]"
+                >
+                  <Monitor class="w-3.5 h-3.5" />
+                  <span>System</span>
+                </Button>
                 <Button
                   @click="setAppTheme('light')"
                   :class="[
-                    'px-3 py-1.5 rounded-lg transition flex items-center gap-1 font-bold',
-                    activeTheme === 'light' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    'px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 font-bold',
+                    activeTheme === 'light' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
                   <Sun class="w-3.5 h-3.5" />
@@ -288,8 +298,8 @@
                 <Button
                   @click="setAppTheme('dark')"
                   :class="[
-                    'px-3 py-1.5 rounded-lg transition flex items-center gap-1 font-bold',
-                    activeTheme === 'dark' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    'px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 font-bold',
+                    activeTheme === 'dark' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
                   <Moon class="w-3.5 h-3.5" />
@@ -301,15 +311,15 @@
             <!-- 4. Choice Layout Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <LayoutGrid class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Choice Layout') || 'Choice Layout' }}</span>
+                <LayoutGrid class="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ __('Choice Layout') || 'Choice Layout' }}</span>
               </div>
-              <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
+              <div class="inline-flex items-center p-0.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xs text-xs font-bold">
                 <Button
                   @click="setChoiceMode('grid')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold flex items-center gap-1',
-                    activeChoiceMode === 'grid' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    activeChoiceMode === 'grid' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
                   <LayoutGrid class="w-3.5 h-3.5" />
@@ -319,7 +329,7 @@
                   @click="setChoiceMode('combobox')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold flex items-center gap-1',
-                    activeChoiceMode === 'combobox' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
+                    activeChoiceMode === 'combobox' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                   ]"
                 >
                   <ChevronDown class="w-3.5 h-3.5" />
@@ -330,13 +340,13 @@
           </div>
 
           <!-- 4. Offline WAL Queue & Sync Status -->
-          <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3">
+          <div class="p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
             <div>
-              <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                <Package class="w-4 h-4 text-slate-500" />
+              <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                <Package class="w-4 h-4 text-slate-500 dark:text-slate-400" />
                 <span>{{ __('WAL Queue') }}</span>
               </div>
-              <p class="text-[11px] text-slate-500 mt-0.5">
+              <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                 {{ pendingWALCount }} {{ __('Pending Responses') }}
               </p>
             </div>
@@ -352,10 +362,10 @@
 
           <!-- 5. Profile Details & Manage Link -->
           <div class="pt-1 flex items-center justify-between text-xs px-1">
-            <span class="text-slate-500 font-medium">{{ __('Manage Profile & Credentials') }}</span>
+            <span class="text-slate-500 dark:text-slate-400 font-medium">{{ __('Manage Profile & Credentials') }}</span>
             <a
               href="/app/user-profile"
-              class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+              class="font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 dark:hover:text-emerald-300 flex items-center gap-1"
             >
               <span>{{ __('ERPNext Profile') }}</span>
               <span>↗</span>
@@ -365,7 +375,7 @@
           <!-- Sheet Dismiss Button -->
           <Button
             @click="showConfigModal = false"
-            class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm transition shadow-sm"
+            class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 dark:bg-emerald-600 dark:hover:bg-emerald-500 active:scale-95 text-white font-bold text-sm transition shadow-sm"
           >
             {{ __('Done') || 'Done' }}
           </Button>
@@ -376,9 +386,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { Button } from "frappe-ui";
-import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
+import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, Monitor, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 
@@ -415,6 +425,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isGuest: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-text-size", "toggle-audio"]);
@@ -422,7 +436,34 @@ const { __, currentLang, setLanguage } = useTranslation();
 
 const showConfigModal = ref(false);
 useScrollLock(showConfigModal);
-const activeTheme = ref("light");
+const activeTheme = ref(
+  (typeof localStorage !== "undefined" && localStorage.getItem("omniquery_theme")) || "system"
+);
+
+let mediaQuery = null;
+
+function applyTheme(theme) {
+  const isDark =
+    theme === "dark" ||
+    (theme === "system" &&
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  if (typeof document !== "undefined") {
+    document.documentElement.classList.toggle("dark", Boolean(isDark));
+    document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+    if (document.body) {
+      document.body.classList.toggle("dark", Boolean(isDark));
+    }
+  }
+}
+
+function handleMediaChange() {
+  if (activeTheme.value === "system") {
+    applyTheme("system");
+  }
+}
 
 const userEmail = computed(() => {
   return (window.frappe && window.frappe.user) || "surveyor@ommnomi.in";
@@ -452,9 +493,7 @@ function setAppTheme(theme) {
   if (typeof localStorage !== "undefined") {
     localStorage.setItem("omniquery_theme", theme);
   }
-  if (typeof document !== "undefined") {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }
+  applyTheme(theme);
 }
 
 function triggerSync() {
@@ -482,8 +521,30 @@ watch(showConfigModal, (isOpen) => {
 
 onMounted(() => {
   if (typeof localStorage !== "undefined") {
-    const savedTheme = localStorage.getItem("omniquery_theme") || "light";
-    setAppTheme(savedTheme);
+    const savedTheme = localStorage.getItem("omniquery_theme") || "system";
+    activeTheme.value = savedTheme;
+    applyTheme(savedTheme);
+  } else {
+    applyTheme("system");
+  }
+
+  if (typeof window !== "undefined" && window.matchMedia) {
+    mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handleMediaChange);
+    } else if (mediaQuery.addListener) {
+      mediaQuery.addListener(handleMediaChange);
+    }
+  }
+});
+
+onUnmounted(() => {
+  if (mediaQuery) {
+    if (mediaQuery.removeEventListener) {
+      mediaQuery.removeEventListener("change", handleMediaChange);
+    } else if (mediaQuery.removeListener) {
+      mediaQuery.removeListener(handleMediaChange);
+    }
   }
 });
 </script>

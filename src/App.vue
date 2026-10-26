@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
+  <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
     <!-- Live Region for Screen Readers (WCAG 2.2 AA) -->
     <div id="omniquery-live-region" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
       {{ liveAnnouncementText }}
@@ -15,6 +15,7 @@
       :progressPercent="activeTemplate ? progressPercent : 0"
       :isRecording="isRecording"
       :isAudioPaused="isAudioPaused"
+      :isGuest="isGuest"
       @exit="onExit"
       @home="onHome"
       @open-wal="showWALDrawer = true"

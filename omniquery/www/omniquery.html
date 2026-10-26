@@ -22,8 +22,15 @@
   <script>
     (function() {
       try {
-        var t = localStorage.getItem('omniquery_theme') || 'light';
-        if (t === 'dark') document.documentElement.classList.add('dark');
+        var t = localStorage.getItem('omniquery_theme') || 'system';
+        var isDark = t === 'dark' || (t === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+          document.documentElement.setAttribute('data-theme', 'dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+          document.documentElement.setAttribute('data-theme', 'light');
+        }
         var s = localStorage.getItem('omniquery_text_size') || 'md';
         document.documentElement.classList.add('text-scale-' + s);
       } catch (e) {}
@@ -56,13 +63,23 @@
       max-width: 100vw;
       overflow-x: hidden;
     }
+    html.dark body {
+      background-color: #020617; /* slate-950 */
+      color: #f8fafc; /* slate-50 */
+    }
+    html.dark #app-loading-splash {
+      background-color: #020617 !important;
+    }
+    html.dark #app-loading-splash h1 {
+      color: #f8fafc !important;
+    }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-900 font-sans antialiased min-h-screen">
+<body class="bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased min-h-screen">
   
   <div id="app">
     <!-- Instant PWA Loading Splash Screen (Shows OmniQuery Logo before JS boots) -->
-    <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #f1f5f9; padding: 1.5rem; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    <div id="app-loading-splash" style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #f1f5f9; padding: 1.5rem; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
       <div style="position: relative; margin-bottom: 1.25rem;">
         <img
           src="/assets/omniquery/icons/desktop_icons/solid/omniquery.svg"
