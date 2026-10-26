@@ -125,7 +125,7 @@ def resolve_option_set_items(option_set_name):
 	"""Resolves ordered option values from an OmniQuery Option Set."""
 	items = frappe.get_all(
 		"OmniQuery Option Item",
-		filters={"parent": option_set_name},
+		filters={"parent": option_set_name, "parenttype": "OmniQuery Option Set", "parentfield": "options"},
 		fields=["option_code"],
 		order_by="idx asc",
 	)

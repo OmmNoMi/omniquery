@@ -8,8 +8,7 @@ from omniquery.services.schema_compiler import calculate_schema_hash, compile_te
 
 class TestSchemaCompiler(unittest.TestCase):
 	def setUp(self):
-		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
+		self._cleanup_test_records()
 
 		frappe.get_doc(
 			{
@@ -195,10 +194,22 @@ class TestSchemaCompiler(unittest.TestCase):
 		}).insert(ignore_permissions=True)
 
 	def tearDown(self):
-		frappe.db.delete("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type"]]})
-		frappe.db.delete("OmniQuery Option Item", {"parent": "Test Animal Species"})
-		frappe.db.delete("OmniQuery Option Set", {"set_name": "Test Animal Species"})
-		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
+		self._cleanup_test_records()
+
+	def _cleanup_test_records(self):
+		for dt, filter_dict in [
+			("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type"]]}),
+			("OmniQuery Option Set", {"set_name": "Test Animal Species"}),
+			("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),
+			("OmniQuery Project", {"project_name": "Test Dairy Initiative"}),
+		]:
+			for name in frappe.get_all(dt, filters=filter_dict, pluck="name"):
+				try:
+					doc = frappe.get_doc(dt, name)
+					if getattr(doc, "docstatus", 0) == 1:
+						doc.cancel()
+					frappe.delete_doc(dt, name, force=True, ignore_permissions=True)
+				except Exception:
+					pass
 		frappe.db.commit()
 
