@@ -32,8 +32,22 @@
       </div>
     </div>
 
-    <!-- Daily Target Goal Progress Strip -->
-    <div class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5">
+    <!-- Unassigned User Empty State -->
+    <div
+      v-if="!templates || templates.length === 0"
+      class="p-8 sm:p-12 text-center rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 space-y-3"
+    >
+      <div class="w-12 h-12 mx-auto rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+        <ClipboardList class="w-6 h-6" />
+      </div>
+      <p class="text-sm sm:text-base font-semibold text-slate-700 dark:text-slate-300 max-w-md mx-auto">
+        {{ __('You are not assigned to a project yet. Ask your supervisor.') }}
+      </p>
+    </div>
+
+    <template v-else>
+      <!-- Daily Target Goal Progress Strip -->
+      <div class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5">
       <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
         <div class="flex items-center gap-1.5">
           <Target class="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
@@ -241,6 +255,7 @@
         <span>→</span>
       </Button>
     </div>
+    </template>
   </div>
 </template>
 
