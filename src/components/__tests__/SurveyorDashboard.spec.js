@@ -22,6 +22,7 @@ describe("SurveyorDashboard", () => {
       props: {
         pendingWALCount: 2,
         isOnline: true,
+        userRoles: ["OmniQuery User"],
         activeDrafts: {
           "TMPL-SHG": {
             response_uid: "DRAFT-1",
@@ -116,4 +117,48 @@ describe("SurveyorDashboard", () => {
     expect(wrapper.emitted("start-new-survey")).toBeTruthy();
     expect(wrapper.emitted("start-new-survey")[0]).toEqual(["TMPL-SHG"]);
   });
+
+  it("renders Manager Review Queue banner and Desk link when user has OmniQuery Manager role", async () => {
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+        userRoles: ["OmniQuery Manager"],
+      },
+    });
+
+    expect(wrapper.text()).toContain("Manager Operations & Review Queue");
+    expect(wrapper.text()).toContain("Manager View");
+    const deskLink = wrapper.find('a[href="/desk/omniquery"]');
+    expect(deskLink.exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("Daily Target");
+  });
+
+  it("never shows Daily Target or Manager banner to a user without OmniQuery User or Manager role", async () => {
+    // Issue #60: Guest or Desk User without OmniQuery User or Manager role
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+        userRoles: ["Desk User"],
+      },
+    });
+
+    expect(wrapper.text()).not.toContain("Daily Target");
+    expect(wrapper.text()).not.toContain("Manager Operations & Review Queue");
+  });
+
+  it("renders Daily Target strip when user has OmniQuery User role and is not a manager", async () => {
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+        userRoles: ["OmniQuery User"],
+      },
+    });
+
+    expect(wrapper.text()).toContain("Daily Target");
+    expect(wrapper.text()).not.toContain("Manager Operations & Review Queue");
+  });
 });
+

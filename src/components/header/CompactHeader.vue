@@ -182,8 +182,9 @@
                     ]"
                   />
                   <span class="text-[11px] font-semibold text-slate-600">
-                    {{ isOnline ? __('Online') : __('Offline') }} · {{ __('Field Surveyor') }}
+                    {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
                   </span>
+
                 </div>
               </div>
             </div>
@@ -362,6 +363,19 @@
             </a>
           </div>
 
+          <!-- 6. Manager Review Workspace Link -->
+          <div v-if="isManager" class="pt-1 flex items-center justify-between text-xs px-1">
+            <span class="text-blue-700 font-semibold">{{ __('OmniQuery Review Workspace') }}</span>
+            <a
+              href="/desk/omniquery"
+              class="font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1"
+            >
+              <span>{{ __('Open Desk') }}</span>
+              <span>↗</span>
+            </a>
+          </div>
+
+
           <!-- Sheet Dismiss Button -->
           <Button
             @click="showConfigModal = false"
@@ -415,6 +429,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  userRoles: {
+    type: Array,
+    default: () => (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [],
+  },
 });
 
 const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-text-size", "toggle-audio"]);
@@ -442,6 +460,30 @@ const userInitial = computed(() => {
   const name = userDisplayName.value || "S";
   return name.charAt(0).toUpperCase();
 });
+
+const userRoles = computed(() => {
+  if (props.userRoles && props.userRoles.length) return props.userRoles;
+  return (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [];
+});
+
+const isGuest = computed(() => {
+  const r = userRoles.value;
+  return !r || r.length === 0 || (r.length === 1 && r[0] === "Guest");
+});
+
+const isManager = computed(() => {
+  const r = userRoles.value;
+  return r.includes("OmniQuery Manager") || r.includes("OmniQuery Admin") || r.includes("System Manager");
+});
+
+const roleLabel = computed(() => {
+  const r = userRoles.value;
+  if (r.includes("OmniQuery Admin") || r.includes("System Manager")) return __("OmniQuery Admin");
+  if (r.includes("OmniQuery Manager")) return __("OmniQuery Manager");
+  if (r.includes("OmniQuery User")) return __("Field Surveyor");
+  return __("Public Respondent");
+});
+
 
 function setTextScale(size) {
   emit("set-text-size", size);
@@ -485,5 +527,12 @@ onMounted(() => {
     const savedTheme = localStorage.getItem("omniquery_theme") || "light";
     setAppTheme(savedTheme);
   }
+});
+
+defineExpose({
+  roleLabel,
+  isGuest,
+  isManager,
+  showConfigModal
 });
 </script>

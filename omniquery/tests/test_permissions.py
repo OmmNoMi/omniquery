@@ -27,7 +27,7 @@ class TestPermissions(unittest.TestCase):
 		for p in ("PROJ-Alpha Study", "PROJ-Beta Study"):
 			if frappe.db.exists("OmniQuery Project", p):
 				frappe.delete_doc("OmniQuery Project", p, force=True, ignore_permissions=True)
-		for u in ("admin_alpha@ommnomi.test", "analyst_beta@ommnomi.test", "outsider@ommnomi.test"):
+		for u in ("admin_alpha@ommnomi.test", "analyst_beta@ommnomi.test", "outsider@ommnomi.test", "surveyor_perm@ommnomi.test"):
 			if frappe.db.exists("User", u):
 				frappe.delete_doc("User", u, force=True, ignore_permissions=True)
 		frappe.db.commit()
@@ -41,6 +41,14 @@ class TestPermissions(unittest.TestCase):
 					"first_name": email.split("@")[0],
 					"roles": [{"role": "OmniQuery Manager"}],
 				}).insert(ignore_permissions=True)
+
+		if not frappe.db.exists("User", "surveyor_perm@ommnomi.test"):
+			frappe.get_doc({
+				"doctype": "User",
+				"email": "surveyor_perm@ommnomi.test",
+				"first_name": "surveyor_perm",
+				"roles": [{"role": "OmniQuery User"}],
+			}).insert(ignore_permissions=True)
 
 	def _create_test_projects(self):
 		frappe.get_doc({
@@ -101,3 +109,18 @@ class TestPermissions(unittest.TestCase):
 		self.assertIn("PROJ-Alpha Study", cond)
 		super_cond = get_template_query_conditions("Administrator")
 		self.assertEqual(super_cond, "")
+
+	def test_manager_docperms_and_capabilities(self):
+		# Issue #60: Manager must be able to create & write Surveyors, create Projects & Option Sets, and export Responses
+		self.assertTrue(frappe.has_permission("OmniQuery Surveyor", "create", user="admin_alpha@ommnomi.test"))
+		self.assertTrue(frappe.has_permission("OmniQuery Surveyor", "write", user="admin_alpha@ommnomi.test"))
+		self.assertTrue(frappe.has_permission("OmniQuery Project", "create", user="admin_alpha@ommnomi.test"))
+		self.assertTrue(frappe.has_permission("OmniQuery Option Set", "create", user="admin_alpha@ommnomi.test"))
+		self.assertTrue(frappe.has_permission("OmniQuery Response", "export", user="admin_alpha@ommnomi.test"))
+
+	def test_surveyor_negative_docperms(self):
+		# Field Surveyor (OmniQuery User) must NOT be able to create Surveyors or export Responses
+		self.assertFalse(frappe.has_permission("OmniQuery Surveyor", "create", user="surveyor_perm@ommnomi.test"))
+		self.assertFalse(frappe.has_permission("OmniQuery Response", "export", user="surveyor_perm@ommnomi.test"))
+
+

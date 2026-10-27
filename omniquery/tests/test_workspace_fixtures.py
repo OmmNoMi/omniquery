@@ -61,3 +61,27 @@ class TestWorkspaceFixtures(FrappeTestCase):
 
 		self.assertTrue(frappe.db.exists("Workspace Sidebar", "OmniQuery"))
 		self.assertTrue(frappe.db.exists("Desktop Icon", "OmniQuery"))
+
+	def test_manager_workspace_has_number_cards_and_review_shortcut(self):
+		# Issue #60: Workspace must have Number Cards ("Awaiting review", "Flagged", "Collected today")
+		# and a "To review" shortcut filtered to workflow_state = Submitted
+		ws = frappe.get_doc("Workspace", "OmniQuery")
+		card_names = [getattr(c, "number_card_name", None) or (c.get("number_card_name") if isinstance(c, dict) else str(c)) for c in (ws.number_cards or [])]
+		self.assertTrue(any("Awaiting" in str(name) for name in card_names), f"Missing Awaiting Review card in {card_names}")
+		self.assertTrue(any("Flagged" in str(name) for name in card_names), f"Missing Flagged card in {card_names}")
+		self.assertTrue(any("Collected" in str(name) for name in card_names), f"Missing Collected Today card in {card_names}")
+
+		to_review_shortcuts = [
+			s for s in (ws.shortcuts or [])
+			if (getattr(s, "label", None) or (s.get("label") if isinstance(s, dict) else "")) == "To Review"
+		]
+		self.assertTrue(len(to_review_shortcuts) > 0, "Missing 'To Review' shortcut in Workspace")
+		sc = to_review_shortcuts[0]
+		link_to = getattr(sc, "link_to", None) or (sc.get("link_to") if isinstance(sc, dict) else None)
+		doc_view = getattr(sc, "doc_view", None) or (sc.get("doc_view") if isinstance(sc, dict) else None)
+		stats_filter = getattr(sc, "stats_filter", None) or (sc.get("stats_filter") if isinstance(sc, dict) else None)
+
+		self.assertEqual(link_to, "OmniQuery Response")
+		self.assertEqual(doc_view, "List")
+		self.assertIn("Submitted", str(stats_filter))
+
