@@ -2,14 +2,13 @@
   <div class="space-y-4 animate-fade-in pb-12">
     <!-- 1. Top Navigation Bar & Breadcrumb -->
     <div class="flex items-center justify-between gap-3 pt-1">
-      <button
-        type="button"
+      <Button
         @click="$emit('back')"
         class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-100 font-extrabold text-xs sm:text-sm transition shadow-xs active:scale-95 cursor-pointer"
       >
         <span>←</span>
         <span>{{ __('Back to Dashboard') }}</span>
-      </button>
+      </Button>
 
       <div class="flex items-center gap-2">
         <span
@@ -28,7 +27,7 @@
       <div class="flex items-center justify-between gap-2 flex-wrap min-w-0">
         <div class="flex items-center gap-2 flex-wrap min-w-0">
           <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-mono font-bold shrink-0">
-            <span>🏛️</span>
+            <Landmark class="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
             <span>{{ projectMeta.name || projectId }}</span>
           </span>
           <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 shrink-0">
@@ -36,8 +35,9 @@
           </span>
         </div>
 
-        <span v-if="projectMeta.workspace" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate">
-          🏢 {{ projectMeta.workspace_title || projectMeta.workspace }}
+        <span v-if="projectMeta.workspace" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
+          <Building2 class="w-3.5 h-3.5 text-slate-400" />
+          <span>{{ projectMeta.workspace_title || projectMeta.workspace }}</span>
         </span>
       </div>
 
@@ -47,7 +47,7 @@
           {{ projectMeta.project_name || projectMeta.name || projectId }}
         </h1>
         <p class="text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
-          <span>🏛️</span>
+          <Landmark class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           <span>{{ projectMeta.grantor_organization || 'National Rural Livelihoods Mission / State Agency' }}</span>
         </p>
       </div>
@@ -61,20 +61,20 @@
       <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 flex-wrap text-xs min-w-0">
         <div class="flex items-center gap-4 flex-wrap text-slate-600 dark:text-slate-300">
           <div class="flex items-center gap-1.5 font-bold">
-            <span class="text-emerald-600 text-sm">📋</span>
+            <ClipboardList class="w-3.5 h-3.5 text-emerald-600" />
             <span>{{ projectSurveys.length }} {{ __('Surveys Assigned') }}</span>
           </div>
           <div class="flex items-center gap-1.5 font-medium text-slate-500 dark:text-slate-400">
-            <span>🛡️</span>
+            <ShieldCheck class="w-3.5 h-3.5 text-slate-400" />
             <span>{{ __('Standard Field Investigator Protocol') }}</span>
           </div>
         </div>
 
         <a
           href="tel:18001026664"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs transition shadow-xs cursor-pointer shrink-0"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs transition shadow-xs cursor-pointer shrink-0 no-underline"
         >
-          <span>📞</span>
+          <Phone class="w-3.5 h-3.5" />
           <span>{{ __('Supervisor Helpline') }}</span>
         </a>
       </div>
@@ -83,55 +83,50 @@
     <!-- 3. Tabbed Content Navigation -->
     <div class="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md pt-1 pb-1">
       <div class="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto no-scrollbar">
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'surveys'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'surveys' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
-          <span>📋</span>
+          <ClipboardList class="w-3.5 h-3.5" />
           <span>{{ __('Surveys in this Project') }} ({{ projectSurveys.length }})</span>
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'sops'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'sops' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
-          <span>📜</span>
+          <Scroll class="w-3.5 h-3.5" />
           <span>{{ __('Field SOPs & Code') }}</span>
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'finance'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'finance' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
-          <span>💰</span>
+          <CircleDollarSign class="w-3.5 h-3.5" />
           <span>{{ __('Turnover & Calculations') }}</span>
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'offline'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'offline' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
-          <span>⚡</span>
+          <Zap class="w-3.5 h-3.5" />
           <span>{{ __('Offline Data Guidelines') }}</span>
-        </button>
+        </Button>
 
-        <button
-          type="button"
+        <Button
           @click="activeTab = 'helpline'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'helpline' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
         >
-          <span>📞</span>
+          <Phone class="w-3.5 h-3.5" />
           <span>{{ __('Supervisor Helpline') }}</span>
-        </button>
+        </Button>
       </div>
     </div>
 
@@ -149,19 +144,18 @@
           </div>
 
           <!-- Download All Button for this Project -->
-          <button
+          <Button
             v-if="cachedSurveysCount < projectSurveys.length && isOnline"
-            type="button"
             @click="$emit('download-project-surveys', projectId)"
             class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-xs transition active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-2xs"
           >
-            <span>⬇️</span>
+            <Download class="w-3.5 h-3.5" />
             <span>{{ __('Download All for Offline') }}</span>
-          </button>
+          </Button>
         </div>
 
         <div v-if="projectSurveys.length === 0" class="p-8 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 space-y-2">
-          <span class="text-3xl">📭</span>
+          <Inbox class="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto" />
           <h3 class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ __('No published surveys found for this project') }}</h3>
           <p class="text-xs text-slate-500">{{ __('Please check with your field supervisor or reload your template list.') }}</p>
         </div>
@@ -201,32 +195,31 @@
                   <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
                   <span>{{ __('Offline Ready') }} ({{ cachedTemplatesMap[s.name].questionCount }} {{ __('Q') }})</span>
                 </span>
-                <button
+                <Button
                   v-else-if="isOnline"
-                  type="button"
                   @click.stop="$emit('download-survey', s.name)"
                   class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
                   :title="__('Pre-cache survey questions so you can fill it without internet')"
                 >
-                  <span>⬇️</span>
+                  <Download class="w-3.5 h-3.5" />
                   <span>{{ __('Download for Offline') }}</span>
-                </button>
+                </Button>
                 <span
                   v-else
-                  class="text-[11px] font-medium text-amber-700 dark:text-amber-400"
+                  class="text-[11px] font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1"
                 >
-                  ⚠️ {{ __('Requires Internet to Download') }}
+                  <AlertTriangle class="w-3.5 h-3.5 text-amber-500" />
+                  <span>{{ __('Requires Internet to Download') }}</span>
                 </span>
               </div>
 
-              <button
-                type="button"
+              <Button
                 @click="$emit('select-survey', s.name)"
                 class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
               >
                 <span>{{ __('Fill Survey') }}</span>
                 <span>→</span>
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -236,7 +229,7 @@
       <div v-if="activeTab === 'sops'" class="space-y-4">
         <div class="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-xs sm:text-sm text-emerald-900 dark:text-emerald-200 space-y-1 shadow-2xs">
           <div class="font-extrabold flex items-center gap-1.5">
-            <span>🛡️</span>
+            <ShieldCheck class="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
             <span>{{ __('Core Ethical Principle') }}</span>
           </div>
           <p class="text-emerald-800/90 dark:text-emerald-300">
@@ -269,7 +262,7 @@
       <div v-if="activeTab === 'finance'" class="space-y-4">
         <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs sm:text-sm text-amber-900 dark:text-amber-200 space-y-1 shadow-2xs">
           <div class="font-extrabold flex items-center gap-1.5">
-            <span>💰</span>
+            <CircleDollarSign class="w-4 h-4 text-amber-700 dark:text-amber-400" />
             <span>{{ __('Multi-Year Turnover Formula') }}</span>
           </div>
           <p class="text-amber-800/90 dark:text-amber-300">
@@ -283,7 +276,7 @@
             :key="idx"
             class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xs space-y-2"
           >
-            <div class="text-2xl">{{ tip.icon }}</div>
+            <component :is="tip.icon" class="w-6 h-6 text-amber-600 dark:text-amber-400" />
             <h4 class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{{ tip.title }}</h4>
             <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{{ tip.desc }}</p>
           </div>
@@ -294,7 +287,7 @@
       <div v-if="activeTab === 'offline'" class="space-y-4">
         <div class="p-4 rounded-2xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 text-xs sm:text-sm text-blue-900 dark:text-blue-200 space-y-1 shadow-2xs">
           <div class="font-extrabold flex items-center gap-1.5">
-            <span>⚡</span>
+            <Zap class="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span>{{ __('Zero-Data-Loss Architecture') }}</span>
           </div>
           <p class="text-blue-800/90 dark:text-blue-300">
@@ -323,7 +316,7 @@
         <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div class="flex items-center gap-3.5">
             <div class="w-14 h-14 rounded-2xl bg-emerald-600 text-white font-bold text-2xl flex items-center justify-center shrink-0 shadow-xs">
-              📞
+              <Phone class="w-7 h-7" />
             </div>
             <div>
               <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
@@ -381,6 +374,23 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
+import { Button, call } from "frappe-ui";
+import {
+  Landmark,
+  Building2,
+  ClipboardList,
+  ShieldCheck,
+  Phone,
+  Scroll,
+  CircleDollarSign,
+  Zap,
+  Download,
+  Inbox,
+  AlertTriangle,
+  Banknote,
+  BarChart3,
+  Building,
+} from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -466,15 +476,12 @@ const projectSurveys = computed(() => {
 async function fetchProjectMeta() {
   if (!props.projectId) return;
   try {
-    const res = await fetch(
-      `/api/method/omniquery.api.survey.get_project_details?project_id=${encodeURIComponent(props.projectId)}`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const proj = data?.message?.project || data?.message;
-      if (proj && (proj.name || proj.project_name)) {
-        remoteProjectMeta.value = proj;
-      }
+    const data = await call("omniquery.api.survey.get_project_details", {
+      project_id: props.projectId,
+    });
+    const proj = data?.project || data?.message?.project || data?.message || data;
+    if (proj && (proj.name || proj.project_name)) {
+      remoteProjectMeta.value = proj;
     }
   } catch (e) {
     console.warn("Could not fetch remote project details:", e);
@@ -513,17 +520,17 @@ const sopsPoints = [
 
 const financeTips = [
   {
-    icon: "💵",
+    icon: Banknote,
     title: "Annual Turnover Estimation",
     desc: "Multiply typical monthly business receipts by the number of active months in that specific financial year (e.g. FY 2022-23, FY 2023-24).",
   },
   {
-    icon: "📊",
+    icon: BarChart3,
     title: "Percentage Distribution Verification",
     desc: "For questions where multiple business activities or challenges are categorized, cross-check that totals make logical sense.",
   },
   {
-    icon: "🏦",
+    icon: Building,
     title: "Capital Sources & Borrowing",
     desc: "Distinguish between SHG loans (CIF/RF), bank loans (Mudra/KCC), family borrowing, and private moneylenders.",
   },
@@ -531,7 +538,7 @@ const financeTips = [
 
 const offlinePoints = [
   "OmniQuery runs 100% offline. All responses, in-progress draft edits, and GPS are recorded directly in device storage (IndexedDB).",
-  "Observe the ⚡ badge in the header: it indicates how many completed responses are stored locally waiting to sync.",
+  "Observe the offline queue badge in the header: it indicates how many completed responses are stored locally waiting to sync.",
   "When returning to network coverage or Wi-Fi, tap 'Sync Now' in the header to push records to the server.",
   "Before leaving the field, verify all completed forms in the 'Filled Forms' verification list.",
 ];

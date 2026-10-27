@@ -93,11 +93,10 @@
             :aria-label="getCleanSubLabel(q)"
             class="flex flex-wrap items-center gap-1.5 py-1"
           >
-            <button
+            <Button
               v-for="(opt, optIdx) in getQuestionOptions(q)"
               :key="opt.value"
               :ref="(el) => setOptionRef(q.question_code, optIdx, el)"
-              type="button"
               role="radio"
               :aria-checked="responses[q.question_code] === opt.value"
               :tabindex="getChoiceTabindex(q, opt.value, optIdx)"
@@ -111,7 +110,7 @@
               ]"
             >
               {{ opt.label }}
-            </button>
+            </Button>
           </div>
 
           <!-- Numeric Stepper / Input -->
@@ -119,39 +118,37 @@
             v-else-if="isNumericQuestion(q)"
             class="flex items-center gap-1.5 justify-end"
           >
-            <button
-              type="button"
+            <Button
               @click="stepNumber(q.question_code, -1)"
               class="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-100 active:scale-95 transition"
               aria-label="Decrement"
             >
               -
-            </button>
-            <input
+            </Button>
+            <TextInput
               type="number"
-              :value="responses[q.question_code]"
-              @input="onUpdateValue(q.question_code, $event.target.value)"
+              :modelValue="responses[q.question_code]"
+              @update:modelValue="(val) => onUpdateValue(q.question_code, val)"
               :placeholder="__('0')"
-              class="w-20 sm:w-24 text-center rounded-lg border border-slate-300 dark:border-slate-600 py-1.5 px-2 text-sm font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:border-emerald-500 focus:outline-none"
+              class="w-20 sm:w-24 text-center rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:border-emerald-500 focus:outline-none"
             />
-            <button
-              type="button"
+            <Button
               @click="stepNumber(q.question_code, 1)"
               class="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-100 active:scale-95 transition"
               aria-label="Increment"
             >
               +
-            </button>
+            </Button>
           </div>
 
           <!-- Default Text Box -->
           <div v-else>
-            <input
+            <TextInput
               type="text"
-              :value="responses[q.question_code]"
-              @input="onUpdateValue(q.question_code, $event.target.value)"
+              :modelValue="responses[q.question_code]"
+              @update:modelValue="(val) => onUpdateValue(q.question_code, val)"
               :placeholder="__('Enter value')"
-              class="w-full sm:w-44 rounded-lg border border-slate-300 dark:border-slate-600 py-1.5 px-3 text-xs sm:text-sm font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:border-emerald-500 focus:outline-none"
+              class="w-full sm:w-44 rounded-lg border border-slate-300 dark:border-slate-600 text-xs sm:text-sm font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:border-emerald-500 focus:outline-none"
             />
           </div>
         </div>
@@ -172,14 +169,14 @@
           v-if="notApplicable"
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 px-2.5 py-0.5 rounded-full"
         >
-          <span>⊘</span>
+          <Ban class="w-3.5 h-3.5" />
           <span>{{ __('Not Applicable') }}</span>
         </span>
         <span
           v-else-if="isGroupCompleted && !isInputFocused"
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full"
         >
-          <span>✓</span>
+          <Check class="w-3.5 h-3.5" />
           <span>{{ __('All items filled') }}</span>
         </span>
       </div>
@@ -189,6 +186,8 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { Button, TextInput } from "frappe-ui";
+import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -291,7 +290,7 @@ function setOptionRef(qCode, optIdx, el) {
     optionRefsMap.value[qCode] = [];
   }
   if (el) {
-    optionRefsMap.value[qCode][optIdx] = el;
+    optionRefsMap.value[qCode][optIdx] = el.$el || el;
   }
 }
 

@@ -18,30 +18,29 @@
     <!-- 1. Draggable Slider Bar (Bigger in focus, with values held below) -->
     <div v-if="activeFormat === 'slider'" class="px-2 pt-2 space-y-3">
       <div class="relative flex items-center">
-        <input
+        <TextInput
           :id="id"
           type="range"
           :min="min"
           :max="max"
           :step="step"
-          :value="numericValue"
+          :modelValue="numericValue"
           :aria-label="ariaLabel || __('Range value')"
           :aria-valuemin="min"
           :aria-valuemax="max"
           :aria-valuenow="numericValue"
           :aria-valuetext="`${displayValue} ${unit ? __(unit) : ''}`.trim()"
           :aria-describedby="ariaDescribedby"
-          @input="onSliderInput"
+          @update:modelValue="(val) => emit('update:modelValue', Number(val))"
           class="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-grab active:cursor-grabbing accent-emerald-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 transition shadow-inner"
         />
       </div>
 
       <!-- Values Held Below Track (Clickable Ticks) -->
       <div class="flex justify-between items-center text-xs font-bold text-slate-500 dark:text-slate-400 px-1 select-none">
-        <button
+        <Button
           v-for="val in steps"
           :key="val"
-          type="button"
           @click="selectValue(val)"
           :class="[
             'px-2 py-0.5 rounded-md transition font-mono',
@@ -51,7 +50,7 @@
           ]"
         >
           {{ val }}
-        </button>
+        </Button>
       </div>
     </div>
 
@@ -61,11 +60,10 @@
       role="radiogroup"
       class="grid grid-flow-col auto-cols-fr gap-1.5 sm:gap-2 pt-1"
     >
-      <button
+      <Button
         v-for="val in steps"
         :key="val"
-        :ref="(el) => { if (el) btnRefs[val] = el; }"
-        type="button"
+        :ref="(el) => setBtnRef(val, el)"
         role="radio"
         :aria-checked="numericValue === val"
         :tabindex="numericValue === val ? 0 : -1"
@@ -79,13 +77,14 @@
         ]"
       >
         {{ val }}
-      </button>
+      </Button>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, nextTick } from "vue";
+import { Button, TextInput } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -132,6 +131,12 @@ const { __ } = useTranslation();
 
 const btnRefs = ref({});
 
+function setBtnRef(val, el) {
+  if (el) {
+    btnRefs.value[val] = el.$el || el.el || el;
+  }
+}
+
 const activeFormat = computed(() => (props.format === "slider" ? "slider" : "buttons"));
 
 const numericValue = computed(() => {
@@ -161,7 +166,9 @@ function onSliderInput(e) {
 function selectValue(val) {
   emit("update:modelValue", val);
   nextTick(() => {
-    btnRefs.value[val]?.focus();
+    const el = btnRefs.value[val];
+    if (el?.focus) el.focus();
+    else if (el?.$el?.focus) el.$el.focus();
   });
 }
 

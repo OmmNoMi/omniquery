@@ -30,3 +30,15 @@ if (typeof window !== "undefined") {
     },
   };
 }
+
+// Global Vue Test Utils config for frappe-ui (router mock)
+import { config } from "@vue/test-utils";
+import { createRouter, createMemoryHistory } from "vue-router";
+const router = createRouter({
+  history: createMemoryHistory(),
+  routes: [{ path: "/", component: { template: "<div/>" } }],
+});
+config.global.plugins = [router];
+config.global.provide = config.global.provide || {};
+config.global.mocks = config.global.mocks || {};
+config.global.mocks.$router = router;

@@ -4,9 +4,8 @@
       <!-- Left: Back Chevron & OmniQuery Wordmark -->
       <div class="flex items-center gap-2 shrink-0">
         <!-- Home / Exit Form Button (when in survey) -->
-        <button
+        <Button
           v-if="showBack"
-          type="button"
           @click="$emit('exit')"
           class="w-8 h-8 rounded-full flex items-center justify-center bg-[#e6efe8] dark:bg-[#1c2c22] hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 text-slate-800 dark:text-emerald-100 border border-[#b8cdbf] dark:border-[#2a4033] transition"
           :aria-label="__('Return to Home')"
@@ -15,7 +14,7 @@
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
           </svg>
-        </button>
+        </Button>
 
         <!-- Official OmniQuery Cloud Icon & Brand Title -->
         <div class="flex items-center gap-2 cursor-pointer select-none" @click="$emit('home')">
@@ -39,23 +38,21 @@
           <span class="text-[11px] font-mono font-black text-emerald-700 dark:text-emerald-300">{{ progressPercent }}%</span>
         </div>
 
-        <!-- Pending WAL Queue Offline Badge Pill (⚡ N, only for logged-in surveyors) -->
-        <button
+        <!-- Pending WAL Queue Offline Badge Pill -->
+        <Button
           v-if="!isGuest && pendingWALCount > 0"
-          type="button"
           @click="$emit('open-wal')"
           class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#fffbeb] dark:bg-amber-950/70 border border-amber-300 dark:border-amber-600 text-amber-900 dark:text-amber-200 flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition select-none hover:bg-amber-100 dark:hover:bg-amber-900/60"
           :title="`${pendingWALCount} ${__('Pending Offline Responses')} - ${__('Click to view & sync')}`"
           :aria-label="`${pendingWALCount} ${__('Pending Offline Responses')}`"
         >
-          <span class="text-xs leading-none">⚡</span>
+          <Zap class="w-3.5 h-3.5 leading-none" />
           <span class="font-bold text-xs leading-none text-amber-900 dark:text-amber-200">{{ pendingWALCount }}</span>
-        </button>
+        </Button>
 
         <!-- Chip 2: Microphone Recording Button (only for logged-in surveyors) -->
-        <button
+        <Button
           v-if="showBack && !isGuest"
-          type="button"
           @click="$emit('toggle-audio')"
           class="relative w-8 h-8 rounded-full flex items-center justify-center transition active:scale-95 shadow-2xs cursor-pointer"
           :class="[
@@ -116,14 +113,13 @@
           class="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition active:scale-95 no-underline"
           :title="__('Sign in with your OmniQuery surveyor or admin account')"
         >
-          <span>🔑</span>
+          <KeyRound class="w-3.5 h-3.5" />
           <span>{{ __('Login') }}</span>
         </a>
 
         <!-- User Avatar Icon with Live Green Dot (Logged-in surveyor only) -->
-        <button
+        <Button
           v-else
-          type="button"
           @click="showConfigModal = true"
           class="relative w-9 h-9 rounded-full bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-black text-xs flex items-center justify-center shadow-xs ring-2 ring-[#b8cdbf] transition cursor-pointer select-none"
           :title="__('Settings & Configuration')"
@@ -146,7 +142,7 @@
           >
             !
           </span>
-        </button>
+        </Button>
       </div>
     </div>
 
@@ -194,8 +190,7 @@
             </div>
 
             <!-- Accessible WCAG 2.2 AA Close Button (44x44px target) -->
-            <button
-              type="button"
+            <Button
               @click="showConfigModal = false"
               class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               :aria-label="__('Close settings')"
@@ -204,7 +199,7 @@
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
               </svg>
-            </button>
+            </Button>
           </div>
 
           <!-- Grouped Native Settings Rows -->
@@ -212,12 +207,11 @@
             <!-- 1. Language Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <span class="text-base">🌐</span>
+                <Globe class="w-4 h-4 text-slate-500" />
                 <span class="text-xs font-bold text-slate-800">{{ __('Language') || 'Language' }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
-                <button
-                  type="button"
+                <Button
                   @click="setLanguage('en')"
                   :class="[
                     'px-3.5 py-1.5 rounded-lg transition font-bold',
@@ -225,9 +219,8 @@
                   ]"
                 >
                   English
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   @click="setLanguage('hi')"
                   :class="[
                     'px-3.5 py-1.5 rounded-lg transition font-bold',
@@ -235,19 +228,18 @@
                   ]"
                 >
                   हिन्दी
-                </button>
+                </Button>
               </div>
             </div>
 
             <!-- 2. Text Scale Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <span class="text-base">🔤</span>
+                <Languages class="w-4 h-4 text-slate-500" />
                 <span class="text-xs font-bold text-slate-800">{{ __('Text Size') || 'Text Size' }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
-                <button
-                  type="button"
+                <Button
                   @click="setTextScale('md')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold',
@@ -255,9 +247,8 @@
                   ]"
                 >
                   A
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   @click="setTextScale('lg')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold',
@@ -265,9 +256,8 @@
                   ]"
                 >
                   A+
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   @click="setTextScale('xl')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold',
@@ -275,71 +265,67 @@
                   ]"
                 >
                   A++
-                </button>
+                </Button>
               </div>
             </div>
 
             <!-- 3. Theme Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <span class="text-base">🎨</span>
+                <Palette class="w-4 h-4 text-slate-500" />
                 <span class="text-xs font-bold text-slate-800">{{ __('Theme') || 'Theme' }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
-                <button
-                  type="button"
+                <Button
                   @click="setAppTheme('light')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition flex items-center gap-1 font-bold',
                     activeTheme === 'light' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   ]"
                 >
-                  <span>☀️</span>
+                  <Sun class="w-3.5 h-3.5" />
                   <span>Light</span>
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   @click="setAppTheme('dark')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition flex items-center gap-1 font-bold',
                     activeTheme === 'dark' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   ]"
                 >
-                  <span>🌙</span>
+                  <Moon class="w-3.5 h-3.5" />
                   <span>Dark</span>
-                </button>
+                </Button>
               </div>
             </div>
 
             <!-- 4. Choice Layout Row -->
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
-                <span class="text-base">⊞</span>
+                <LayoutGrid class="w-4 h-4 text-slate-500" />
                 <span class="text-xs font-bold text-slate-800">{{ __('Choice Layout') || 'Choice Layout' }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
-                <button
-                  type="button"
+                <Button
                   @click="setChoiceMode('grid')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold flex items-center gap-1',
                     activeChoiceMode === 'grid' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   ]"
                 >
-                  <span>⊞</span>
+                  <LayoutGrid class="w-3.5 h-3.5" />
                   <span>Grid</span>
-                </button>
-                <button
-                  type="button"
+                </Button>
+                <Button
                   @click="setChoiceMode('combobox')"
                   :class="[
                     'px-3 py-1.5 rounded-lg transition font-bold flex items-center gap-1',
                     activeChoiceMode === 'combobox' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
                   ]"
                 >
-                  <span>▾</span>
+                  <ChevronDown class="w-3.5 h-3.5" />
                   <span>Dropdown</span>
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -348,21 +334,21 @@
           <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                <span>📦</span>
+                <Package class="w-4 h-4 text-slate-500" />
                 <span>{{ __('WAL Queue') }}</span>
               </div>
               <p class="text-[11px] text-slate-500 mt-0.5">
                 {{ pendingWALCount }} {{ __('Pending Responses') }}
               </p>
             </div>
-            <button
-              type="button"
+            <Button
               @click="triggerSync"
               :disabled="pendingWALCount === 0"
-              class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-xs disabled:opacity-40"
+              class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-xs disabled:opacity-40 flex items-center gap-1.5"
             >
-              ⚡ {{ __('Sync Now') }}
-            </button>
+              <Zap class="w-3.5 h-3.5" />
+              <span>{{ __('Sync Now') }}</span>
+            </Button>
           </div>
 
           <!-- 5. Profile Details & Manage Link -->
@@ -391,13 +377,12 @@
 
 
           <!-- Sheet Dismiss Button -->
-          <button
-            type="button"
+          <Button
             @click="showConfigModal = false"
             class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm transition shadow-sm"
           >
             {{ __('Done') || 'Done' }}
-          </button>
+          </Button>
         </div>
       </div>
     </Teleport>
@@ -406,6 +391,8 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
+import { Button } from "frappe-ui";
+import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 

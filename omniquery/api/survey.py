@@ -500,7 +500,7 @@ def get_project_details(project_id=None):
 			"id": "sop-01",
 			"title": "Field Survey Protocol & Ethical Guidelines",
 			"category": "Field SOP",
-			"icon": "📜",
+			"icon": "scroll",
 			"summary": "Mandatory protocols for introducing the study, voluntary participation, and respondent respect.",
 			"points": [
 				"Always introduce yourself with authorized surveyor credentials and clearly explain the non-commercial research objectives.",
@@ -513,7 +513,7 @@ def get_project_details(project_id=None):
 			"id": "training-02",
 			"title": "Turnover & Financial Estimation Guide",
 			"category": "Data Accuracy",
-			"icon": "💰",
+			"icon": "dollar-sign",
 			"summary": "How to assist respondents with multi-year turnover and enterprise cost estimates.",
 			"points": [
 				"If accounts are not maintained on paper, compute annual turnover by averaging typical monthly cash inflows multiplied by operational months.",
@@ -526,11 +526,11 @@ def get_project_details(project_id=None):
 			"id": "tech-03",
 			"title": "Offline Data Collection & Recovery Guide",
 			"category": "App & Recovery",
-			"icon": "⚡",
+			"icon": "zap",
 			"summary": "Zero-data-loss workflows for remote field operations without cellular internet.",
 			"points": [
 				"OmniQuery runs 100% offline. Responses, draft progress, and GPS are saved immediately in device storage (IndexedDB).",
-				"Monitor the ⚡ badge in the header: it indicates how many completed responses are stored in the queue awaiting sync.",
+				"Monitor the offline queue badge in the header: it indicates how many completed responses are stored in the queue awaiting sync.",
 				"When returning to network coverage or village Wi-Fi, tap 'Sync Now' to push records to the server.",
 				"Use 'Filled Forms' to inspect completed submissions, review answers, and export emergency backups to JSON/CSV.",
 			],

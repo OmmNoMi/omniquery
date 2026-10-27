@@ -1,4 +1,5 @@
 import { ref, computed } from "vue";
+import { call } from "frappe-ui";
 import { db } from "../services/db";
 
 export function generateSurveyId(templateName) {
@@ -122,61 +123,58 @@ export function useSurvey() {
 
     // 2. Fetch fresh bootstrap data from server if online
     try {
-      const response = await fetch("/api/method/omniquery.api.survey.get_bootstrap_data");
-      if (response.ok) {
-        const data = await response.json();
-        const templates = data.message?.templates || [];
-        if (templates.length > 0) {
-          const formatted = [];
-          for (const t of templates) {
-            const schema = t.schema || {};
-            schema.template_name = t.name;
-            schema.title = t.title;
-            schema.project = t.project;
-            schema.project_name = t.project_name;
-            schema.version = t.version;
-            schema.target_category = t.target_category;
-            schema.workspace = t.workspace;
-            schema.workspace_title = t.workspace_title;
-            schema.grantor_organization = t.grantor_organization;
-            schema.project_description = t.project_description;
-            schema.response_title_format = t.response_title_format || schema.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})";
+      const data = await call("omniquery.api.survey.get_bootstrap_data");
+      const templates = (data && data.templates) || (data && data.message && data.message.templates) || [];
+      if (templates.length > 0) {
+        const formatted = [];
+        for (const t of templates) {
+          const schema = t.schema || {};
+          schema.template_name = t.name;
+          schema.title = t.title;
+          schema.project = t.project;
+          schema.project_name = t.project_name;
+          schema.version = t.version;
+          schema.target_category = t.target_category;
+          schema.workspace = t.workspace;
+          schema.workspace_title = t.workspace_title;
+          schema.grantor_organization = t.grantor_organization;
+          schema.project_description = t.project_description;
+          schema.response_title_format = t.response_title_format || schema.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})";
 
-            // Persist full schema to IndexedDB
-            await db.templates.put({
-              template_name: t.name,
-              title: t.title,
-              project: t.project,
-              project_name: t.project_name || t.project,
-              grantor_organization: t.grantor_organization || "",
-              description: t.project_description || "",
-              version: t.version || 1,
-              target_category: t.target_category || "Survey",
-              workspace: t.workspace,
-              workspace_title: t.workspace_title,
-              response_title_format: schema.response_title_format,
-              schema: schema,
-              modified: new Date().toISOString(),
-            });
+          // Persist full schema to IndexedDB
+          await db.templates.put({
+            template_name: t.name,
+            title: t.title,
+            project: t.project,
+            project_name: t.project_name || t.project,
+            grantor_organization: t.grantor_organization || "",
+            description: t.project_description || "",
+            version: t.version || 1,
+            target_category: t.target_category || "Survey",
+            workspace: t.workspace,
+            workspace_title: t.workspace_title,
+            response_title_format: schema.response_title_format,
+            schema: schema,
+            modified: new Date().toISOString(),
+          });
 
-            formatted.push({
-              name: t.name,
-              title: t.title,
-              project: t.project,
-              project_name: t.project_name || t.project,
-              grantor_organization: t.grantor_organization || "",
-              project_description: t.project_description || "",
-              version: t.version || 1,
-              target_category: t.target_category || "Survey",
-              workspace: t.workspace,
-              workspace_title: t.workspace_title,
-              response_title_format: schema.response_title_format,
-            });
-          }
-          availableTemplates.value = formatted;
-          await loadActiveDrafts();
-          return availableTemplates.value;
+          formatted.push({
+            name: t.name,
+            title: t.title,
+            project: t.project,
+            project_name: t.project_name || t.project,
+            grantor_organization: t.grantor_organization || "",
+            project_description: t.project_description || "",
+            version: t.version || 1,
+            target_category: t.target_category || "Survey",
+            workspace: t.workspace,
+            workspace_title: t.workspace_title,
+            response_title_format: schema.response_title_format,
+          });
         }
+        availableTemplates.value = formatted;
+        await loadActiveDrafts();
+        return availableTemplates.value;
       }
     } catch (e) {
       console.warn("Could not fetch get_bootstrap_data from server:", e);
@@ -184,21 +182,18 @@ export function useSurvey() {
 
     // 3. Fallback to list_active_templates if get_bootstrap_data didn't return templates
     try {
-      const response = await fetch("/api/method/omniquery.api.survey.list_active_templates");
-      if (response.ok) {
-        const data = await response.json();
-        const list = data.message || [];
-        if (list.length > 0) {
-          availableTemplates.value = list;
-          // Background prefetch schemas for all templates
-          for (const tmpl of list) {
-            fetchRemoteSchema(tmpl.name).then((payload) => {
-              if (payload) {
-                const schema = payload.schema || payload;
-                cacheTemplateLocally(tmpl.name, schema, payload);
-              }
-            }).catch(() => {});
-          }
+      const data = await call("omniquery.api.survey.list_active_templates");
+      const list = Array.isArray(data) ? data : ((data && data.message) || []);
+      if (list.length > 0) {
+        availableTemplates.value = list;
+        // Background prefetch schemas for all templates
+        for (const tmpl of list) {
+          fetchRemoteSchema(tmpl.name).then((payload) => {
+            if (payload) {
+              const schema = payload.schema || payload;
+              cacheTemplateLocally(tmpl.name, schema, payload);
+            }
+          }).catch(() => {});
         }
       }
     } catch (e) {
@@ -245,10 +240,8 @@ export function useSurvey() {
 
   async function fetchRemoteSchema(surveyId) {
     try {
-      const res = await fetch(`/api/method/omniquery.api.survey.get_schema?template_name=${encodeURIComponent(surveyId)}`);
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.message || null;
+      const data = await call("omniquery.api.survey.get_schema", { template_name: surveyId });
+      return data || null;
     } catch (e) {
       return null;
     }

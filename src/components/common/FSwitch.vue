@@ -1,7 +1,6 @@
 <template>
   <div class="flex items-center gap-3">
-    <button
-      type="button"
+    <Button
       @click="toggle"
       @keydown="onKeydown"
       :class="[
@@ -11,6 +10,7 @@
       :id="id"
       role="switch"
       :aria-checked="Boolean(modelValue)"
+      :label="ariaLabel || __('Toggle yes or no')"
       :aria-label="ariaLabel || __('Toggle yes or no')"
       :aria-describedby="ariaDescribedby"
     >
@@ -21,7 +21,7 @@
           modelValue ? 'translate-x-7' : 'translate-x-0'
         ]"
       />
-    </button>
+    </Button>
     <span class="text-base font-semibold text-slate-800">
       {{ modelValue ? __('Yes') : __('No') }}
     </span>
@@ -29,6 +29,7 @@
 </template>
 
 <script setup>
+import { Button } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
