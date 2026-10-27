@@ -71,6 +71,17 @@ class TestWorkspaceFixtures(FrappeTestCase):
 		self.assertTrue(any("Flagged" in str(name) for name in card_names), f"Missing Flagged card in {card_names}")
 		self.assertTrue(any("Collected" in str(name) for name in card_names), f"Missing Collected Today card in {card_names}")
 
-		shortcuts = [s.label if hasattr(s, "label") else s.get("label") for s in (ws.shortcuts or [])]
-		self.assertTrue(any("Review" in str(sc) for sc in shortcuts), f"Missing To Review shortcut in {shortcuts}")
+		to_review_shortcuts = [
+			s for s in (ws.shortcuts or [])
+			if (getattr(s, "label", None) or (s.get("label") if isinstance(s, dict) else "")) == "To Review"
+		]
+		self.assertTrue(len(to_review_shortcuts) > 0, "Missing 'To Review' shortcut in Workspace")
+		sc = to_review_shortcuts[0]
+		link_to = getattr(sc, "link_to", None) or (sc.get("link_to") if isinstance(sc, dict) else None)
+		doc_view = getattr(sc, "doc_view", None) or (sc.get("doc_view") if isinstance(sc, dict) else None)
+		stats_filter = getattr(sc, "stats_filter", None) or (sc.get("stats_filter") if isinstance(sc, dict) else None)
+
+		self.assertEqual(link_to, "OmniQuery Response")
+		self.assertEqual(doc_view, "List")
+		self.assertIn("Submitted", str(stats_filter))
 

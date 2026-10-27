@@ -442,6 +442,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  userRoles: {
+    type: Array,
+    default: () => (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [],
+  },
 });
 
 const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-text-size", "toggle-audio"]);
@@ -471,7 +475,13 @@ const userInitial = computed(() => {
 });
 
 const userRoles = computed(() => {
+  if (props.userRoles && props.userRoles.length) return props.userRoles;
   return (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [];
+});
+
+const isGuest = computed(() => {
+  const r = userRoles.value;
+  return !r || r.length === 0 || (r.length === 1 && r[0] === "Guest");
 });
 
 const isManager = computed(() => {
@@ -483,7 +493,8 @@ const roleLabel = computed(() => {
   const r = userRoles.value;
   if (r.includes("OmniQuery Admin") || r.includes("System Manager")) return __("OmniQuery Admin");
   if (r.includes("OmniQuery Manager")) return __("OmniQuery Manager");
-  return __("Field Surveyor");
+  if (r.includes("OmniQuery User")) return __("Field Surveyor");
+  return __("Public Respondent");
 });
 
 
@@ -529,5 +540,12 @@ onMounted(() => {
     const savedTheme = localStorage.getItem("omniquery_theme") || "light";
     setAppTheme(savedTheme);
   }
+});
+
+defineExpose({
+  roleLabel,
+  isGuest,
+  isManager,
+  showConfigModal
 });
 </script>

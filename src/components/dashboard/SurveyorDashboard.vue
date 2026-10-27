@@ -34,7 +34,7 @@
 
     <!-- Daily Target Goal Progress Strip (Field Surveyors) -->
     <div
-      v-if="!isManager"
+      v-if="isSurveyor && !isManager"
       class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5"
     >
       <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -56,7 +56,7 @@
 
     <!-- Manager Review Queue & Desk Access Banner -->
     <div
-      v-else
+      v-else-if="isManager"
       class="p-4 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 space-y-2"
     >
       <div class="flex items-center justify-between">
@@ -347,6 +347,10 @@ const roles = computed(() => {
 const isManager = computed(() => {
   const r = roles.value;
   return r.includes("OmniQuery Manager") || r.includes("OmniQuery Admin") || r.includes("System Manager");
+});
+
+const isSurveyor = computed(() => {
+  return roles.value.includes("OmniQuery User");
 });
 
 
