@@ -20,7 +20,8 @@ def has_template_permission(doc, ptype: str = "read", user: str | None = None) -
 		return _can_read_template(doc, user)
 	if ptype in ("write", "submit", "amend", "cancel", "delete"):
 		return _can_write_template(doc, user)
-	return False
+	# Allow unhandled controller ptypes (print, email, share, etc.) to pass through to DocPerms
+	return True
 
 
 def _can_read_template(doc, user: str) -> bool:
@@ -56,6 +57,19 @@ def get_template_query_conditions(user: str | None = None) -> str:
 	return f"(`tabOmniQuery Template`.`is_public` = 1 OR `tabOmniQuery Template`.`project` IN ({escaped}))"
 
 
+def _is_response_surveyor_or_owner(doc, user: str) -> bool:
+	if not doc or not user:
+		return False
+	if getattr(doc, "owner", None) == user:
+		return True
+	surveyor = getattr(doc, "surveyor", None)
+	if surveyor:
+		surveyor_user = frappe.db.get_value("OmniQuery Surveyor", surveyor, "user")
+		if surveyor_user == user:
+			return True
+	return False
+
+
 def get_response_query_conditions(user: str | None = None) -> str:
 	user = user or frappe.session.user
 	if is_super_user(user):
@@ -63,13 +77,29 @@ def get_response_query_conditions(user: str | None = None) -> str:
 	user_roles = set(frappe.get_roles(user))
 	if "OmniQuery Admin" in user_roles or "OmniQuery Manager" in user_roles:
 		return ""
-	projects = frappe.get_all("OmniQuery Project Member", filters={"user": user}, pluck="parent")
+
+	escaped_user = frappe.db.escape(user)
+	# Surveyor match must resolve through tabOmniQuery Surveyor.user (surveyor field is a Link to OmniQuery Surveyor)
+	surveyor_cond = (
+		f"(`tabOmniQuery Response`.`owner` = {escaped_user} OR "
+		f"`tabOmniQuery Response`.`surveyor` IN (SELECT `name` FROM `tabOmniQuery Surveyor` WHERE `user` = {escaped_user}))"
+	)
+
+	# Scoped by projects where member has access to view all responses (Admin, Manager, Analyst, Viewer)
+	# Field enumerators (Project User) only see their own responses
+	allowed_roles = ["Project Admin", "Project Manager", "Project Analyst", "Project Viewer"]
+	projects = frappe.get_all(
+		"OmniQuery Project Member",
+		filters={"user": user, "project_role": ["in", allowed_roles]},
+		pluck="parent",
+	)
 	if not projects:
-		return f"(`tabOmniQuery Response`.`surveyor` = {frappe.db.escape(user)} OR `tabOmniQuery Response`.`owner` = {frappe.db.escape(user)})"
-	escaped = ", ".join(frappe.db.escape(p) for p in projects)
+		return surveyor_cond
+
+	escaped_projects = ", ".join(frappe.db.escape(p) for p in projects)
 	return (
-		f"(`tabOmniQuery Response`.`survey_template` IN (SELECT `name` FROM `tabOmniQuery Template` WHERE `project` IN ({escaped})) "
-		f"OR `tabOmniQuery Response`.`surveyor` = {frappe.db.escape(user)})"
+		f"(`tabOmniQuery Response`.`survey_template` IN (SELECT `name` FROM `tabOmniQuery Template` WHERE `project` IN ({escaped_projects})) "
+		f"OR {surveyor_cond})"
 	)
 
 
@@ -98,11 +128,13 @@ def has_response_permission(doc, ptype: str = "read", user: str | None = None) -
 		return _can_write_response(doc, user)
 	if ptype in ("export", "report"):
 		return "OmniQuery Analyst" in user_roles or "Project Analyst" in _get_user_project_roles(_get_doc_project(doc), user)
-	return False
+	# Pass-through for unhandled ptypes (create, print, email, share, delete, etc.)
+	# so that Frappe controller check passes and native DocPerms evaluate
+	return True
 
 
 def _can_read_response(doc, user: str) -> bool:
-	if getattr(doc, "surveyor", None) == user or getattr(doc, "owner", None) == user:
+	if _is_response_surveyor_or_owner(doc, user):
 		return True
 	roles = _get_user_project_roles(_get_doc_project(doc), user)
 	allowed = {"Project Admin", "Project Manager", "Project Analyst", "Project Viewer"}
@@ -111,9 +143,10 @@ def _can_read_response(doc, user: str) -> bool:
 
 def _can_write_response(doc, user: str) -> bool:
 	user_roles = set(frappe.get_roles(user))
+	# Analysts and Viewers are strictly read/export only and cannot write or edit responses
 	if (user_roles & {"OmniQuery Analyst", "OmniQuery Viewer"}) and not (user_roles & {"OmniQuery Manager", "OmniQuery Admin"}):
 		return False
-	if getattr(doc, "surveyor", None) == user or getattr(doc, "owner", None) == user:
+	if _is_response_surveyor_or_owner(doc, user):
 		return True
 	roles = _get_user_project_roles(_get_doc_project(doc), user)
 	return bool(set(roles) & {"Project User", "Project Admin"})

@@ -13,16 +13,21 @@ def export_flattened_responses(template_name=None, project=None, format="csv"):
 	Zero raw SQL: Uses frappe.qb and frappe.get_all.
 	"""
 	current_user = frappe.session.user
+	if not frappe.has_permission("OmniQuery Response", "export"):
+		frappe.throw(_("Not permitted to export responses"), frappe.PermissionError)
+
 	filters = {}
 	if template_name:
 		filters["survey_template"] = template_name
 	if project:
 		# Filter templates under project
-		tmpl_names = frappe.get_all("OmniQuery Template", filters={"project": project}, pluck="name")
+		tmpl_names = frappe.get_list("OmniQuery Template", filters={"project": project}, pluck="name")
 		if tmpl_names:
 			filters["survey_template"] = ["in", tmpl_names]
+		else:
+			filters["survey_template"] = "__no_accessible_templates__"
 
-	responses = frappe.get_all(
+	responses = frappe.get_list(
 		"OmniQuery Response",
 		filters=filters,
 		fields=[
