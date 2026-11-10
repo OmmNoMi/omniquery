@@ -18,19 +18,10 @@ class OmniQueryProject(Document):
 		self.sync_member_roles()
 
 	def sync_member_roles(self):
-		role_map = {
-			"Project Analyst": "OmniQuery Analyst",
-			"Project Viewer": "OmniQuery Viewer",
-		}
+		from omniquery.permissions import sync_user_project_roles
 		for m in (self.members or []):
-			if not m.user:
-				continue
-			target_role = role_map.get(m.project_role)
-			if target_role and frappe.db.exists("User", m.user) and frappe.db.exists("Role", target_role):
-				user_doc = frappe.get_doc("User", m.user)
-				if not any(r.role == target_role for r in user_doc.roles):
-					user_doc.append("roles", {"role": target_role})
-					user_doc.save(ignore_permissions=True)
+			if m.user:
+				sync_user_project_roles(m.user)
 
 	def has_project_role(self, user: str, role: str) -> bool:
 		if not user:

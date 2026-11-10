@@ -3,6 +3,7 @@ import io
 import json
 import frappe
 from frappe import _
+from omniquery.permissions import is_super_user
 
 
 @frappe.whitelist()
@@ -10,21 +11,54 @@ def export_flattened_responses(template_name=None, project=None, format="csv"):
 	"""
 	Exports OmniQuery responses flattened across repeat groups and matrix items.
 	Returns either a downloadable CSV string or structured JSON rows.
-	Zero raw SQL: Uses frappe.qb and frappe.get_all.
+	Zero raw SQL: Uses frappe.qb and frappe.get_list.
 	"""
 	current_user = frappe.session.user
 	if not frappe.has_permission("OmniQuery Response", "export"):
 		frappe.throw(_("Not permitted to export responses"), frappe.PermissionError)
 
+	user_roles = set(frappe.get_roles(current_user))
+	is_super = is_super_user(current_user)
+
+	allowed_export_projects = None
+	if not is_super:
+		allowed_export_projects = set(
+			frappe.get_all(
+				"OmniQuery Project Member",
+				filters={
+					"user": current_user,
+					"project_role": ["in", ["Project Admin", "Project Manager", "Project Analyst"]],
+				},
+				pluck="parent",
+			)
+		)
+		if not allowed_export_projects:
+			frappe.throw(_("Not permitted to export responses for your assigned projects"), frappe.PermissionError)
+
+	if project:
+		if allowed_export_projects is not None and project not in allowed_export_projects:
+			frappe.throw(_("Not permitted to export responses from project {0}").format(project), frappe.PermissionError)
+		target_projects = [project]
+	else:
+		target_projects = list(allowed_export_projects) if allowed_export_projects is not None else None
+
+	tmpl_filters = {}
+	if target_projects is not None:
+		tmpl_filters["project"] = ["in", target_projects]
+
+	allowed_tmpl_names = set(frappe.get_list("OmniQuery Template", filters=tmpl_filters, pluck="name"))
+
 	filters = {}
 	if template_name:
-		filters["survey_template"] = template_name
-	if project:
-		# Filter templates under project
-		tmpl_names = frappe.get_list("OmniQuery Template", filters={"project": project}, pluck="name")
-		if tmpl_names:
-			filters["survey_template"] = ["in", tmpl_names]
+		# Intersect template_name with project/allowed templates
+		if template_name in allowed_tmpl_names or is_super:
+			filters["survey_template"] = template_name
 		else:
+			filters["survey_template"] = "__no_accessible_templates__"
+	else:
+		if allowed_tmpl_names:
+			filters["survey_template"] = ["in", list(allowed_tmpl_names)]
+		elif not is_super:
 			filters["survey_template"] = "__no_accessible_templates__"
 
 	responses = frappe.get_list(
@@ -63,73 +97,80 @@ def export_flattened_responses(template_name=None, project=None, format="csv"):
 	resp_names = [r.name for r in responses]
 	items = frappe.get_all(
 		"OmniQuery Response Item",
-		filters={"parent": ["in", resp_names], "parenttype": "OmniQuery Response"},
-		fields=["parent", "question_code", "question_label", "value_text", "value_numeric", "value_json"],
-		order_by="idx asc",
+		filters={"parent": ["in", resp_names]},
+		fields=[
+			"parent",
+			"question_code",
+			"question_label",
+			"value_text",
+			"value_numeric",
+			"value_json",
+			"attachment_file",
+		],
+		order_by="creation asc",
 	)
 
 	# Group items by parent response
-	items_by_parent = {}
-	question_headers = {}
-	for itm in items:
-		items_by_parent.setdefault(itm.parent, {})[itm.question_code] = itm
-		if itm.question_code not in question_headers:
-			question_headers[itm.question_code] = itm.question_label or itm.question_code
+	from collections import defaultdict
+	items_by_parent = defaultdict(list)
+	all_question_codes = set()
+	for it in items:
+		items_by_parent[it.parent].append(it)
+		if it.question_code:
+			all_question_codes.add(it.question_code)
 
-	headers = [
-		"Response ID",
-		"Template",
-		"Version",
-		"Status",
-		"Surveyor",
-		"Local Time",
-		"Sync Time",
-		"Latitude",
-		"Longitude",
-		"GPS Accuracy",
-		"Audio Recording",
-	]
-	q_codes = list(question_headers.keys())
-	for code in q_codes:
-		headers.append(f"{question_headers[code]} [{code}]")
+	sorted_qcodes = sorted(list(all_question_codes))
 
+	# Flatten rows
 	rows = []
 	for r in responses:
-		r_items = items_by_parent.get(r.name, {})
-		row = [
-			r.name,
-			r.survey_template,
-			r.template_version,
-			r.survey_status,
-			r.surveyor,
-			str(r.captured_at_local or ""),
-			str(r.synced_at or ""),
-			r.gps_latitude or "",
-			r.gps_longitude or "",
-			r.gps_accuracy or "",
-			r.audio_recording or "",
-		]
-		for code in q_codes:
-			itm = r_items.get(code)
-			if itm:
-				val = itm.value_text or (itm.value_numeric if itm.value_numeric is not None else itm.value_json or "")
-			else:
-				val = ""
-			row.append(val)
+		row = {
+			"Response Name": r.name,
+			"Survey Template": r.survey_template,
+			"Template Version": r.template_version,
+			"Respondent": r.respondent or "",
+			"Surveyor": r.surveyor or "",
+			"Status": r.survey_status or "",
+			"GPS Latitude": r.gps_latitude or "",
+			"GPS Longitude": r.gps_longitude or "",
+			"GPS Accuracy": r.gps_accuracy or "",
+			"Captured At": r.captured_at_local or "",
+			"Synced At": r.synced_at or "",
+		}
+		p_items = items_by_parent.get(r.name, [])
+		for it in p_items:
+			val = it.value_text or it.value_numeric or it.value_json or it.attachment_file or ""
+			col_name = it.question_code or it.question_label or "question"
+			row[col_name] = str(val)
 		rows.append(row)
 
 	if format == "json":
-		return {"headers": headers, "rows": rows}
+		return {"rows": rows}
 
-	output = io.StringIO()
-	writer = csv.writer(output, quoting=csv.QUOTE_MINIMAL)
-	writer.writerow(headers)
-	for row in rows:
-		writer.writerow(row)
+	# CSV Export via in-memory buffer
+	headers = [
+		"Response Name",
+		"Survey Template",
+		"Template Version",
+		"Respondent",
+		"Surveyor",
+		"Status",
+		"GPS Latitude",
+		"GPS Longitude",
+		"GPS Accuracy",
+		"Captured At",
+		"Synced At",
+	] + sorted_qcodes
 
-	csv_content = output.getvalue()
+	out = io.StringIO()
+	writer = csv.DictWriter(out, fieldnames=headers, extrasaction="ignore")
+	writer.writeheader()
+	for r in rows:
+		writer.writerow(r)
+
 	frappe.response["type"] = "download"
 	frappe.response["display_content_as"] = "attachment"
-	frappe.response["filename"] = f"OmniQuery_Responses_{template_name or 'export'}.csv"
-	frappe.response["filecontent"] = csv_content.encode("utf-8-sig")
+	filename = f"responses_{template_name or project or 'all'}.csv"
+	frappe.response["filename"] = filename
+	frappe.response["filecontent"] = out.getvalue().encode("utf-8")
 	frappe.response["content_type"] = "text/csv; charset=utf-8"

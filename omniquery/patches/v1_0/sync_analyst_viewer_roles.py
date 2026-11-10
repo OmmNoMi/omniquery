@@ -1,30 +1,18 @@
 import frappe
+from omniquery.permissions import sync_user_project_roles
 
 
 def execute():
 	"""
-	Ensures users assigned as Project Analyst or Project Viewer in OmniQuery Project Member
-	are synchronized with the corresponding native Frappe roles (OmniQuery Analyst, OmniQuery Viewer).
+	Ensures users assigned as Project Analyst, Project Viewer, or Project User in OmniQuery Project Member
+	are synchronized with the corresponding native Frappe roles (OmniQuery Analyst, OmniQuery Viewer, OmniQuery User).
 	"""
-	role_map = {
-		"Project Analyst": "OmniQuery Analyst",
-		"Project Viewer": "OmniQuery Viewer",
-	}
+	users = frappe.get_all(
+		"OmniQuery Project Member",
+		pluck="user",
+		distinct=True,
+	)
 
-	for member_role, frappe_role in role_map.items():
-		if not frappe.db.exists("Role", frappe_role):
-			continue
-
-		users = frappe.get_all(
-			"OmniQuery Project Member",
-			filters={"project_role": member_role},
-			pluck="user",
-			distinct=True,
-		)
-
-		for u in users:
-			if u and frappe.db.exists("User", u):
-				user_doc = frappe.get_doc("User", u)
-				if not any(r.role == frappe_role for r in user_doc.roles):
-					user_doc.append("roles", {"role": frappe_role})
-					user_doc.save(ignore_permissions=True)
+	for u in users:
+		if u:
+			sync_user_project_roles(u)
