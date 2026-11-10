@@ -14,14 +14,34 @@ class OmniQueryProject(Document):
 			return
 		workspace_sequence = self.workspace.replace("OQW-", "").replace("WSP-", "") if self.workspace else "001"
 		self.name = frappe.model.naming.make_autoname(f"OQP-{workspace_sequence}-.###")
+
 	def on_update(self):
 		self.sync_member_roles()
 
+	def on_trash(self):
+		self._members_to_sync = [m.user for m in (self.members or []) if m.user]
+
+	def after_delete(self):
+		from omniquery.permissions import sync_user_project_roles
+		users = getattr(self, "_members_to_sync", None) or [m.user for m in (self.members or []) if m.user]
+		for u in users:
+			sync_user_project_roles(u)
+
 	def sync_member_roles(self):
 		from omniquery.permissions import sync_user_project_roles
+		affected_users = set()
 		for m in (self.members or []):
 			if m.user:
-				sync_user_project_roles(m.user)
+				affected_users.add(m.user)
+
+		before = self.get_doc_before_save()
+		if before:
+			for m in (before.members or []):
+				if m.user:
+					affected_users.add(m.user)
+
+		for u in affected_users:
+			sync_user_project_roles(u)
 
 	def has_project_role(self, user: str, role: str) -> bool:
 		if not user:

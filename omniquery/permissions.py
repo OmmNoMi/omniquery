@@ -1,14 +1,10 @@
 import frappe
 
+# Site-wide roles with unrestricted access across all templates and responses
 SUPER_ROLES = {"Administrator", "System Manager", "OmniQuery Admin"}
 
-PROJECT_ROLE_TO_FRAPPE_ROLE = {
-	"Project Admin": "OmniQuery Manager",
-	"Project Manager": "OmniQuery Manager",
-	"Project Analyst": "OmniQuery Analyst",
-	"Project Viewer": "OmniQuery Viewer",
-	"Project User": "OmniQuery User",
-}
+# Roles exclusively derived from and managed by OmniQuery Project Member synchronization (#62)
+SYNCED_ROLES = {"OmniQuery Analyst", "OmniQuery Viewer"}
 
 
 def is_super_user(user: str | None) -> bool:
@@ -29,6 +25,15 @@ def has_template_permission(doc, ptype: str = "read", user: str | None = None) -
 		return _can_read_template(doc, user)
 	if ptype in ("write", "submit", "amend", "cancel", "delete"):
 		return _can_write_template(doc, user)
+	if ptype in ("create", "import"):
+		# Allow creation when user is OmniQuery Manager or scoped project grants Admin
+		user_roles = set(frappe.get_roles(user))
+		if "OmniQuery Manager" in user_roles:
+			return True
+		if doc and getattr(doc, "project", None):
+			roles = _get_user_project_roles(doc.project, user)
+			return "Project Admin" in roles
+		return True
 	return False
 
 
@@ -82,7 +87,7 @@ def _is_response_surveyor_or_owner(doc, user: str) -> bool:
 
 def get_response_query_conditions(user: str | None = None) -> str:
 	user = user or frappe.session.user
-	if is_super_user(user):
+	if is_super_user(user) or "OmniQuery Manager" in frappe.get_roles(user):
 		return ""
 
 	escaped_user = frappe.db.escape(user)
@@ -124,7 +129,7 @@ def _get_doc_project(doc) -> str | None:
 
 def has_response_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	user = user or frappe.session.user
-	if is_super_user(user):
+	if is_super_user(user) or "OmniQuery Manager" in frappe.get_roles(user):
 		return True
 
 	# Read, print, email, share: user must have read access on this specific response
@@ -137,7 +142,11 @@ def has_response_permission(doc, ptype: str = "read", user: str | None = None) -
 	if ptype in ("export", "report"):
 		return _can_export_response(doc, user)
 
-	if ptype in ("create", "delete", "cancel"):
+	if ptype in ("create", "import"):
+		# Creation of responses is allowed for authenticated users (DocPerm controls actual role access)
+		return True
+
+	if ptype in ("delete", "cancel"):
 		return _can_write_response(doc, user)
 
 	return False
@@ -152,6 +161,9 @@ def _can_read_response(doc, user: str) -> bool:
 
 
 def _can_write_response(doc, user: str) -> bool:
+	if _is_response_surveyor_or_owner(doc, user):
+		return True
+
 	# Project-level roles on this specific response's project decide write access
 	proj = _get_doc_project(doc)
 	roles = set(_get_user_project_roles(proj, user)) if proj else set()
@@ -159,9 +171,6 @@ def _can_write_response(doc, user: str) -> bool:
 	# If user is only Project Analyst or Project Viewer on this project, deny write
 	if (roles & {"Project Analyst", "Project Viewer"}) and not (roles & {"Project Admin", "Project Manager"}):
 		return False
-
-	if _is_response_surveyor_or_owner(doc, user):
-		return True
 
 	return bool(roles & {"Project User", "Project Admin", "Project Manager"})
 
@@ -175,13 +184,15 @@ def _can_export_response(doc, user: str) -> bool:
 	return bool(roles & {"Project Admin", "Project Manager", "Project Analyst"})
 
 
-def sync_user_project_roles(user: str):
+def sync_user_project_roles(user: str) -> set[str]:
 	"""
-	Synchronizes native Frappe roles based on active project memberships across ALL projects.
-	If a user no longer holds a role in any project, the role is revoked.
+	Synchronizes native Frappe reader roles (OmniQuery Analyst, OmniQuery Viewer)
+	derived strictly from active project memberships across ALL projects (#62).
+	Leaves administrator-assigned roles (OmniQuery Manager, OmniQuery User, etc.) intact.
+	Saves with ignore_permissions=True so non-System-Managers can update project members.
 	"""
-	if not user or not frappe.db.exists("User", user):
-		return
+	if not user or user == "Administrator" or not frappe.db.exists("User", user):
+		return set()
 
 	# Gather all project roles the user currently holds across all projects
 	held_project_roles = set(
@@ -192,21 +203,26 @@ def sync_user_project_roles(user: str):
 		)
 	)
 
-	# Compute desired Frappe roles based on active project memberships
 	desired_roles = set()
-	for proj_role in held_project_roles:
-		frappe_role = PROJECT_ROLE_TO_FRAPPE_ROLE.get(proj_role)
-		if frappe_role:
-			desired_roles.add(frappe_role)
-
-	managed_roles = set(PROJECT_ROLE_TO_FRAPPE_ROLE.values())
+	if held_project_roles & {"Project Admin", "Project Manager", "Project Analyst"}:
+		desired_roles.add("OmniQuery Analyst")
+	if "Project Viewer" in held_project_roles:
+		desired_roles.add("OmniQuery Viewer")
 
 	user_doc = frappe.get_doc("User", user)
 	existing_roles = {r.role for r in user_doc.roles}
-	roles_to_add = [r for r in desired_roles if r not in existing_roles and frappe.db.exists("Role", r)]
-	roles_to_remove = [r for r in managed_roles if r not in desired_roles and r in existing_roles]
 
-	if roles_to_add:
-		user_doc.add_roles(*roles_to_add)
+	roles_to_add = [r for r in desired_roles if r not in existing_roles and frappe.db.exists("Role", r)]
+	roles_to_remove = [r for r in SYNCED_ROLES if r not in desired_roles and r in existing_roles]
+
+	if not roles_to_add and not roles_to_remove:
+		return desired_roles
+
 	if roles_to_remove:
-		user_doc.remove_roles(*roles_to_remove)
+		user_doc.roles = [r for r in user_doc.roles if r.role not in roles_to_remove]
+	for r in roles_to_add:
+		user_doc.append("roles", {"role": r})
+
+	user_doc.save(ignore_permissions=True)
+	frappe.clear_cache(user=user)
+	return desired_roles
