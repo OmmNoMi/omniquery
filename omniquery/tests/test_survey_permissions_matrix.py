@@ -28,7 +28,8 @@ class TestSurveyPermissionsMatrix(FrappeTestCase):
 
 	def test_super_user_detection(self):
 		self.assertTrue(is_super_user("Administrator"))
-		self.assertTrue(is_super_user(None))
+		self.assertFalse(is_super_user(None))
+		self.assertFalse(is_super_user(""))
 
 	def test_public_citizen_link_template_is_readable_by_anyone(self):
 		template_doc = frappe._dict({

@@ -36,6 +36,8 @@ def ensure_roles():
 	roles = [
 		{"role_name": "OmniQuery Admin", "desk_access": 1},
 		{"role_name": "OmniQuery Manager", "desk_access": 1},
+		{"role_name": "OmniQuery Analyst", "desk_access": 1},
+		{"role_name": "OmniQuery Viewer", "desk_access": 1},
 		{"role_name": "OmniQuery User", "desk_access": 0},
 	]
 	for r in roles:

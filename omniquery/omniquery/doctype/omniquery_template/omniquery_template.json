@@ -235,6 +235,18 @@
   {
    "read": 1,
    "role": "OmniQuery User"
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Analyst"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "role": "OmniQuery Viewer"
   }
  ],
  "sort_field": "creation",
