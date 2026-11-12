@@ -74,7 +74,10 @@
             >
               {{ getSubLetter(q) }}
             </span>
-            <label class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+            <label
+              :id="'sub_label_' + q.question_code"
+              class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug"
+            >
               {{ getCleanSubLabel(q) }}
               <span v-if="q.is_mandatory" class="text-rose-500 font-bold">*</span>
             </label>
@@ -90,7 +93,9 @@
           <div
             v-if="isChoiceQuestion(q)"
             role="radiogroup"
+            :aria-labelledby="'sub_label_' + q.question_code"
             :aria-label="getCleanSubLabel(q)"
+            :aria-required="Boolean(q.is_mandatory || q.reqd)"
             class="flex flex-wrap items-center gap-1.5 py-1"
           >
             <Button
