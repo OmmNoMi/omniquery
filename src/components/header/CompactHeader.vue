@@ -182,7 +182,7 @@
                     ]"
                   />
                   <span class="text-[11px] font-semibold text-slate-600">
-                    {{ isOnline ? __('Online') : __('Offline') }} · {{ __('Field Surveyor') }}
+                    {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
                   </span>
                 </div>
               </div>
@@ -358,7 +358,19 @@
               class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
             >
               <span>{{ __('ERPNext Profile') }}</span>
-              <span>↗</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+          </div>
+
+          <!-- 6. Manager Review Workspace Link -->
+          <div v-if="isManager" class="pt-1 flex items-center justify-between text-xs px-1">
+            <span class="text-blue-700 font-semibold">{{ __('OmniQuery Review Workspace') }}</span>
+            <a
+              href="/desk/omniquery"
+              class="font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1"
+            >
+              <span>{{ __('Open Desk') }}</span>
+              <span aria-hidden="true">↗</span>
             </a>
           </div>
 
@@ -381,6 +393,7 @@ import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
+import { useUserRoles } from "../../composables/useUserRoles";
 
 const props = defineProps({
   surveyTitle: {
@@ -419,6 +432,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  userRoles: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-text-size", "toggle-audio"]);
@@ -445,6 +462,15 @@ const userName = userDisplayName;
 const userInitial = computed(() => {
   const name = userDisplayName.value || "S";
   return name.charAt(0).toUpperCase();
+});
+
+const { isGuest, isManager, isSurveyor, isAdmin } = useUserRoles(() => props.userRoles);
+
+const roleLabel = computed(() => {
+  if (isAdmin.value) return __("OmniQuery Admin");
+  if (isManager.value) return __("OmniQuery Manager");
+  if (isSurveyor.value) return __("Field Surveyor");
+  return __("Public Respondent");
 });
 
 function setTextScale(size) {
@@ -489,5 +515,12 @@ onMounted(() => {
     const savedTheme = localStorage.getItem("omniquery_theme") || "light";
     setAppTheme(savedTheme);
   }
+});
+
+defineExpose({
+  roleLabel,
+  isGuest,
+  isManager,
+  showConfigModal
 });
 </script>
