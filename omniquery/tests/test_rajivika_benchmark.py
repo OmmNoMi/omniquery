@@ -8,6 +8,7 @@ from frappe.utils.fixtures import sync_fixtures
 
 from omniquery.api.survey import get_bootstrap_data, get_schema, list_active_templates
 from omniquery.api.sync import batch_push
+from omniquery.tests.utils import delete_test_docs
 
 RAJIVIKA_TEMPLATE = "OQS-001-001-001"
 RAJIVIKA_PROJECT = "OQP-001-001"
@@ -129,11 +130,10 @@ class TestRajivikaBenchmark(unittest.TestCase):
 			self.assertEqual(resp2["results"][0]["status"], "DUPLICATE_SKIPPED")
 			self.assertEqual(frappe.db.count("OmniQuery Response", {"idempotency_key": test_uuid}), 1)
 		finally:
-			if frappe.db.exists("OmniQuery Response", doc_name):
-				doc = frappe.get_doc("OmniQuery Response", doc_name)
-				if doc.docstatus == 1:
-					doc.cancel()
-				frappe.delete_doc("OmniQuery Response", doc_name, force=True, ignore_permissions=True)
-			if frappe.db.exists("OmniQuery Sync Audit Log", f"SYNC-{test_uuid}"):
-				frappe.delete_doc("OmniQuery Sync Audit Log", f"SYNC-{test_uuid}", force=True, ignore_permissions=True)
+			delete_test_docs(
+				[
+					("OmniQuery Response", {"name": doc_name}),
+					("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"}),
+				]
+			)
 			frappe.db.commit()

@@ -5,6 +5,7 @@ import uuid
 import frappe
 
 from omniquery.api.sync import batch_push
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestIdempotentSync(unittest.TestCase):
@@ -93,19 +94,13 @@ class TestIdempotentSync(unittest.TestCase):
 		self.assertEqual(count, 1)
 
 		# Teardown test records
-		for dt, filter_dict in [
-			("OmniQuery Response", {"idempotency_key": test_uuid}),
-			("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"}),
-			("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"}),
-			("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),
-			("OmniQuery Project", {"project_name": "Test Dairy Initiative"}),
-		]:
-			for name in frappe.get_all(dt, filters=filter_dict, pluck="name"):
-				try:
-					doc = frappe.get_doc(dt, name)
-					if getattr(doc, "docstatus", 0) == 1:
-						doc.cancel()
-					frappe.delete_doc(dt, name, force=True, ignore_permissions=True)
-				except Exception:
-					pass
+		delete_test_docs(
+			[
+				("OmniQuery Response", {"idempotency_key": test_uuid}),
+				("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"}),
+				("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"}),
+				("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),
+				("OmniQuery Project", {"project_name": "Test Dairy Initiative"}),
+			]
+		)
 		frappe.db.commit()

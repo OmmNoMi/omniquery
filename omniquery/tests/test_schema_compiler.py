@@ -4,6 +4,7 @@ import unittest
 import frappe
 
 from omniquery.services.schema_compiler import calculate_schema_hash, compile_template_schema
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestSchemaCompiler(unittest.TestCase):
@@ -197,19 +198,13 @@ class TestSchemaCompiler(unittest.TestCase):
 		self._cleanup_test_records()
 
 	def _cleanup_test_records(self):
-		for dt, filter_dict in [
-			("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type"]]}),
-			("OmniQuery Option Set", {"set_name": "Test Animal Species"}),
-			("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),
-			("OmniQuery Project", {"project_name": "Test Dairy Initiative"}),
-		]:
-			for name in frappe.get_all(dt, filters=filter_dict, pluck="name"):
-				try:
-					doc = frappe.get_doc(dt, name)
-					if getattr(doc, "docstatus", 0) == 1:
-						doc.cancel()
-					frappe.delete_doc(dt, name, force=True, ignore_permissions=True)
-				except Exception:
-					pass
+		delete_test_docs(
+			[
+				("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type"]]}),
+				("OmniQuery Option Set", {"set_name": "Test Animal Species"}),
+				("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),
+				("OmniQuery Project", {"project_name": "Test Dairy Initiative"}),
+			]
+		)
 		frappe.db.commit()
 
