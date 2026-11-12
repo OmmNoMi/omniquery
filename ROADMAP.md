@@ -163,6 +163,8 @@ OmniQuery adopts a clean **Raven-style in-app membership architecture**: instead
 - [ ] **Pre-existing: the `All` role has create/read/write on every OmniQuery Response.** Any logged-in user, website users included, can read and edit all responses through `/api/resource`. Scope it with the same Response `has_permission` hook as the item above.
 - [ ] **Workspace fixture vs `install.py` drift.** `workspace/omniquery/omniquery.json` and `_get_workspace_shortcuts()` / `_build_workspace_content()` hold the same content twice. Generate one from the other, or add a test that they match.
 - [ ] **"Collected Today" card relies on `captured_at_local`.** Responses entered in Desk without a capture time don't count. Default `captured_at_local` to `creation` on insert if it is empty.
+- [ ] **Confirm a Frappe Cloud deploy builds the untracked bundle.** `omniquery/public/dist/` is no longer committed: `bench build` runs `yarn build` (vite) through `--run-build-command`, the same way Frappe CRM and Helpdesk ship. Deploy to the FC test site once and check that `/assets/omniquery/dist/omniquery.bundle.js` returns 200 before the next production deploy.
+- [ ] **Finish aligning the frontend build with Frappe CRM / Helpdesk.** Move `src/` into `frontend/` with its own `package.json`, and make the root `package.json` `build`/`postinstall` delegate to it. Use `frappeui({ buildConfig: { indexHtmlPath: "../omniquery/www/omniquery.html" } })` so Vite writes hashed asset names into the page. That replaces the mtime `bundle_version` in `www/omniquery.py` and the copy in `api/survey.py` `get_service_worker` (with its hard-coded `20261005_v33` fallback), and lets `sw.js` precache the hashed files. The output stays gitignored.
 
 ---
 
