@@ -38,7 +38,8 @@ class TestSyncConcurrency(FrappeTestCase):
 
 		frappe.db.delete("OmniQuery Sync Audit Log", {"idempotency_key": ["like", "TEST-CONC-%"]})
 		frappe.db.delete("OmniQuery Field Error Log", {"question_code": ["like", "TEST-CONC-%"]})
-		frappe.db.delete("OmniQuery Response", {"name": "TEMP_SP_003"})
+		if frappe.db.exists("OmniQuery Response", "TEMP_SP_003"):
+			frappe.delete_doc("OmniQuery Response", "TEMP_SP_003", force=True, ignore_permissions=True)
 
 		if frappe.db.exists("OmniQuery Template", self.test_template_name):
 			frappe.delete_doc("OmniQuery Template", self.test_template_name, force=True)
@@ -98,7 +99,9 @@ class TestSyncConcurrency(FrappeTestCase):
 		self.assertEqual(count, 1)
 
 		# Clean up test artifact
-		frappe.db.delete("OmniQuery Response", {"idempotency_key": idempotency_key})
+		resp_name = frappe.db.get_value("OmniQuery Response", {"idempotency_key": idempotency_key}, "name")
+		if resp_name:
+			frappe.delete_doc("OmniQuery Response", resp_name, force=True, ignore_permissions=True)
 		frappe.db.delete("OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key})
 		frappe.db.commit()
 
