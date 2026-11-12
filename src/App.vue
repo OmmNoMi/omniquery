@@ -136,6 +136,24 @@
 
       <!-- Active Section View inside Survey -->
       <div v-else-if="activeSection">
+        <!-- GPS Status Alert Banner when error -->
+        <div v-if="gpsStatus === 'error' && gpsErrorMessage" class="mb-4" role="alert">
+          <Alert
+            theme="red"
+            variant="subtle"
+            :title="gpsErrorMessage"
+          >
+            <template #actions>
+              <div class="flex items-center gap-2">
+                <Badge theme="red">{{ __('GPS Denied') }}</Badge>
+                <Button size="sm" variant="subtle" @click="captureGPS">
+                  {{ __('Retry GPS') }}
+                </Button>
+              </div>
+            </template>
+          </Alert>
+        </div>
+
         <SectionCard
           :section="activeSection"
           :currentIndex="activeSectionIndex"
@@ -490,7 +508,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
-import { Button, TextInput, call } from "frappe-ui";
+import { Button, TextInput, Badge, Alert, call } from "frappe-ui";
 import {
   AlertTriangle,
   Check,
@@ -537,7 +555,7 @@ function announce(message) {
 const { __ } = useTranslation();
 const { textSize, cycleTextSize, setTextSize } = useTextScale();
 const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
-const { gpsCoords, captureGPS } = useGPS();
+const { gpsCoords, gpsAccuracy, gpsStatus, gpsErrorMessage, captureGPS } = useGPS();
 const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
 
 const {
@@ -1089,9 +1107,9 @@ async function syncDraftToServer() {
     respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
     surveyor: (window.frappe && window.frappe.session && window.frappe.session.user) || "Administrator",
     captured_at_local: new Date().toISOString(),
-    gps_latitude: gpsCoords.value?.latitude || null,
-    gps_longitude: gpsCoords.value?.longitude || null,
-    gps_accuracy: gpsCoords.value?.accuracy || null,
+    gps_latitude: gpsCoords.value?.latitude ?? null,
+    gps_longitude: gpsCoords.value?.longitude ?? null,
+    gps_accuracy: gpsAccuracy.value ?? null,
     items: items,
   };
 
@@ -1205,9 +1223,9 @@ async function saveOfflineRecord() {
     respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
     surveyor: (window.frappe && (window.frappe.user || (window.frappe.session && window.frappe.session.user))) || "Administrator",
     captured_at_local: new Date().toISOString(),
-    gps_latitude: gpsCoords.value?.latitude || null,
-    gps_longitude: gpsCoords.value?.longitude || null,
-    gps_accuracy: gpsCoords.value?.accuracy || null,
+    gps_latitude: gpsCoords.value?.latitude ?? null,
+    gps_longitude: gpsCoords.value?.longitude ?? null,
+    gps_accuracy: gpsAccuracy.value ?? null,
     items: items,
   };
 
