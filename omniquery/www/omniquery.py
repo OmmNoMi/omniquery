@@ -52,10 +52,7 @@ def get_context(context):
 	ctx.current_lang = user_lang
 
 	ctx.current_user = frappe.session.user
-	try:
-		ctx.user_roles = json.dumps(frappe.get_roles(ctx.current_user))
-	except Exception:
-		ctx.user_roles = json.dumps([])
+	ctx.user_roles = json.dumps(frappe.get_roles(ctx.current_user))
 	try:
 		import os
 		bundle_path = os.path.join(frappe.get_app_path("omniquery"), "public", "dist", "omniquery.bundle.js")

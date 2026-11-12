@@ -84,4 +84,3 @@ class TestWorkspaceFixtures(FrappeTestCase):
 		self.assertEqual(link_to, "OmniQuery Response")
 		self.assertEqual(doc_view, "List")
 		self.assertIn("Submitted", str(stats_filter))
-

@@ -79,11 +79,10 @@
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
         >
           <span>{{ __('Go to Review Queue') }}</span>
-          <span>↗</span>
+          <span aria-hidden="true">↗</span>
         </a>
       </div>
     </div>
-
 
     <!-- 4 KPI Performance Cards Grid (Clickable to open filtered view in Filled Forms) -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full min-w-0">
@@ -283,6 +282,7 @@ import { computed, ref, onMounted, watch } from "vue";
 import { Button, call } from "frappe-ui";
 import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { useUserRoles } from "../../composables/useUserRoles";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db } from "../../services/db";
 
@@ -309,10 +309,9 @@ const props = defineProps({
   },
   userRoles: {
     type: Array,
-    default: () => (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [],
+    default: () => [],
   },
 });
-
 
 const emit = defineEmits([
   "open-wal",
@@ -341,20 +340,7 @@ const displayName = computed(() => {
   return user.value.split("@")[0] || user.value;
 });
 
-const roles = computed(() => {
-  if (props.userRoles && props.userRoles.length) return props.userRoles;
-  return (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [];
-});
-
-const isManager = computed(() => {
-  const r = roles.value;
-  return r.includes("OmniQuery Manager") || r.includes("OmniQuery Admin") || r.includes("System Manager");
-});
-
-const isSurveyor = computed(() => {
-  return roles.value.includes("OmniQuery User");
-});
-
+const { isManager, isSurveyor } = useUserRoles(() => props.userRoles);
 
 const userInitial = computed(() => {
   return (displayName.value || "A").charAt(0).toUpperCase();
@@ -438,14 +424,10 @@ const targetProgressPct = computed(() => {
 });
 
 const remainingTodayText = computed(() => {
-  if (isManager.value) {
-    return `${completedToday.value} ${__("collected")}`;
-  }
   const left = dailyTarget.value - completedToday.value;
   if (left <= 0) return __("Target reached!");
   return `${left} ${__("left for target")}`;
 });
-
 
 const activeDraftsCount = computed(() => {
   let list = Object.values(props.activeDrafts || {});

@@ -184,7 +184,6 @@
                   <span class="text-[11px] font-semibold text-slate-600">
                     {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
                   </span>
-
                 </div>
               </div>
             </div>
@@ -359,7 +358,7 @@
               class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
             >
               <span>{{ __('ERPNext Profile') }}</span>
-              <span>↗</span>
+              <span aria-hidden="true">↗</span>
             </a>
           </div>
 
@@ -371,10 +370,9 @@
               class="font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1"
             >
               <span>{{ __('Open Desk') }}</span>
-              <span>↗</span>
+              <span aria-hidden="true">↗</span>
             </a>
           </div>
-
 
           <!-- Sheet Dismiss Button -->
           <Button
@@ -395,6 +393,7 @@ import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
+import { useUserRoles } from "../../composables/useUserRoles";
 
 const props = defineProps({
   surveyTitle: {
@@ -431,7 +430,7 @@ const props = defineProps({
   },
   userRoles: {
     type: Array,
-    default: () => (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [],
+    default: () => [],
   },
 });
 
@@ -461,29 +460,14 @@ const userInitial = computed(() => {
   return name.charAt(0).toUpperCase();
 });
 
-const userRoles = computed(() => {
-  if (props.userRoles && props.userRoles.length) return props.userRoles;
-  return (typeof window !== "undefined" && window.frappe && window.frappe.user_roles) || [];
-});
-
-const isGuest = computed(() => {
-  const r = userRoles.value;
-  return !r || r.length === 0 || (r.length === 1 && r[0] === "Guest");
-});
-
-const isManager = computed(() => {
-  const r = userRoles.value;
-  return r.includes("OmniQuery Manager") || r.includes("OmniQuery Admin") || r.includes("System Manager");
-});
+const { isGuest, isManager, isSurveyor, isAdmin } = useUserRoles(() => props.userRoles);
 
 const roleLabel = computed(() => {
-  const r = userRoles.value;
-  if (r.includes("OmniQuery Admin") || r.includes("System Manager")) return __("OmniQuery Admin");
-  if (r.includes("OmniQuery Manager")) return __("OmniQuery Manager");
-  if (r.includes("OmniQuery User")) return __("Field Surveyor");
+  if (isAdmin.value) return __("OmniQuery Admin");
+  if (isManager.value) return __("OmniQuery Manager");
+  if (isSurveyor.value) return __("Field Surveyor");
   return __("Public Respondent");
 });
-
 
 function setTextScale(size) {
   emit("set-text-size", size);

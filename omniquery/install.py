@@ -14,7 +14,6 @@ def after_migrate():
 	sync_app_fixtures()
 
 
-
 def ensure_default_surveyor():
 	if not frappe.db.exists("DocType", "OmniQuery Surveyor"):
 		return
@@ -188,19 +187,16 @@ def ensure_number_cards():
 			"type": "Document Type",
 			"document_type": "OmniQuery Response",
 			"function": "Count",
-			"filters_json": json.dumps([["OmniQuery Response", "creation", "Timespan", "today"]]),
+			"filters_json": json.dumps([["OmniQuery Response", "captured_at_local", "Timespan", "today"]]),
 			"is_public": 1,
 			"module": "OmniQuery",
 			"color": "#34A853",
 		},
 	]
+	# Create only: an admin's later edits to a card in Desk must survive bench migrate.
 	for card in cards:
 		if not frappe.db.exists("Number Card", card["name"]):
 			frappe.get_doc({"doctype": "Number Card", **card}).insert(ignore_permissions=True)
-		else:
-			doc = frappe.get_doc("Number Card", card["name"])
-			doc.update(card)
-			doc.save(ignore_permissions=True)
 
 
 def _get_workspace_number_cards():
@@ -282,4 +278,3 @@ def ensure_workspace():
 	doc.set("shortcuts", shortcuts)
 	doc.set("number_cards", number_cards)
 	doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
-

@@ -110,17 +110,27 @@ class TestPermissions(unittest.TestCase):
 		super_cond = get_template_query_conditions("Administrator")
 		self.assertEqual(super_cond, "")
 
-	def test_manager_docperms_and_capabilities(self):
-		# Issue #60: Manager must be able to create & write Surveyors, create Projects & Option Sets, and export Responses
-		self.assertTrue(frappe.has_permission("OmniQuery Surveyor", "create", user="admin_alpha@ommnomi.test"))
-		self.assertTrue(frappe.has_permission("OmniQuery Surveyor", "write", user="admin_alpha@ommnomi.test"))
-		self.assertTrue(frappe.has_permission("OmniQuery Project", "create", user="admin_alpha@ommnomi.test"))
-		self.assertTrue(frappe.has_permission("OmniQuery Option Set", "create", user="admin_alpha@ommnomi.test"))
-		self.assertTrue(frappe.has_permission("OmniQuery Response", "export", user="admin_alpha@ommnomi.test"))
+	def test_project_data_has_no_unscoped_bulk_rights(self):
+		# Invariant (PR #63 review): a role that is not a site-wide admin must not get
+		# export/share/email/delete on project data unless the DocType has a
+		# has_permission hook that scopes it to the user's projects. Covers any role
+		# added later (e.g. Analyst/Viewer from PR #112).
+		site_wide_roles = {"System Manager", "OmniQuery Admin", "Administrator"}
+		bulk_ptypes = ("export", "share", "email", "delete")
+		hooked = set(frappe.get_hooks("has_permission") or {})
+		for doctype in ("OmniQuery Response", "OmniQuery Surveyor", "OmniQuery Project", "OmniQuery Option Set"):
+			if doctype in hooked:
+				continue
+			for perm in frappe.get_meta(doctype).permissions:
+				if perm.role in site_wide_roles:
+					continue
+				granted = [p for p in bulk_ptypes if perm.get(p)]
+				self.assertFalse(
+					granted,
+					f"{doctype}: role {perm.role!r} gets {granted} site-wide with no has_permission hook",
+				)
 
 	def test_surveyor_negative_docperms(self):
 		# Field Surveyor (OmniQuery User) must NOT be able to create Surveyors or export Responses
 		self.assertFalse(frappe.has_permission("OmniQuery Surveyor", "create", user="surveyor_perm@ommnomi.test"))
 		self.assertFalse(frappe.has_permission("OmniQuery Response", "export", user="surveyor_perm@ommnomi.test"))
-
-
