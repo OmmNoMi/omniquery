@@ -23,10 +23,8 @@ class TestInFlightAndSubmit(FrappeTestCase):
 		if not template:
 			return
 
-		# 4. Generate Survey ID with OQS-{surveyID}-{randomstring}
-		clean_tmpl = template.replace("OQS-", "")
-		rand_str = uuid.uuid4().hex[:6]
-		survey_id = f"OQS-{clean_tmpl}-{rand_str}"
+		# 4. Generate Survey ID with UUIDv4
+		survey_id = str(uuid.uuid4())
 
 		# 5. Test In-Flight Live Draft Sync
 		draft_payload = {

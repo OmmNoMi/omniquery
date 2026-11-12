@@ -9,12 +9,19 @@ describe("useSurvey", () => {
     vi.restoreAllMocks();
   });
 
-  it("generates deterministic format survey ID with prefix and random entropy", () => {
-    const id = generateSurveyId("OQS-SHG-SURVEY");
-    expect(id).toMatch(/^OQS-SHG-SURVEY-[a-z0-9]{6}$/);
+  it("generates client-side UUIDv4 survey ID matching regex and 10,000 calls produce no duplicates", () => {
+    const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const id = generateSurveyId();
+    expect(id).toMatch(uuidV4Regex);
 
-    const defaultId = generateSurveyId(null);
-    expect(defaultId).toMatch(/^OQS-SURVEY-[a-z0-9]{6}$/);
+    const seen = new Set();
+    for (let i = 0; i < 10000; i++) {
+      const nextId = generateSurveyId();
+      expect(nextId).toMatch(uuidV4Regex);
+      expect(seen.has(nextId)).toBe(false);
+      seen.add(nextId);
+    }
+    expect(seen.size).toBe(10000);
   });
 
   it("saves drafts into IndexedDB and maintains multi-draft ordering by updated_at", async () => {
