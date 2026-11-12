@@ -1,14 +1,13 @@
 import hashlib
 import json
 import uuid
-from datetime import date, datetime
 
 import frappe
 from frappe import _
 from frappe.utils import (
 	cint,
 	flt,
-	get_datetime_str,
+	get_datetime,
 	now_datetime,
 )
 from frappe.utils.data import convert_utc_to_system_timezone
@@ -17,28 +16,39 @@ from .survey import resolve_template_name, user_has_template_permission
 
 
 def parse_local_datetime(val):
-	"""Converts ISO-8601 string or date object into Frappe standard datetime string."""
+	"""Return `val` as a system-timezone "YYYY-MM-DD HH:MM:SS" string.
+
+	The field app sends `new Date().toISOString()` (UTC, ending in "Z"), so values
+	with an offset are converted to the site's timezone. A missing value means
+	"captured now". A value that cannot be read returns None: the caller still
+	saves the answers, leaves captured_at_local empty and logs the raw value,
+	instead of inventing a time or rejecting the whole response.
+	"""
+	if isinstance(val, str):
+		val = val.strip()
 	if not val:
-		return now_datetime()
-	if isinstance(val, (datetime, date)):
-		dt = val
-	elif isinstance(val, str):
-		val_str = val.strip()
-		try:
-			if val_str.endswith("Z"):
-				val_str = val_str[:-1] + "+00:00"
-			dt = datetime.fromisoformat(val_str)
-		except Exception:
-			frappe.log_error(title="Field Error: Invalid captured_at_local", message=f"Failed to parse datetime value: {val}\n{frappe.get_traceback()}")
-			frappe.throw(_("Invalid datetime value for captured_at_local: {0}").format(val), frappe.ValidationError)
-	else:
-		frappe.log_error(title="Field Error: Invalid captured_at_local", message=f"Unsupported datetime type: {type(val)}")
-		frappe.throw(_("Invalid datetime value for captured_at_local: {0}").format(val), frappe.ValidationError)
-
-	if getattr(dt, "tzinfo", None) is not None:
+		return now_datetime().strftime("%Y-%m-%d %H:%M:%S")
+	try:
+		dt = get_datetime(val)
+	except (ValueError, OverflowError, TypeError):
+		dt = None
+	if dt and dt.tzinfo:
 		dt = convert_utc_to_system_timezone(dt)
+	return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else None
 
-	return dt.strftime("%Y-%m-%d %H:%M:%S")
+
+def log_invalid_captured_at(idempotency_key, raw_value):
+	"""Record an unreadable captured_at_local against the response it belongs to.
+
+	Safe inside the batch_push savepoint: Frappe stores Error Log as MyISAM, so a
+	rollback of the response never removes this entry.
+	"""
+	frappe.log_error(
+		title="OmniQuery: invalid captured_at_local",
+		message=f"Saved the answers with captured_at_local empty. Received: {raw_value!r}",
+		reference_doctype="OmniQuery Response",
+		reference_name=idempotency_key,
+	)
 
 
 def log_raw_ingestion_dump(endpoint, raw_payload, client_ip=None, surveyor=None):
@@ -170,7 +180,6 @@ def process_automated_audit(resp_doc, raw_sub):
 		if raw_sub.get("time_spent_seconds"):
 			time_spent_seconds = int(raw_sub.get("time_spent_seconds"))
 		elif resp_doc.captured_at_local and resp_doc.creation:
-			from frappe.utils import get_datetime
 			t_local = get_datetime(resp_doc.captured_at_local)
 			t_sync = get_datetime(resp_doc.synced_at or now_datetime())
 			diff = abs((t_sync - t_local).total_seconds())
@@ -490,6 +499,8 @@ def batch_push(submissions=None):
 			resp_doc.gps_longitude = sub.get("gps_longitude")
 			resp_doc.gps_accuracy = sub.get("gps_accuracy")
 			resp_doc.captured_at_local = parse_local_datetime(sub.get("captured_at_local"))
+			if resp_doc.captured_at_local is None:
+				log_invalid_captured_at(idempotency_key, sub.get("captured_at_local"))
 			resp_doc.synced_at = now_datetime()
 			resp_doc.response_payload = raw_payload_str
 
