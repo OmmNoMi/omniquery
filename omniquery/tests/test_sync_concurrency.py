@@ -286,5 +286,79 @@ class TestSyncConcurrency(FrappeTestCase):
 		)
 		self.assertEqual(failed_audit_status, "FAILED")
 
+	def test_parse_local_datetime_converts_offsets_to_the_site_timezone(self):
+		from omniquery.api.sync import parse_local_datetime
 
+		cases = [
+			("Asia/Kolkata", "2026-10-09T06:30:00Z", "2026-10-09 12:00:00"),
+			("Asia/Kolkata", "2026-10-09T06:30:00.123Z", "2026-10-09 12:00:00"),
+			("America/New_York", "2026-10-09T06:30:00Z", "2026-10-09 02:30:00"),
+			("UTC", "2026-10-09T12:00:00+05:30", "2026-10-09 06:30:00"),
+			# No offset means the device already sent local time: keep it as is.
+			("America/New_York", "2026-10-09 06:30:00", "2026-10-09 06:30:00"),
+		]
+		for tz, raw, expected in cases:
+			with self.subTest(tz=tz, raw=raw), unittest.mock.patch(
+				"frappe.utils.data.get_system_timezone", return_value=tz
+			):
+				self.assertEqual(parse_local_datetime(raw), expected)
 
+	def test_parse_local_datetime_missing_means_now_and_unreadable_means_none(self):
+		from frappe.utils import get_datetime
+		from omniquery.api.sync import parse_local_datetime
+
+		for missing in (None, "", "   "):
+			with self.subTest(missing=missing):
+				result = parse_local_datetime(missing)
+				self.assertIsNotNone(result)
+				self.assertIsNotNone(get_datetime(result))
+
+		for unreadable in ("garbage", "2026-13-45T99:00:00Z", 12345):
+			with self.subTest(unreadable=unreadable):
+				self.assertIsNone(parse_local_datetime(unreadable))
+
+	def _bad_timestamp_error_logs(self, key):
+		return frappe.get_all(
+			"Error Log",
+			filters={"reference_doctype": "OmniQuery Response", "reference_name": key},
+			pluck="name",
+		)
+
+	def test_batch_push_keeps_answers_when_captured_at_is_unreadable(self):
+		key = f"TEST-CONC-BADTS-{frappe.generate_hash(length=8)}"
+		self.addCleanup(lambda: frappe.db.delete("Error Log", {"reference_name": key}))
+		sub = {
+			"idempotency_key": key,
+			"survey_template": self.test_template_name,
+			"template_version": 1,
+			"captured_at_local": "garbage",
+			"items": [{"question_code": "q1", "value": "kept"}],
+		}
+
+		res = batch_push([sub])
+		items = res.get("results", []) if isinstance(res, dict) else res
+		self.assertEqual(items[0]["status"], "SUCCESS")
+
+		doc = frappe.get_doc("OmniQuery Response", key)
+		self.assertIsNone(doc.captured_at_local)
+		self.assertEqual([i.value_text for i in doc.items], ["kept"])
+		self.assertEqual(len(self._bad_timestamp_error_logs(key)), 1)
+
+	def test_sync_draft_saves_when_captured_at_is_unreadable(self):
+		from omniquery.api.sync import sync_draft
+
+		key = f"TEST-CONC-BADTS-{frappe.generate_hash(length=8)}"
+		res = sync_draft(
+			{
+				"idempotency_key": key,
+				"survey_template": self.test_template_name,
+				"template_version": 1,
+				"captured_at_local": "garbage",
+				"items": [{"question_code": "q1", "value": "draft"}],
+			}
+		)
+
+		self.assertEqual(res["status"], "SUCCESS")
+		doc = frappe.get_doc("OmniQuery Response", key)
+		self.assertIsNone(doc.captured_at_local)
+		self.assertEqual([i.value_text for i in doc.items], ["draft"])
