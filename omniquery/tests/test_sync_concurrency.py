@@ -162,6 +162,22 @@ class TestSyncConcurrency(FrappeTestCase):
 		dump_file = os.path.join(frappe.get_site_path("logs"), "omniquery_payloads_dump.jsonl")
 		self.assertTrue(os.path.exists(dump_file))
 
+	def test_phone_validation_rejects_non_numeric(self):
+		idempotency_key = "TEST-CONC-PHONE-FAIL-001"
+		sub = {
+			"idempotency_key": idempotency_key,
+			"survey_template": self.test_template_name,
+			"template_version": 1,
+			"items": [
+				{"question_code": "q_phone_number", "field_type": "Phone", "value": "12abc"}
+			],
+		}
+		res = batch_push([sub])
+		results = res.get("results", []) if isinstance(res, dict) else res
+		self.assertEqual(len(results), 1)
+		self.assertEqual(results[0]["status"], "FAILED")
+		self.assertFalse(frappe.db.exists("OmniQuery Response", idempotency_key))
+
 	def test_guest_batch_push_rejected(self):
 		orig_user = frappe.session.user
 		try:

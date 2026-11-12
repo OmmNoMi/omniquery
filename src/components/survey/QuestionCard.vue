@@ -57,6 +57,7 @@
         </span>
 
         <label
+          :id="'q_label_' + question.question_code"
           :for="'q_input_' + question.question_code"
           class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug cursor-pointer"
         >
@@ -179,6 +180,9 @@
             class="grid gap-2.5 focus:outline-none outline-none"
             :class="displayedGridOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
             :role="isMultiSelect ? 'group' : 'radiogroup'"
+            :aria-labelledby="'q_label_' + question.question_code"
+            :aria-label="parsedQuestionMeta.text"
+            :aria-required="Boolean(question.is_mandatory || question.reqd)"
             @keydown="onGridKeydown"
             @keydown.esc.stop="focusCard"
           >
@@ -291,12 +295,12 @@
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
-        :aria-invalid="Boolean(errorMessage)"
-        :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
+        :aria-invalid="Boolean(effectiveErrorMessage)"
+        :aria-errormessage="effectiveErrorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
-        :placeholder="__('Enter value')"
+        :placeholder="inputPlaceholder"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
 
@@ -308,15 +312,33 @@
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
-        :aria-invalid="Boolean(errorMessage)"
-        :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
+        :aria-invalid="Boolean(effectiveErrorMessage)"
+        :aria-errormessage="effectiveErrorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
 
-      <!-- 10. Default Text Input -->
+      <!-- 10. Phone Input -->
+      <TextInput
+        v-else-if="isPhoneControl"
+        :id="'q_input_' + question.question_code"
+        type="tel"
+        inputmode="tel"
+        :modelValue="modelValue"
+        :aria-label="questionLabel"
+        :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
+        :aria-invalid="Boolean(effectiveErrorMessage)"
+        :aria-errormessage="effectiveErrorMessage ? 'q_err_' + question.question_code : undefined"
+        @update:modelValue="onPhoneInput"
+        @keydown.enter="onInputEnter"
+        @keydown.esc.stop="focusCard"
+        :placeholder="__('Enter 10-digit mobile number')"
+        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
+      />
+
+      <!-- 11. Default Text Input -->
       <TextInput
         v-else
         :id="'q_input_' + question.question_code"
@@ -324,28 +346,28 @@
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
-        :aria-invalid="Boolean(errorMessage)"
-        :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
+        :aria-invalid="Boolean(effectiveErrorMessage)"
+        :aria-errormessage="effectiveErrorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
-        :placeholder="__('Enter value')"
+        :placeholder="inputPlaceholder"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-medium text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
       />
     </div>
 
     <!-- Validation Error -->
     <p
-      v-if="errorMessage"
+      v-if="effectiveErrorMessage"
       :id="'q_err_' + question.question_code"
       role="alert"
       class="mt-2 text-xs font-semibold text-rose-600"
     >
-      {{ __(errorMessage) }}
+      {{ effectiveErrorMessage }}
     </p>
 
     <!-- Card Footer: Status Badge (Right) -->
-    <div v-if="notApplicable || (isCompleted && !isInputFocused)" class="flex items-center justify-end mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+    <div v-if="notApplicable || (isCompleted && !isInputFocused && !effectiveErrorMessage)" class="flex items-center justify-end mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
       <!-- Status Badge (Bottom-Right) -->
       <div class="min-h-[22px] flex items-center">
         <!-- Not Applicable Badge -->
@@ -360,7 +382,7 @@
 
         <!-- Answered Badge -->
         <span
-          v-else-if="isCompleted && !isInputFocused"
+          v-else-if="isCompleted && !isInputFocused && !effectiveErrorMessage"
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full"
         >
           <Check class="w-3.5 h-3.5" />
@@ -725,6 +747,7 @@ const inputTypeLabel = computed(() => {
   if (isYearControl.value) return __("Year");
   if (isGeolocationControl.value) return __("GPS");
   if (isChoiceControl.value) return isMultiSelect.value ? __("Multi-select") : __("Select");
+  if (isPhoneControl.value) return __("Phone");
   if (isDateControl.value) return __("Date");
   if (isNumberControl.value) return __("Number");
   return __("Text");
@@ -830,6 +853,7 @@ const rangeStep = computed(() => {
 });
 
 const rangeUnit = computed(() => {
+  if (props.question.unit) return props.question.unit;
   const label = (props.question.label_en || "").toLowerCase();
   if (label.includes("year")) return "Years";
   if (label.includes("month")) return "Months";
@@ -1232,6 +1256,93 @@ const isDateControl = computed(() => {
   return type.includes("date");
 });
 
+const isPhoneControl = computed(() => {
+  const type = (props.question.field_type || "").toLowerCase();
+  const variant = (props.question.control_variant || "").toLowerCase();
+  const code = (props.question.question_code || "").toLowerCase();
+  const label = (props.question.label_en || "").toLowerCase();
+  return (
+    type === "phone" ||
+    variant === "phone" ||
+    code.includes("phone") ||
+    code.includes("mobile") ||
+    label.includes("phone number") ||
+    label.includes("mobile number") ||
+    label.includes("contact number")
+  );
+});
+
+const phoneValidationError = ref("");
+
+function onPhoneInput(val) {
+  if (!val || String(val).trim() === "") {
+    phoneValidationError.value = "";
+    emit("update:modelValue", "");
+    return;
+  }
+  const clean = String(val).trim();
+  if (/[a-zA-Z]/.test(clean)) {
+    phoneValidationError.value = __("Enter a 10-digit mobile number");
+    return;
+  }
+  const digitsOnly = clean.replace(/\D/g, "");
+  if (digitsOnly.length !== 10 && clean.length !== 10) {
+    phoneValidationError.value = __("Enter a 10-digit mobile number");
+    return;
+  }
+  phoneValidationError.value = "";
+  emit("update:modelValue", clean);
+  emit("answered");
+}
+
+function getActionableRequiredError(question) {
+  const rawLabel = question.label_en || question.label || "this field";
+  const clean = rawLabel.replace(/^Q\d+[a-z]?\.\s*/i, "").replace(/[*:]/g, "").trim();
+  const lower = clean.toLowerCase();
+
+  const type = (question.field_type || "").toLowerCase();
+  const variant = (question.control_variant || "").toLowerCase();
+  const isChoice = type.includes("select") || type.includes("choice") || variant.includes("radio") || variant.includes("combobox") || (question.options && question.options.length > 0);
+
+  if (isChoice) {
+    const article = /^[aeiou]/i.test(lower) ? "an" : "a";
+    return `Choose ${article} ${lower}`;
+  }
+  if (type === "date" || variant === "date") {
+    return `Select date for ${lower}`;
+  }
+  if (type === "phone" || variant === "phone" || lower.includes("phone") || lower.includes("mobile")) {
+    return "Enter a 10-digit mobile number";
+  }
+  return `Enter ${lower}`;
+}
+
+const effectiveErrorMessage = computed(() => {
+  if (phoneValidationError.value) return phoneValidationError.value;
+  if (isCompleted.value) {
+    if (props.errorMessage && !props.errorMessage.toLowerCase().includes("required") && !props.errorMessage.toLowerCase().includes("choose") && !props.errorMessage.toLowerCase().includes("enter")) {
+      return props.errorMessage;
+    }
+    return "";
+  }
+  if (!props.errorMessage) return "";
+  if (props.errorMessage === "This field is required" || props.errorMessage.toLowerCase().includes("required")) {
+    return getActionableRequiredError(props.question);
+  }
+  return props.errorMessage;
+});
+
+const inputPlaceholder = computed(() => {
+  if (isPhoneControl.value) return __("Enter 10-digit mobile number");
+  if (isDateControl.value) return "";
+  const raw = props.question.label_en || props.question.label || "";
+  const clean = raw.replace(/^Q\d+[a-z]?\.\s*/i, "").replace(/[*:]/g, "").trim().toLowerCase();
+  if (isNumberControl.value) {
+    return clean ? `Enter ${clean}` : __("Enter number");
+  }
+  return clean ? `Enter ${clean}` : __("Enter value");
+});
+
 function formatCoords(coords) {
   if (typeof coords === "object" && coords.latitude) {
     return `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`;
@@ -1250,50 +1361,54 @@ onUnmounted(() => {
   window.removeEventListener("omniquery:choicemode", onGlobalChoiceMode);
 });
 
-function focusPrimaryInput() {
+function focusPrimaryInput(options = {}) {
+  const preventScroll = options && options.preventScroll !== undefined ? options.preventScroll : false;
   nextTick(() => {
     if (!cardRef.value) return;
+    if (preventScroll === false && typeof cardRef.value.scrollIntoView === "function") {
+      cardRef.value.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     // 0. Quick search bar at top of options
     if (searchInputRef.value) {
-      searchInputRef.value.focus({ preventScroll: true });
+      searchInputRef.value.focus({ preventScroll });
       return;
     }
     // 1. Standard text / number / date input or textarea (exclude quick search inputs)
     const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]):not([data-search-input]), textarea:not([disabled])");
     if (input) {
-      input.focus({ preventScroll: true });
+      input.focus({ preventScroll });
       return;
     }
     // 2. Combobox trigger button: [role="combobox"] (Multi-select or single-select combobox dropdown)
     const comboboxBtn = cardRef.value.querySelector("button[role=combobox]:not([disabled])");
     if (comboboxBtn) {
-      comboboxBtn.focus({ preventScroll: true });
+      comboboxBtn.focus({ preventScroll });
       return;
     }
     // 3. Option buttons grid: focus selected option button or first option button
     const checkedOptionBtn = cardRef.value.querySelector("button[role=radio][aria-checked=true], button[role=checkbox][aria-checked=true]");
     if (checkedOptionBtn) {
-      checkedOptionBtn.focus({ preventScroll: true });
+      checkedOptionBtn.focus({ preventScroll });
       return;
     }
     const firstOptionBtn = cardRef.value.querySelector("button[role=radio], button[role=checkbox]");
     if (firstOptionBtn) {
-      firstOptionBtn.focus({ preventScroll: true });
+      firstOptionBtn.focus({ preventScroll });
       return;
     }
     // 4. Binary switch control
     const switchBtn = cardRef.value.querySelector("button[role=switch]");
     if (switchBtn) {
-      switchBtn.focus({ preventScroll: true });
+      switchBtn.focus({ preventScroll });
       return;
     }
     // 5. Any interactive button inside control area
     const anyBtn = cardRef.value.querySelector("button:not([disabled])");
     if (anyBtn) {
-      anyBtn.focus({ preventScroll: true });
+      anyBtn.focus({ preventScroll });
       return;
     }
-    cardRef.value.focus({ preventScroll: true });
+    cardRef.value.focus({ preventScroll });
   });
 }
 
