@@ -10,6 +10,7 @@ describe("CompactHeader Microphone Invariant (Issue #37)", () => {
         showBack: true,
         isSurveyActive: false,
         surveyTitle: "SHG Enterprise Study",
+        userRoles: ["OmniQuery User"],
       },
     });
 
@@ -23,6 +24,7 @@ describe("CompactHeader Microphone Invariant (Issue #37)", () => {
         showBack: true,
         isSurveyActive: true,
         surveyTitle: "SHG Enterprise Study",
+        userRoles: ["OmniQuery User"],
       },
     });
 
