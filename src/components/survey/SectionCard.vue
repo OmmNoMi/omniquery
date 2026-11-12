@@ -14,7 +14,11 @@
           <span>{{ __('Completed') }}</span>
         </span>
       </div>
-      <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-snug">
+      <h2
+        ref="sectionHeadingRef"
+        tabindex="-1"
+        class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-snug outline-none focus:outline-none"
+      >
         {{ sectionTitle }}
       </h2>
       <p v-if="sectionDescription" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
@@ -351,5 +355,18 @@ const activeModeIcon = computed(() => {
   if (props.autoAdvance) return Zap;
   if (props.isFullForm) return ClipboardList;
   return FileText;
+});
+
+const sectionHeadingRef = ref(null);
+
+function focusHeading() {
+  nextTick(() => {
+    sectionHeadingRef.value?.focus();
+  });
+}
+
+defineExpose({
+  focusHeading,
+  headingRef: sectionHeadingRef,
 });
 </script>

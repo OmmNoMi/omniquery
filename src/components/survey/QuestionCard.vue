@@ -57,6 +57,7 @@
         </span>
 
         <label
+          :id="'q_label_' + question.question_code"
           :for="'q_input_' + question.question_code"
           class="text-base sm:text-lg font-bold text-slate-900 dark:text-white leading-snug cursor-pointer"
         >
@@ -179,6 +180,9 @@
             class="grid gap-2.5 focus:outline-none outline-none"
             :class="displayedGridOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
             :role="isMultiSelect ? 'group' : 'radiogroup'"
+            :aria-labelledby="'q_label_' + question.question_code"
+            :aria-label="parsedQuestionMeta.text"
+            :aria-required="Boolean(question.is_mandatory || question.reqd)"
             @keydown="onGridKeydown"
             @keydown.esc.stop="focusCard"
           >
@@ -830,6 +834,7 @@ const rangeStep = computed(() => {
 });
 
 const rangeUnit = computed(() => {
+  if (props.question.unit) return props.question.unit;
   const label = (props.question.label_en || "").toLowerCase();
   if (label.includes("year")) return "Years";
   if (label.includes("month")) return "Months";
@@ -1250,50 +1255,54 @@ onUnmounted(() => {
   window.removeEventListener("omniquery:choicemode", onGlobalChoiceMode);
 });
 
-function focusPrimaryInput() {
+function focusPrimaryInput(options = {}) {
+  const preventScroll = options && options.preventScroll !== undefined ? options.preventScroll : false;
   nextTick(() => {
     if (!cardRef.value) return;
+    if (preventScroll === false && typeof cardRef.value.scrollIntoView === "function") {
+      cardRef.value.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
     // 0. Quick search bar at top of options
     if (searchInputRef.value) {
-      searchInputRef.value.focus({ preventScroll: true });
+      searchInputRef.value.focus({ preventScroll });
       return;
     }
     // 1. Standard text / number / date input or textarea (exclude quick search inputs)
     const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]):not([data-search-input]), textarea:not([disabled])");
     if (input) {
-      input.focus({ preventScroll: true });
+      input.focus({ preventScroll });
       return;
     }
     // 2. Combobox trigger button: [role="combobox"] (Multi-select or single-select combobox dropdown)
     const comboboxBtn = cardRef.value.querySelector("button[role=combobox]:not([disabled])");
     if (comboboxBtn) {
-      comboboxBtn.focus({ preventScroll: true });
+      comboboxBtn.focus({ preventScroll });
       return;
     }
     // 3. Option buttons grid: focus selected option button or first option button
     const checkedOptionBtn = cardRef.value.querySelector("button[role=radio][aria-checked=true], button[role=checkbox][aria-checked=true]");
     if (checkedOptionBtn) {
-      checkedOptionBtn.focus({ preventScroll: true });
+      checkedOptionBtn.focus({ preventScroll });
       return;
     }
     const firstOptionBtn = cardRef.value.querySelector("button[role=radio], button[role=checkbox]");
     if (firstOptionBtn) {
-      firstOptionBtn.focus({ preventScroll: true });
+      firstOptionBtn.focus({ preventScroll });
       return;
     }
     // 4. Binary switch control
     const switchBtn = cardRef.value.querySelector("button[role=switch]");
     if (switchBtn) {
-      switchBtn.focus({ preventScroll: true });
+      switchBtn.focus({ preventScroll });
       return;
     }
     // 5. Any interactive button inside control area
     const anyBtn = cardRef.value.querySelector("button:not([disabled])");
     if (anyBtn) {
-      anyBtn.focus({ preventScroll: true });
+      anyBtn.focus({ preventScroll });
       return;
     }
-    cardRef.value.focus({ preventScroll: true });
+    cardRef.value.focus({ preventScroll });
   });
 }
 
