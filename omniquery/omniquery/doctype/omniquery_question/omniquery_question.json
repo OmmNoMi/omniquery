@@ -20,6 +20,8 @@
   "label_en",
   "field_category",
   "control_variant",
+  "group_title",
+  "group_code",
   "allow_user_toggle",
   "column_break_rating",
   "rating_icon",
@@ -144,7 +146,17 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Control Variant",
-   "options": "Auto\nRadio\nButtons\nSwitch\nChips\nRating\nCombobox\nSlider\nGrid\nText\nNumber\nCurrency\nDate\nGPS Capture\nPinpoint Map\nPolygon\nCascaded Admin Hierarchy"
+   "options": "Auto\nRadio\nButtons\nSwitch\nChips\nRating\nCombobox\nSlider\nGrid\nMatrix\nText\nNumber\nCurrency\nDate\nGPS Capture\nPinpoint Map\nPolygon\nCascaded Admin Hierarchy"
+  },
+  {
+   "fieldname": "group_title",
+   "fieldtype": "Data",
+   "label": "Group Title"
+  },
+  {
+   "fieldname": "group_code",
+   "fieldtype": "Data",
+   "label": "Group Code"
   },
   {
    "fieldname": "column_break_rating",

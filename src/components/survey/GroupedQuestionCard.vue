@@ -74,7 +74,10 @@
             >
               {{ getSubLetter(q) }}
             </span>
-            <label class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+            <label
+              :id="'sub_label_' + q.question_code"
+              class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug"
+            >
               {{ getCleanSubLabel(q) }}
               <span v-if="q.is_mandatory" class="text-rose-500 font-bold">*</span>
             </label>
@@ -90,7 +93,9 @@
           <div
             v-if="isChoiceQuestion(q)"
             role="radiogroup"
+            :aria-labelledby="'sub_label_' + q.question_code"
             :aria-label="getCleanSubLabel(q)"
+            :aria-required="Boolean(q.is_mandatory || q.reqd)"
             class="flex flex-wrap items-center gap-1.5 py-1"
           >
             <Button
@@ -409,4 +414,24 @@ function onFocusOut(e) {
     isInputFocused.value = false;
   }
 }
+
+function focusPrimaryInput(options = {}) {
+  const preventScroll = options.preventScroll !== undefined ? options.preventScroll : false;
+  nextTick(() => {
+    if (!cardRef.value) return;
+    if (preventScroll === false) {
+      cardRef.value.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]), button:not([disabled])");
+    if (input) {
+      input.focus({ preventScroll });
+    } else {
+      cardRef.value.focus({ preventScroll });
+    }
+  });
+}
+
+defineExpose({
+  focus: focusPrimaryInput,
+});
 </script>
