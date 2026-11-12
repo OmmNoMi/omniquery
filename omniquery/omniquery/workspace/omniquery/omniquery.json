@@ -1,7 +1,7 @@
 {
  "app": "omniquery",
  "charts": [],
- "content": "[{\"id\": \"hdr_actions\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Quick Launch</span>\", \"col\": 12}}, {\"id\": \"sc_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Survey Templates\", \"label\": \"Survey Templates\", \"type\": \"DocType\", \"color\": \"Green\", \"col\": 3, \"link_to\": \"OmniQuery Template\"}}, {\"id\": \"sc_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Questions\", \"label\": \"Questions\", \"type\": \"DocType\", \"color\": \"Blue\", \"col\": 3, \"link_to\": \"OmniQuery Question\"}}, {\"id\": \"sc_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Option Sets\", \"label\": \"Option Sets\", \"type\": \"DocType\", \"color\": \"Purple\", \"col\": 3, \"link_to\": \"OmniQuery Option Set\"}}, {\"id\": \"sc_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Responses\", \"label\": \"Responses\", \"type\": \"DocType\", \"color\": \"Cyan\", \"col\": 3, \"link_to\": \"OmniQuery Response\"}}, {\"id\": \"sc_5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Field App (PWA)\", \"label\": \"Field App (PWA)\", \"type\": \"URL\", \"color\": \"Cyan\", \"col\": 3, \"url\": \"/omniquery\"}}, {\"id\": \"sc_6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Projects\", \"label\": \"Projects\", \"type\": \"DocType\", \"color\": \"Orange\", \"col\": 3, \"link_to\": \"OmniQuery Project\"}}, {\"id\": \"sc_7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Workspaces\", \"label\": \"Workspaces\", \"type\": \"DocType\", \"color\": \"Blue\", \"col\": 3, \"link_to\": \"OmniQuery Workspace\"}}, {\"id\": \"sc_8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Field Error Logs\", \"label\": \"Field Error Logs\", \"type\": \"DocType\", \"color\": \"Red\", \"col\": 3, \"link_to\": \"OmniQuery Field Error Log\"}}, {\"id\": \"sc_9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Settings\", \"label\": \"Settings\", \"type\": \"DocType\", \"color\": \"Grey\", \"col\": 3, \"link_to\": \"OmniQuery Settings\"}}]",
+ "content": "[{\"id\": \"hdr_metrics\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Review Queue & Activity</span>\", \"col\": 12}}, {\"id\": \"nc_1\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Awaiting Review\", \"card_name\": \"Awaiting Review\", \"col\": 4}}, {\"id\": \"nc_2\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Flagged Responses\", \"card_name\": \"Flagged Responses\", \"col\": 4}}, {\"id\": \"nc_3\", \"type\": \"number_card\", \"data\": {\"number_card_name\": \"Collected Today\", \"card_name\": \"Collected Today\", \"col\": 4}}, {\"id\": \"hdr_actions\", \"type\": \"header\", \"data\": {\"text\": \"<span class=\\\"h4\\\">Quick Launch</span>\", \"col\": 12}}, {\"id\": \"sc_1\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"To Review\", \"label\": \"To Review\", \"type\": \"DocType\", \"color\": \"Orange\", \"col\": 3, \"link_to\": \"OmniQuery Response\"}}, {\"id\": \"sc_2\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Survey Templates\", \"label\": \"Survey Templates\", \"type\": \"DocType\", \"color\": \"Green\", \"col\": 3, \"link_to\": \"OmniQuery Template\"}}, {\"id\": \"sc_3\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Questions\", \"label\": \"Questions\", \"type\": \"DocType\", \"color\": \"Blue\", \"col\": 3, \"link_to\": \"OmniQuery Question\"}}, {\"id\": \"sc_4\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Option Sets\", \"label\": \"Option Sets\", \"type\": \"DocType\", \"color\": \"Purple\", \"col\": 3, \"link_to\": \"OmniQuery Option Set\"}}, {\"id\": \"sc_5\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Responses\", \"label\": \"Responses\", \"type\": \"DocType\", \"color\": \"Cyan\", \"col\": 3, \"link_to\": \"OmniQuery Response\"}}, {\"id\": \"sc_6\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Field App (PWA)\", \"label\": \"Field App (PWA)\", \"type\": \"URL\", \"color\": \"Cyan\", \"col\": 3, \"url\": \"/omniquery\"}}, {\"id\": \"sc_7\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Projects\", \"label\": \"Projects\", \"type\": \"DocType\", \"color\": \"Orange\", \"col\": 3, \"link_to\": \"OmniQuery Project\"}}, {\"id\": \"sc_8\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Workspaces\", \"label\": \"Workspaces\", \"type\": \"DocType\", \"color\": \"Blue\", \"col\": 3, \"link_to\": \"OmniQuery Workspace\"}}, {\"id\": \"sc_9\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Field Error Logs\", \"label\": \"Field Error Logs\", \"type\": \"DocType\", \"color\": \"Red\", \"col\": 3, \"link_to\": \"OmniQuery Field Error Log\"}}, {\"id\": \"sc_10\", \"type\": \"shortcut\", \"data\": {\"shortcut_name\": \"Settings\", \"label\": \"Settings\", \"type\": \"DocType\", \"color\": \"Grey\", \"col\": 3, \"link_to\": \"OmniQuery Settings\"}}]",
  "creation": "2026-09-29 14:00:00",
  "custom_blocks": [],
  "docstatus": 0,
@@ -174,13 +174,34 @@
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery",
- "number_cards": [],
+ "number_cards": [
+  {
+   "label": "Awaiting Review",
+   "number_card_name": "Awaiting Review"
+  },
+  {
+   "label": "Flagged Responses",
+   "number_card_name": "Flagged Responses"
+  },
+  {
+   "label": "Collected Today",
+   "number_card_name": "Collected Today"
+  }
+ ],
  "owner": "Administrator",
  "public": 1,
  "quick_lists": [],
  "roles": [],
  "sequence_id": 0.0,
  "shortcuts": [
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "To Review",
+   "link_to": "OmniQuery Response",
+   "stats_filter": "[[\"OmniQuery Response\", \"survey_status\", \"=\", \"Submitted\"]]",
+   "type": "DocType"
+  },
   {
    "color": "Green",
    "doc_view": "",
