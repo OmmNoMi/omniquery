@@ -579,6 +579,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  allResponses: {
+    type: Object,
+    default: () => ({}),
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "capture-gps", "answered", "next"]);
@@ -892,15 +896,57 @@ const isChoiceControl = computed(() => {
     return false;
   }
   const type = props.question.field_type || "";
-  return type === "Select" || Boolean(props.question.options && props.question.options.length);
+  const opts = props.question.options;
+  const hasOptions = Boolean(opts && (Array.isArray(opts) ? opts.length > 0 : Object.keys(opts).length > 0));
+  return type === "Select" || hasOptions;
 });
 
 const rawOptions = computed(() => {
-  if (props.question.options_translated && props.question.options_translated.length) {
-    return props.question.options_translated;
+  const q = props.question;
+  const parentField = q.depends_on_field;
+  let allOpts = q.options;
+  if (q.options_translated && (Array.isArray(q.options_translated) ? q.options_translated.length : Object.keys(q.options_translated).length)) {
+    allOpts = q.options_translated;
   }
-  return props.question.options || [];
+  if (!allOpts) return [];
+
+  // When options is an object keyed by parent option code/name
+  if (!Array.isArray(allOpts) && typeof allOpts === "object") {
+    if (parentField && props.allResponses) {
+      const parentVal = props.allResponses[parentField];
+      return parentVal ? (allOpts[parentVal] || []) : [];
+    }
+    return [];
+  }
+
+  // When options is an array with parent_option metadata on items
+  if (Array.isArray(allOpts) && parentField && props.allResponses) {
+    const parentVal = props.allResponses[parentField];
+    const hasParentProperty = allOpts.some(
+      (opt) => typeof opt === "object" && opt !== null && ("parent_option" in opt || "parent" in opt)
+    );
+    if (hasParentProperty) {
+      if (!parentVal) return [];
+      return allOpts.filter((opt) => {
+        const p = typeof opt === "object" ? (opt.parent_option || opt.parent) : null;
+        return p === parentVal;
+      });
+    }
+  }
+
+  return Array.isArray(allOpts) ? allOpts : [];
 });
+
+watch(
+  () => (props.question.depends_on_field && props.allResponses ? props.allResponses[props.question.depends_on_field] : undefined),
+  (newVal, oldVal) => {
+    if (props.question.depends_on_field && newVal !== oldVal) {
+      if (props.modelValue !== "" && props.modelValue !== null && props.modelValue !== undefined) {
+        emit("update:modelValue", "");
+      }
+    }
+  }
+);
 
 const normalizedOptions = computed(() => {
   return rawOptions.value.map((opt) => {

@@ -351,6 +351,7 @@ def seed():
 		fieldtype = df.fieldtype
 		options_json = None
 		validation_rules_json = None
+		depends_on_field = None
 
 		# Determine OmniQuery field_type
 		if fieldname == "years_of_shg_membership":
@@ -367,18 +368,15 @@ def seed():
 			options_json = json.dumps(["Baran", "Churu", "Dausa", "Dungarpur", "Jodhpur"])
 		elif fieldname == "block":
 			target_type = "Single Choice (Dropdown)"
+			depends_on_field = "district"
 			options_json = json.dumps(
-				[
-					"Chhipabarod",
-					"Baran",
-					"Ratangarh",
-					"Sujangarh",
-					"Sikandra",
-					"Sagwara",
-					"Galiakot",
-					"Mandor",
-					"Luni Shergadh",
-				]
+				{
+					"Baran": ["Baran", "Chhipabarod"],
+					"Churu": ["Ratangarh", "Sujangarh"],
+					"Dausa": ["Sikandra"],
+					"Dungarpur": ["Sagwara", "Galiakot"],
+					"Jodhpur": ["Mandor", "Luni Shergadh"],
+				}
 			)
 		elif fieldtype == "Select":
 			target_type = "Single Choice (Radio)"
@@ -410,6 +408,7 @@ def seed():
 				"field_type": target_type,
 				"is_mandatory": 1 if df.reqd else 0,
 				"display_order": order_val,
+				"depends_on_field": depends_on_field,
 				"options_json": options_json,
 				"validation_rules_json": validation_rules_json,
 			},

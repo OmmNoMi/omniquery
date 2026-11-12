@@ -170,6 +170,60 @@ class TestSchemaCompiler(unittest.TestCase):
 		new_hash = tmpl.schema_hash_sha256
 		self.assertNotEqual(initial_hash, new_hash)
 
+	def test_cascading_options_and_depends_on_field(self):
+		option_set = frappe.get_doc({
+			"doctype": "OmniQuery Option Set",
+			"set_name": "Test Rajasthan Blocks",
+			"scope": "Platform",
+			"options": [
+				{"option_code": "Chhipabarod", "label_text": "Chhipabarod", "parent_option": "Baran"},
+				{"option_code": "Baran", "label_text": "Baran", "parent_option": "Baran"},
+				{"option_code": "Ratangarh", "label_text": "Ratangarh", "parent_option": "Churu"},
+			],
+		}).insert(ignore_permissions=True)
+
+		q_block = frappe.get_doc({
+			"doctype": "OmniQuery Question",
+			"scope": "Platform",
+			"label_en": "Block",
+			"field_category": "Choice (Single)",
+			"options_set": option_set.name,
+			"depends_on_field": "district",
+			"status": "Active",
+		}).insert(ignore_permissions=True)
+
+		tmpl = frappe.get_doc({
+			"doctype": "OmniQuery Template",
+			"title": "Test Women Dairy Assessment 2026",
+			"project": "PROJ-Test Dairy Initiative",
+			"version": 1,
+			"status": "Draft",
+			"sections": [{"section_code": "SEC_1", "section_title": "Section 1"}],
+			"questions": [
+				{
+					"section_code": "SEC_1",
+					"question_code": "district",
+					"label_en": "District",
+					"field_type": "Single Choice (Dropdown)",
+					"options_json": json.dumps(["Baran", "Churu"]),
+					"is_mandatory": 1,
+				},
+				{
+					"section_code": "SEC_1",
+					"question_code": "block",
+					"question": q_block.name,
+					"is_mandatory": 1,
+				},
+			],
+		}).insert(ignore_permissions=True)
+
+		schema_obj = json.loads(tmpl.compiled_schema_json)
+		q_map = {q["question_code"]: q for q in schema_obj["questions"]}
+		self.assertEqual(q_map["block"]["depends_on_field"], "district")
+		self.assertIsInstance(q_map["block"]["options"], dict)
+		self.assertEqual(q_map["block"]["options"]["Baran"], ["Chhipabarod", "Baran"])
+		self.assertEqual(q_map["block"]["options"]["Churu"], ["Ratangarh"])
+
 	def _create_test_rating_question(self):
 		return frappe.get_doc({
 			"doctype": "OmniQuery Question",
@@ -195,9 +249,9 @@ class TestSchemaCompiler(unittest.TestCase):
 		}).insert(ignore_permissions=True)
 
 	def tearDown(self):
-		frappe.db.delete("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type"]]})
-		frappe.db.delete("OmniQuery Option Item", {"parent": "Test Animal Species"})
-		frappe.db.delete("OmniQuery Option Set", {"set_name": "Test Animal Species"})
+		frappe.db.delete("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type", "Block"]]})
+		frappe.db.delete("OmniQuery Option Item", {"parent": ["in", ["Test Animal Species", "Test Rajasthan Blocks"]]})
+		frappe.db.delete("OmniQuery Option Set", {"set_name": ["in", ["Test Animal Species", "Test Rajasthan Blocks"]]})
 		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
 		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
 		frappe.db.commit()
