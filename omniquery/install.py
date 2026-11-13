@@ -11,6 +11,7 @@ def after_migrate():
 	ensure_workspace_sidebar()
 	ensure_desktop_icon()
 	ensure_default_surveyor()
+	ensure_response_workflow()
 	sync_app_fixtures()
 
 
@@ -278,3 +279,57 @@ def ensure_workspace():
 	doc.set("shortcuts", shortcuts)
 	doc.set("number_cards", number_cards)
 	doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
+
+
+RESPONSE_WORKFLOW = "OmniQuery Response Approval"
+WORKFLOW_ACTIONS = ("Approve", "Flag for Audit", "Reject", "Verify", "Submit")
+# (state, style, doc_status, allow_edit). Only Draft is docstatus 0: sync submits a response, and
+# Frappe refuses any transition from a submitted (1) state back to a draft (0) one.
+WORKFLOW_STATES = (
+	("Draft", "Inverse", "0", "OmniQuery User"),
+	("Submitted", "Primary", "1", "OmniQuery Manager"),
+	("Supervisor Verified", "Success", "1", "OmniQuery Manager"),
+	("Audit Flagged", "Danger", "1", "OmniQuery Manager"),
+	("Approved", "Success", "1", "OmniQuery Manager"),
+	("Rejected", "Danger", "1", "OmniQuery Manager"),
+)
+# (state, action, next_state); every review transition belongs to OmniQuery Manager
+WORKFLOW_TRANSITIONS = (
+	("Submitted", "Approve", "Approved"),
+	("Submitted", "Flag for Audit", "Audit Flagged"),
+	("Submitted", "Reject", "Rejected"),
+	("Submitted", "Verify", "Supervisor Verified"),
+	("Supervisor Verified", "Approve", "Approved"),
+	("Supervisor Verified", "Flag for Audit", "Audit Flagged"),
+	("Supervisor Verified", "Reject", "Rejected"),
+	("Audit Flagged", "Approve", "Approved"),
+	("Audit Flagged", "Reject", "Rejected"),
+	("Audit Flagged", "Verify", "Supervisor Verified"),
+)
+
+
+def ensure_response_workflow():
+	# Create only, like the number cards: an admin who edits or deactivates it in Desk keeps that.
+	if not frappe.db.exists("DocType", "Workflow") or frappe.db.exists("Workflow", RESPONSE_WORKFLOW):
+		return
+	_ensure_named("Workflow Action Master", "workflow_action_name", WORKFLOW_ACTIONS)
+	for state, style, _docstatus, _role in WORKFLOW_STATES:
+		_ensure_named("Workflow State", "workflow_state_name", (state,), style=style)
+	frappe.get_doc(_response_workflow_payload()).insert(ignore_permissions=True)
+
+
+def _ensure_named(doctype, name_field, names, **fields):
+	for name in names:
+		if not frappe.db.exists(doctype, name):
+			frappe.get_doc({"doctype": doctype, name_field: name, **fields}).insert(ignore_permissions=True)
+
+
+def _response_workflow_payload():
+	states = [{"state": s, "doc_status": d, "allow_edit": r} for s, _style, d, r in WORKFLOW_STATES]
+	submit = {"state": "Draft", "action": "Submit", "next_state": "Submitted", "allowed": "OmniQuery User"}
+	review = [{"state": s, "action": a, "next_state": n, "allowed": "OmniQuery Manager"} for s, a, n in WORKFLOW_TRANSITIONS]
+	transitions = [{**t, "allow_self_approval": 1} for t in [submit, *review]]
+	return {
+		"doctype": "Workflow", "workflow_name": RESPONSE_WORKFLOW, "document_type": "OmniQuery Response",
+		"workflow_state_field": "survey_status", "is_active": 1, "states": states, "transitions": transitions,
+	}

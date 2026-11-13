@@ -84,6 +84,7 @@
    "in_standard_filter": 1,
    "label": "Status",
    "options": "Draft\nSubmitted\nSupervisor Verified\nAudit Flagged\nApproved\nRejected",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -241,6 +242,7 @@
    "report": 1,
    "role": "OmniQuery Manager",
    "share": 1,
+   "submit": 1,
    "write": 1
   }
  ],
