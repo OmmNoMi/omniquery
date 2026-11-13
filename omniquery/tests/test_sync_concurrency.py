@@ -2,6 +2,7 @@ import unittest.mock
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from omniquery.api.sync import batch_push
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestSyncConcurrency(FrappeTestCase):
@@ -21,29 +22,22 @@ class TestSyncConcurrency(FrappeTestCase):
 				"doctype": "OmniQuery Template",
 				"title": "Sync Concurrency Test",
 				"project": self.project_name,
-				"status": "Published",
+				"status": "Draft",
 			})
 			doc.insert(ignore_permissions=True)
+			doc.submit()
 			self.test_template_name = doc.name
 
 	def tearDown(self):
-		# Clean up any test responses
-		responses = frappe.get_all(
-			"OmniQuery Response",
-			filters={"idempotency_key": ["like", "TEST-CONC-%"]},
-			pluck="name"
-		)
-		for r in responses:
-			frappe.delete_doc("OmniQuery Response", r, force=True)
-
-		frappe.db.delete("OmniQuery Sync Audit Log", {"idempotency_key": ["like", "TEST-CONC-%"]})
-		frappe.db.delete("OmniQuery Field Error Log", {"question_code": ["like", "TEST-CONC-%"]})
-		if frappe.db.exists("OmniQuery Response", "TEMP_SP_003"):
-			frappe.delete_doc("OmniQuery Response", "TEMP_SP_003", force=True, ignore_permissions=True)
-
-		if frappe.db.exists("OmniQuery Template", self.test_template_name):
-			frappe.delete_doc("OmniQuery Template", self.test_template_name, force=True)
-
+		frappe.set_user("Administrator")
+		key = {"idempotency_key": ["like", "TEST-CONC-%"]}
+		delete_test_docs([
+			("OmniQuery Response", key),
+			("OmniQuery Response", {"name": "TEMP_SP_003"}),
+			("OmniQuery Sync Audit Log", key),
+			("OmniQuery Field Error Log", {"question_code": ["like", "TEST-CONC-%"]}),
+			("OmniQuery Template", {"name": self.test_template_name}),
+		])
 
 	def test_duplicate_submission_is_skipped(self):
 		idempotency_key = "TEST-CONC-001"
@@ -99,10 +93,8 @@ class TestSyncConcurrency(FrappeTestCase):
 		self.assertEqual(count, 1)
 
 		# Clean up test artifact
-		resp_name = frappe.db.get_value("OmniQuery Response", {"idempotency_key": idempotency_key}, "name")
-		if resp_name:
-			frappe.delete_doc("OmniQuery Response", resp_name, force=True, ignore_permissions=True)
-		frappe.db.delete("OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key})
+		delete_test_docs([("OmniQuery Response", {"idempotency_key": idempotency_key}),
+			("OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key})])
 		frappe.db.commit()
 
 	def test_batch_push_multiple_submissions(self):
@@ -289,6 +281,35 @@ class TestSyncConcurrency(FrappeTestCase):
 		)
 		self.assertEqual(failed_audit_status, "FAILED")
 
+	def test_synced_final_response_has_docstatus_1_and_locked(self):
+		idempotency_key = "TEST-CONC-SUBMIT-DOCSTATUS"
+		sub = {
+			"idempotency_key": idempotency_key,
+			"survey_template": self.test_template_name,
+			"template_version": 1,
+			"items": [],
+		}
+		res = batch_push([sub])
+		results = res.get("results", []) if isinstance(res, dict) else res
+		self.assertEqual(results[0]["status"], "SUCCESS")
+
+		doc_name = results[0]["doc_name"]
+		resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
+		self.assertEqual(resp_doc.docstatus, 1)
+
+		resp_doc.template_version = 99
+		with self.assertRaises(frappe.UpdateAfterSubmitError):
+			resp_doc.save()
+
+	def test_template_with_status_published_requires_docstatus_1(self):
+		tmpl = frappe.new_doc("OmniQuery Template")
+		tmpl.title = "Test Published Docstatus Requirement"
+		tmpl.project = self.project_name
+		tmpl.status = "Published"
+		# the message, not just the class: a MandatoryError is a ValidationError too
+		with self.assertRaisesRegex(frappe.ValidationError, "must have docstatus 1"):
+			tmpl.insert(ignore_permissions=True)
+
 	def test_parse_local_datetime_converts_offsets_to_the_site_timezone(self):
 		from omniquery.api.sync import parse_local_datetime
 
@@ -365,3 +386,29 @@ class TestSyncConcurrency(FrappeTestCase):
 		doc = frappe.get_doc("OmniQuery Response", key)
 		self.assertIsNone(doc.captured_at_local)
 		self.assertEqual([i.value_text for i in doc.items], ["draft"])
+
+	def test_a_retry_cannot_reopen_a_reviewed_response(self):
+		# every status but Draft is final, including any added later, so a retried payload is skipped
+		sub = {"idempotency_key": "TEST-CONC-REVIEWED", "survey_template": self.test_template_name, "items": []}
+		name = batch_push([sub])["results"][0]["doc_name"]
+		for status in frappe.get_meta("OmniQuery Response").get_options("survey_status").split("\n")[1:]:
+			frappe.db.set_value("OmniQuery Response", name, "survey_status", status)
+			self.assertEqual(batch_push([sub])["results"][0]["status"], "DUPLICATE_SKIPPED", status)
+			self.assertEqual(frappe.db.get_value("OmniQuery Response", name, "survey_status"), status)
+
+	def test_patch_submits_only_final_legacy_documents(self):
+		from omniquery.patches.v1_0.submit_final_documents import execute
+
+		names = {status: self.legacy_response(status) for status in ("Approved", "Draft")}
+		frappe.db.set_value("OmniQuery Template", self.test_template_name, "docstatus", 0)  # Published, as before #28
+		execute()
+		self.assertEqual(frappe.db.get_value("OmniQuery Template", self.test_template_name, "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("OmniQuery Response", names["Approved"], "docstatus"), 1)
+		self.assertEqual(frappe.db.get_value("OmniQuery Response", names["Draft"], "docstatus"), 0)
+
+	def legacy_response(self, status):
+		"""A response as sync stored it before #28: docstatus 0 whatever its status."""
+		sub = {"idempotency_key": f"TEST-CONC-LEGACY-{status}", "survey_template": self.test_template_name, "items": []}
+		name = batch_push([sub])["results"][0]["doc_name"]
+		frappe.db.set_value("OmniQuery Response", name, {"docstatus": 0, "survey_status": status})
+		return name

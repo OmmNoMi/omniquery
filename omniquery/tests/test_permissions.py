@@ -130,6 +130,20 @@ class TestPermissions(unittest.TestCase):
 					f"{doctype}: role {perm.role!r} gets {granted} site-wide with no has_permission hook",
 				)
 
+	def test_public_roles_cannot_finalise_documents(self):
+		# All and Guest cover every user, website users included: none may submit, cancel or amend
+		for doctype in frappe.get_all("DocType", {"module": "OmniQuery", "is_submittable": 1}, pluck="name"):
+			for perm in frappe.get_meta(doctype).permissions:
+				granted = [p for p in ("submit", "cancel", "amend") if perm.get(p)]
+				if perm.role in ("All", "Guest"):
+					self.assertFalse(granted, f"{doctype}: role {perm.role!r} gets {granted}")
+
+	def test_submittable_doctypes_can_be_amended(self):
+		# migrate syncs a DocType JSON without make_amendable(), so the JSON itself must carry amended_from
+		for doctype in frappe.get_all("DocType", {"module": "OmniQuery", "is_submittable": 1}, pluck="name"):
+			field = frappe.get_meta(doctype).get_field("amended_from")
+			self.assertTrue(field and field.options == doctype, f"{doctype} has no amended_from link to itself")
+
 	def test_surveyor_negative_docperms(self):
 		# Field Surveyor (OmniQuery User) must NOT be able to create Surveyors or export Responses
 		self.assertFalse(frappe.has_permission("OmniQuery Surveyor", "create", user="surveyor_perm@ommnomi.test"))

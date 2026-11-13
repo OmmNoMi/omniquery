@@ -38,7 +38,7 @@ class TestLegacyPayloadAdapter(FrappeTestCase):
 		project = frappe.get_doc({"doctype": "OmniQuery Project", "project_name": PREFIX,
 			"grantor_organization": "Test", "status": "Active"}).insert(ignore_permissions=True)
 		cls.template = frappe.get_doc({"doctype": "OmniQuery Template", "title": PREFIX, "project": project.name,
-			"version": 1, "status": "Published"}).insert(ignore_permissions=True).name
+			"version": 1, "docstatus": 1}).insert(ignore_permissions=True).name  # inserted as submitted
 		frappe.db.commit()
 
 	@classmethod

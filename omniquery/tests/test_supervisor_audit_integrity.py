@@ -2,6 +2,7 @@ import frappe
 from frappe.tests.utils import FrappeTestCase
 
 from omniquery.api.sync import AUDIT_THRESHOLD_DEFAULTS, audit_thresholds, batch_push, gps_reason, speedrun_reason
+from omniquery.omniquery.doctype.omniquery_response.omniquery_response import QUALITY_SIGNAL_FIELDS
 from omniquery.patches.v1_0 import dedupe_surveyor_users, remove_machine_supervisor_audits
 from omniquery.tests.utils import delete_test_docs
 
@@ -29,7 +30,7 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 		project = frappe.get_doc({"doctype": "OmniQuery Project", "project_name": PREFIX,
 			"grantor_organization": "Test", "status": "Active"}).insert(ignore_permissions=True)
 		cls.template = frappe.get_doc({"doctype": "OmniQuery Template", "title": PREFIX, "project": project.name,
-			"version": 1, "status": "Published"}).insert(ignore_permissions=True).name
+			"version": 1, "docstatus": 1}).insert(ignore_permissions=True).name  # inserted as submitted
 		frappe.db.commit()
 
 	@classmethod
@@ -142,12 +143,18 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 
 	def test_quality_signals_cannot_be_edited_by_a_reviewer(self):
 		name = self.push("GUARD", time_spent_seconds=5).name
+		# a submitted response is locked by Frappe itself; a draft only by the guard, so test the guard on one
+		frappe.db.set_value("OmniQuery Response", name, "docstatus", 0)
 		frappe.set_user(self.manager)
 		doc = frappe.get_doc("OmniQuery Response", name)
 		doc.is_outlier_flagged, doc.outlier_reasons = 0, None
-		self.assertRaises(frappe.ValidationError, doc.save)
+		self.assertRaisesRegex(frappe.ValidationError, "Quality signals", doc.save)
 		frappe.set_user("Administrator")
 		self.assertEqual(frappe.db.get_value("OmniQuery Response", name, "is_outlier_flagged"), 1)
+
+	def test_quality_signals_stay_locked_after_submit(self):
+		meta = frappe.get_meta("OmniQuery Response")
+		self.assertFalse([f for f in QUALITY_SIGNAL_FIELDS if meta.get_field(f).allow_on_submit])
 
 	# migration patches
 

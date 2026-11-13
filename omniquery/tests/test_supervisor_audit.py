@@ -2,6 +2,7 @@ import uuid
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from omniquery.api.sync import batch_push
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestSupervisorAudit(FrappeTestCase):
@@ -24,18 +25,14 @@ class TestSupervisorAudit(FrappeTestCase):
 			"title": "Speedrun Audit Test Template",
 			"project": self.proj,
 			"version": 1,
-			"status": "Published",
 		}).insert(ignore_permissions=True)
+		t.submit()
 		self.tmpl = t.name
 		self.test_records.append(("OmniQuery Template", self.tmpl))
 
 	def tearDown(self):
-		for dt, dn in reversed(self.test_records):
-			try:
-				if frappe.db.exists(dt, dn):
-					frappe.delete_doc(dt, dn, force=True)
-			except Exception:
-				pass
+		frappe.set_user("Administrator")
+		delete_test_docs([(dt, {"name": dn}) for dt, dn in reversed(self.test_records)])
 		frappe.db.commit()
 
 	def test_automated_speedrun_outlier_detection(self):

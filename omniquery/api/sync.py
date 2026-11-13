@@ -487,8 +487,8 @@ def batch_push(submissions=None):
 				results.append({"idempotency_key": idempotency_key, "status": "REJECTED", "error": err_msg})
 				continue
 
-			existing_status = frappe.db.get_value("OmniQuery Response", doc_name, "survey_status")
-			if existing_status in ["Submitted", "Supervisor Verified", "Audit Flagged", "Approved"]:
+			# a submitted response is final, Rejected included: a retried payload must not undo a review
+			if frappe.db.get_value("OmniQuery Response", doc_name, "docstatus") == 1:
 				results.append({
 					"idempotency_key": idempotency_key,
 					"status": "DUPLICATE_SKIPPED",
@@ -528,6 +528,7 @@ def batch_push(submissions=None):
 				log_invalid_captured_at(idempotency_key, sub.get("captured_at_local"))
 			resp_doc.synced_at = now_datetime()
 			resp_doc.response_payload = raw_payload_str
+			resp_doc.docstatus = 1  # insert or save as a submit, in one write
 
 			resp_doc.set("items", [])
 			for item in sub.get("items", []):
