@@ -1,12 +1,9 @@
 frappe.ui.form.on("OmniQuery Sync Audit Log", {
 	refresh(frm) {
-		if (frm.doc.sync_status === "FAILED" && frm.doc.raw_payload) {
+		if (frm.doc.sync_status === "FAILED" && frm.doc.raw_payload && frm.perm[0]?.write) {
 			frm.add_custom_button(__("Replay Payload"), () => {
-				frappe.show_alert({
-					message: __("Replaying submission payload..."),
-					indicator: "blue",
-				});
-				frm.call("replay").then((r) => {
+				// freeze blocks a second click from replaying the same payload twice
+				frm.call({ method: "replay", freeze: true, freeze_message: __("Replaying submission payload...") }).then((r) => {
 					if (r.message && r.message.status === "SUCCESS") {
 						frappe.show_alert({
 							message: __("Payload replayed successfully! Response linked: {0}", [r.message.doc_name]),

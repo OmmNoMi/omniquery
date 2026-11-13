@@ -1,6 +1,9 @@
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
+
+from omniquery.api.sync import batch_push
 
 
 class OmniQuerySyncAuditLog(Document):
@@ -10,34 +13,34 @@ class OmniQuerySyncAuditLog(Document):
 
 	@frappe.whitelist()
 	def replay(self):
-		"""
-		Replays a FAILED sync audit log using its raw_payload dump.
-		Maps legacy shapes, re-submits through batch_push, and links the created response.
-		"""
-		if not self.raw_payload:
-			frappe.throw(frappe._("Cannot replay audit log without raw_payload dump"))
+		"""Re-run this FAILED submission through batch_push and link the Response it creates.
+		Desk only checks read access before calling a doc method, and every user can read these logs,
+		so replaying (which creates a Response and deletes error rows) checks write access itself."""
+		self.check_permission("write")
+		if self.sync_status != "FAILED" or not self.raw_payload:
+			frappe.throw(_("Only a FAILED sync that kept its raw payload can be replayed"))
+		result = batch_push(submissions=[self.replay_payload()])["results"][0]
+		if result.get("status") not in ("SUCCESS", "DUPLICATE_SKIPPED"):
+			return {"status": "FAILED", "error": result.get("error") or _("Replay failed")}
+		self.mark_replayed(result["status"], result["doc_name"])
+		return {"status": "SUCCESS", "doc_name": result["doc_name"]}
 
-		payload = frappe.parse_json(self.raw_payload) if isinstance(self.raw_payload, str) else self.raw_payload
-		from omniquery.api.sync import batch_push
+	def replay_payload(self):
+		"""The stored payload pinned to this log's key and surveyor. Without the key a keyless payload would
+		be filed as a new submission; without the surveyor it would be credited to whoever replays it."""
+		payload = frappe.parse_json(self.raw_payload)
+		if not isinstance(payload, dict):
+			frappe.throw(_("The raw payload is not a single submission, so it cannot be replayed"))
+		payload["idempotency_key"] = self.idempotency_key
+		if self.surveyor and not payload.get("surveyor"):
+			payload["surveyor"] = self.surveyor
+		return payload
 
-		res = batch_push(submissions=[payload])
-		if not res.get("results"):
-			frappe.throw(frappe._("Batch push produced no results"))
-
-		result = res["results"][0]
-		self.reload()
-
-		if result.get("status") in ("SUCCESS", "DUPLICATE_SKIPPED"):
-			# Clean up associated field error logs for this idempotency key
-			for err_name in frappe.get_all(
-				"OmniQuery Field Error Log",
-				filters={"question_code": self.idempotency_key},
-				pluck="name",
-			):
-				frappe.delete_doc("OmniQuery Field Error Log", err_name, force=True, ignore_permissions=True)
-
-			frappe.db.commit()
-			return {"status": "SUCCESS", "doc_name": result.get("doc_name")}
-		else:
-			err = result.get("error") or "Replay failed"
-			return {"status": "FAILED", "error": err}
+	def mark_replayed(self, status, response_name):
+		"""batch_push leaves this log untouched when the Response already exists, so link it here, and
+		clear the error rows that the failed attempts left for this key."""
+		self.db_set({"sync_status": status, "survey_response": response_name, "error_message": None})
+		filters = {"question_code": self.idempotency_key}
+		for name in frappe.get_all("OmniQuery Field Error Log", filters=filters, pluck="name"):
+			frappe.delete_doc("OmniQuery Field Error Log", name, force=True, ignore_permissions=True)
+		frappe.db.commit()

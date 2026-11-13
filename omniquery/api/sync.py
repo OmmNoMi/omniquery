@@ -343,51 +343,69 @@ def sync_draft(data=None):
 
 
 def normalize_submission_payload(sub):
-	"""
-	Adapts legacy offline write-ahead-log (WAL) shapes into canonical submission schema.
-	Legacy shape:
-	{
-		"template_name": "...",
-		"responses": {"q1": "val1"},
-		"gps_coordinates": {"latitude": ..., "longitude": ..., "accuracy": ...},
-		"saved_at": "..."
-	}
-	"""
+	"""Map a legacy offline WAL entry {template_name, responses, saved_at, gps_coordinates} onto the
+	canonical batch_push fields. A canonical field the client already sent always wins. A non-dict gives {}."""
 	if not isinstance(sub, dict):
-		return None
+		return {}
+	gps = sub["gps_coordinates"] if isinstance(sub.get("gps_coordinates"), dict) else {}
+	legacy = {
+		"survey_template": sub.get("template_name"),
+		"items": legacy_items(sub.get("responses")),
+		"captured_at_local": sub.get("saved_at"),
+		"gps_latitude": first_present(gps, "latitude", "lat"),
+		"gps_longitude": first_present(gps, "longitude", "lng", "lon"),
+		"gps_accuracy": gps.get("accuracy"),
+	}
+	return {**sub, **{k: v for k, v in legacy.items() if v is not None and sub.get(k) in (None, "", [])}}
 
-	normalized = dict(sub)
 
-	# 1. Map template name
-	if not normalized.get("survey_template") and normalized.get("template_name"):
-		normalized["survey_template"] = normalized["template_name"]
+def legacy_items(responses):
+	"""Legacy WAL entries stored answers as {question_code: value}; a list is already item-shaped."""
+	if isinstance(responses, dict):
+		return [{"question_code": str(k), "value": v} for k, v in responses.items()]
+	return responses if isinstance(responses, list) else None
 
-	# 2. Map items from responses dict or list
-	if not normalized.get("items") and "responses" in normalized:
-		resp_data = normalized.get("responses")
-		if isinstance(resp_data, dict):
-			normalized["items"] = [
-				{"question_code": str(k), "value": v}
-				for k, v in resp_data.items()
-			]
-		elif isinstance(resp_data, list):
-			normalized["items"] = resp_data
 
-	# 3. Map captured_at_local from saved_at
-	if not normalized.get("captured_at_local") and normalized.get("saved_at"):
-		normalized["captured_at_local"] = normalized["saved_at"]
+def first_present(values, *keys):
+	"""The first of keys that is set, so a 0 coordinate is kept rather than skipped as falsy."""
+	return next((values[k] for k in keys if values.get(k) is not None), None)
 
-	# 4. Map GPS coordinates
-	gps = normalized.get("gps_coordinates")
-	if isinstance(gps, dict):
-		if normalized.get("gps_latitude") is None:
-			normalized["gps_latitude"] = gps.get("latitude") if "latitude" in gps else gps.get("lat")
-		if normalized.get("gps_longitude") is None:
-			normalized["gps_longitude"] = gps.get("longitude") if "longitude" in gps else (gps.get("lng") or gps.get("lon"))
-		if normalized.get("gps_accuracy") is None:
-			normalized["gps_accuracy"] = gps.get("accuracy")
 
-	return normalized
+def resolve_idempotency_key(sub, template_name, payload_hash):
+	"""The client's key. Without one, a valid submission gets OQS-{template}-{random} as before, and an
+	invalid one gets a key derived from its payload, so its retries share one audit log and error row."""
+	if sub.get("idempotency_key"):
+		return sub["idempotency_key"]
+	if template_name:
+		return f"OQS-{template_name.replace('OQS-', '')}-{uuid.uuid4().hex[:6]}"
+	return f"OQS-INVALID-{payload_hash[:12]}"
+
+
+def upsert_audit_log(idempotency_key, fields):
+	"""Create or update the Sync Audit Log for a key and commit it. Returns its name; a failed
+	write is logged, never raised, so one bad audit write does not stop the rest of the batch."""
+	try:
+		name = frappe.db.get_value("OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name")
+		audit = frappe.get_doc("OmniQuery Sync Audit Log", name) if name else frappe.new_doc("OmniQuery Sync Audit Log")
+		audit.update({"idempotency_key": idempotency_key, "processed_at": now_datetime(), **fields})
+		(audit.save if name else audit.insert)(ignore_permissions=True)
+		frappe.db.commit()
+		return audit.name
+	except Exception:
+		frappe.log_error(f"Sync Audit Log write failed for {idempotency_key}", frappe.get_traceback())
+
+
+def log_field_error(idempotency_key, error_message, raw_payload_str, fields):
+	"""Insert one Field Error Log per (idempotency key, error), so client retries do not add duplicates."""
+	row = {"question_code": idempotency_key, "error_message": str(error_message)[:1000]}
+	try:
+		if frappe.db.exists("OmniQuery Field Error Log", row):
+			return
+		frappe.get_doc({"doctype": "OmniQuery Field Error Log", **row, **fields, "logged_at": now_datetime(),
+			"device_info": raw_payload_str[:4000]}).insert(ignore_permissions=True)
+		frappe.db.commit()
+	except Exception:
+		frappe.log_error(f"Field Error Log write failed for {idempotency_key}", frappe.get_traceback())
 
 
 @frappe.whitelist(allow_guest=True)
@@ -436,92 +454,29 @@ def batch_push(submissions=None):
 
 	for raw_sub in submissions:
 		sub = normalize_submission_payload(raw_sub)
-		idempotency_key = (
-			(sub.get("idempotency_key") if sub else None)
-			or (raw_sub.get("idempotency_key") if isinstance(raw_sub, dict) else None)
-			or f"OQS-UNKNOWN-{uuid.uuid4().hex[:6]}"
-		)
 		raw_payload_str = frappe.as_json(raw_sub)
 		payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
+		template_name = resolve_template_name(sub["survey_template"]) if sub.get("survey_template") else None
+		idempotency_key = resolve_idempotency_key(sub, template_name, payload_hash)
 
-		# Check unknown/invalid shape
-		if not sub or not sub.get("survey_template"):
+		# Terminal: a payload with no template cannot become a Response, however often it is retried
+		if not template_name:
 			err_msg = "Unknown payload shape: missing survey_template"
-			try:
-				existing_audit = frappe.db.get_value(
-					"OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name"
-				)
-				if existing_audit:
-					audit = frappe.get_doc("OmniQuery Sync Audit Log", existing_audit)
-				else:
-					audit = frappe.new_doc("OmniQuery Sync Audit Log")
-					audit.idempotency_key = idempotency_key
-
-				audit.surveyor = resolve_surveyor(current_user)
-				audit.sync_status = "FAILED"
-				audit.client_ip = client_ip
-				audit.payload_hash_sha256 = payload_hash
-				audit.processed_at = now_datetime()
-				audit.raw_payload = raw_payload_str
-				audit.error_message = err_msg
-				if existing_audit:
-					audit.save(ignore_permissions=True)
-				else:
-					audit.insert(ignore_permissions=True)
-				frappe.db.commit()
-			except Exception:
-				pass
-
-			# Dedup Field Error Log on (idempotency_key, error)
-			try:
-				if not frappe.db.exists(
-					"OmniQuery Field Error Log",
-					{"question_code": idempotency_key, "error_message": err_msg},
-				):
-					field_err = frappe.new_doc("OmniQuery Field Error Log")
-					field_err.question_code = idempotency_key
-					field_err.surveyor = str(current_user)
-					field_err.logged_at = now_datetime()
-					field_err.error_message = err_msg
-					field_err.stack_trace = ""
-					field_err.device_info = raw_payload_str[:4000]
-					field_err.insert(ignore_permissions=True)
-					frappe.db.commit()
-			except Exception:
-				pass
-
+			upsert_audit_log(idempotency_key, {
+				"surveyor": resolve_surveyor(current_user), "sync_status": "FAILED", "client_ip": client_ip,
+				"payload_hash_sha256": payload_hash, "raw_payload": raw_payload_str, "error_message": err_msg,
+			})
+			log_field_error(idempotency_key, err_msg, raw_payload_str, {"surveyor": str(current_user)})
 			results.append({"idempotency_key": idempotency_key, "status": "INVALID_SHAPE", "error": err_msg})
 			continue
-
-		template_name = resolve_template_name(sub.get("survey_template"))
 
 		# Security: Strict template RBAC validation
 		if not user_has_template_permission(template_name, user=current_user):
 			err_msg = "Guest access not permitted for private survey template" if current_user == "Guest" else f"Permission denied for template {template_name}"
-			try:
-				existing_audit = frappe.db.get_value(
-					"OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name"
-				)
-				if existing_audit:
-					audit = frappe.get_doc("OmniQuery Sync Audit Log", existing_audit)
-				else:
-					audit = frappe.new_doc("OmniQuery Sync Audit Log")
-					audit.idempotency_key = idempotency_key
-
-				audit.surveyor = resolve_surveyor(sub.get("surveyor") or current_user)
-				audit.sync_status = "REJECTED"
-				audit.client_ip = client_ip
-				audit.processed_at = now_datetime()
-				audit.raw_payload = raw_payload_str
-				audit.error_message = err_msg
-				if existing_audit:
-					audit.save(ignore_permissions=True)
-				else:
-					audit.insert(ignore_permissions=True)
-				frappe.db.commit()
-			except Exception:
-				pass
-
+			upsert_audit_log(idempotency_key, {
+				"surveyor": resolve_surveyor(sub.get("surveyor") or current_user), "sync_status": "REJECTED",
+				"client_ip": client_ip, "raw_payload": raw_payload_str, "error_message": err_msg,
+			})
 			results.append({"idempotency_key": idempotency_key, "status": "REJECTED", "error": err_msg})
 			continue
 
@@ -550,32 +505,11 @@ def batch_push(submissions=None):
 				continue
 
 		# Phase 1: Pre-save in OmniQuery Sync Audit Log with PENDING status and full raw JSON dump
-		audit_doc_name = None
-		try:
-			existing_audit = frappe.db.get_value(
-				"OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name"
-			)
-			if existing_audit:
-				audit = frappe.get_doc("OmniQuery Sync Audit Log", existing_audit)
-			else:
-				audit = frappe.new_doc("OmniQuery Sync Audit Log")
-				audit.idempotency_key = idempotency_key
-
-			audit.surveyor = resolve_surveyor(sub.get("surveyor") or current_user)
-			audit.sync_status = "PENDING"
-			audit.client_ip = client_ip
-			audit.payload_hash_sha256 = payload_hash
-			audit.processed_at = now_datetime()
-			audit.raw_payload = raw_payload_str
-			audit.error_message = None
-			if existing_audit:
-				audit.save(ignore_permissions=True)
-			else:
-				audit.insert(ignore_permissions=True)
-			audit_doc_name = audit.name
-			frappe.db.commit()
-		except Exception as audit_pre_err:
-			frappe.log_error("Audit Pre-Log write failed", frappe.get_traceback())
+		audit_doc_name = upsert_audit_log(idempotency_key, {
+			"surveyor": resolve_surveyor(sub.get("surveyor") or current_user), "sync_status": "PENDING",
+			"client_ip": client_ip, "payload_hash_sha256": payload_hash, "raw_payload": raw_payload_str,
+			"error_message": None,
+		})
 
 		# Phase 2: Savepoint-protected Response Document Creation
 		savepoint = f"sp_sync_{idempotency_key.replace('-', '_')}"
@@ -671,25 +605,10 @@ def batch_push(submissions=None):
 					pass
 
 			# Record Field Error Log so administrators can inspect failed submissions in Desk (Dedup on idempotency_key + error)
-			try:
-				err_summary = str(e)[:1000]
-				if not frappe.db.exists(
-					"OmniQuery Field Error Log",
-					{"question_code": idempotency_key, "error_message": err_summary},
-				):
-					field_err = frappe.new_doc("OmniQuery Field Error Log")
-					field_err.survey_template = template_name
-					field_err.template_version = sub.get("template_version") or 1
-					field_err.question_code = idempotency_key
-					field_err.surveyor = str(sub.get("surveyor") or current_user)
-					field_err.logged_at = now_datetime()
-					field_err.error_message = err_summary
-					field_err.stack_trace = frappe.get_traceback()
-					field_err.device_info = raw_payload_str[:4000]
-					field_err.insert(ignore_permissions=True)
-					frappe.db.commit()
-			except Exception as field_err_ex:
-				frappe.log_error("Field error log write failed", frappe.get_traceback())
+			log_field_error(idempotency_key, e, raw_payload_str, {
+				"survey_template": template_name, "template_version": sub.get("template_version") or 1,
+				"surveyor": str(sub.get("surveyor") or current_user), "stack_trace": frappe.get_traceback(),
+			})
 
 			results.append({"idempotency_key": idempotency_key, "status": "FAILED", "error": str(e)})
 
