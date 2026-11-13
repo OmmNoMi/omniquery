@@ -32,9 +32,19 @@
       </div>
     </div>
 
+    <!-- Not in any project yet (#57); the queue and drafts below stay, so unsynced work is never hidden -->
+    <div
+      v-if="isUnassigned"
+      role="status"
+      class="p-3 sm:p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-start gap-2.5 text-sm font-bold text-amber-900 dark:text-amber-200"
+    >
+      <UserX class="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+      <p>{{ __('You are not assigned to a project yet. Ask your supervisor.') }}</p>
+    </div>
+
     <!-- Daily Target Goal Progress Strip (Field Surveyors with a configured target) -->
     <div
-      v-if="isSurveyor && !isManager && dailyTarget"
+      v-else-if="isSurveyor && !isManager && dailyTarget"
       class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5"
     >
       <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -280,7 +290,7 @@
 <script setup>
 import { computed, ref, onMounted, watch } from "vue";
 import { Button, call } from "frappe-ui";
-import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play } from "lucide-vue-next";
+import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play, UserX } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useUserRoles } from "../../composables/useUserRoles";
 import { resolveResponseTitle } from "../../utils/responseTitle";
@@ -310,6 +320,10 @@ const props = defineProps({
   userRoles: {
     type: Array,
     default: () => [],
+  },
+  isUnassigned: {
+    type: Boolean,
+    default: false,
   },
 });
 

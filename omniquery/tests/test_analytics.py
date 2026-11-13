@@ -35,7 +35,7 @@ class TestIssue47Analytics(FrappeTestCase):
 			_make_user(user, roles)
 		cls.project = {key: _make_project(key, members) for key, members in PROJECTS.items()}
 		template = {key: _make_template(cls.project[key]) for key in PROJECTS}
-		own = _make_surveyor("Issue47 Field Surveyor", SURVEYOR)
+		own = frappe.db.get_value("OmniQuery Surveyor", {"user": SURVEYOR}, "name")  # made when they joined A (#57)
 		namesake = _make_surveyor(SURVEYOR, NAMESAKE)  # named SURV-<surveyor's email>, but someone else's
 		cls.own_surveyor = own
 		_make_response(template["A"], SURVEYOR, own, "Approved")

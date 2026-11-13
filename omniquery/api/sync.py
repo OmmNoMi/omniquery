@@ -12,6 +12,8 @@ from frappe.utils import (
 )
 from frappe.utils.data import convert_utc_to_system_timezone
 
+from omniquery.omniquery.doctype.omniquery_surveyor.omniquery_surveyor import ensure_surveyor_for_user
+
 from .survey import resolve_template_name, user_has_template_permission
 
 
@@ -89,14 +91,7 @@ def resolve_surveyor(user_or_name=None):
 	if s:
 		return s
 	try:
-		doc = frappe.get_doc({
-			"doctype": "OmniQuery Surveyor",
-			"surveyor_name": user.split("@")[0] if "@" in user else user,
-			"user": user if frappe.db.exists("User", user) else "Administrator",
-			"status": "Active",
-		})
-		doc.insert(ignore_permissions=True)
-		return doc.name
+		return ensure_surveyor_for_user(user if frappe.db.exists("User", user) else "Administrator")
 	except Exception:
 		return "SURV-Administrator"
 

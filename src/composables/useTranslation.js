@@ -48,6 +48,7 @@ const CORE_HINDI = {
   "Saved offline": "ऑफ़लाइन सुरक्षित किया गया",
   "No active surveys available.": "कोई सक्रिय सर्वेक्षण उपलब्ध नहीं है।",
   "Check your network connection or permissions.": "अपना नेटवर्क कनेक्शन या अनुमतियां जांचें।",
+  "You are not assigned to a project yet. Ask your supervisor.": "आपको अभी किसी परियोजना में नहीं जोड़ा गया है। अपने पर्यवेक्षक से पूछें।",
   "Text Size": "अक्षर आकार",
   "Sections": "अनुभाग",
   "Questions": "प्रश्न",

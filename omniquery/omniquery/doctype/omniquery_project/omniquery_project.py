@@ -1,7 +1,11 @@
 import frappe
 from frappe.model.document import Document
 
+from omniquery.omniquery.doctype.omniquery_surveyor.omniquery_surveyor import ensure_surveyor_for_user
 from omniquery.permissions import remove_project_user_permissions, sync_user_project_roles
+
+# the project role of the people who fill surveys in the PWA
+SURVEYOR_PROJECT_ROLE = "Project User"
 
 
 class OmniQueryProject(Document):
@@ -21,7 +25,11 @@ class OmniQueryProject(Document):
 		# only users whose (user, project role) rows changed can need different access
 		before = self.get_doc_before_save()
 		changed = _member_pairs(self) ^ (_member_pairs(before) if before else set())
-		_sync_users({user for user, _role in changed})
+		users = {user for user, _role in changed}
+		_sync_users(users)
+		# a new field member can fill surveys straight away; their KPIs and sync credit need the record (#57)
+		for user in users & {m.user for m in self.members if m.user and m.project_role == SURVEYOR_PROJECT_ROLE}:
+			ensure_surveyor_for_user(user)
 
 	def on_trash(self):
 		# Frappe refuses the delete while a User Permission still links to this project

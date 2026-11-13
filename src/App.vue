@@ -229,6 +229,7 @@
       <div v-else class="space-y-4">
         <!-- 0. Active Project Header Section with Persistent Switcher & Training Material Link -->
         <ProjectHeaderCard
+          v-if="showCatalog"
           :templates="availableTemplates"
           :cachedTemplatesMap="cachedTemplatesMap"
           :isOnline="isOnline"
@@ -244,6 +245,7 @@
           :activeDrafts="activeDrafts"
           :templates="availableTemplates"
           :selectedProject="selectedProject"
+          :isUnassigned="isUnassigned"
           @open-wal="showWALDrawer = true"
           @sync-now="triggerSync"
           @resume-draft="selectSurvey"
@@ -253,7 +255,7 @@
         />
 
         <!-- 2. Survey Templates Section Header & Search/Filter Controls -->
-        <div class="space-y-2.5 pt-1">
+        <div v-if="showCatalog" class="space-y-2.5 pt-1">
           <div class="flex items-center justify-between text-xs font-bold px-1">
             <span class="uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <ClipboardList class="w-3.5 h-3.5 text-slate-400" />
@@ -287,8 +289,8 @@
 
 
 
-        <!-- Empty State -->
-        <div v-if="filteredTemplates.length === 0" class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+        <!-- Empty State (an unassigned user sees the dashboard's ask-your-supervisor card instead) -->
+        <div v-if="showCatalog && filteredTemplates.length === 0" class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
           <p class="text-sm font-bold text-slate-700">{{ __('No active surveys available.') }}</p>
           <p class="text-xs text-slate-500">{{ __('Check your network connection or permissions.') }}</p>
         </div>
@@ -544,6 +546,7 @@ const {
   activeTemplate,
   activeSectionIndex,
   availableTemplates,
+  isUnassigned,
   sections,
   activeSection,
   activeQuestions,
@@ -765,6 +768,9 @@ const workspacesList = computed(() => {
   }
   return Array.from(map.values());
 });
+
+// someone in no project with no public survey to fill has no catalog to show (#57)
+const showCatalog = computed(() => !isUnassigned.value || availableTemplates.value.length > 0);
 
 const filteredTemplates = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();

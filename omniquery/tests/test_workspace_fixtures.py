@@ -58,11 +58,11 @@ class TestWorkspaceFixtures(FrappeTestCase):
 		def exists_without_archive(doctype, *args, **kwargs):
 			return None if doctype == "Workspace Sidebar" else real_exists(doctype, *args, **kwargs)
 
-		# db.delete, not delete_doc: in developer mode delete_doc on a standard icon deletes its shipped JSON file
-		frappe.db.delete("Desktop Icon", {"name": "OmniQuery"})
-		frappe.db.delete("Has Role", {"parenttype": "Desktop Icon", "parent": "OmniQuery"})
-		with patch.object(frappe.db, "exists", exists_without_archive):
-			install.after_migrate()
+		# in developer mode, deleting and re-inserting a standard icon deletes and rewrites its shipped JSON file
+		with patch.dict(frappe.conf, {"developer_mode": 0}):
+			frappe.delete_doc("Desktop Icon", "OmniQuery", force=True, ignore_permissions=True)
+			with patch.object(frappe.db, "exists", exists_without_archive):
+				install.after_migrate()
 
 		self.assertTrue(frappe.db.exists("Desktop Icon", "OmniQuery"))
 

@@ -199,6 +199,24 @@ describe("SurveyorDashboard", () => {
       expect(wrapper.text()).toContain("लक्ष्य के लिए 4 शेष");
     });
   });
+
+  it("tells an unassigned user to ask their supervisor, and still shows their unsynced queue (#57)", async () => {
+    const wrapper = mount(SurveyorDashboard, {
+      props: { isUnassigned: true, pendingWALCount: 3, isOnline: true, userRoles: ["OmniQuery User"] },
+    });
+    const card = wrapper.find("[role='status']");
+    expect(card.exists()).toBe(true);
+    expect(card.text()).toContain("You are not assigned to a project yet. Ask your supervisor.");
+    expect(card.find("svg").attributes("aria-hidden")).toBe("true");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("5"));
+    expect(wrapper.text()).toContain("3");
+    expect(wrapper.text()).not.toContain("5 / 10"); // no daily target for someone in no project
+  });
+
+  it("does not take an empty survey list for being unassigned (#57)", () => {
+    const wrapper = mount(SurveyorDashboard, { props: { templates: [], isOnline: true } });
+    expect(wrapper.text()).not.toContain("not assigned to a project");
+  });
 });
 
 function mockKpis(message) {

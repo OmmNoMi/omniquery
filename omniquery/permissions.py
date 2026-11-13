@@ -45,6 +45,19 @@ def is_site_wide_reviewer(user: str) -> bool:
 	return is_super_user(user) or REVIEWER_ROLE in frappe.get_roles(user)
 
 
+def is_unassigned(user: str) -> bool:
+	"""Signed in, but in no project and with no site-wide role: the PWA asks them to see their supervisor (#57)."""
+	return bool(user) and user != "Guest" and not is_site_wide_reviewer(user) and not get_member_projects(user)
+
+
+def can_view_project(project: str, user: str) -> bool:
+	"""Project details are for its members and site-wide reviewers, or anyone when it runs a public survey (#57)."""
+	if is_site_wide_reviewer(user) or _get_user_project_roles(project, user):
+		return True
+	public = {"project": project, "status": "Published", "docstatus": 1}
+	return bool(frappe.get_all("OmniQuery Template", filters=public, or_filters={"is_public": 1, "is_public_citizen_link": 1}, limit=1))
+
+
 def has_template_permission(doc, ptype: str = "read", user: str | None = None) -> bool:
 	user = user or frappe.session.user
 	if is_super_user(user):
