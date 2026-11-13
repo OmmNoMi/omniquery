@@ -3,10 +3,8 @@ from frappe.model.document import Document
 
 
 class OmniQuerySupervisorAudit(Document):
-	def validate(self):
-		if not self.supervisor:
+	def before_insert(self):
+		"""The supervisor is whoever records the audit; only a System Manager may record one on someone's
+		behalf. The field is set-only-once, so a later edit by another manager cannot re-sign it."""
+		if not self.supervisor or "System Manager" not in frappe.get_roles():
 			self.supervisor = frappe.session.user
-		# Ensure non-System Manager users cannot forge supervisor identity
-		if self.supervisor != frappe.session.user and not frappe.has_role("System Manager"):
-			self.supervisor = frappe.session.user
-

@@ -153,12 +153,16 @@
    "label": "Telemetry & Quality Signals"
   },
   {
+   "depends_on": "eval:doc.time_spent_seconds",
+   "description": "Hidden when not measured.",
    "fieldname": "time_spent_seconds",
    "fieldtype": "Int",
    "label": "Time Spent (Seconds)",
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.gps_distance_variance_meters",
+   "description": "Hidden when not measured (no GPS, or no respondent location).",
    "fieldname": "gps_distance_variance_meters",
    "fieldtype": "Float",
    "label": "GPS Variance vs Centroid (Meters)",

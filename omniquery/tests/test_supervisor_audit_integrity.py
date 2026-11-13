@@ -1,189 +1,195 @@
-import uuid
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from omniquery.api.sync import batch_push
+
+from omniquery.api.sync import AUDIT_THRESHOLD_DEFAULTS, audit_thresholds, batch_push, gps_reason, speedrun_reason
+from omniquery.patches.v1_0 import dedupe_surveyor_users, remove_machine_supervisor_audits
+from omniquery.tests.utils import delete_test_docs
+
+# batch_push commits mid-request, so the FrappeTestCase rollback cannot undo it: tearDownClass deletes
+# everything these tests create, matched by this prefix.
+PREFIX = f"TEST-AUDIT-{frappe.generate_hash(length=6)}"
+AUDIT = "OmniQuery Supervisor Audit"
+SETTINGS = "OmniQuery Settings"
+
+
+def make_user(suffix, role):
+	return frappe.get_doc({"doctype": "User", "email": f"{PREFIX.lower()}-{suffix}@example.com", "first_name": PREFIX,
+		"send_welcome_email": 0, "roles": [{"role": role}]}).insert(ignore_permissions=True).name
 
 
 class TestSupervisorAuditIntegrity(FrappeTestCase):
-	def setUp(self):
-		self.test_records = []
-		# Project fixture
-		self.proj = frappe.db.get_value("OmniQuery Project", {"status": "Active"}, "name")
-		if not self.proj:
-			p = frappe.get_doc({
-				"doctype": "OmniQuery Project",
-				"project_name": "Test Audit Integrity Project",
-				"status": "Active",
-			}).insert(ignore_permissions=True)
-			self.proj = p.name
-			self.test_records.append(("OmniQuery Project", self.proj))
+	@classmethod
+	def setUpClass(cls):
+		super().setUpClass()
+		frappe.set_user("Administrator")
+		cls.manager, cls.other_manager = make_user("manager", "OmniQuery Manager"), make_user("manager2", "OmniQuery Manager")
+		cls.field_user = make_user("field", "OmniQuery User")
+		cls.surveyor = frappe.get_doc({"doctype": "OmniQuery Surveyor", "surveyor_name": PREFIX,
+			"user": cls.field_user, "status": "Active"}).insert(ignore_permissions=True).name
+		project = frappe.get_doc({"doctype": "OmniQuery Project", "project_name": PREFIX,
+			"grantor_organization": "Test", "status": "Active"}).insert(ignore_permissions=True)
+		cls.template = frappe.get_doc({"doctype": "OmniQuery Template", "title": PREFIX, "project": project.name,
+			"version": 1, "status": "Published"}).insert(ignore_permissions=True).name
+		frappe.db.commit()
 
-		# Template fixture
-		t = frappe.get_doc({
-			"doctype": "OmniQuery Template",
-			"title": "Audit Integrity Test Template",
-			"project": self.proj,
-			"version": 1,
-			"status": "Published",
-		}).insert(ignore_permissions=True)
-		self.tmpl = t.name
-		self.test_records.append(("OmniQuery Template", self.tmpl))
+	@classmethod
+	def tearDownClass(cls):
+		frappe.set_user("Administrator")
+		responses = frappe.get_all("OmniQuery Response", filters={"survey_template": cls.template}, pluck="name")
+		delete_test_docs([
+			(AUDIT, {"survey_response": ["in", responses or [""]]}),
+			("OmniQuery Response", {"name": ["in", responses or [""]]}),
+			("OmniQuery Sync Audit Log", {"idempotency_key": ["like", f"{PREFIX}%"]}),
+			("OmniQuery Field Error Log", {"question_code": ["like", f"{PREFIX}%"]}),
+			("OmniQuery Template", {"name": cls.template}),
+			("OmniQuery Project", {"project_name": PREFIX}),
+			("OmniQuery Surveyor", {"surveyor_name": ["like", f"{PREFIX}%"]}),
+			("User", {"name": ["in", [cls.manager, cls.other_manager, cls.field_user]]}),
+		])
+		frappe.db.commit()
+		super().tearDownClass()
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
-		for dt, dn in reversed(self.test_records):
-			try:
-				if frappe.db.exists(dt, dn):
-					frappe.delete_doc(dt, dn, force=True)
-			except Exception:
-				pass
+
+	def push(self, key, questions=6, **extra):
+		payload = {"idempotency_key": f"{PREFIX}-{key}", "survey_template": self.template, "template_version": 1,
+			"surveyor": self.surveyor, **extra,
+			"items": [{"question_code": f"Q_{i}", "question_label": f"Q {i}", "value": f"A {i}"} for i in range(questions)]}
+		result = batch_push(submissions=[payload])["results"][0]
+		self.assertEqual(result["status"], "SUCCESS", result)
+		return frappe.get_doc("OmniQuery Response", result["doc_name"])
+
+	def with_settings(self, values):
+		"""Set threshold fields for one test and put the saved values (or their absence) back after it."""
+		saved = frappe.db.get_singles_dict(SETTINGS)
+		for field, value in values.items():
+			frappe.db.set_single_value(SETTINGS, field, value)
+		self.addCleanup(self.restore_settings, {field: saved.get(field) for field in values})
+
+	def restore_settings(self, saved):
+		for field, value in saved.items():
+			if value is None:
+				frappe.db.delete("Singles", {"doctype": SETTINGS, "field": field})
+			else:
+				frappe.db.set_single_value(SETTINGS, field, value)
 		frappe.db.commit()
 
-	def test_sync_does_not_create_supervisor_audit_and_sets_outlier_signal(self):
-		"""
-		Issue #59 Invariant: Syncing a response must NOT create an automated Supervisor Audit
-		with a human verdict and forged supervisor identity.
-		Instead, automated telemetry signals must be saved directly on OmniQuery Response.
-		"""
-		key = f"TEST-SPEEDRUN-{uuid.uuid4().hex[:6]}"
-		payload = {
-			"idempotency_key": key,
-			"survey_template": self.tmpl,
-			"template_version": 1,
-			"surveyor": "SURV-Administrator",
-			"time_spent_seconds": 5,  # 5 seconds for 6 questions (Outlier)
-			"items": [
-				{"question_code": f"Q_{i}", "question_label": f"Question {i}", "value": f"Ans {i}"}
-				for i in range(1, 7)
-			],
-		}
+	# sync records signals on the Response, never an audit
 
-		res = batch_push(submissions=[payload])
-		self.assertEqual(res["results"][0]["status"], "SUCCESS")
-		doc_name = res["results"][0]["doc_name"]
-		self.test_records.append(("OmniQuery Response", doc_name))
+	def test_speedrun_is_flagged_on_the_response_and_no_audit_is_made(self):
+		self.with_settings(AUDIT_THRESHOLD_DEFAULTS)
+		doc = self.push("SPEED", time_spent_seconds=5)
+		self.assertFalse(frappe.db.exists(AUDIT, {"survey_response": doc.name}))
+		self.assertEqual((doc.is_outlier_flagged, doc.time_spent_seconds, doc.survey_status), (1, 5, "Audit Flagged"))
+		self.assertIn("Speedrun detected: 5s for 6 questions", doc.outlier_reasons)
 
-		# Zero machine-generated Supervisor Audit
-		audit_name = f"AUDIT-{doc_name}"
-		self.assertFalse(
-			frappe.db.exists("OmniQuery Supervisor Audit", audit_name),
-			f"Supervisor Audit {audit_name} was synthesized by machine during sync. Audits must only be created by human supervisors."
-		)
+	def test_normal_sync_is_not_flagged(self):
+		self.with_settings(AUDIT_THRESHOLD_DEFAULTS)
+		doc = self.push("NORMAL", time_spent_seconds=90)
+		self.assertFalse(frappe.db.exists(AUDIT, {"survey_response": doc.name}))
+		self.assertEqual((doc.is_outlier_flagged, doc.outlier_reasons, doc.survey_status), (0, None, "Submitted"))
 
-		# Signals must be on OmniQuery Response
-		resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
-		self.assertEqual(resp_doc.is_outlier_flagged, 1)
-		self.assertIn("Speedrun detected", resp_doc.outlier_reasons or "")
-		self.assertEqual(resp_doc.survey_status, "Audit Flagged")
+	def test_unmeasured_telemetry_is_zero_and_hidden(self):
+		doc = self.push("UNKNOWN")
+		self.assertEqual((doc.time_spent_seconds, doc.gps_distance_variance_meters, doc.is_outlier_flagged), (0, 0, 0))
+		meta = frappe.get_meta("OmniQuery Response")
+		for field in ("time_spent_seconds", "gps_distance_variance_meters"):
+			self.assertEqual(meta.get_field(field).depends_on, f"eval:doc.{field}")
 
-	def test_normal_sync_creates_no_audit_and_flag_is_zero(self):
-		"""
-		Telemetry Invariant: Normal survey sync creates NO Supervisor Audit record
-		and sets is_outlier_flagged = 0 on OmniQuery Response.
-		"""
-		key = f"TEST-NORMAL-{uuid.uuid4().hex[:6]}"
-		payload = {
-			"idempotency_key": key,
-			"survey_template": self.tmpl,
-			"template_version": 1,
-			"surveyor": "SURV-Administrator",
-			"time_spent_seconds": 90,  # 90s for 6 questions (Normal)
-			"items": [
-				{"question_code": f"Q_{i}", "question_label": f"Question {i}", "value": f"Ans {i}"}
-				for i in range(1, 7)
-			],
-		}
+	# thresholds come from OmniQuery Settings
 
-		res = batch_push(submissions=[payload])
-		doc_name = res["results"][0]["doc_name"]
-		self.test_records.append(("OmniQuery Response", doc_name))
+	def test_settings_thresholds_drive_the_sync(self):
+		self.with_settings({"speed_threshold_sec_per_question": 20, "min_questions_for_speed_check": 5})
+		self.assertEqual(self.push("STRICT", time_spent_seconds=90).is_outlier_flagged, 1, "90s < 6 x 20s")
+		self.with_settings({"speed_threshold_sec_per_question": 3, "min_questions_for_speed_check": 10})
+		self.assertEqual(self.push("FEW", time_spent_seconds=5).is_outlier_flagged, 0, "6 questions < 10 minimum")
 
-		audit_name = f"AUDIT-{doc_name}"
-		self.assertFalse(
-			frappe.db.exists("OmniQuery Supervisor Audit", audit_name),
-			"Supervisor Audit was incorrectly created for normal submission."
-		)
+	def test_zero_thresholds_are_honoured_and_unsaved_ones_default(self):
+		self.with_settings({**AUDIT_THRESHOLD_DEFAULTS, "speed_threshold_sec_per_question": 0, "gps_distance_threshold_m": 0})
+		thresholds = audit_thresholds()
+		self.assertIsNone(speedrun_reason(6, 1, thresholds), "a 0s-per-question limit flags nothing")
+		self.assertIn("GPS variance high", gps_reason(1, thresholds), "a 0m limit flags any distance")
+		frappe.db.delete("Singles", {"doctype": SETTINGS, "field": ["in", list(AUDIT_THRESHOLD_DEFAULTS)]})
+		self.assertEqual(audit_thresholds(), AUDIT_THRESHOLD_DEFAULTS)
 
-		resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
-		self.assertEqual(resp_doc.is_outlier_flagged, 0)
-		self.assertEqual(resp_doc.survey_status, "Submitted")
+	# an audit is signed by the person who records it
 
-	def test_manager_has_create_and_write_permissions_on_supervisor_audit(self):
-		"""
-		Issue #59 Invariant: OmniQuery Manager role must have create and write DocPerms
-		on OmniQuery Supervisor Audit.
-		"""
-		manager_email = "oq.manager.test@example.com"
-		frappe.set_user(manager_email)
-		self.assertTrue(
-			frappe.has_permission("OmniQuery Supervisor Audit", "read"),
-			"OmniQuery Manager must have read permission on OmniQuery Supervisor Audit"
-		)
-		self.assertTrue(
-			frappe.has_permission("OmniQuery Supervisor Audit", "create"),
-			"OmniQuery Manager must have create permission on OmniQuery Supervisor Audit"
-		)
-		self.assertTrue(
-			frappe.has_permission("OmniQuery Supervisor Audit", "write"),
-			"OmniQuery Manager must have write permission on OmniQuery Supervisor Audit"
-		)
+	def test_audit_is_signed_by_the_manager_who_records_it(self):
+		response = self.push("SIGN", time_spent_seconds=90).name
+		frappe.set_user(self.manager)
+		audit = frappe.get_doc({"doctype": AUDIT, "survey_response": response, "supervisor": self.other_manager,
+			"audit_verdict": "Verified", "audit_remarks": "Checked by phone."}).insert()
+		self.assertEqual(audit.supervisor, self.manager, "a manager cannot sign an audit as someone else")
 
-	def test_supervisor_audit_created_by_manager_records_manager_identity(self):
-		"""
-		Identity Invariant: When an OmniQuery Manager creates a Supervisor Audit,
-		the supervisor field must reflect the authenticated manager, not Administrator or surveyor.
-		"""
-		manager_email = "oq.manager.test@example.com"
-		key = f"TEST-MANUAL-{uuid.uuid4().hex[:6]}"
-		payload = {
-			"idempotency_key": key,
-			"survey_template": self.tmpl,
-			"template_version": 1,
-			"surveyor": "SURV-Administrator",
-			"time_spent_seconds": 90,
-			"items": [{"question_code": "Q_1", "question_label": "Q1", "value": "A1"}],
-		}
-		res = batch_push(submissions=[payload])
-		doc_name = res["results"][0]["doc_name"]
-		self.test_records.append(("OmniQuery Response", doc_name))
+	def test_system_manager_may_record_an_audit_for_a_supervisor(self):
+		response = self.push("BEHALF", time_spent_seconds=90).name
+		audit = frappe.get_doc({"doctype": AUDIT, "survey_response": response, "supervisor": self.manager,
+			"audit_verdict": "Verified"}).insert()
+		self.assertEqual(audit.supervisor, self.manager)
 
-		frappe.set_user(manager_email)
-		audit_doc = frappe.get_doc({
-			"doctype": "OmniQuery Supervisor Audit",
-			"survey_response": doc_name,
-			"audit_verdict": "Verified",
-			"audit_remarks": "Manually verified by field operations manager.",
-		}).insert()
-		self.test_records.append(("OmniQuery Supervisor Audit", audit_doc.name))
+	def test_editing_an_audit_does_not_re_sign_it(self):
+		response = self.push("EDIT", time_spent_seconds=90).name
+		frappe.set_user(self.manager)
+		name = frappe.get_doc({"doctype": AUDIT, "survey_response": response, "audit_verdict": "Verified"}).insert().name
+		frappe.set_user(self.other_manager)
+		audit = frappe.get_doc(AUDIT, name)
+		audit.audit_remarks = "Second look."
+		audit.save()
+		self.assertEqual(frappe.db.get_value(AUDIT, name, "supervisor"), self.manager)
+		audit.supervisor = self.other_manager
+		self.assertRaises(frappe.CannotChangeConstantError, audit.save)
 
-		self.assertEqual(audit_doc.supervisor, manager_email)
+	def test_quality_signals_cannot_be_edited_by_a_reviewer(self):
+		name = self.push("GUARD", time_spent_seconds=5).name
+		frappe.set_user(self.manager)
+		doc = frappe.get_doc("OmniQuery Response", name)
+		doc.is_outlier_flagged, doc.outlier_reasons = 0, None
+		self.assertRaises(frappe.ValidationError, doc.save)
+		frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("OmniQuery Response", name, "is_outlier_flagged"), 1)
 
-	def test_thresholds_configured_in_settings(self):
-		"""
-		Configuration Invariant: Outlier thresholds must be configurable in OmniQuery Settings,
-		not hard-coded in python modules.
-		"""
-		settings = frappe.get_doc("OmniQuery Settings")
-		self.assertTrue(
-			hasattr(settings, "speed_threshold_sec_per_question"),
-			"OmniQuery Settings is missing speed_threshold_sec_per_question field"
-		)
-		self.assertTrue(
-			hasattr(settings, "min_questions_for_speed_check"),
-			"OmniQuery Settings is missing min_questions_for_speed_check field"
-		)
-		self.assertTrue(
-			hasattr(settings, "gps_distance_threshold_m"),
-			"OmniQuery Settings is missing gps_distance_threshold_m field"
-		)
+	# migration patches
 
-	def test_surveyor_user_uniqueness(self):
-		"""
-		Data Correctness Invariant: An OmniQuery Surveyor record's linked Frappe User
-		must be unique to prevent multi-surveyor identity collisions.
-		"""
-		field = frappe.get_meta("OmniQuery Surveyor").get_field("user")
-		self.assertTrue(
-			bool(field.unique),
-			"OmniQuery Surveyor 'user' field must be unique."
-		)
+	def test_cleanup_patch_moves_machine_signals_and_keeps_human_audits(self):
+		machine, human = self.push("OLD-MACHINE").name, self.push("OLD-HUMAN").name
+		self.insert_audit(machine, "Flagged for Re-Survey", "Speedrun detected: 4s for 6 questions (min threshold: 18s)",
+			time_spent_seconds=4, is_outlier_flagged=1)
+		kept = self.insert_audit(human, "Verified", "Visited the household.")
+		remove_machine_supervisor_audits.execute()
+		self.assertFalse(frappe.db.exists(AUDIT, {"survey_response": machine}))
+		self.assertTrue(frappe.db.exists(AUDIT, kept))
+		signals = frappe.db.get_value("OmniQuery Response", machine, ["time_spent_seconds", "is_outlier_flagged",
+			"outlier_reasons"], as_dict=True)
+		self.assertEqual((signals.time_spent_seconds, signals.is_outlier_flagged), (4, 1))
+		self.assertTrue(signals.outlier_reasons.startswith("Speedrun detected"))
+
+	def test_cleanup_patch_removes_verified_machine_audits(self):
+		response = self.push("OLD-VERIFIED").name
+		self.insert_audit(response, "Verified", remove_machine_supervisor_audits.VERIFIED_REMARK, time_spent_seconds=60)
+		remove_machine_supervisor_audits.execute()
+		self.assertFalse(frappe.db.exists(AUDIT, {"survey_response": response}))
+		self.assertEqual(frappe.db.get_value("OmniQuery Response", response, "time_spent_seconds"), 60)
+
+	def test_dedupe_patch_detaches_a_surveyor_and_says_why(self):
+		# the unique index stops a second link being made, so the detach step is tested on its own
+		user = make_user("dup", "OmniQuery User")
+		self.addCleanup(frappe.delete_doc, "User", user, force=True, ignore_permissions=True)
+		name = frappe.get_doc({"doctype": "OmniQuery Surveyor", "surveyor_name": f"{PREFIX}-DUP", "user": user,
+			"status": "Active"}).insert(ignore_permissions=True).name
+		self.assertNotIn(user, dedupe_surveyor_users.duplicate_users())
+		dedupe_surveyor_users.detach(name, user)
+		self.assertEqual(frappe.db.get_value("OmniQuery Surveyor", name, ["user", "status"]), (None, "Inactive"))
+		self.assertTrue(frappe.db.exists("Comment", {"reference_name": name, "content": ["like", f"%{user}%"]}))
+
+	def test_surveyor_user_is_unique(self):
+		self.assertTrue(frappe.get_meta("OmniQuery Surveyor").get_field("user").unique)
+		self.assertRaises(frappe.UniqueValidationError, frappe.get_doc({"doctype": "OmniQuery Surveyor",
+			"surveyor_name": f"{PREFIX}-TWIN", "user": self.field_user, "status": "Active"}).insert, ignore_permissions=True)
+
+	def insert_audit(self, response, verdict, remarks, **signals):
+		"""An audit as the old sync wrote it, with the signals cleared from its Response as they were then."""
+		frappe.db.set_value("OmniQuery Response", response, {"time_spent_seconds": 0, "is_outlier_flagged": 0,
+			"outlier_reasons": None})
+		return frappe.get_doc({"doctype": AUDIT, "survey_response": response, "audit_verdict": verdict,
+			"audit_remarks": remarks, **signals}).insert(ignore_permissions=True).name
