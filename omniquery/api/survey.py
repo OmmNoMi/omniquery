@@ -387,11 +387,33 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 
 @frappe.whitelist(allow_guest=True)
 def get_surveyor_kpis(project=None):
-	"""Today's, this week's, all-time and approved counts of the session user's own responses."""
+	"""Today's, this week's, all-time and approved counts of the session user's own responses.
+
+	daily_target is None when no target applies, so the dashboard shows no made-up goal (#55).
+	"""
 	counts = dict.fromkeys(("today_count", "week_count", "total_count", "approved_count"), 0)
-	if frappe.session.user != "Guest":
-		counts.update(_own_response_counts(frappe.session.user, project))
-	return {**counts, "daily_target": 10}
+	if frappe.session.user == "Guest":
+		return {**counts, "daily_target": None}
+	counts.update(_own_response_counts(frappe.session.user, project))
+	return {**counts, "daily_target": _daily_target(frappe.session.user, project)}
+
+
+def _daily_target(user: str, project=None) -> int | None:
+	"""The member's own target, else their project's; across projects only when every one agrees (#55)."""
+	rows = frappe.get_all(
+		"OmniQuery Project Member", filters={"parenttype": "OmniQuery Project", "user": user}, fields=["parent", "daily_target"]
+	)
+	if project and project != "ALL":
+		rows = [row for row in rows if row.parent == project]
+	defaults = _project_targets({row.parent for row in rows})
+	targets = {row.daily_target or defaults.get(row.parent) or None for row in rows}
+	return targets.pop() if len(targets) == 1 else None
+
+
+def _project_targets(projects: set[str]) -> dict:
+	if not projects:
+		return {}
+	return dict(frappe.get_all("OmniQuery Project", filters={"name": ["in", list(projects)]}, fields=["name", "daily_target"], as_list=True))
 
 
 def _own_response_counts(user: str, project=None) -> dict:

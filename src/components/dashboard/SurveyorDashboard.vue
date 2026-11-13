@@ -32,9 +32,9 @@
       </div>
     </div>
 
-    <!-- Daily Target Goal Progress Strip (Field Surveyors) -->
+    <!-- Daily Target Goal Progress Strip (Field Surveyors with a configured target) -->
     <div
-      v-if="isSurveyor && !isManager"
+      v-if="isSurveyor && !isManager && dailyTarget"
       class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5"
     >
       <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -324,7 +324,7 @@ const emit = defineEmits([
 
 const { __ } = useTranslation();
 
-const dailyTarget = ref(10);
+const dailyTarget = ref(null);
 const serverTodayCount = ref(0);
 const serverTotalCount = ref(0);
 const serverApprovedCount = ref(0);
@@ -403,8 +403,10 @@ async function fetchServerMetrics() {
       serverTodayCount.value = Number(msg.today_count) || 0;
       serverTotalCount.value = Number(msg.total_count) || 0;
       serverApprovedCount.value = Number(msg.approved_count) || 0;
-      if (msg.daily_target) {
+      if (msg.daily_target != null && Number(msg.daily_target) > 0) {
         dailyTarget.value = Number(msg.daily_target);
+      } else {
+        dailyTarget.value = null;
       }
     }
   } catch (e) {}
@@ -424,9 +426,12 @@ const targetProgressPct = computed(() => {
 });
 
 const remainingTodayText = computed(() => {
+  if (!dailyTarget.value) {
+    return completedToday.value === 1 ? __("1 survey today") : __("{0} surveys today", [completedToday.value]);
+  }
   const left = dailyTarget.value - completedToday.value;
   if (left <= 0) return __("Target reached!");
-  return `${left} ${__("left for target")}`;
+  return __("{0} left for target", [left]);
 });
 
 const activeDraftsCount = computed(() => {

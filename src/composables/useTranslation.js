@@ -1,6 +1,9 @@
 import { ref, computed } from "vue";
 
 const CORE_HINDI = {
+  "{0} surveys today": "आज {0} सर्वेक्षण",
+  "1 survey today": "आज 1 सर्वेक्षण",
+  "{0} left for target": "लक्ष्य के लिए {0} शेष",
   "Surveys": "सर्वेक्षण सूची",
   "Start Survey": "सर्वेक्षण शुरू करें",
   "Start Survey →": "सर्वेक्षण शुरू करें →",
@@ -53,9 +56,19 @@ const CORE_HINDI = {
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";
 const currentLang = ref(initialLang);
 
+function fillPlaceholders(text, args) {
+  if (!args) return text;
+  return text.replace(/\{(\d+)\}/g, (match, i) => (args[i] === undefined ? match : String(args[i])));
+}
+
 export function useTranslation() {
-  function __(text) {
+  // same signature as Frappe's __(text, replace): "{0}" placeholders are filled from args
+  function __(text, args) {
     if (!text) return "";
+    return fillPlaceholders(translate(text), args);
+  }
+
+  function translate(text) {
     if (currentLang.value === "en") return text;
     const globalDict = (typeof window !== "undefined" && window.__messages) || {};
     return globalDict[text] || CORE_HINDI[text] || text;
