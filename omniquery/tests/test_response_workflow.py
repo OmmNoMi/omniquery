@@ -37,13 +37,15 @@ class TestResponseWorkflow(FrappeTestCase):
 	def tearDown(self):
 		frappe.set_user("Administrator")
 
-	def _response(self, status="Submitted"):
-		frappe.set_user("Administrator")
-		return frappe.get_doc({
+	def _response(self, status="Submitted", owner="Administrator"):
+		frappe.set_user(owner)  # the inserting user owns the row, as sync makes the surveyor own it
+		doc = frappe.get_doc({
 			"doctype": "OmniQuery Response", "idempotency_key": f"TEST-WF-{frappe.generate_hash(length=8)}",
 			"survey_template": self.template, "template_version": 1, "survey_status": status,
 			"surveyor": self.surveyor, "docstatus": SYNC_DOCSTATUS[status],
 		}).insert(ignore_permissions=True)
+		frappe.set_user("Administrator")
+		return doc
 
 	def test_manager_approves_a_synced_response_and_it_is_versioned(self):
 		resp = self._response()
@@ -54,7 +56,8 @@ class TestResponseWorkflow(FrappeTestCase):
 		self.assertTrue(any("survey_status" in d for d in data), data)
 
 	def test_surveyor_cannot_approve(self):
-		resp = self._response()
+		"""Even their own response: review is the reviewer's, and the surveyor can read this one."""
+		resp = self._response(owner=SURVEYOR)
 		frappe.set_user(SURVEYOR)
 		with self.assertRaises(frappe.ValidationError):
 			apply_response_workflow(resp.name, "Approve")

@@ -1,6 +1,8 @@
 import frappe
 from frappe.model.document import Document
 
+from omniquery.permissions import remove_project_user_permissions, sync_user_project_roles
+
 
 class OmniQueryProject(Document):
 	def autoname(self):
@@ -14,6 +16,21 @@ class OmniQueryProject(Document):
 			return
 		workspace_sequence = self.workspace.replace("OQW-", "").replace("WSP-", "") if self.workspace else "001"
 		self.name = frappe.model.naming.make_autoname(f"OQP-{workspace_sequence}-.###")
+
+	def on_update(self):
+		# only users whose (user, project role) rows changed can need different access
+		before = self.get_doc_before_save()
+		changed = _member_pairs(self) ^ (_member_pairs(before) if before else set())
+		_sync_users({user for user, _role in changed})
+
+	def on_trash(self):
+		# Frappe refuses the delete while a User Permission still links to this project
+		remove_project_user_permissions(self.name)
+
+	def after_delete(self):
+		# the member rows are gone now, so each user is synced without this project
+		_sync_users({m.user for m in self.members if m.user})
+
 	def has_project_role(self, user: str, role: str) -> bool:
 		if not user:
 			return False
@@ -26,3 +43,12 @@ class OmniQueryProject(Document):
 			if m.user == user:
 				return m.project_role
 		return None
+
+
+def _member_pairs(doc) -> set[tuple[str, str]]:
+	return {(m.user, m.project_role) for m in doc.members if m.user}
+
+
+def _sync_users(users: set[str]):
+	for user in users:
+		sync_user_project_roles(user)

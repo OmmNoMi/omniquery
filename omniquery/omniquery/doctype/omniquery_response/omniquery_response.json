@@ -8,8 +8,9 @@
  "field_order": [
   "idempotency_key",
   "survey_template",
+  "project",
   "template_version",
-  "entrepreneur",
+  "respondent",
   "surveyor",
   "survey_status",
   "column_break_geo",
@@ -49,6 +50,17 @@
    "label": "Survey Template",
    "options": "OmniQuery Template",
    "reqd": 1
+  },
+  {
+   "description": "Copied from the template. Analysts and viewers see only responses of their own projects, through the User Permissions project membership keeps.",
+   "fetch_from": "survey_template.project",
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Project",
+   "options": "OmniQuery Project",
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "template_version",
@@ -203,7 +215,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-10 01:00:00.000000",
+ "modified": "2026-11-13 12:00:00.000000",
  "modified_by": "Administrator",
  "is_submittable": 1,
  "module": "OmniQuery",
@@ -227,14 +239,21 @@
    "write": 1
   },
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
    "read": 1,
-   "role": "All",
+   "report": 1,
+   "role": "OmniQuery Admin",
+   "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
    "create": 1,
-   "delete": 0,
    "email": 1,
    "export": 1,
    "print": 1,
@@ -244,6 +263,26 @@
    "share": 1,
    "submit": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "role": "OmniQuery User",
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Analyst"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "role": "OmniQuery Viewer"
   }
  ],
  "sort_field": "creation",
