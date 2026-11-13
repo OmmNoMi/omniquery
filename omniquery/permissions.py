@@ -17,6 +17,8 @@ MEMBER_ROLE_GRANTS = {
 SYNCED_ROLES = set(MEMBER_ROLE_GRANTS.values())
 # project roles that may export the project's responses through api.export
 EXPORT_PROJECT_ROLES = ("Project Admin", "Project Manager", "Project Analyst")
+# project roles that read the project's responses in Desk, and so its analytics (#47)
+READ_PROJECT_ROLES = tuple(MEMBER_ROLE_GRANTS)
 # the scoped doctype: sync owns every User Permission on OmniQuery Project applicable to it
 SCOPED_DOCTYPE = "OmniQuery Response"
 
@@ -77,6 +79,17 @@ def get_member_projects(user: str, project_roles=None) -> list[str]:
 	if project_roles:
 		filters["project_role"] = ["in", list(project_roles)]
 	return frappe.get_all("OmniQuery Project Member", filters=filters, pluck="parent", distinct=True)
+
+
+def permitted_projects(project, project_roles, message: str) -> list[str] | None:
+	"""The projects the session user reaches through project_roles; None means every project (site-wide reviewer)."""
+	user = frappe.session.user
+	if is_site_wide_reviewer(user):
+		return [project] if project else None
+	allowed = get_member_projects(user, project_roles)
+	if not allowed or (project and project not in allowed):
+		frappe.throw(message, frappe.PermissionError)
+	return [project] if project else allowed
 
 
 def get_template_query_conditions(user: str | None = None) -> str:
