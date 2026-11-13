@@ -1,3 +1,6 @@
+// the server refuses these without a reason (omniquery_response.REASON_STATES)
+const REASON_ACTIONS = ["Flag for Audit", "Reject"];
+
 frappe.ui.form.on("OmniQuery Response", {
 	refresh(frm) {
 		render_audio_player(frm);
@@ -5,40 +8,12 @@ frappe.ui.form.on("OmniQuery Response", {
 	},
 	before_workflow_action(frm) {
 		const action = frm.selected_workflow_action;
-		if (action === "Flag for Audit" || action === "Reject") {
-			return new Promise((resolve, reject) => {
-				frappe.prompt(
-					[
-						{
-							fieldname: "reason",
-							fieldtype: "Small Text",
-							label: __(action === "Reject" ? "Rejection Reason" : "Audit Flag Reason"),
-							reqd: 1,
-						},
-					],
-					(vals) => {
-						frappe.call({
-							method: "omniquery.omniquery.doctype.omniquery_response.omniquery_response.apply_response_workflow",
-							args: {
-								doc: frm.doc.name,
-								action: action,
-								reason: vals.reason,
-							},
-							callback: (r) => {
-								if (!r.exc) {
-									frm.reload_doc();
-								}
-								reject();
-							},
-							error: () => {
-								reject();
-							},
-						});
-					},
-					__(action),
-					__("Confirm")
-				);
-			});
+		if (REASON_ACTIONS.includes(action)) {
+			// Frappe froze the page before calling this hook; unfreeze so the prompt can be used.
+			// The promise never settles, so Frappe's own apply_workflow (which drops the reason) never runs.
+			frappe.dom.unfreeze();
+			prompt_review_reason(frm, action);
+			return new Promise(() => {});
 		}
 	},
 	audio_recording(frm) {
@@ -51,6 +26,26 @@ frappe.ui.form.on("OmniQuery Response", {
 		render_gps_preview(frm);
 	},
 });
+
+function prompt_review_reason(frm, action) {
+	const label = action === "Reject" ? __("Rejection Reason") : __("Audit Flag Reason");
+	frappe.prompt(
+		[{ fieldname: "reason", fieldtype: "Small Text", label, reqd: 1 }],
+		({ reason }) =>
+			frappe
+				.xcall("omniquery.omniquery.doctype.omniquery_response.omniquery_response.apply_response_workflow", {
+					doc: frm.doc.name,
+					action,
+					reason,
+				})
+				.then(() => {
+					frm.selected_workflow_action = null;
+					frm.reload_doc();
+				}),
+		__(action),
+		__("Confirm")
+	);
+}
 
 function render_audio_player(frm) {
 	if (!frm.doc.audio_recording) {
