@@ -3,11 +3,13 @@ import { mount } from "@vue/test-utils";
 import JSZip from "jszip";
 import FilledFormsModal from "../dashboard/FilledFormsModal.vue";
 import { db } from "../../services/db";
+import { useTranslation } from "../../composables/useTranslation.js";
 
 describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
   let el;
 
   beforeEach(async () => {
+    useTranslation().setLanguage("en");
     el = document.createElement("div");
     el.id = "modal-root";
     document.body.appendChild(el);
@@ -103,7 +105,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
     });
 
     // Wait for async loadResponses()
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     expect(document.body.textContent).toContain("On this device");
@@ -126,7 +129,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     // Click Drafts filter button
@@ -154,7 +158,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     // Find and click the Resume button
@@ -182,7 +187,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     // Spy on link download click
@@ -216,7 +222,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     const csvContent = wrapper.vm.generateCsvString();
@@ -239,7 +246,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     const zipFileSpy = vi.spyOn(JSZip.prototype, "file");
@@ -265,12 +273,11 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    await wrapper.vm.$nextTick();
-
-    const buttons = Array.from(document.body.querySelectorAll("button"));
-    const backBtn = buttons.find((b) => b.textContent?.includes("Back"));
-    expect(backBtn).toBeDefined();
+    let backBtn;
+    await vi.waitFor(() => {
+      backBtn = Array.from(document.body.querySelectorAll("button")).find((b) => b.textContent?.includes("Back"));
+      expect(backBtn).toBeDefined();
+    });
 
     backBtn.click();
     expect(wrapper.emitted("close")).toBeTruthy();

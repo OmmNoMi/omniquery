@@ -1,18 +1,14 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      ref="dialogRef"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="filled-forms-modal-title"
-      tabindex="-1"
-      class="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 h-screen w-screen flex flex-col overflow-hidden animate-fade-in select-none overscroll-contain focus:outline-none"
-      @keydown.esc.stop="closeModal"
-      @wheel.stop
-    >
+  <!-- frappe-ui Dialog: focus trap, focus return, scroll lock and topmost-only Escape (#56) -->
+  <Dialog
+    :modelValue="isOpen"
+    :options="{ size: '4xl' }"
+    @update:modelValue="(open) => !open && closeModal()"
+  >
+    <template #body>
+    <div class="bg-slate-100 dark:bg-slate-950 max-h-[calc(100dvh-6rem)] flex flex-col overflow-hidden select-none">
       <!-- 1. Full-Page Top App Bar -->
-      <header class="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-xs">
+      <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-xs">
         <div class="flex items-center gap-3 min-w-0">
           <Button
             @click="closeModal"
@@ -24,12 +20,12 @@
           </Button>
 
           <div class="min-w-0">
-            <h1 id="filled-forms-modal-title" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+            <DialogTitle as="h1" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
               {{ __('On this device') }}
-            </h1>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              {{ responsesList.length }} {{ __('records') }}
-            </p>
+            </DialogTitle>
+            <DialogDescription as="p" class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              {{ recordCountText(responsesList.length) }}
+            </DialogDescription>
           </div>
         </div>
 
@@ -189,7 +185,7 @@
       </div>
 
       <!-- 4. Scrollable Full-Page List of Cards -->
-      <main class="flex-1 overflow-y-auto p-4 sm:p-6 max-w-4xl w-full mx-auto space-y-5">
+      <main class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 w-full space-y-5">
         <!-- Empty State -->
         <div v-if="filteredResponses.length === 0" class="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
           <div class="flex justify-center mb-1"><FileText class="w-10 h-10 text-slate-300 dark:text-slate-600" /></div>
@@ -207,7 +203,7 @@
           <div class="flex items-center gap-2 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-1">
             <Calendar class="w-3.5 h-3.5" />
             <span>{{ group.dateLabel }}</span>
-            <span class="text-[10px] font-normal lowercase">({{ group.items.length }} {{ __('records') }})</span>
+            <span class="text-[10px] font-normal lowercase">({{ recordCountText(group.items.length) }})</span>
           </div>
 
           <!-- Response Cards in Date Group -->
@@ -344,63 +340,83 @@
         </div>
       </main>
 
-      <!-- 5. Cross-Verification Inspector Dialog (Universal BaseModal with built-in scroll lock) -->
-      <BaseModal
-        :isOpen="Boolean(selectedInspectResponse)"
-        size="xl"
-        :title="selectedInspectResponse ? `${__('Cross-Verification')}: ${selectedInspectResponse.response_uid}` : ''"
-        :subtitle="selectedInspectResponse?.template_title || selectedInspectResponse?.template_name || ''"
-        @close="selectedInspectResponse = null"
+      <!-- 5. Cross-Verification Inspector: a nested Dialog, so Escape closes only it (#56) -->
+      <Dialog
+        :modelValue="Boolean(selectedInspectResponse)"
+        :options="{ size: 'xl' }"
+        @update:modelValue="(open) => !open && (selectedInspectResponse = null)"
       >
-        <div v-if="selectedInspectResponse" class="p-4 sm:p-5 space-y-3">
-          <div
-            v-for="(val, code) in (selectedInspectResponse.responses || {})"
-            :key="code"
-            class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-left space-y-1"
-          >
-            <div class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
-              {{ code }}
+        <template #body>
+          <div v-if="selectedInspectResponse" class="max-h-[calc(100dvh-6rem)] flex flex-col">
+            <div class="px-4 py-3 sm:px-5 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0">
+              <div class="min-w-0">
+                <DialogTitle as="h2" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white break-words">
+                  {{ __('Cross-Verification') }}: {{ selectedInspectResponse.response_uid }}
+                </DialogTitle>
+                <DialogDescription as="p" class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {{ selectedInspectResponse.template_title || selectedInspectResponse.template_name }}
+                </DialogDescription>
+              </div>
+              <Button
+                @click="selectedInspectResponse = null"
+                class="w-8 h-8 rounded-full text-slate-500 dark:text-slate-400 flex items-center justify-center cursor-pointer shrink-0"
+                :aria-label="__('Close')"
+                :title="__('Close')"
+              >
+                <X class="w-4 h-4" aria-hidden="true" />
+              </Button>
             </div>
-            <div class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 break-words">
-              {{ formatValue(val) }}
+            <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <div v-if="selectedInspectResponse" class="p-4 sm:p-5 space-y-3">
+              <div
+                v-for="(val, code) in (selectedInspectResponse.responses || {})"
+                :key="code"
+                class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-left space-y-1"
+              >
+                <div class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                  {{ code }}
+                </div>
+                <div class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 break-words">
+                  {{ formatValue(val) }}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-
-        <template #footer>
-          <div v-if="selectedInspectResponse" class="w-full flex justify-between gap-2 items-center">
-            <Button
-              @click="copyResponseJson(selectedInspectResponse)"
-              class="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1.5"
-            >
-              <Check v-if="copiedJsonId === selectedInspectResponse.response_uid" class="w-3.5 h-3.5" />
-              <Copy v-else class="w-3.5 h-3.5" />
-              <span>{{ copiedJsonId === selectedInspectResponse.response_uid ? __('Copied') : __('Copy JSON') }}</span>
-            </Button>
-            <Button
-              @click="selectedInspectResponse = null"
-              class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
-            >
-              <span>{{ __('Verified Good') }}</span>
-              <Check class="w-3.5 h-3.5" />
-            </Button>
+            </div>
+            <div class="px-4 py-3 sm:px-5 border-t border-slate-200 dark:border-slate-800 shrink-0">
+              <div v-if="selectedInspectResponse" class="w-full flex justify-between gap-2 items-center">
+                <Button
+                  @click="copyResponseJson(selectedInspectResponse)"
+                  class="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check v-if="copiedJsonId === selectedInspectResponse.response_uid" class="w-3.5 h-3.5" />
+                  <Copy v-else class="w-3.5 h-3.5" />
+                  <span>{{ copiedJsonId === selectedInspectResponse.response_uid ? __('Copied') : __('Copy JSON') }}</span>
+                </Button>
+                <Button
+                  @click="selectedInspectResponse = null"
+                  class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>{{ __('Verified Good') }}</span>
+                  <Check class="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
           </div>
         </template>
-      </BaseModal>
+      </Dialog>
     </div>
-  </Teleport>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch, toRef, nextTick } from "vue";
-import { Button } from "frappe-ui";
+import { computed, ref, watch } from "vue";
+import { Button, Dialog } from "frappe-ui";
+import { DialogDescription, DialogTitle } from "reka-ui";
 import { X, Zap, ChevronDown, Trash2, FileText, Calendar, Check, Copy } from "lucide-vue-next";
 import JSZip from "jszip";
-import BaseModal from "../common/BaseModal.vue";
-import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import { useWAL } from "../../composables/useWAL";
-import { useDrafts } from "../../composables/useDrafts";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db, compactLocalStorage } from "../../services/db";
 
@@ -423,28 +439,19 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "sync-all", "resume-draft"]);
+// drafts-changed: a draft was discarded or storage pruned, so the dashboard re-reads its drafts (#56)
+const emit = defineEmits(["close", "sync-all", "resume-draft", "drafts-changed"]);
 
 const { __ } = useTranslation();
 const { forceSyncAll, retryQuarantinedEntry } = useWAL();
-const { setDrafts } = useDrafts();
-
-const dialogRef = ref(null);
-let openerElement = null;
 
 function closeModal() {
   emit("close");
 }
 
-function handleKeyDown(e) {
-  if (props.isOpen && e.key === "Escape") {
-    e.stopPropagation();
-    closeModal();
-  }
+function recordCountText(count) {
+  return count === 1 ? __("1 record") : __("{0} records", [count]);
 }
-
-// Universal scroll locking: strictly prevents background scrolling while open
-useScrollLock(toRef(props, "isOpen"));
 
 const responsesList = ref([]);
 const activeFilter = ref("all");
@@ -461,8 +468,6 @@ async function loadResponses() {
   try {
     // 1. Fetch all records from db.responses
     const localResponses = await db.responses.toArray();
-    const drafts = localResponses.filter((r) => r.status === "Draft");
-    setDrafts(drafts);
 
     // 2. Fetch all records from db.wal
     const walEntries = await db.wal.toArray();
@@ -620,6 +625,7 @@ async function deleteSpecificDraft(responseUid) {
     try {
       await db.responses.delete(responseUid);
       await loadResponses();
+      emit("drafts-changed");
     } catch (e) {
       console.warn("Failed to delete draft:", e);
     }
@@ -952,6 +958,7 @@ function inspectResponse(resp) {
 async function handleCompactStorage() {
   const pruned = await compactLocalStorage(30);
   await loadResponses();
+  emit("drafts-changed");
   if (pruned > 0) {
     syncFeedbackMessage.value = `${__('Cleaned up')} ${pruned} ${__('old synced responses to free local storage')}`;
   } else {
@@ -961,51 +968,4 @@ async function handleCompactStorage() {
     syncFeedbackMessage.value = "";
   }, 4000);
 }
-
-watch(
-  () => props.isOpen,
-  async (open) => {
-    if (open) {
-      if (typeof document !== "undefined") {
-        openerElement = document.activeElement;
-      }
-      loadResponses();
-      await nextTick();
-      if (dialogRef.value) {
-        const firstFocusable = dialogRef.value.querySelector("button, [tabindex='0']");
-        if (firstFocusable && typeof firstFocusable.focus === "function") {
-          firstFocusable.focus();
-        } else if (typeof dialogRef.value.focus === "function") {
-          dialogRef.value.focus();
-        }
-      }
-    } else {
-      if (openerElement && typeof openerElement.focus === "function") {
-        openerElement.focus();
-        openerElement = null;
-      }
-    }
-  }
-);
-
-onMounted(() => {
-  if (typeof window !== "undefined") {
-    window.addEventListener("keydown", handleKeyDown);
-  }
-  if (props.isOpen) {
-    if (typeof document !== "undefined") {
-      openerElement = document.activeElement;
-    }
-    loadResponses();
-  }
-});
-
-onUnmounted(() => {
-  if (typeof window !== "undefined") {
-    window.removeEventListener("keydown", handleKeyDown);
-  }
-  if (openerElement && typeof openerElement.focus === "function") {
-    openerElement.focus();
-  }
-});
 </script>

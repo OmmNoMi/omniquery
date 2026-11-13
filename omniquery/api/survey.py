@@ -2,6 +2,10 @@ import json
 
 import frappe
 from frappe import _
+from frappe.query_builder import Case
+from frappe.query_builder import functions as fn
+
+from omniquery.permissions import can_view_project, has_template_permission, is_super_user, is_unassigned
 
 
 def resolve_template_name(template_name: str) -> str:
@@ -27,61 +31,38 @@ def resolve_template_name(template_name: str) -> str:
 
 
 def user_has_template_permission(template, user=None):
-	"""
-	Strict RBAC & Access Control for Survey Templates.
-	Rules:
-	1. Administrator and System Manager have unconditional access.
-	2. If is_public is true (1), all users (including Guest) can access.
-	3. If user is Guest and not public -> Denied.
-	4. If allowed_users is specified, user must be in the comma-separated list.
-	5. If allowed_roles is specified, user must possess at least one of the roles.
-	6. If neither is specified, fallback to standard Frappe document permission check.
-	"""
-	if not user:
-		user = frappe.session.user
+	"""Can the user open this template in the PWA, and sync responses to it? (#57)
 
-	user_roles = set(frappe.get_roles(user))
-	if "System Manager" in user_roles or "Administrator" in user_roles or user == "Administrator":
-		return True
-
+	Public templates are open to everyone. Any other template needs project membership, through
+	permissions.has_template_permission, and its allowed_users / allowed_roles then narrow that.
+	Super users always pass.
+	"""
+	user = user or frappe.session.user
 	if isinstance(template, str):
-		template = resolve_template_name(template)
-		template = frappe.db.get_value(
-			"OmniQuery Template",
-			template,
-			["name", "is_public", "is_public_citizen_link", "allowed_roles", "allowed_users"],
-			as_dict=True,
-		)
-		if not template:
-			return False
-
-	is_public = getattr(template, "is_public", 0) or getattr(template, "is_public_citizen_link", 0)
-	if is_public:
+		template = _get_template_access_fields(template)
+	if not template or not has_template_permission(template, "read", user):
+		return False
+	if is_super_user(user) or _is_public(template):
 		return True
+	return _in_allow_lists(template, user)
 
-	if user == "Guest":
-		return False
 
-	allowed_users_raw = getattr(template, "allowed_users", None) or ""
-	if allowed_users_raw:
-		allowed_users = [u.strip().lower() for u in allowed_users_raw.split(",") if u.strip()]
-		if user.lower() in allowed_users:
-			return True
+def _get_template_access_fields(template_name):
+	fields = ["name", "project", "is_public", "is_public_citizen_link", "allowed_roles", "allowed_users"]
+	return frappe.db.get_value("OmniQuery Template", resolve_template_name(template_name), fields, as_dict=True)
 
-	allowed_roles_raw = getattr(template, "allowed_roles", None) or ""
-	if allowed_roles_raw:
-		allowed_roles = [r.strip() for r in allowed_roles_raw.split(",") if r.strip()]
-		if any(role in user_roles for role in allowed_roles):
-			return True
 
-	# If neither allowed_roles nor allowed_users are specified, check DocPerm
-	if not allowed_roles_raw and not allowed_users_raw:
-		tmpl_name = getattr(template, "name", None)
-		if tmpl_name:
-			return frappe.has_permission("OmniQuery Template", "read", doc=tmpl_name, user=user)
-		return False
+def _is_public(template):
+	return bool(getattr(template, "is_public", 0) or getattr(template, "is_public_citizen_link", 0))
 
-	return False
+
+def _in_allow_lists(template, user):
+	"""allowed_users / allowed_roles narrow a project's templates; with neither set, every member passes."""
+	users = {u.strip().lower() for u in (getattr(template, "allowed_users", None) or "").split(",") if u.strip()}
+	roles = {r.strip() for r in (getattr(template, "allowed_roles", None) or "").split(",") if r.strip()}
+	if not users and not roles:
+		return True
+	return user.lower() in users or bool(roles & set(frappe.get_roles(user)))
 
 
 def get_template_permission_query_conditions(user=None):
@@ -146,7 +127,7 @@ def enrich_template_meta(tmpl, p_map, w_map):
 @frappe.whitelist(allow_guest=True)
 def list_active_templates(project=None):
 	"""Returns all published survey templates accessible to current user according to RBAC."""
-	filters = {"status": "Published"}
+	filters = {"status": "Published", "docstatus": 1}
 	if project:
 		filters["project"] = project
 
@@ -160,6 +141,7 @@ def list_active_templates(project=None):
 			"version",
 			"target_category",
 			"is_public",
+			"is_public_citizen_link",
 			"allowed_roles",
 			"allowed_users",
 			"schema_hash_sha256",
@@ -275,7 +257,7 @@ def get_bootstrap_data():
 	user_info = get_current_user_info()
 	templates = frappe.get_all(
 		"OmniQuery Template",
-		filters={"status": "Published"},
+		filters={"status": "Published", "docstatus": 1},
 		fields=[
 			"name",
 			"title",
@@ -283,6 +265,7 @@ def get_bootstrap_data():
 			"version",
 			"target_category",
 			"is_public",
+			"is_public_citizen_link",
 			"allowed_roles",
 			"allowed_users",
 			"schema_hash_sha256",
@@ -320,6 +303,8 @@ def get_bootstrap_data():
 		if isinstance(user_info, dict)
 		else str(user_info),
 		"templates": authorized,
+		# no project and no site-wide role: the PWA tells them to ask their supervisor (#57)
+		"is_unassigned": is_unassigned(current_user),
 	}
 
 
@@ -385,114 +370,70 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 
 @frappe.whitelist(allow_guest=True)
 def get_surveyor_kpis(project=None):
+	"""Today's, this week's, all-time and approved counts of the session user's own responses.
+
+	daily_target is None when no target applies, so the dashboard shows no made-up goal (#55).
 	"""
-	Returns daily and aggregate KPI statistics for the current surveyor, optionally filtered by project.
-	"""
-	user = frappe.session.user
-	today_start = frappe.utils.today() + " 00:00:00"
-	week_start = frappe.utils.add_days(frappe.utils.today(), -frappe.utils.get_datetime().weekday()) + " 00:00:00"
+	counts = dict.fromkeys(("today_count", "week_count", "total_count", "approved_count"), 0)
+	if frappe.session.user == "Guest":
+		return {**counts, "daily_target": None}
+	counts.update(_own_response_counts(frappe.session.user, project))
+	return {**counts, "daily_target": _daily_target(frappe.session.user, project)}
 
-	today_count = 0
-	week_count = 0
-	total_count = 0
 
-	if user != "Guest":
-		try:
-			Response = frappe.qb.DocType("OmniQuery Response")
+def _daily_target(user: str, project=None) -> int | None:
+	"""The member's own target, else their project's; across projects only when every one agrees (#55)."""
+	rows = frappe.get_all(
+		"OmniQuery Project Member", filters={"parenttype": "OmniQuery Project", "user": user}, fields=["parent", "daily_target"]
+	)
+	if project and project != "ALL":
+		rows = [row for row in rows if row.parent == project]
+	defaults = _project_targets({row.parent for row in rows})
+	targets = {row.daily_target or defaults.get(row.parent) or None for row in rows}
+	return targets.pop() if len(targets) == 1 else None
 
-			def build_query(since=None):
-				query = (
-					frappe.qb.from_(Response)
-					.select(frappe.qb.fn.Count("*"))
-					.where(Response.survey_status != "Draft")
-					.where((Response.owner == user) | (Response.surveyor.like(f"%{user}%")))
-				)
-				if since:
-					query = query.where(Response.creation >= since)
-				if project and project != "ALL":
-					Template = frappe.qb.DocType("OmniQuery Template")
-					tmpl_subquery = (
-						frappe.qb.from_(Template)
-						.select(Template.name)
-						.where((Template.project == project) | (Template.name == project))
-					)
-					query = query.where(Response.survey_template.isin(tmpl_subquery))
-				return query
 
-			today_res = build_query(since=today_start).run()
-			today_count = (today_res and today_res[0][0]) or 0
+def _project_targets(projects: set[str]) -> dict:
+	if not projects:
+		return {}
+	return dict(frappe.get_all("OmniQuery Project", filters={"name": ["in", list(projects)]}, fields=["name", "daily_target"], as_list=True))
 
-			week_res = build_query(since=week_start).run()
-			week_count = (week_res and week_res[0][0]) or 0
 
-			total_res = build_query().run()
-			total_count = (total_res and total_res[0][0]) or 0
+def _own_response_counts(user: str, project=None) -> dict:
+	response = frappe.qb.DocType("OmniQuery Response")
+	query = frappe.qb.from_(response).where(response.survey_status != "Draft").where(_own_responses(response, user))
+	if project and project != "ALL":
+		query = query.where(response.project == project)
+	today = frappe.utils.today()
+	week = frappe.utils.add_days(today, -frappe.utils.getdate(today).weekday())
+	row = query.select(*_kpi_columns(response, today, week)).run(as_dict=True)[0]
+	return {key: int(value or 0) for key, value in row.items()}
 
-			# Query supervisor approval count
-			appr_query = build_query().where(Response.survey_status == "Approved")
-			appr_res = appr_query.run()
-			approved_count = (appr_res and appr_res[0][0]) or 0
-		except Exception:
-			approved_count = 0
 
-	return {
-		"today_count": today_count,
-		"week_count": week_count,
-		"total_count": total_count,
-		"approved_count": approved_count,
-		"daily_target": 10,
-	}
+def _own_responses(response, user: str):
+	"""Rows the user owns or that sync credited to a Surveyor linked to them; no name guessing (#47)."""
+	surveyors = frappe.get_all("OmniQuery Surveyor", filters={"user": user}, pluck="name")
+	return (response.owner == user) | response.surveyor.isin(surveyors) if surveyors else response.owner == user
+
+
+def _kpi_columns(response, today: str, week: str):
+	def since(day, alias):
+		return fn.Sum(Case().when(response.creation >= f"{day} 00:00:00", 1).else_(0)).as_(alias)
+
+	approved = fn.Sum(Case().when(response.survey_status == "Approved", 1).else_(0)).as_("approved_count")
+	return since(today, "today_count"), since(week, "week_count"), fn.Count(response.name).as_("total_count"), approved
 
 
 @frappe.whitelist(allow_guest=True)
 def get_project_details(project_id=None):
 	"""
 	Returns comprehensive project metadata, guidelines, SOPs, and training materials.
-	"""
-	if not project_id:
-		tmpl = frappe.db.get_value("OmniQuery Template", {"status": "Published"}, "project")
-		project_id = tmpl or "OQP-001-001"
 
-	proj = frappe.db.get_value(
-		"OmniQuery Project",
-		project_id,
-		[
-			"name",
-			"project_name",
-			"grantor_organization",
-			"workspace",
-			"description",
-			"district_scope",
-			"target_beneficiaries",
-			"start_date",
-			"end_date",
-		],
-		as_dict=True,
-	)
-	if not proj:
-		proj = frappe.db.get_value(
-			"OmniQuery Project",
-			{"project_name": project_id},
-			[
-				"name",
-				"project_name",
-				"grantor_organization",
-				"workspace",
-				"description",
-				"district_scope",
-				"target_beneficiaries",
-				"start_date",
-				"end_date",
-			],
-			as_dict=True,
-		)
-		if not proj:
-			proj = {
-				"name": project_id,
-				"project_name": project_id,
-				"grantor_organization": "State Rural Livelihoods Mission / SVEP",
-				"description": "Field Survey & Beneficiary Enterprise Assessment",
-			}
+	Only for a project the caller may see (permissions.can_view_project); otherwise {} (#57).
+	"""
+	proj = _find_project(project_id)
+	if not proj or not can_view_project(proj.name, frappe.session.user):
+		return {}
 
 	# Training modules & field SOPs for surveyors
 	training_modules = [
@@ -552,3 +493,23 @@ def get_project_details(project_id=None):
 	}
 
 
+PROJECT_DETAIL_FIELDS = [
+	"name",
+	"project_name",
+	"grantor_organization",
+	"workspace",
+	"description",
+	"district_scope",
+	"target_beneficiaries",
+	"start_date",
+	"end_date",
+]
+
+
+def _find_project(project_id):
+	"""The project by name, or by project_name as older PWA links pass it."""
+	if not project_id:
+		return None
+	return frappe.db.get_value("OmniQuery Project", project_id, PROJECT_DETAIL_FIELDS, as_dict=True) or frappe.db.get_value(
+		"OmniQuery Project", {"project_name": project_id}, PROJECT_DETAIL_FIELDS, as_dict=True
+	)

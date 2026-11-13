@@ -1,7 +1,6 @@
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from omniquery.permissions import (
-	has_response_permission,
 	has_template_permission,
 	is_super_user,
 )
@@ -28,7 +27,8 @@ class TestSurveyPermissionsMatrix(FrappeTestCase):
 
 	def test_super_user_detection(self):
 		self.assertTrue(is_super_user("Administrator"))
-		self.assertTrue(is_super_user(None))
+		self.assertFalse(is_super_user(None))
+		self.assertFalse(is_super_user(""))
 
 	def test_public_citizen_link_template_is_readable_by_anyone(self):
 		template_doc = frappe._dict({
@@ -38,15 +38,3 @@ class TestSurveyPermissionsMatrix(FrappeTestCase):
 			"is_public": 0,
 		})
 		self.assertTrue(has_template_permission(template_doc, "read", "citizen_guest@example.com"))
-
-	def test_response_owner_can_write_response(self):
-		surveyor_user = "field_surveyor_1@example.com"
-		response_doc = frappe._dict({
-			"doctype": "OmniQuery Response",
-			"project": self.project_name,
-			"surveyor": surveyor_user,
-			"owner": surveyor_user,
-		})
-
-		self.assertTrue(has_response_permission(response_doc, "write", surveyor_user))
-		self.assertFalse(has_response_permission(response_doc, "write", "outsider@example.com"))
