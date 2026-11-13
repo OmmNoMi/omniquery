@@ -14,6 +14,7 @@
   "start_date",
   "end_date",
   "target_beneficiaries",
+  "daily_target",
   "section_scope",
   "district_scope",
   "description",
@@ -74,6 +75,13 @@
    "label": "Target Beneficiaries"
   },
   {
+   "fieldname": "daily_target",
+   "fieldtype": "Int",
+   "label": "Daily Target (Surveys/Day)",
+   "description": "Default daily target number of completed surveys per surveyor",
+   "non_negative": 1
+  },
+  {
    "fieldname": "section_scope",
    "fieldtype": "Section Break",
    "label": "Geographic Scope & Notes"
@@ -103,7 +111,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-29 13:50:00.000000",
+ "modified": "2026-11-13 13:00:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Project",
