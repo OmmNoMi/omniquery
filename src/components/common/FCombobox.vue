@@ -2,9 +2,8 @@
   <div class="relative w-full text-left" ref="rootContainer" data-f-combobox>
     <div class="relative flex items-center w-full">
       <!-- Trigger Button -->
-      <button
+      <Button
         ref="triggerBtn"
-        type="button"
         role="combobox"
         :aria-expanded="isOpen ? 'true' : 'false'"
         :aria-haspopup="multiple ? 'listbox' : 'listbox'"
@@ -56,12 +55,11 @@
             <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
         </span>
-      </button>
+      </Button>
 
       <!-- Absolute Clear Button (sibling over trigger to keep HTML5 tree spec valid) -->
-      <button
+      <Button
         v-if="clearable && hasSelection && !disabled"
-        type="button"
         @click.stop="clearAll"
         :aria-label="__('Clear selection')"
         class="absolute right-9 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md transition cursor-pointer"
@@ -70,7 +68,7 @@
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
-      </button>
+      </Button>
     </div>
 
     <!-- Dropdown Popover Panel -->
@@ -87,18 +85,18 @@
             <circle cx="11" cy="11" r="8"></circle>
             <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
           </svg>
-          <input
+          <TextInput
             ref="searchInput"
-            v-model="searchQuery"
+            :modelValue="searchQuery"
+            @update:modelValue="(val) => (searchQuery = val)"
             type="text"
             :placeholder="searchPlaceholder || __('Search options...')"
             @keydown="onSearchKeydown"
             class="w-full text-xs pl-8 pr-7 py-2.5 rounded-xl border outline-none transition bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:ring-2 focus:ring-[#4285F4]/20 focus:border-[#4285F4]"
             aria-autocomplete="list"
           />
-          <button
+          <Button
             v-if="searchQuery"
-            type="button"
             @mousedown.prevent
             @click="onClearSearch"
             class="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
@@ -108,7 +106,7 @@
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -123,11 +121,10 @@
       <!-- Scrollable Options List: Chip / Button Cards Grid -->
       <div class="max-h-72 overflow-y-auto p-1" ref="optionsList">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" role="listbox">
-          <button
+          <Button
             v-for="(option, index) in filteredOptions"
             :key="option.value"
-            :ref="(el) => { if (el) optionRefs[index] = el; }"
-            type="button"
+            :ref="(el) => { if (el) optionRefs[index] = el.$el || el; }"
             role="option"
             :aria-selected="isOptionSelected(option.value) ? 'true' : 'false'"
             @click="selectOption(option)"
@@ -172,7 +169,7 @@
             </span>
 
             <span class="truncate text-xs sm:text-sm font-semibold leading-snug flex-1">{{ option.label }}</span>
-          </button>
+          </Button>
         </div>
 
         <div v-if="filteredOptions.length === 0" class="py-6 text-center text-xs text-slate-400">
@@ -182,13 +179,12 @@
 
       <!-- Multiselect Bottom Action Footer (Clean Done Button on Right, No Duplicate Selected Count) -->
       <div v-if="multiple" class="pt-2 mt-1 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-end px-1">
-        <button
-          type="button"
+        <Button
           @click="closeCombobox"
           class="px-4 py-1.5 rounded-lg bg-[#4285F4] hover:bg-blue-600 active:scale-95 text-white font-bold text-xs shadow-xs transition cursor-pointer"
         >
           {{ __('Done') }}
-        </button>
+        </Button>
       </div>
     </div>
   </div>
@@ -196,6 +192,7 @@
 
 <script setup>
 import { ref, computed, nextTick, watch, onMounted, onUnmounted } from "vue";
+import { Button, TextInput } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({
@@ -293,10 +290,20 @@ function openCombobox() {
   highlightedIndex.value = 0;
 }
 
+function focusTrigger() {
+  const el = triggerBtn.value?.$el || triggerBtn.value?.el || triggerBtn.value;
+  el?.focus?.();
+}
+
+function focusSearch() {
+  const el = searchInput.value?.$el?.querySelector("input") || searchInput.value?.el || searchInput.value;
+  el?.focus?.({ preventScroll: true });
+}
+
 function closeCombobox() {
   isOpen.value = false;
   searchQuery.value = "";
-  if (triggerBtn.value) triggerBtn.value.focus();
+  focusTrigger();
 }
 
 function onTriggerKeydown(e) {
@@ -370,7 +377,7 @@ function removeOption(val) {
 
 function clearAll() {
   emit("update:modelValue", props.multiple ? [] : "");
-  if (isOpen.value && searchInput.value) searchInput.value.focus();
+  if (isOpen.value) focusSearch();
 }
 
 function handleClickOutside(e) {
@@ -382,7 +389,7 @@ function handleClickOutside(e) {
 function onClearSearch() {
   searchQuery.value = "";
   nextTick(() => {
-    searchInput.value?.focus({ preventScroll: true });
+    focusSearch();
   });
 }
 
@@ -396,7 +403,7 @@ watch(isOpen, async (open) => {
     highlightedIndex.value = 0;
     optionRefs.value = [];
     await nextTick();
-    if (searchInput.value) searchInput.value.focus({ preventScroll: true });
+    focusSearch();
   } else {
     searchQuery.value = "";
   }
@@ -411,6 +418,6 @@ onUnmounted(() => {
 });
 
 defineExpose({
-  focus: () => triggerBtn.value?.focus(),
+  focus: () => focusTrigger(),
 });
 </script>

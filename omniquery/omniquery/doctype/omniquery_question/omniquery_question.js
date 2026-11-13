@@ -1,7 +1,7 @@
 frappe.ui.form.on("OmniQuery Question", {
 	refresh(frm) {
 		if (!frm.is_new() && frm.doc.scope !== "Platform") {
-			frm.add_custom_button(__("🚀 Elevate Scope"), () => {
+			frm.add_custom_button(__("Elevate Scope"), () => {
 				open_elevate_scope_dialog(frm);
 			}, __("Actions"));
 		}

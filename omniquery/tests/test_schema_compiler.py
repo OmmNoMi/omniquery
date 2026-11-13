@@ -4,12 +4,12 @@ import unittest
 import frappe
 
 from omniquery.services.schema_compiler import calculate_schema_hash, compile_template_schema
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestSchemaCompiler(unittest.TestCase):
 	def setUp(self):
-		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
+		self._cleanup_test_records()
 
 		frappe.get_doc(
 			{
@@ -195,10 +195,16 @@ class TestSchemaCompiler(unittest.TestCase):
 		}).insert(ignore_permissions=True)
 
 	def tearDown(self):
-		frappe.db.delete("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type"]]})
-		frappe.db.delete("OmniQuery Option Item", {"parent": "Test Animal Species"})
-		frappe.db.delete("OmniQuery Option Set", {"set_name": "Test Animal Species"})
-		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
+		self._cleanup_test_records()
+
+	def _cleanup_test_records(self):
+		delete_test_docs(
+			[
+				("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type"]]}),
+				("OmniQuery Option Set", {"set_name": "Test Animal Species"}),
+				("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),
+				("OmniQuery Project", {"project_name": "Test Dairy Initiative"}),
+			]
+		)
 		frappe.db.commit()
 

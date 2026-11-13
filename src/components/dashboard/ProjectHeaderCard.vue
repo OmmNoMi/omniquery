@@ -3,7 +3,7 @@
     <!-- Top Row Context: Project Counter & Quick Dots -->
     <div v-if="projectList.length > 1" class="flex items-center justify-between px-1 text-xs">
       <div class="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-300">
-        <span>🏛️</span>
+        <Landmark class="w-4 h-4 text-slate-500" />
         <span>{{ __('Active Project') }} ({{ activeIndex + 1 }} {{ __('of') }} {{ projectList.length }})</span>
       </div>
 
@@ -23,9 +23,8 @@
     <!-- Carousel Container with Prominent On-Card Navigation Chevrons -->
     <div class="relative w-full max-w-full min-w-0 group">
       <!-- On-Card Left Carousel Arrow -->
-      <button
+      <Button
         v-if="projectList.length > 1"
-        type="button"
         @click.stop="scrollToIndex(activeIndex - 1)"
         :disabled="activeIndex === 0"
         class="absolute left-1.5 sm:left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/95 dark:bg-slate-800/95 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 disabled:opacity-0 disabled:pointer-events-none transition-all active:scale-90 cursor-pointer"
@@ -35,12 +34,11 @@
         <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
-      </button>
+      </Button>
 
       <!-- On-Card Right Carousel Arrow -->
-      <button
+      <Button
         v-if="projectList.length > 1"
-        type="button"
         @click.stop="scrollToIndex(activeIndex + 1)"
         :disabled="activeIndex === projectList.length - 1"
         class="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/95 dark:bg-slate-800/95 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 disabled:opacity-0 disabled:pointer-events-none transition-all active:scale-90 cursor-pointer"
@@ -50,7 +48,7 @@
         <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
         </svg>
-      </button>
+      </Button>
 
       <!-- Scrollable Snap Container -->
       <div
@@ -74,7 +72,7 @@
           <div class="flex items-center justify-between gap-2 flex-wrap min-w-0">
             <div class="flex items-center gap-1.5 min-w-0 flex-1">
               <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 shrink-0">
-                <span>🏛️</span>
+                <Landmark class="w-3 h-3 text-emerald-700 dark:text-emerald-400" />
                 <span>{{ __('Active Project') }}</span>
               </span>
               <span v-if="proj.workspace_title" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate min-w-0">
@@ -103,8 +101,9 @@
           <!-- Project Surveys Count & Offline Readiness Strip -->
           <div class="flex items-center justify-between gap-2 pt-1 text-xs flex-wrap min-w-0">
             <div class="flex items-center gap-1.5 flex-wrap">
-              <span class="font-bold text-slate-700 dark:text-slate-300">
-                📋 {{ getProjectSurveys(proj.id).length }} {{ __('Surveys') }}
+              <span class="inline-flex items-center gap-1 font-bold text-slate-700 dark:text-slate-300">
+                <ClipboardList class="w-3.5 h-3.5 text-slate-500" />
+                <span>{{ getProjectSurveys(proj.id).length }} {{ __('Surveys') }}</span>
               </span>
               <span>·</span>
               <span
@@ -120,24 +119,22 @@
             </div>
 
             <!-- Download All for Offline Button -->
-            <button
+            <Button
               v-if="!isProjectFullyCached(proj.id) && isOnline && getProjectSurveys(proj.id).length > 0"
-              type="button"
               @click.stop="$emit('download-project-surveys', proj.id)"
               class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-[11px] transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
               :title="__('Download all survey templates for this project so they can be filled offline')"
             >
-              <span>⬇️</span>
+              <Download class="w-3.5 h-3.5" />
               <span>{{ __('Download All for Offline') }}</span>
-            </button>
+            </Button>
           </div>
 
           <!-- Bottom Action Row: On-Card Interactive Switcher + Training Materials -->
           <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap min-w-0">
             <!-- Carousel Switcher Controls directly on Card -->
             <div v-if="projectList.length > 1" class="flex items-center gap-1.5">
-              <button
-                type="button"
+              <Button
                 @click.stop="scrollToIndex(activeIndex - 1)"
                 :disabled="activeIndex === 0"
                 class="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 dark:hover:bg-slate-700 transition disabled:opacity-30 disabled:pointer-events-none active:scale-95 cursor-pointer flex items-center gap-1"
@@ -145,7 +142,7 @@
               >
                 <span>←</span>
                 <span class="hidden sm:inline">{{ __('Prev') }}</span>
-              </button>
+              </Button>
 
               <div class="flex items-center gap-1 px-1">
                 <span
@@ -157,8 +154,7 @@
                 />
               </div>
 
-              <button
-                type="button"
+              <Button
                 @click.stop="scrollToIndex(activeIndex + 1)"
                 :disabled="activeIndex === projectList.length - 1"
                 class="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 dark:hover:bg-slate-700 transition disabled:opacity-30 disabled:pointer-events-none active:scale-95 cursor-pointer flex items-center gap-1"
@@ -166,19 +162,18 @@
               >
                 <span class="hidden sm:inline">{{ __('Next') }}</span>
                 <span>→</span>
-              </button>
+              </Button>
             </div>
             <div v-else class="text-[11px] text-slate-400 font-medium"></div>
 
-            <button
-              type="button"
+            <Button
               @click.stop="$emit('open-project-details', proj.id)"
               class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-xs font-bold transition shadow-2xs cursor-pointer shrink-0"
             >
-              <span>📚</span>
+              <BookOpen class="w-3.5 h-3.5" />
               <span>{{ __('Project Details & Training Materials') }}</span>
               <span>→</span>
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -188,6 +183,8 @@
 
 <script setup>
 import { computed, ref, onMounted, nextTick } from "vue";
+import { Button } from "frappe-ui";
+import { Landmark, ClipboardList, Download, BookOpen } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({

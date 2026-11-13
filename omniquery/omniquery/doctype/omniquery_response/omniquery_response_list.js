@@ -64,7 +64,7 @@ frappe.listview_settings["OmniQuery Response"] = {
 			return Boolean(doc.audio_recording);
 		},
 		get_label: function() {
-			return __("▶ Audio");
+			return __("Audio");
 		},
 		get_description: function(doc) {
 			return __("Play interview audio recording");

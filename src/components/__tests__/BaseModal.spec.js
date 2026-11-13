@@ -21,7 +21,7 @@ describe("BaseModal", () => {
         isOpen: true,
         title: "Test Modal Title",
         subtitle: "Test Subtitle Info",
-        icon: "ℹ️",
+        icon: "MODAL_ICON",
       },
       slots: {
         default: "<p id='modal-body'>Modal body content</p>",
@@ -31,7 +31,7 @@ describe("BaseModal", () => {
 
     expect(document.body.textContent).toContain("Test Modal Title");
     expect(document.body.textContent).toContain("Test Subtitle Info");
-    expect(document.body.textContent).toContain("ℹ️");
+    expect(document.body.textContent).toContain("MODAL_ICON");
     expect(document.body.querySelector("#modal-body")?.textContent).toBe("Modal body content");
     wrapper.unmount();
   });
@@ -45,9 +45,9 @@ describe("BaseModal", () => {
       attachTo: el,
     });
 
-    // Close button has text '✕'
+    // Close button has aria-label/title 'Close' and contains lucide X svg
     const buttons = Array.from(document.body.querySelectorAll("button"));
-    const closeBtn = buttons.find((b) => b.textContent?.trim() === "✕");
+    const closeBtn = buttons.find((b) => b.getAttribute("aria-label") === "Close" || b.getAttribute("title") === "Close" || b.querySelector("svg"));
     expect(closeBtn).toBeDefined();
 
     closeBtn?.click();
