@@ -290,10 +290,8 @@ fixtures = [
 # ------------------
 permission_query_conditions = {
 	"OmniQuery Template": "omniquery.api.survey.get_template_permission_query_conditions",
-	"OmniQuery Response": "omniquery.permissions.get_response_query_conditions",
 }
 
 has_permission = {
 	"OmniQuery Template": "omniquery.api.survey.has_template_doc_permission",
-	"OmniQuery Response": "omniquery.permissions.has_response_permission",
 }

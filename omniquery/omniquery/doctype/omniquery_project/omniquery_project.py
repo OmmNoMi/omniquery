@@ -1,6 +1,8 @@
 import frappe
 from frappe.model.document import Document
 
+from omniquery.permissions import remove_project_user_permissions, sync_user_project_roles
+
 
 class OmniQueryProject(Document):
 	def autoname(self):
@@ -16,32 +18,18 @@ class OmniQueryProject(Document):
 		self.name = frappe.model.naming.make_autoname(f"OQP-{workspace_sequence}-.###")
 
 	def on_update(self):
-		self.sync_member_roles()
+		# only users whose (user, project role) rows changed can need different access
+		before = self.get_doc_before_save()
+		changed = _member_pairs(self) ^ (_member_pairs(before) if before else set())
+		_sync_users({user for user, _role in changed})
 
 	def on_trash(self):
-		self._members_to_sync = [m.user for m in (self.members or []) if m.user]
+		# Frappe refuses the delete while a User Permission still links to this project
+		remove_project_user_permissions(self.name)
 
 	def after_delete(self):
-		from omniquery.permissions import sync_user_project_roles
-		users = getattr(self, "_members_to_sync", None) or [m.user for m in (self.members or []) if m.user]
-		for u in users:
-			sync_user_project_roles(u)
-
-	def sync_member_roles(self):
-		from omniquery.permissions import sync_user_project_roles
-		affected_users = set()
-		for m in (self.members or []):
-			if m.user:
-				affected_users.add(m.user)
-
-		before = self.get_doc_before_save()
-		if before:
-			for m in (before.members or []):
-				if m.user:
-					affected_users.add(m.user)
-
-		for u in affected_users:
-			sync_user_project_roles(u)
+		# the member rows are gone now, so each user is synced without this project
+		_sync_users({m.user for m in self.members if m.user})
 
 	def has_project_role(self, user: str, role: str) -> bool:
 		if not user:
@@ -55,3 +43,12 @@ class OmniQueryProject(Document):
 			if m.user == user:
 				return m.project_role
 		return None
+
+
+def _member_pairs(doc) -> set[tuple[str, str]]:
+	return {(m.user, m.project_role) for m in doc.members if m.user}
+
+
+def _sync_users(users: set[str]):
+	for user in users:
+		sync_user_project_roles(user)
