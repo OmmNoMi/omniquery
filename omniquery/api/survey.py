@@ -2,6 +2,8 @@ import json
 
 import frappe
 from frappe import _
+from frappe.query_builder import Case
+from frappe.query_builder import functions as fn
 
 
 def resolve_template_name(template_name: str) -> str:
@@ -385,63 +387,36 @@ def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, d
 
 @frappe.whitelist(allow_guest=True)
 def get_surveyor_kpis(project=None):
-	"""
-	Returns daily and aggregate KPI statistics for the current surveyor, optionally filtered by project.
-	"""
-	user = frappe.session.user
-	today_start = frappe.utils.today() + " 00:00:00"
-	week_start = frappe.utils.add_days(frappe.utils.today(), -frappe.utils.get_datetime().weekday()) + " 00:00:00"
+	"""Today's, this week's, all-time and approved counts of the session user's own responses."""
+	counts = dict.fromkeys(("today_count", "week_count", "total_count", "approved_count"), 0)
+	if frappe.session.user != "Guest":
+		counts.update(_own_response_counts(frappe.session.user, project))
+	return {**counts, "daily_target": 10}
 
-	today_count = 0
-	week_count = 0
-	total_count = 0
 
-	if user != "Guest":
-		try:
-			Response = frappe.qb.DocType("OmniQuery Response")
+def _own_response_counts(user: str, project=None) -> dict:
+	response = frappe.qb.DocType("OmniQuery Response")
+	query = frappe.qb.from_(response).where(response.survey_status != "Draft").where(_own_responses(response, user))
+	if project and project != "ALL":
+		query = query.where(response.project == project)
+	today = frappe.utils.today()
+	week = frappe.utils.add_days(today, -frappe.utils.getdate(today).weekday())
+	row = query.select(*_kpi_columns(response, today, week)).run(as_dict=True)[0]
+	return {key: int(value or 0) for key, value in row.items()}
 
-			def build_query(since=None):
-				query = (
-					frappe.qb.from_(Response)
-					.select(frappe.qb.fn.Count("*"))
-					.where(Response.survey_status != "Draft")
-					.where((Response.owner == user) | (Response.surveyor.like(f"%{user}%")))
-				)
-				if since:
-					query = query.where(Response.creation >= since)
-				if project and project != "ALL":
-					Template = frappe.qb.DocType("OmniQuery Template")
-					tmpl_subquery = (
-						frappe.qb.from_(Template)
-						.select(Template.name)
-						.where((Template.project == project) | (Template.name == project))
-					)
-					query = query.where(Response.survey_template.isin(tmpl_subquery))
-				return query
 
-			today_res = build_query(since=today_start).run()
-			today_count = (today_res and today_res[0][0]) or 0
+def _own_responses(response, user: str):
+	"""Rows the user owns or that sync credited to a Surveyor linked to them; no name guessing (#47)."""
+	surveyors = frappe.get_all("OmniQuery Surveyor", filters={"user": user}, pluck="name")
+	return (response.owner == user) | response.surveyor.isin(surveyors) if surveyors else response.owner == user
 
-			week_res = build_query(since=week_start).run()
-			week_count = (week_res and week_res[0][0]) or 0
 
-			total_res = build_query().run()
-			total_count = (total_res and total_res[0][0]) or 0
+def _kpi_columns(response, today: str, week: str):
+	def since(day, alias):
+		return fn.Sum(Case().when(response.creation >= f"{day} 00:00:00", 1).else_(0)).as_(alias)
 
-			# Query supervisor approval count
-			appr_query = build_query().where(Response.survey_status == "Approved")
-			appr_res = appr_query.run()
-			approved_count = (appr_res and appr_res[0][0]) or 0
-		except Exception:
-			approved_count = 0
-
-	return {
-		"today_count": today_count,
-		"week_count": week_count,
-		"total_count": total_count,
-		"approved_count": approved_count,
-		"daily_target": 10,
-	}
+	approved = fn.Sum(Case().when(response.survey_status == "Approved", 1).else_(0)).as_("approved_count")
+	return since(today, "today_count"), since(week, "week_count"), fn.Count(response.name).as_("total_count"), approved
 
 
 @frappe.whitelist(allow_guest=True)

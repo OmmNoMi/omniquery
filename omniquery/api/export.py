@@ -4,7 +4,7 @@ import io
 import frappe
 from frappe import _
 
-from omniquery.permissions import EXPORT_PROJECT_ROLES, get_member_projects, is_site_wide_reviewer
+from omniquery.permissions import EXPORT_PROJECT_ROLES, permitted_projects
 
 RESPONSE_FIELDS = [
 	"name", "survey_template", "template_version", "survey_status", "surveyor", "captured_at_local",
@@ -21,7 +21,7 @@ ITEM_FIELDS = ["parent", "question_code", "question_label", "value_text", "value
 def export_flattened_responses(template_name=None, project=None, format="csv"):
 	"""Responses flattened to one row each, one column per question, for the projects the user may export."""
 	frappe.has_permission("OmniQuery Response", "export", throw=True)
-	projects = _exportable_projects(project)
+	projects = permitted_projects(project, EXPORT_PROJECT_ROLES, _("Not permitted to export responses for this project"))
 	filters = {} if projects is None else {"project": ["in", projects]}
 	if template_name:
 		filters["survey_template"] = template_name
@@ -30,17 +30,6 @@ def export_flattened_responses(template_name=None, project=None, format="csv"):
 		return _empty_response(template_name, project, format)
 	headers, rows = _flatten(responses)
 	return {"headers": headers, "rows": rows} if format == "json" else _send_csv(headers, rows, template_name or project)
-
-
-def _exportable_projects(project=None) -> list[str] | None:
-	"""A site-wide reviewer may export any project (None: every response); a member only those with an export project role."""
-	user = frappe.session.user
-	if is_site_wide_reviewer(user):
-		return [project] if project else None
-	allowed = get_member_projects(user, EXPORT_PROJECT_ROLES)
-	if not allowed or (project and project not in allowed):
-		frappe.throw(_("Not permitted to export responses for this project"), frappe.PermissionError)
-	return [project] if project else allowed
 
 
 def _flatten(responses):

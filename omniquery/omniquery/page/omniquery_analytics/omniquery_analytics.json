@@ -5,7 +5,7 @@
  "doctype": "Page",
  "icon": "activity",
  "idx": 0,
- "modified": "2026-10-05 00:50:00.000000",
+ "modified": "2026-11-13 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "omniquery-analytics",
@@ -16,7 +16,16 @@
    "role": "System Manager"
   },
   {
-   "role": "All"
+   "role": "OmniQuery Admin"
+  },
+  {
+   "role": "OmniQuery Manager"
+  },
+  {
+   "role": "OmniQuery Analyst"
+  },
+  {
+   "role": "OmniQuery Viewer"
   }
  ],
  "script": null,
