@@ -8,8 +8,9 @@
  "field_order": [
   "idempotency_key",
   "survey_template",
+  "project",
   "template_version",
-  "entrepreneur",
+  "respondent",
   "surveyor",
   "survey_status",
   "column_break_geo",
@@ -19,6 +20,13 @@
   "captured_at_local",
   "synced_at",
   "audio_recording",
+  "telemetry_section",
+  "time_spent_seconds",
+  "gps_distance_variance_meters",
+  "cb_telemetry",
+  "is_outlier_flagged",
+  "outlier_reasons",
+  "amended_from",
   "items_tab",
   "items",
   "raw_payload_tab",
@@ -42,6 +50,17 @@
    "label": "Survey Template",
    "options": "OmniQuery Template",
    "reqd": 1
+  },
+  {
+   "description": "Copied from the template. Analysts and viewers see only responses of their own projects, through the User Permissions project membership keeps.",
+   "fetch_from": "survey_template.project",
+   "fieldname": "project",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "Project",
+   "options": "OmniQuery Project",
+   "read_only": 1,
+   "search_index": 1
   },
   {
    "fieldname": "template_version",
@@ -72,10 +91,12 @@
    "default": "Submitted",
    "fieldname": "survey_status",
    "fieldtype": "Select",
+   "allow_on_submit": 1,
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Status",
    "options": "Draft\nSubmitted\nSupervisor Verified\nAudit Flagged\nApproved\nRejected",
+   "read_only": 1,
    "reqd": 1
   },
   {
@@ -119,6 +140,16 @@
    "label": "Interview Audio Recording"
   },
   {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "OmniQuery Response",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
    "fieldname": "items_tab",
    "fieldtype": "Tab Break",
    "label": "Normalized Answers"
@@ -140,18 +171,61 @@
    "label": "Raw Immutable JSON",
    "options": "JSON",
    "read_only": 1
+  },
+  {
+   "fieldname": "telemetry_section",
+   "fieldtype": "Section Break",
+   "label": "Telemetry & Quality Signals"
+  },
+  {
+   "depends_on": "eval:doc.time_spent_seconds",
+   "description": "Hidden when not measured.",
+   "fieldname": "time_spent_seconds",
+   "fieldtype": "Int",
+   "label": "Time Spent (Seconds)",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.gps_distance_variance_meters",
+   "description": "Hidden when not measured (no GPS, or no respondent location).",
+   "fieldname": "gps_distance_variance_meters",
+   "fieldtype": "Float",
+   "label": "GPS Variance vs Centroid (Meters)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_telemetry",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_outlier_flagged",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Outlier Flagged",
+   "read_only": 1
+  },
+  {
+   "fieldname": "outlier_reasons",
+   "fieldtype": "Small Text",
+   "label": "Outlier Reasons",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-10 01:00:00.000000",
+ "modified": "2026-11-13 12:00:00.000000",
  "modified_by": "Administrator",
+ "is_submittable": 1,
  "module": "OmniQuery",
  "name": "OmniQuery Response",
  "naming_rule": "By script",
  "owner": "Administrator",
  "permissions": [
   {
+   "amend": 1,
+   "cancel": 1,
    "create": 1,
    "delete": 1,
    "email": 1,
@@ -161,13 +235,54 @@
    "report": 1,
    "role": "System Manager",
    "share": 1,
+   "submit": 1,
+   "write": 1
+  },
+  {
+   "amend": 1,
+   "cancel": 1,
+   "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Admin",
+   "share": 1,
+   "submit": 1,
    "write": 1
   },
   {
    "create": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
    "read": 1,
-   "role": "All",
+   "report": 1,
+   "role": "OmniQuery Manager",
+   "share": 1,
+   "submit": 1,
    "write": 1
+  },
+  {
+   "create": 1,
+   "if_owner": 1,
+   "print": 1,
+   "read": 1,
+   "role": "OmniQuery User",
+   "write": 1
+  },
+  {
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Analyst"
+  },
+  {
+   "print": 1,
+   "read": 1,
+   "role": "OmniQuery Viewer"
   }
  ],
  "sort_field": "creation",

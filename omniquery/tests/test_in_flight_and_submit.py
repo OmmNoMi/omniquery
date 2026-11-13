@@ -2,6 +2,7 @@ import uuid
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from omniquery.api.sync import sync_draft, batch_push, resolve_surveyor, resolve_respondent
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestInFlightAndSubmit(FrappeTestCase):
@@ -69,8 +70,6 @@ class TestInFlightAndSubmit(FrappeTestCase):
 		self.assertEqual(resp_doc.survey_status, "Submitted")
 
 		# Clean up test doc
-		frappe.delete_doc("OmniQuery Response", doc_name, force=True)
-		audit_name = frappe.db.get_value("OmniQuery Sync Audit Log", {"idempotency_key": survey_id}, "name")
-		if audit_name:
-			frappe.delete_doc("OmniQuery Sync Audit Log", audit_name, force=True)
+		delete_test_docs([("OmniQuery Response", {"name": doc_name}),
+			("OmniQuery Sync Audit Log", {"idempotency_key": survey_id})])
 		frappe.db.commit()

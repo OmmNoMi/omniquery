@@ -1,12 +1,12 @@
 import unittest
 import frappe
 from omniquery.api.survey import get_project_details
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestProjectAPI(unittest.TestCase):
 	def setUp(self):
-		frappe.db.delete("OmniQuery Template", {"title": "SHG Test Survey Unit"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Rajasthan Livelihood Project"})
+		self._cleanup_test_records()
 
 		frappe.get_doc(
 			{
@@ -29,11 +29,11 @@ class TestProjectAPI(unittest.TestCase):
 				"title": "SHG Test Survey Unit",
 				"project": proj_name,
 				"version": 1,
-				"status": "Published",
 				"sections": [{"section_code": "SEC_1", "section_title": "Basic Section"}],
 				"questions": [{"section_code": "SEC_1", "question_code": "q1", "label_en": "Question 1"}],
 			}
 		).insert(ignore_permissions=True)
+		template.submit()
 
 		details = get_project_details(proj_name)
 		self.assertIn("project", details)
@@ -43,13 +43,19 @@ class TestProjectAPI(unittest.TestCase):
 		self.assertTrue(len(details["training_modules"]) >= 1)
 		self.assertIn("helpline", details)
 
-	def test_get_project_details_fallback(self):
-		details = get_project_details("NON_EXISTENT_PROJECT_XYZ")
-		self.assertIn("project", details)
-		self.assertEqual(details["project"]["name"], "NON_EXISTENT_PROJECT_XYZ")
-		self.assertIn("training_modules", details)
+	def test_unknown_project_gives_nothing_not_a_made_up_one(self):
+		# #57: the endpoint once invented a project and a grantor for any id it did not know
+		self.assertEqual(get_project_details("NON_EXISTENT_PROJECT_XYZ"), {})
+		self.assertEqual(get_project_details(), {})
 
 	def tearDown(self):
-		frappe.db.delete("OmniQuery Template", {"title": "SHG Test Survey Unit"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Rajasthan Livelihood Project"})
+		self._cleanup_test_records()
+
+	def _cleanup_test_records(self):
+		delete_test_docs(
+			[
+				("OmniQuery Template", {"title": "SHG Test Survey Unit"}),
+				("OmniQuery Project", {"project_name": "Rajasthan Livelihood Project"}),
+			]
+		)
 		frappe.db.commit()
