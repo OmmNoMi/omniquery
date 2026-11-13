@@ -32,9 +32,9 @@
       </div>
     </div>
 
-    <!-- Daily Target Goal Progress Strip -->
+    <!-- Daily Target Goal Progress Strip (Field Surveyors with a configured target) -->
     <div
-      v-if="dailyTarget"
+      v-if="isSurveyor && !isManager && dailyTarget"
       class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5"
     >
       <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -51,6 +51,36 @@
           class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500 shadow-xs"
           :style="{ width: `${targetProgressPct}%` }"
         />
+      </div>
+    </div>
+
+    <!-- Manager Review Queue & Desk Access Banner -->
+    <div
+      v-else-if="isManager"
+      class="p-4 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 space-y-2"
+    >
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <ClipboardList class="w-5 h-5 text-blue-700 dark:text-blue-300 shrink-0" />
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-900 dark:text-blue-200">
+            {{ __('Manager Operations & Review Queue') }}
+          </span>
+        </div>
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
+          {{ __('Manager View') }}
+        </span>
+      </div>
+      <p class="text-xs text-blue-800 dark:text-blue-300">
+        {{ __('You are signed in with manager permissions. Review submitted responses, verify audits, and track team progress in the OmniQuery Desk Workspace.') }}
+      </p>
+      <div class="pt-1 flex items-center gap-2 flex-wrap">
+        <a
+          href="/desk/omniquery"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
+        >
+          <span>{{ __('Go to Review Queue') }}</span>
+          <span aria-hidden="true">↗</span>
+        </a>
       </div>
     </div>
 
@@ -252,6 +282,7 @@ import { computed, ref, onMounted, watch } from "vue";
 import { Button, call } from "frappe-ui";
 import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { useUserRoles } from "../../composables/useUserRoles";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db } from "../../services/db";
 
@@ -275,6 +306,10 @@ const props = defineProps({
   selectedProject: {
     type: String,
     default: "ALL",
+  },
+  userRoles: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -304,6 +339,8 @@ const displayName = computed(() => {
   if (user.value === "Administrator") return "Administrator";
   return user.value.split("@")[0] || user.value;
 });
+
+const { isManager, isSurveyor } = useUserRoles(() => props.userRoles);
 
 const userInitial = computed(() => {
   return (displayName.value || "A").charAt(0).toUpperCase();
@@ -390,13 +427,11 @@ const targetProgressPct = computed(() => {
 
 const remainingTodayText = computed(() => {
   if (!dailyTarget.value) {
-    return completedToday.value === 1
-      ? `1 ${__("survey today")}`
-      : `${completedToday.value} ${__("surveys today")}`;
+    return completedToday.value === 1 ? __("1 survey today") : __("{0} surveys today", [completedToday.value]);
   }
   const left = dailyTarget.value - completedToday.value;
   if (left <= 0) return __("Target reached!");
-  return `${left} ${__("left for target")}`;
+  return __("{0} left for target", [left]);
 });
 
 const activeDraftsCount = computed(() => {

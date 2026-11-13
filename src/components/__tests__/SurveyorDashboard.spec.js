@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import SurveyorDashboard from "../dashboard/SurveyorDashboard.vue";
+import { useTranslation } from "../../composables/useTranslation.js";
 
 describe("SurveyorDashboard", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    useTranslation().setLanguage("en");
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -22,6 +24,7 @@ describe("SurveyorDashboard", () => {
       props: {
         pendingWALCount: 2,
         isOnline: true,
+        userRoles: ["OmniQuery User"],
         activeDrafts: {
           "TMPL-SHG": {
             response_uid: "DRAFT-1",
@@ -117,56 +120,87 @@ describe("SurveyorDashboard", () => {
     expect(wrapper.emitted("start-new-survey")[0]).toEqual(["TMPL-SHG"]);
   });
 
-  it("hides daily target progress strip and shows simple count when daily_target is null", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        message: {
-          today_count: 3,
-          total_count: 12,
-          daily_target: null,
-        },
-      }),
-    });
-
+  it("renders Manager Review Queue banner and Desk link when user has OmniQuery Manager role", async () => {
     const wrapper = mount(SurveyorDashboard, {
       props: {
         pendingWALCount: 0,
         isOnline: true,
+        userRoles: ["OmniQuery Manager"],
       },
+    });
+
+    expect(wrapper.text()).toContain("Manager Operations & Review Queue");
+    expect(wrapper.text()).toContain("Manager View");
+    const deskLink = wrapper.find('a[href="/desk/omniquery"]');
+    expect(deskLink.exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("Daily Target");
+  });
+
+  it("never shows Daily Target or Manager banner to a user without OmniQuery User or Manager role", async () => {
+    // Issue #60: Guest or Desk User without OmniQuery User or Manager role
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+        userRoles: ["Desk User"],
+      },
+    });
+
+    expect(wrapper.text()).not.toContain("Daily Target");
+    expect(wrapper.text()).not.toContain("Manager Operations & Review Queue");
+  });
+
+  it("renders Daily Target strip and remaining count for a surveyor with a configured target", async () => {
+    mockKpis({ today_count: 2, total_count: 10, daily_target: 6 });
+    const wrapper = mount(SurveyorDashboard, {
+      props: { pendingWALCount: 0, isOnline: true, userRoles: ["OmniQuery User"] },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("2 / 6");
+    });
+    expect(wrapper.text()).toContain("Daily Target");
+    expect(wrapper.text()).toContain("4 left for target");
+    expect(wrapper.text()).not.toContain("Manager Operations & Review Queue");
+  });
+
+  it("hides the target strip and shows a plain count when no target is configured (#55)", async () => {
+    mockKpis({ today_count: 3, total_count: 12, daily_target: null });
+    const wrapper = mount(SurveyorDashboard, {
+      props: { pendingWALCount: 0, isOnline: true, userRoles: ["OmniQuery User"] },
     });
 
     await vi.waitFor(() => {
       expect(wrapper.text()).toContain("3 surveys today");
     });
-
     expect(wrapper.text()).not.toContain("Daily Target");
     expect(wrapper.text()).not.toContain("left for target");
   });
 
-  it("renders daily target strip and remaining count when daily_target is configured", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        message: {
-          today_count: 2,
-          total_count: 10,
-          daily_target: 6,
-        },
-      }),
-    });
-
+  it("says 1 survey today, singular, when no target is configured", async () => {
+    mockKpis({ today_count: 1, total_count: 1, daily_target: null });
     const wrapper = mount(SurveyorDashboard, {
-      props: {
-        pendingWALCount: 0,
-        isOnline: true,
-      },
+      props: { pendingWALCount: 0, isOnline: true, userRoles: ["OmniQuery User"] },
     });
 
     await vi.waitFor(() => {
-      expect(wrapper.text()).toContain("Daily Target");
-      expect(wrapper.text()).toContain("2 / 6");
-      expect(wrapper.text()).toContain("4 left for target");
+      expect(wrapper.text()).toContain("1 survey today");
+    });
+  });
+
+  it("puts the count where Hindi word order wants it, not glued in front", async () => {
+    useTranslation().setLanguage("hi");
+    mockKpis({ today_count: 2, total_count: 10, daily_target: 6 });
+    const wrapper = mount(SurveyorDashboard, {
+      props: { pendingWALCount: 0, isOnline: true, userRoles: ["OmniQuery User"] },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("लक्ष्य के लिए 4 शेष");
     });
   });
 });
+
+function mockKpis(message) {
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message }) });
+}
