@@ -243,6 +243,7 @@
           :pendingWALCount="pendingWALCount"
           :isOnline="isOnline"
           :activeDrafts="activeDrafts"
+          :drafts="allDrafts"
           :templates="availableTemplates"
           :selectedProject="selectedProject"
           :isUnassigned="isUnassigned"
@@ -421,7 +422,7 @@
           </Button>
 
           <Button
-            @click="showWALDrawer = false; showFilledFormsModal = true"
+            @click="openRecoveryFromWALDrawer"
             class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <ClipboardList class="w-4 h-4 text-emerald-600" />
@@ -486,6 +487,7 @@
       @close="showFilledFormsModal = false"
       @sync-all="triggerSync"
       @resume-draft="handleResumeDraftFromModal"
+      @drafts-changed="loadActiveDrafts"
     />
   </div>
 </template>
@@ -556,6 +558,7 @@ const {
   isSubmitted,
   currentDraftId,
   activeDrafts,
+  allDrafts,
   loadActiveDrafts,
   loadAvailableTemplates,
   loadTemplate,
@@ -669,6 +672,19 @@ const filledFormsInitialFilter = ref("all");
 function openFilteredFilledForms(filter = "all") {
   filledFormsInitialFilter.value = filter;
   showFilledFormsModal.value = true;
+}
+
+// The drawer's button goes away with the drawer, so hand focus back to whatever opened the
+// drawer first: the dialog then returns focus there when it closes (#56)
+let walDrawerOpener = null;
+watch(showWALDrawer, (open) => {
+  if (open) walDrawerOpener = document.activeElement;
+});
+
+function openRecoveryFromWALDrawer() {
+  showWALDrawer.value = false;
+  walDrawerOpener?.focus?.();
+  openFilteredFilledForms("all");
 }
 
 function handleResumeDraftFromModal(templateName, draftId) {

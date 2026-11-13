@@ -99,6 +99,8 @@
       <!-- 1. Completed Today -->
       <div
         @click="$emit('open-filtered-forms', 'today')"
+        @keydown.enter.prevent="$emit('open-filtered-forms', 'today')"
+        @keydown.space.prevent="$emit('open-filtered-forms', 'today')"
         role="button"
         tabindex="0"
         class="p-3 sm:p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-left space-y-1 shadow-2xs hover:shadow-md hover:border-emerald-400 active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
@@ -120,6 +122,8 @@
       <!-- 2. Pending Offline Queue -->
       <div
         @click="$emit('open-filtered-forms', 'queue')"
+        @keydown.enter.prevent="$emit('open-filtered-forms', 'queue')"
+        @keydown.space.prevent="$emit('open-filtered-forms', 'queue')"
         role="button"
         tabindex="0"
         class="p-3 sm:p-3.5 rounded-xl border text-left space-y-1 shadow-2xs hover:shadow-md active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
@@ -157,6 +161,8 @@
       <!-- 3. Active Drafts -->
       <div
         @click="$emit('open-filtered-forms', 'drafts')"
+        @keydown.enter.prevent="$emit('open-filtered-forms', 'drafts')"
+        @keydown.space.prevent="$emit('open-filtered-forms', 'drafts')"
         role="button"
         tabindex="0"
         class="p-3 sm:p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 text-left space-y-1 shadow-2xs hover:shadow-md hover:border-blue-400 active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
@@ -178,6 +184,8 @@
       <!-- 4. Total Lifetime Submissions -->
       <div
         @click="$emit('open-filtered-forms', 'all')"
+        @keydown.enter.prevent="$emit('open-filtered-forms', 'all')"
+        @keydown.space.prevent="$emit('open-filtered-forms', 'all')"
         role="button"
         tabindex="0"
         class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-left space-y-1 shadow-2xs hover:shadow-md hover:border-slate-400 active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
@@ -308,6 +316,11 @@ const props = defineProps({
   activeDrafts: {
     type: Object,
     default: () => ({}),
+  },
+  // every Draft on this device, as the Filled Forms dialog lists them (#56)
+  drafts: {
+    type: Array,
+    default: () => [],
   },
   templates: {
     type: Array,
@@ -448,18 +461,8 @@ const remainingTodayText = computed(() => {
   return __("{0} left for target", [left]);
 });
 
-const activeDraftsCount = computed(() => {
-  let list = Object.values(props.activeDrafts || {});
-  if (props.selectedProject && props.selectedProject !== "ALL") {
-    const allowedTemplates = new Set(
-      props.templates
-        .filter((t) => (t.project || "default") === props.selectedProject)
-        .map((t) => t.name || t.template_name)
-    );
-    list = list.filter((d) => allowedTemplates.has(d.template_name));
-  }
-  return list.length;
-});
+// Device-wide, like the queue tile and the Filled Forms dialog it opens, so the two agree (#56)
+const activeDraftsCount = computed(() => props.drafts.length);
 
 const topDraft = computed(() => {
   let list = Object.values(props.activeDrafts || {});

@@ -71,6 +71,18 @@ describe("SurveyorDashboard", () => {
     expect(wrapper.emitted("open-filtered-forms")[2]).toEqual(["drafts"]);
   });
 
+  it("opens the filled forms from every KPI tile with Enter or Space, not only a click", async () => {
+    const wrapper = mount(SurveyorDashboard, { props: { pendingWALCount: 1, isOnline: true } });
+    const tiles = wrapper.findAll("[role='button'][tabindex='0']");
+    expect(tiles).toHaveLength(4);
+    for (const tile of tiles) {
+      await tile.trigger("keydown.enter");
+      await tile.trigger("keydown.space");
+    }
+    const opened = ["today", "queue", "drafts", "all"].flatMap((f) => [[f], [f]]);
+    expect(wrapper.emitted("open-filtered-forms")).toEqual(opened);
+  });
+
   it("renders active in-progress draft card and handles resume and start-new events", async () => {
     const draft = {
       response_uid: "DRAFT-001",

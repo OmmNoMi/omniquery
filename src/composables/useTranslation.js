@@ -3,6 +3,9 @@ import { ref, computed } from "vue";
 const CORE_HINDI = {
   "{0} surveys today": "आज {0} सर्वेक्षण",
   "1 survey today": "आज 1 सर्वेक्षण",
+  "On this device": "इस डिवाइस पर",
+  "{0} records": "{0} रिकॉर्ड",
+  "1 record": "1 रिकॉर्ड",
   "{0} left for target": "लक्ष्य के लिए {0} शेष",
   "Surveys": "सर्वेक्षण सूची",
   "Start Survey": "सर्वेक्षण शुरू करें",
