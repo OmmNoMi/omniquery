@@ -11,6 +11,9 @@ from omniquery.permissions import (
 )
 
 
+MEMBER_ONLY = "member_only_perm@ommnomi.test"
+
+
 class TestPermissions(unittest.TestCase):
 	def setUp(self):
 		self._cleanup_test_records()
@@ -29,7 +32,7 @@ class TestPermissions(unittest.TestCase):
 		for p in ("PROJ-Alpha Study", "PROJ-Beta Study"):
 			if frappe.db.exists("OmniQuery Project", p):
 				frappe.delete_doc("OmniQuery Project", p, force=True, ignore_permissions=True)
-		for u in ("admin_alpha@ommnomi.test", "analyst_beta@ommnomi.test", "outsider@ommnomi.test", "surveyor_perm@ommnomi.test"):
+		for u in ("admin_alpha@ommnomi.test", "analyst_beta@ommnomi.test", "outsider@ommnomi.test", "surveyor_perm@ommnomi.test", MEMBER_ONLY):
 			if frappe.db.exists("User", u):
 				frappe.delete_doc("User", u, force=True, ignore_permissions=True)
 		frappe.db.commit()
@@ -43,6 +46,9 @@ class TestPermissions(unittest.TestCase):
 					"first_name": email.split("@")[0],
 					"roles": [{"role": "OmniQuery Manager"}],
 				}).insert(ignore_permissions=True)
+
+		# issue #48's persona: a project member with no site-wide OmniQuery role
+		frappe.get_doc({"doctype": "User", "email": MEMBER_ONLY, "first_name": "member_only"}).insert(ignore_permissions=True)
 
 		if not frappe.db.exists("User", "surveyor_perm@ommnomi.test"):
 			frappe.get_doc({
@@ -66,11 +72,15 @@ class TestPermissions(unittest.TestCase):
 			"project_name": "Beta Study",
 			"grantor_organization": "Beta Grantor",
 			"status": "Active",
-			"members": [{"user": "analyst_beta@ommnomi.test", "project_role": "Project Analyst"}],
+			"members": [
+				{"user": "analyst_beta@ommnomi.test", "project_role": "Project Analyst"},
+				{"user": MEMBER_ONLY, "project_role": "Project Analyst"},
+			],
 		}).insert(ignore_permissions=True)
 
-	def _make_template(self, title: str, project: str, is_public: int = 0):
+	def _make_template(self, title: str, project: str, is_public: int = 0, **extra):
 		return frappe.get_doc({
+			**extra,
 			"doctype": "OmniQuery Template",
 			"title": title,
 			"project": project,
@@ -80,6 +90,34 @@ class TestPermissions(unittest.TestCase):
 			"sections": [{"section_code": "SEC_1", "section_title": "Section 1", "display_order": 1}],
 			"questions": [{"section_code": "SEC_1", "question_code": "q1", "label_en": "Q1", "is_mandatory": 1}],
 		}).insert(ignore_permissions=True)
+
+	def test_member_template_list_runs_and_shows_only_their_and_public_templates(self):
+		# Regression (#48): the IN list was quoted twice, so this get_list raised MariaDB 1064
+		self._make_template("Perm Test Template Beta", "PROJ-Beta Study")
+		self._make_template("Perm Test Template Alpha", "PROJ-Alpha Study")
+		self._make_template("Perm Test Template Public", "PROJ-Alpha Study", is_public=1)
+		self._make_template("Perm Test Template Citizen", "PROJ-Alpha Study", is_public_citizen_link=1)
+		try:
+			frappe.set_user(MEMBER_ONLY)
+			titles = set(frappe.get_list("OmniQuery Template", filters={"title": ["like", "Perm Test Template%"]}, pluck="title"))
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(titles, {"Perm Test Template Beta", "Perm Test Template Public", "Perm Test Template Citizen"})
+
+	def test_manager_creates_a_template_and_a_plain_member_cannot(self):
+		# Regression (#48): the hook denied create, and Frappe checks it on insert, not in has_permission(doctype)
+		try:
+			frappe.set_user("outsider@ommnomi.test")  # OmniQuery Manager, member of no project
+			self.assertEqual(self._insert_as_session_user("Perm Test Template Manager", "PROJ-Alpha Study"), "outsider@ommnomi.test")
+			frappe.set_user(MEMBER_ONLY)
+			self.assertRaises(frappe.PermissionError, self._insert_as_session_user, "Perm Test Template Member", "PROJ-Beta Study")
+		finally:
+			frappe.set_user("Administrator")
+
+	def _insert_as_session_user(self, title: str, project: str) -> str:
+		return frappe.get_doc({
+			"doctype": "OmniQuery Template", "title": title, "project": project, "version": 1, "status": "Draft",
+		}).insert().owner
 
 	def test_super_user_bypass(self):
 		tmpl = self._make_template("Perm Test Template Alpha", "PROJ-Alpha Study")
