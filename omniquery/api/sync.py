@@ -162,87 +162,79 @@ def calculate_haversine_distance(lat1, lon1, lat2, lon2):
 		return None
 
 
+AUDIT_THRESHOLD_DEFAULTS = {
+	"speed_threshold_sec_per_question": 3,
+	"min_questions_for_speed_check": 5,
+	"gps_distance_threshold_m": 5000.0,
+}
+
+
 def process_automated_audit(resp_doc, raw_sub):
-	"""
-	Analyzes field survey telemetry and generates an OmniQuery Supervisor Audit record.
-	Detects:
-	1. Speedrunning: Total time spent < (question_count * 3 seconds).
-	2. GPS Variance: Distance from respondent or project centroid > 5,000 meters.
-	"""
+	"""Records the speedrun and GPS-variance quality signals on the Response. It never creates a
+	Supervisor Audit: an audit is a human sign-off, made only by a supervisor reviewing the response."""
 	try:
 		if not resp_doc or not resp_doc.name:
-			return None
-
-		items_count = len(resp_doc.items or [])
-		time_spent_seconds = None
-
-		# Calculate time spent if timing metadata is available
-		if raw_sub.get("time_spent_seconds"):
-			time_spent_seconds = int(raw_sub.get("time_spent_seconds"))
-		elif resp_doc.captured_at_local and resp_doc.creation:
-			t_local = get_datetime(resp_doc.captured_at_local)
-			t_sync = get_datetime(resp_doc.synced_at or now_datetime())
-			diff = abs((t_sync - t_local).total_seconds())
-			# If local and sync happened within same hour, diff can approximate duration
-			if 5 <= diff <= 14400:
-				time_spent_seconds = int(diff)
-
-		# GPS Variance Check
-		gps_variance_m = None
-		lat = resp_doc.gps_latitude
-		lon = resp_doc.gps_longitude
-		if lat and lon and resp_doc.respondent:
-			resp_geo = frappe.db.get_value(
-				"OmniQuery Respondent", resp_doc.respondent, ["gps_latitude", "gps_longitude"], as_dict=True
-			)
-			if resp_geo and resp_geo.gps_latitude and resp_geo.gps_longitude:
-				gps_variance_m = calculate_haversine_distance(
-					lat, lon, resp_geo.gps_latitude, resp_geo.gps_longitude
-				)
-
-		# Evaluate Outlier Invariants
-		is_outlier = 0
-		remarks = []
-
-		# Speedrun check: < 3 seconds per question (min 10 questions)
-		if items_count >= 5 and time_spent_seconds is not None:
-			min_expected_sec = items_count * 3
-			if time_spent_seconds < min_expected_sec:
-				is_outlier = 1
-				remarks.append(f"Speedrun detected: {time_spent_seconds}s for {items_count} questions (min threshold: {min_expected_sec}s)")
-
-		# GPS Outlier check: > 5km from centroid
-		if gps_variance_m is not None and gps_variance_m > 5000:
-			is_outlier = 1
-			remarks.append(f"GPS variance high: {gps_variance_m}m from respondent centroid (>5km)")
-
-		audit_name = f"AUDIT-{resp_doc.name}"
-		if frappe.db.exists("OmniQuery Supervisor Audit", audit_name):
-			audit_doc = frappe.get_doc("OmniQuery Supervisor Audit", audit_name)
-		else:
-			audit_doc = frappe.new_doc("OmniQuery Supervisor Audit")
-			audit_doc.name = audit_name
-			audit_doc.survey_response = resp_doc.name
-
-		audit_doc.supervisor = frappe.session.user or "Administrator"
-		audit_doc.time_spent_seconds = time_spent_seconds or 0
-		audit_doc.gps_distance_variance_meters = gps_variance_m
-		audit_doc.is_outlier_flagged = is_outlier
-		audit_doc.audit_verdict = "Flagged for Re-Survey" if is_outlier else "Verified"
-		audit_doc.audit_remarks = "; ".join(remarks) if remarks else "Automated telemetry verified."
-
-		audit_doc.save(ignore_permissions=True)
+			return
+		signals = quality_signals(resp_doc, raw_sub)
+		frappe.db.set_value("OmniQuery Response", resp_doc.name, signals)
 		frappe.db.commit()
+		resp_doc.update(signals)
+	except Exception:
+		frappe.log_error("Process automated audit error", frappe.get_traceback())
 
-		# If outlier, also update response status to Audit Flagged
-		if is_outlier and resp_doc.survey_status != "Approved":
-			frappe.db.set_value("OmniQuery Response", resp_doc.name, "survey_status", "Audit Flagged")
-			frappe.db.commit()
 
-		return audit_doc.name
-	except Exception as e:
-		frappe.log_error("Process automated audit error", str(e))
+def quality_signals(resp_doc, raw_sub):
+	"""Frappe number columns cannot be empty, so an unmeasured time or distance is stored as 0;
+	neither can really be 0 (time needs at least 5 seconds), and the form hides them when 0."""
+	thresholds = audit_thresholds()
+	time_spent, gps_variance = telemetry_time_spent(resp_doc, raw_sub), telemetry_gps_variance(resp_doc)
+	checks = (speedrun_reason(len(resp_doc.items or []), time_spent, thresholds), gps_reason(gps_variance, thresholds))
+	reasons = [reason for reason in checks if reason]
+	signals = {"time_spent_seconds": cint(time_spent), "gps_distance_variance_meters": flt(gps_variance),
+		"is_outlier_flagged": 1 if reasons else 0, "outlier_reasons": "; ".join(reasons) or None}
+	if reasons and resp_doc.survey_status != "Approved":
+		signals["survey_status"] = "Audit Flagged"
+	return signals
+
+
+def audit_thresholds():
+	"""Settings values, with the defaults only for a value that was never saved, so 0 is honoured."""
+	saved = frappe.db.get_singles_dict("OmniQuery Settings", cast=True)
+	return {key: default if saved.get(key) is None else saved[key] for key, default in AUDIT_THRESHOLD_DEFAULTS.items()}
+
+
+def telemetry_time_spent(resp_doc, raw_sub):
+	"""The client's own timing, else the gap between capture and sync when it looks like one sitting."""
+	if raw_sub.get("time_spent_seconds"):
+		return cint(raw_sub["time_spent_seconds"])
+	if not resp_doc.captured_at_local:
 		return None
+	gap = abs((get_datetime(resp_doc.synced_at or now_datetime()) - get_datetime(resp_doc.captured_at_local)).total_seconds())
+	return int(gap) if 5 <= gap <= 14400 else None
+
+
+def telemetry_gps_variance(resp_doc):
+	"""Metres between where the response was captured and where its respondent is recorded."""
+	if not (resp_doc.gps_latitude and resp_doc.gps_longitude and resp_doc.respondent):
+		return None
+	home = frappe.db.get_value("OmniQuery Respondent", resp_doc.respondent, ["gps_latitude", "gps_longitude"], as_dict=True)
+	if not (home and home.gps_latitude and home.gps_longitude):
+		return None
+	return calculate_haversine_distance(resp_doc.gps_latitude, resp_doc.gps_longitude, home.gps_latitude, home.gps_longitude)
+
+
+def speedrun_reason(items_count, time_spent, thresholds):
+	min_expected = items_count * thresholds["speed_threshold_sec_per_question"]
+	if items_count < thresholds["min_questions_for_speed_check"] or time_spent is None or time_spent >= min_expected:
+		return None
+	return f"Speedrun detected: {time_spent}s for {items_count} questions (min threshold: {min_expected}s)"
+
+
+def gps_reason(gps_variance, thresholds):
+	limit = thresholds["gps_distance_threshold_m"]
+	if gps_variance is None or gps_variance <= limit:
+		return None
+	return f"GPS variance high: {gps_variance}m from respondent centroid (>{limit}m)"
 
 
 @frappe.whitelist(allow_guest=True)
