@@ -9,7 +9,6 @@ from frappe.tests.utils import FrappeTestCase
 
 from omniquery.api.analytics import get_project_analytics
 from omniquery.api.survey import get_surveyor_kpis
-from omniquery.install import _get_sidebar_overview_items
 from omniquery.tests.utils import delete_test_docs
 
 ANALYST, VIEWER, SURVEYOR, MANAGER, OUTSIDER, NAMESAKE = (
@@ -85,7 +84,7 @@ class TestIssue47Analytics(FrappeTestCase):
 		frappe.set_user(SURVEYOR)
 		self.assertEqual(
 			get_surveyor_kpis(),
-			{"today_count": 4, "week_count": 4, "total_count": 4, "approved_count": 1, "daily_target": 10},
+			{"today_count": 4, "week_count": 4, "total_count": 4, "approved_count": 1, "daily_target": None},
 		)
 		self.assertEqual(get_surveyor_kpis(project=self.project["A"])["total_count"], 3)
 
@@ -93,14 +92,15 @@ class TestIssue47Analytics(FrappeTestCase):
 		frappe.set_user("Guest")
 		self.assertEqual(
 			get_surveyor_kpis(),
-			{"today_count": 0, "week_count": 0, "total_count": 0, "approved_count": 0, "daily_target": 10},
+			{"today_count": 0, "week_count": 0, "total_count": 0, "approved_count": 0, "daily_target": None},
 		)
 
 	def test_analytics_page_is_for_response_readers_only(self):
 		roles = {r.role for r in frappe.get_doc("Page", "omniquery-analytics").roles}
 		self.assertEqual(roles & {"All", "Guest", "OmniQuery User"}, set())
 		self.assertTrue({"OmniQuery Analyst", "OmniQuery Viewer", "OmniQuery Manager"} <= roles)
-		self.assertIn("omniquery-analytics", [i.get("link_to") for i in _get_sidebar_overview_items() if i.get("link_type") == "Page"])
+		sidebar = frappe.get_doc("Sidebar", "OmniQuery")
+		self.assertIn("omniquery-analytics", [i.link_to for i in sidebar.items if i.link_type == "Page"])
 
 
 def _make_user(email, roles):

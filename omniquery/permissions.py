@@ -15,6 +15,9 @@ MEMBER_ROLE_GRANTS = {
 	"Project Viewer": "OmniQuery Viewer",
 }
 SYNCED_ROLES = set(MEMBER_ROLE_GRANTS.values())
+# who gets the OmniQuery Desk app: its workspace, desktop icon and Apps screen entry (#53).
+# Field surveyors (OmniQuery User) work in the PWA and are left out.
+DESK_APP_ROLES = ("System Manager", "OmniQuery Admin", REVIEWER_ROLE, *sorted(SYNCED_ROLES))
 # project roles that may export the project's responses through api.export
 EXPORT_PROJECT_ROLES = ("Project Admin", "Project Manager", "Project Analyst")
 # project roles that read the project's responses in Desk, and so its analytics (#47)
@@ -30,6 +33,12 @@ def is_super_user(user: str | None) -> bool:
 	if not user:
 		return False
 	return user == "Administrator" or bool(set(frappe.get_roles(user)) & SUPER_ROLES)
+
+
+def can_open_desk_app() -> bool:
+	"""The add_to_apps_screen has_permission hook: only DESK_APP_ROLES see OmniQuery on /apps."""
+	user = frappe.session.user
+	return user == "Administrator" or bool(set(frappe.get_roles(user)) & set(DESK_APP_ROLES))
 
 
 def is_site_wide_reviewer(user: str) -> bool:
