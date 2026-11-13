@@ -63,7 +63,8 @@
    "label": "Status",
    "options": "Draft\nPublished\nDeprecated",
    "read_only": 1,
-   "reqd": 1
+   "reqd": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "target_category",
@@ -100,7 +101,8 @@
    "fieldname": "published_at",
    "fieldtype": "Datetime",
    "label": "Published Timestamp",
-   "read_only": 1
+   "read_only": 1,
+   "no_copy": 1
   },
   {
    "fieldname": "amended_from",

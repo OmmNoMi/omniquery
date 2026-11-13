@@ -38,7 +38,7 @@ def _get_user_project_roles(project: str, user: str) -> list[str]:
 		return []
 	return frappe.get_all(
 		"OmniQuery Project Member",
-		filters={"parent": project, "user": user},
+		filters={"parent": project, "parenttype": "OmniQuery Project", "user": user},
 		pluck="project_role",
 	)
 
@@ -47,7 +47,11 @@ def get_template_query_conditions(user: str | None = None) -> str:
 	user = user or frappe.session.user
 	if is_super_user(user):
 		return ""
-	projects = frappe.get_all("OmniQuery Project Member", filters={"user": user}, pluck="parent")
+	projects = frappe.get_all(
+		"OmniQuery Project Member",
+		filters={"parenttype": "OmniQuery Project", "user": user},
+		pluck="parent",
+	)
 	if not projects:
 		return "(`tabOmniQuery Template`.`is_public` = 1 OR `tabOmniQuery Template`.`is_public_citizen_link` = 1)"
 	proj_list = "', '".join(frappe.db.escape(p) for p in projects)

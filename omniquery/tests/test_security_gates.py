@@ -6,6 +6,7 @@ import uuid
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from omniquery.api.sync import upload_response_audio, sync_draft
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestSecurityGates(FrappeTestCase):
@@ -14,18 +15,7 @@ class TestSecurityGates(FrappeTestCase):
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
-		for dt, dn in reversed(self.test_records):
-			try:
-				if frappe.db.exists(dt, dn):
-					doc = frappe.get_doc(dt, dn)
-					if getattr(doc, "docstatus", 0) == 1:
-						doc.cancel()
-					frappe.delete_doc(dt, dn, force=True)
-			except Exception:
-				try:
-					frappe.db.delete(dt, {"name": dn})
-				except Exception:
-					pass
+		delete_test_docs([(dt, {"name": dn}) for dt, dn in reversed(self.test_records)])
 		frappe.db.commit()
 
 	def _get_or_create_project(self):

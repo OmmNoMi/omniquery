@@ -1,12 +1,12 @@
 import unittest
 import frappe
 from omniquery.api.survey import get_project_details
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestProjectAPI(unittest.TestCase):
 	def setUp(self):
-		frappe.db.delete("OmniQuery Template", {"title": "SHG Test Survey Unit"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Rajasthan Livelihood Project"})
+		self._cleanup_test_records()
 
 		frappe.get_doc(
 			{
@@ -50,6 +50,13 @@ class TestProjectAPI(unittest.TestCase):
 		self.assertIn("training_modules", details)
 
 	def tearDown(self):
-		frappe.db.delete("OmniQuery Template", {"title": "SHG Test Survey Unit"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Rajasthan Livelihood Project"})
+		self._cleanup_test_records()
+
+	def _cleanup_test_records(self):
+		delete_test_docs(
+			[
+				("OmniQuery Template", {"title": "SHG Test Survey Unit"}),
+				("OmniQuery Project", {"project_name": "Rajasthan Livelihood Project"}),
+			]
+		)
 		frappe.db.commit()

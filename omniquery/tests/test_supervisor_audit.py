@@ -2,6 +2,7 @@ import uuid
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from omniquery.api.sync import batch_push
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestSupervisorAudit(FrappeTestCase):
@@ -30,18 +31,8 @@ class TestSupervisorAudit(FrappeTestCase):
 		self.test_records.append(("OmniQuery Template", self.tmpl))
 
 	def tearDown(self):
-		for dt, dn in reversed(self.test_records):
-			try:
-				if frappe.db.exists(dt, dn):
-					doc = frappe.get_doc(dt, dn)
-					if getattr(doc, "docstatus", 0) == 1:
-						doc.cancel()
-					frappe.delete_doc(dt, dn, force=True)
-			except Exception:
-				try:
-					frappe.db.delete(dt, {"name": dn})
-				except Exception:
-					pass
+		frappe.set_user("Administrator")
+		delete_test_docs([(dt, {"name": dn}) for dt, dn in reversed(self.test_records)])
 		frappe.db.commit()
 
 	def test_automated_speedrun_outlier_detection(self):
@@ -67,24 +58,20 @@ class TestSupervisorAudit(FrappeTestCase):
 		doc_name = res["results"][0]["doc_name"]
 		self.test_records.append(("OmniQuery Response", doc_name))
 
-		# Verify Supervisor Audit record was synthesized
+		# Verify zero automated Supervisor Audit was created (Issue #59)
 		audit_name = f"AUDIT-{doc_name}"
-		self.assertTrue(frappe.db.exists("OmniQuery Supervisor Audit", audit_name))
-		self.test_records.append(("OmniQuery Supervisor Audit", audit_name))
+		self.assertFalse(frappe.db.exists("OmniQuery Supervisor Audit", audit_name))
 
-		audit_doc = frappe.get_doc("OmniQuery Supervisor Audit", audit_name)
-		self.assertEqual(audit_doc.is_outlier_flagged, 1)
-		self.assertEqual(audit_doc.audit_verdict, "Flagged for Re-Survey")
-		self.assertIn("Speedrun detected", audit_doc.audit_remarks)
-
-		# Verify Response was moved to Audit Flagged
+		# Verify Response was moved to Audit Flagged and signal fields populated
 		resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
+		self.assertEqual(resp_doc.is_outlier_flagged, 1)
+		self.assertIn("Speedrun detected", resp_doc.outlier_reasons or "")
 		self.assertEqual(resp_doc.survey_status, "Audit Flagged")
 
 	def test_automated_normal_submission_verification(self):
 		"""
-		Telemetry Invariant: A survey submitted with reasonable time (60 seconds for 6 questions)
-		must be marked Verified without outlier flags.
+		Telemetry Invariant: A survey submitted with reasonable time (90 seconds for 6 questions)
+		must be marked Submitted without outlier flags, and creates no machine audit.
 		"""
 		key = f"TEST-NORMAL-{uuid.uuid4().hex[:6]}"
 		payload = {
@@ -103,10 +90,10 @@ class TestSupervisorAudit(FrappeTestCase):
 		doc_name = res["results"][0]["doc_name"]
 		self.test_records.append(("OmniQuery Response", doc_name))
 
+		# Zero automated audit
 		audit_name = f"AUDIT-{doc_name}"
-		self.assertTrue(frappe.db.exists("OmniQuery Supervisor Audit", audit_name))
-		self.test_records.append(("OmniQuery Supervisor Audit", audit_name))
+		self.assertFalse(frappe.db.exists("OmniQuery Supervisor Audit", audit_name))
 
-		audit_doc = frappe.get_doc("OmniQuery Supervisor Audit", audit_name)
-		self.assertEqual(audit_doc.is_outlier_flagged, 0)
-		self.assertEqual(audit_doc.audit_verdict, "Verified")
+		resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
+		self.assertEqual(resp_doc.is_outlier_flagged, 0)
+		self.assertEqual(resp_doc.survey_status, "Submitted")

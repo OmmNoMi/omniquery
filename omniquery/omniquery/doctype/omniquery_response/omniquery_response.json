@@ -19,6 +19,13 @@
   "captured_at_local",
   "synced_at",
   "audio_recording",
+  "telemetry_section",
+  "time_spent_seconds",
+  "gps_distance_variance_meters",
+  "cb_telemetry",
+  "is_outlier_flagged",
+  "outlier_reasons",
+  "amended_from",
   "items_tab",
   "items",
   "raw_payload_tab",
@@ -120,6 +127,16 @@
    "label": "Interview Audio Recording"
   },
   {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "no_copy": 1,
+   "options": "OmniQuery Response",
+   "print_hide": 1,
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
    "fieldname": "items_tab",
    "fieldtype": "Tab Break",
    "label": "Normalized Answers"
@@ -140,6 +157,46 @@
    "fieldtype": "Code",
    "label": "Raw Immutable JSON",
    "options": "JSON",
+   "read_only": 1
+  },
+  {
+   "fieldname": "telemetry_section",
+   "fieldtype": "Section Break",
+   "label": "Telemetry & Quality Signals"
+  },
+  {
+   "depends_on": "eval:doc.time_spent_seconds",
+   "description": "Hidden when not measured.",
+   "fieldname": "time_spent_seconds",
+   "fieldtype": "Int",
+   "label": "Time Spent (Seconds)",
+   "read_only": 1
+  },
+  {
+   "depends_on": "eval:doc.gps_distance_variance_meters",
+   "description": "Hidden when not measured (no GPS, or no respondent location).",
+   "fieldname": "gps_distance_variance_meters",
+   "fieldtype": "Float",
+   "label": "GPS Variance vs Centroid (Meters)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "cb_telemetry",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_outlier_flagged",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Outlier Flagged",
+   "read_only": 1
+  },
+  {
+   "fieldname": "outlier_reasons",
+   "fieldtype": "Small Text",
+   "label": "Outlier Reasons",
    "read_only": 1
   }
  ],
@@ -172,7 +229,18 @@
    "create": 1,
    "read": 1,
    "role": "All",
-   "submit": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Manager",
+   "share": 1,
    "write": 1
   }
  ],

@@ -1,7 +1,11 @@
 import uuid
 import frappe
+from frappe import _
 from frappe.model.document import Document
 from frappe.utils import now_datetime
+
+# written only by sync (with db.set_value), so a form or API save may not change them
+QUALITY_SIGNAL_FIELDS = ("time_spent_seconds", "gps_distance_variance_meters", "is_outlier_flagged", "outlier_reasons")
 
 
 class OmniQueryResponse(Document):
@@ -24,3 +28,11 @@ class OmniQueryResponse(Document):
 			self.synced_at = now_datetime()
 		if not self.survey_status or self.survey_status == "Draft":
 			self.survey_status = "Submitted"
+
+	def validate(self):
+		"""Without this a reviewer with write access could quietly clear a sync outlier flag."""
+		if self.is_new():
+			return
+		changed = [field for field in QUALITY_SIGNAL_FIELDS if self.has_value_changed(field)]
+		if changed:
+			frappe.throw(_("Quality signals are recorded by sync and cannot be edited: {0}").format(", ".join(changed)))

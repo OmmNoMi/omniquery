@@ -14,7 +14,12 @@
   "disaster_recovery_section",
   "dr_retention_days",
   "cb_dr",
-  "auto_backup_on_submission"
+  "auto_backup_on_submission",
+  "audit_thresholds_section",
+  "speed_threshold_sec_per_question",
+  "min_questions_for_speed_check",
+  "cb_audit",
+  "gps_distance_threshold_m"
  ],
  "fields": [
   {
@@ -71,6 +76,33 @@
    "fieldname": "auto_backup_on_submission",
    "fieldtype": "Check",
    "label": "Auto-archive Forensic Evidence on Final Submission"
+  },
+  {
+   "fieldname": "audit_thresholds_section",
+   "fieldtype": "Section Break",
+   "label": "Automated Outlier Telemetry Thresholds"
+  },
+  {
+   "default": "3",
+   "fieldname": "speed_threshold_sec_per_question",
+   "fieldtype": "Int",
+   "label": "Speedrun Threshold (Seconds per Question)"
+  },
+  {
+   "default": "5",
+   "fieldname": "min_questions_for_speed_check",
+   "fieldtype": "Int",
+   "label": "Minimum Questions for Speedrun Check"
+  },
+  {
+   "fieldname": "cb_audit",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "5000",
+   "fieldname": "gps_distance_threshold_m",
+   "fieldtype": "Float",
+   "label": "GPS Variance Threshold (Meters)"
   }
  ],
  "issingle": 1,
