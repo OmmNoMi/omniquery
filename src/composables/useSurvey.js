@@ -208,11 +208,11 @@ export function useSurvey() {
   async function getCachedTemplate(surveyId) {
     try {
       const cached = await db.templates.get(surveyId);
-      if (cached && cached.schema) {
-        return cached.schema;
+      if (cached) {
+        return cached.schema || cached;
       }
       const byTitle = await db.templates.where("title").equals(surveyId).first();
-      return (byTitle && byTitle.schema) || null;
+      return (byTitle && (byTitle.schema || byTitle)) || null;
     } catch (e) {
       return null;
     }
@@ -249,8 +249,10 @@ export function useSurvey() {
 
   async function loadTemplate(surveyId, options = {}) {
     if (!surveyId) return null;
-    const isStartNew = options === false || (typeof options === "object" && options.startNew);
-    const targetDraftId = typeof options === "object" ? options.draftId : null;
+    const isStartNew =
+      (typeof options === "boolean" && options === true) ||
+      (typeof options === "object" && options !== null && Boolean(options.startNew));
+    const targetDraftId = typeof options === "object" && options !== null ? options.draftId : null;
 
     // 1. Instant offline retrieval from IndexedDB
     const cached = await getCachedTemplate(surveyId);
@@ -291,7 +293,12 @@ export function useSurvey() {
             .toArray();
 
           if (matchingDrafts && matchingDrafts.length > 0) {
-            matchingDrafts.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
+            matchingDrafts.sort((a, b) => {
+              const answersA = Object.keys(a.responses || {}).length;
+              const answersB = Object.keys(b.responses || {}).length;
+              if (answersB !== answersA) return answersB - answersA;
+              return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
+            });
             draft = matchingDrafts[0];
           }
         }
@@ -325,11 +332,24 @@ export function useSurvey() {
     const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
     if (!tmplName) return;
 
+    // Do not save empty drafts when there are no answers
+    const hasAnswers = responses.value && Object.values(responses.value).some((v) => {
+      if (v === undefined || v === null) return false;
+      if (typeof v === "string") return v.trim().length > 0;
+      if (Array.isArray(v)) return v.length > 0;
+      if (typeof v === "object") return Object.keys(v).length > 0;
+      return true;
+    });
+    if (!hasAnswers) return;
+
     if (!currentDraftId.value) {
       currentDraftId.value = generateSurveyId(tmplName);
     }
 
     try {
+      const existing = await db.responses.get(currentDraftId.value);
+      const createdAt = existing?.created_at || new Date().toISOString();
+
       await db.responses.put({
         response_uid: currentDraftId.value,
         template_name: tmplName,
@@ -339,9 +359,9 @@ export function useSurvey() {
         active_section_index: activeSectionIndex.value,
         progress_percent: progress,
         status: "Draft",
-        created_at: new Date().toISOString(),
+        created_at: createdAt,
         updated_at: new Date().toISOString(),
-        synced: false,
+        synced: 0,
       });
       await loadActiveDrafts();
     } catch (e) {

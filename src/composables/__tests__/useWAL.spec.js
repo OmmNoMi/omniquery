@@ -1,9 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useWAL } from "../useWAL";
+import { useWAL, _resetWALInstance } from "../useWAL";
 import { db } from "../../services/db";
 
 describe("useWAL", () => {
   beforeEach(async () => {
+    _resetWALInstance();
     await db.wal.clear();
     await db.responses.clear();
     vi.restoreAllMocks();
@@ -89,7 +90,7 @@ describe("useWAL", () => {
     expect(pendingWALCount.value).toBe(0);
 
     const walRecords = await db.wal.toArray();
-    expect(walRecords[0].status).toBe("synced");
+    expect(walRecords.length).toBe(0);
   });
 
   it("handles offline status gracefully without network calls", async () => {
@@ -105,6 +106,15 @@ describe("useWAL", () => {
     const result = await syncWAL();
     expect(result).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("rethrows when db.wal.add rejects due to quota exceeded or storage failure", async () => {
+    const { queueWAL } = useWAL();
+    vi.spyOn(db.wal, "add").mockRejectedValue(new Error("QuotaExceededError"));
+
+    await expect(
+      queueWAL("OmniQuery Response", { idempotency_key: "FAIL-001" }, false)
+    ).rejects.toThrow("QuotaExceededError");
   });
 
   it("quarantines a WAL entry when rejected or reaching 5 failed attempts", async () => {
@@ -156,7 +166,7 @@ describe("useWAL", () => {
     });
     await retryQuarantinedEntry(entry.wal_id);
     const walRecord = await db.wal.get(entry.wal_id);
-    expect(walRecord.status).toBe("synced");
+    expect(walRecord).toBeUndefined();
   });
 
   it("syncs pending audio recordings and updates status to synced", async () => {
