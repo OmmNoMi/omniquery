@@ -369,15 +369,13 @@
       </div>
     </div>
 
-    <!-- Question Configuration & Info Modal (Universal BaseModal with built-in scroll lock) -->
-    <BaseModal
-      :isOpen="showConfigModal"
-      size="md"
-      :title="__('Question Settings')"
-      :subtitle="`${question.question_code} · ${question.is_mandatory ? __('Mandatory') : __('Optional')}`"
-      @close="showConfigModal = false"
-    >
-      <div class="p-5 space-y-4">
+    <!-- frappe-ui Dialog: focus trap, focus return, scroll lock and topmost-only Escape -->
+    <Dialog v-model="showConfigModal" :options="{ title: __('Question Settings'), size: 'md' }">
+      <template #body-content>
+      <div class="space-y-4">
+        <DialogDescription as="p" class="text-xs text-slate-500 dark:text-slate-400 truncate">
+          {{ question.question_code }} · {{ question.is_mandatory ? __('Mandatory') : __('Optional') }}
+        </DialogDescription>
         <!-- Question Title & Description -->
         <div>
           <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white leading-snug">
@@ -517,8 +515,9 @@
           </div>
         </div>
       </div>
+      </template>
 
-      <template #footer>
+      <template #actions>
         <div class="w-full flex items-center justify-between">
           <span class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 font-medium">
             <svg class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
@@ -534,13 +533,14 @@
           </Button>
         </div>
       </template>
-    </BaseModal>
+    </Dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
-import { Button, TextInput } from "frappe-ui";
+import { Button, Dialog, TextInput } from "frappe-ui";
+import { DialogDescription } from "reka-ui";
 import {
   ClipboardList,
   X,
@@ -555,7 +555,6 @@ import {
   CircleDot,
 } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
-import BaseModal from "../common/BaseModal.vue";
 import FSwitch from "../common/FSwitch.vue";
 import FRating from "../common/FRating.vue";
 import FCurrencyInput from "../common/FCurrencyInput.vue";

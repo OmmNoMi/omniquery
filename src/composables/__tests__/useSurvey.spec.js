@@ -207,6 +207,36 @@ describe("useSurvey", () => {
     expect(survey.activeTemplate.value.title).toBe("Offline Test Survey");
   });
 
+  it("takes an unassigned user's empty bootstrap as the answer, not a cue for another endpoint (#57)", async () => {
+    await db.templates.put({ template_name: "OQS-STALE", title: "Old Project Survey", schema: {} });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: { templates: [], is_unassigned: true } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const survey = useSurvey();
+    const loaded = await survey.loadAvailableTemplates();
+
+    expect(survey.isUnassigned.value).toBe(true);
+    expect(loaded).toEqual([]);
+    const calls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(calls.some((url) => url.includes("list_active_templates"))).toBe(false);
+    expect(await db.templates.get("OQS-STALE")).toBeDefined(); // drafts may still need the cached schema
+  });
+
+  it("is not unassigned when the server does not say so, or cannot be reached", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: { templates: [] } }) }));
+    const survey = useSurvey();
+    await survey.loadAvailableTemplates();
+    expect(survey.isUnassigned.value).toBe(false);
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    const offline = useSurvey();
+    await offline.loadAvailableTemplates();
+    expect(offline.isUnassigned.value).toBe(false);
+  });
+
   it("refreshes cachedTemplatesMap and downloads surveys for offline", async () => {
     const survey = useSurvey();
     await db.templates.clear();

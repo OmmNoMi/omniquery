@@ -345,14 +345,15 @@
             </a>
 
             <a
-              href="mailto:fieldsupport@ommnomi.in"
+              v-if="projectSupportEmail"
+              :href="'mailto:' + projectSupportEmail"
               class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition block text-left group cursor-pointer"
             >
               <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 {{ __('Email Dispatch') }}
               </div>
               <div class="text-sm sm:text-base font-mono font-black text-emerald-600 dark:text-emerald-400 mt-1 group-hover:underline break-all">
-                fieldsupport@ommnomi.in
+                {{ projectSupportEmail }}
               </div>
               <div class="text-[11px] text-slate-500 mt-0.5">
                 {{ __('Official escalation & technical bug reports') }}
@@ -360,12 +361,6 @@
             </a>
           </div>
 
-          <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs flex items-center justify-between gap-2 flex-wrap">
-            <span class="text-slate-500 dark:text-slate-400">{{ __('State Lead') }}:</span>
-            <span class="font-extrabold text-slate-800 dark:text-slate-200">
-              SVEP State Field Operations Desk · Rajasthan Cluster
-            </span>
-          </div>
         </div>
       </div>
     </div>
@@ -460,6 +455,9 @@ const projectMeta = computed(() => {
     status: "Active",
   };
 });
+
+// set per project on OmniQuery Project; the card hides until someone sets it (#51)
+const projectSupportEmail = computed(() => projectMeta.value.support_email || "");
 
 // Filter templates that belong to this project
 const projectSurveys = computed(() => {

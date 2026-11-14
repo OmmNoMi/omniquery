@@ -1,15 +1,17 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 z-[100] bg-slate-100 dark:bg-slate-950 h-screen w-screen flex flex-col overflow-hidden animate-fade-in select-none overscroll-contain"
-      @wheel.stop
-    >
+  <!-- frappe-ui Dialog: focus trap, focus return, scroll lock and topmost-only Escape (#56) -->
+  <Dialog
+    :modelValue="isOpen"
+    :options="{ size: '4xl' }"
+    @update:modelValue="(open) => !open && closeModal()"
+  >
+    <template #body>
+    <div class="bg-slate-100 dark:bg-slate-950 max-h-[calc(100dvh-6rem)] flex flex-col overflow-hidden select-none">
       <!-- 1. Full-Page Top App Bar -->
-      <header class="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-xs">
+      <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 flex items-center justify-between gap-3 shrink-0 shadow-xs">
         <div class="flex items-center gap-3 min-w-0">
           <Button
-            @click="$emit('close')"
+            @click="closeModal"
             class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer shrink-0"
             :title="__('Return to Dashboard')"
           >
@@ -18,12 +20,12 @@
           </Button>
 
           <div class="min-w-0">
-            <h1 class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
-              {{ __('Saved Responses & Drafts') }}
-            </h1>
-            <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-              {{ responsesList.length }} {{ __('records stored on this device') }}
-            </p>
+            <DialogTitle as="h1" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+              {{ __('On this device') }}
+            </DialogTitle>
+            <DialogDescription as="p" class="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              {{ recordCountText(responsesList.length) }}
+            </DialogDescription>
           </div>
         </div>
 
@@ -37,7 +39,7 @@
           </span>
 
           <Button
-            @click="$emit('close')"
+            @click="closeModal"
             class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 flex items-center justify-center font-bold text-sm transition cursor-pointer"
             :title="__('Close')"
             :aria-label="__('Close')"
@@ -51,6 +53,7 @@
       <!-- 2. Live Sync Feedback Toast Banner -->
       <div
         v-if="syncFeedbackMessage"
+        role="status"
         class="px-4 py-2.5 bg-emerald-600 text-white text-xs font-bold flex items-center justify-between gap-2 shrink-0 animate-fade-in shadow-xs"
       >
         <div class="flex items-center gap-2">
@@ -183,7 +186,7 @@
       </div>
 
       <!-- 4. Scrollable Full-Page List of Cards -->
-      <main class="flex-1 overflow-y-auto p-4 sm:p-6 max-w-4xl w-full mx-auto space-y-5">
+      <main class="flex-1 min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-6 w-full space-y-5">
         <!-- Empty State -->
         <div v-if="filteredResponses.length === 0" class="p-12 text-center bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
           <div class="flex justify-center mb-1"><FileText class="w-10 h-10 text-slate-300 dark:text-slate-600" /></div>
@@ -201,7 +204,7 @@
           <div class="flex items-center gap-2 text-xs font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-wider px-1">
             <Calendar class="w-3.5 h-3.5" />
             <span>{{ group.dateLabel }}</span>
-            <span class="text-[10px] font-normal lowercase">({{ group.items.length }} {{ __('records') }})</span>
+            <span class="text-[10px] font-normal lowercase">({{ recordCountText(group.items.length) }})</span>
           </div>
 
           <!-- Response Cards in Date Group -->
@@ -338,97 +341,88 @@
         </div>
       </main>
 
-      <!-- Discard Draft Confirmation Dialog -->
-      <BaseModal
-        :isOpen="Boolean(draftToDelete)"
-        size="sm"
-        hideHeader
-        :showCloseButton="false"
-        @close="draftToDelete = null"
+      <!-- 5. Cross-Verification Inspector: a nested Dialog, so Escape closes only it (#56) -->
+      <Dialog
+        :modelValue="Boolean(selectedInspectResponse)"
+        :options="{ size: 'xl' }"
+        @update:modelValue="(open) => !open && (selectedInspectResponse = null)"
       >
-        <div class="p-6 text-center space-y-4">
-          <div class="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400">
-            <Trash2 class="w-6 h-6" />
-          </div>
-          <div class="space-y-1">
-            <h3 class="text-base font-extrabold text-slate-900 dark:text-white">
-              {{ __('Discard Saved Draft?') }}
-            </h3>
-            <p class="text-xs text-slate-500 dark:text-slate-400">
-              {{ __('Are you sure you want to discard this saved draft? This action cannot be undone.') }}
-            </p>
-          </div>
-          <div class="grid grid-cols-2 gap-2.5 pt-2">
-            <Button
-              @click="draftToDelete = null"
-              class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs"
-            >
-              {{ __('Cancel') }}
-            </Button>
-            <Button
-              @click="confirmDeleteDraft"
-              class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-xs"
-            >
-              {{ __('Discard') }}
-            </Button>
-          </div>
-        </div>
-      </BaseModal>
-
-      <!-- 5. Cross-Verification Inspector Dialog (Universal BaseModal with built-in scroll lock) -->
-      <BaseModal
-        :isOpen="Boolean(selectedInspectResponse)"
-        size="xl"
-        :title="selectedInspectResponse ? `${__('Cross-Verification')}: ${selectedInspectResponse.response_uid}` : ''"
-        :subtitle="selectedInspectResponse?.template_title || selectedInspectResponse?.template_name || ''"
-        @close="selectedInspectResponse = null"
-      >
-        <div v-if="selectedInspectResponse" class="p-4 sm:p-5 space-y-3">
-          <div
-            v-for="(val, code) in (selectedInspectResponse.responses || {})"
-            :key="code"
-            class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-left space-y-1"
-          >
-            <div class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
-              {{ code }}
+        <template #body>
+          <div v-if="selectedInspectResponse" class="max-h-[calc(100dvh-6rem)] flex flex-col">
+            <div class="px-4 py-3 sm:px-5 border-b border-slate-200 dark:border-slate-800 flex items-start justify-between gap-3 shrink-0">
+              <div class="min-w-0">
+                <DialogTitle as="h2" class="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white break-words">
+                  {{ __('Cross-Verification') }}: {{ selectedInspectResponse.response_uid }}
+                </DialogTitle>
+                <DialogDescription as="p" class="text-xs text-slate-500 dark:text-slate-400 truncate">
+                  {{ selectedInspectResponse.template_title || selectedInspectResponse.template_name }}
+                </DialogDescription>
+              </div>
+              <Button
+                @click="selectedInspectResponse = null"
+                class="w-8 h-8 rounded-full text-slate-500 dark:text-slate-400 flex items-center justify-center cursor-pointer shrink-0"
+                :aria-label="__('Close')"
+                :title="__('Close')"
+              >
+                <X class="w-4 h-4" aria-hidden="true" />
+              </Button>
             </div>
-            <div class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 break-words">
-              {{ formatValue(val) }}
+            <div class="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+            <div v-if="selectedInspectResponse" class="p-4 sm:p-5 space-y-3">
+              <div
+                v-for="(val, code) in (selectedInspectResponse.responses || {})"
+                :key="code"
+                class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-left space-y-1"
+              >
+                <div class="text-[11px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                  {{ code }}
+                </div>
+                <div class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 break-words">
+                  {{ formatValue(val) }}
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-
-        <template #footer>
-          <div v-if="selectedInspectResponse" class="w-full flex justify-between gap-2 items-center">
-            <Button
-              @click="copyResponseJson(selectedInspectResponse)"
-              class="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1.5"
-            >
-              <Check v-if="copiedJsonId === selectedInspectResponse.response_uid" class="w-3.5 h-3.5" />
-              <Copy v-else class="w-3.5 h-3.5" />
-              <span>{{ copiedJsonId === selectedInspectResponse.response_uid ? __('Copied') : __('Copy JSON') }}</span>
-            </Button>
-            <Button
-              @click="selectedInspectResponse = null"
-              class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
-            >
-              <span>{{ __('Verified Good') }}</span>
-              <Check class="w-3.5 h-3.5" />
-            </Button>
+            </div>
+            <div class="px-4 py-3 sm:px-5 border-t border-slate-200 dark:border-slate-800 shrink-0">
+              <div v-if="selectedInspectResponse" class="w-full flex justify-between gap-2 items-center">
+                <Button
+                  @click="copyResponseJson(selectedInspectResponse)"
+                  class="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Check v-if="copiedJsonId === selectedInspectResponse.response_uid" class="w-3.5 h-3.5" />
+                  <Copy v-else class="w-3.5 h-3.5" />
+                  <span>{{ copiedJsonId === selectedInspectResponse.response_uid ? __('Copied') : __('Copy JSON') }}</span>
+                </Button>
+                <Button
+                  @click="selectedInspectResponse = null"
+                  class="px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 active:scale-95 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>{{ __('Verified Good') }}</span>
+                  <Check class="w-3.5 h-3.5" />
+                </Button>
+              </div>
+            </div>
           </div>
         </template>
-      </BaseModal>
+      </Dialog>
+
+      <!-- Discard-draft confirm: frappe-ui Dialog options render the title, message and actions -->
+      <Dialog
+        :modelValue="Boolean(draftToDiscard)"
+        :options="discardDialogOptions"
+        @update:modelValue="(open) => !open && (draftToDiscard = null)"
+      />
     </div>
-  </Teleport>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch, toRef } from "vue";
-import { Button } from "frappe-ui";
+import { computed, ref, watch } from "vue";
+import { Button, Dialog, toast } from "frappe-ui";
+import { DialogDescription, DialogTitle } from "reka-ui";
 import { X, Zap, ChevronDown, Trash2, FileText, Calendar, Check, Copy } from "lucide-vue-next";
 import JSZip from "jszip";
-import BaseModal from "../common/BaseModal.vue";
-import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import { useWAL } from "../../composables/useWAL";
 import { resolveResponseTitle } from "../../utils/responseTitle";
@@ -453,13 +447,19 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "sync-all", "resume-draft"]);
+// drafts-changed: a draft was discarded or storage pruned, so the dashboard re-reads its drafts (#56)
+const emit = defineEmits(["close", "sync-all", "resume-draft", "drafts-changed"]);
 
 const { __ } = useTranslation();
 const { forceSyncAll, retryQuarantinedEntry } = useWAL();
 
-// Universal scroll locking: strictly prevents background scrolling while open
-useScrollLock(toRef(props, "isOpen"));
+function closeModal() {
+  emit("close");
+}
+
+function recordCountText(count) {
+  return count === 1 ? __("1 record") : __("{0} records", [count]);
+}
 
 const responsesList = ref([]);
 const activeFilter = ref("all");
@@ -598,7 +598,8 @@ async function handleForceSync() {
       syncFeedbackMessage.value = "";
     }, 5000);
   } catch (e) {
-    syncFeedbackMessage.value = `Sync error: ${e.message || e}`;
+    syncFeedbackMessage.value = "";
+    toast.error(__("Sync failed: {0}", [e.message || e]));
   } finally {
     isSyncingLocal.value = false;
   }
@@ -618,8 +619,6 @@ async function handleRetryQuarantined(walId) {
   }
 }
 
-const draftToDelete = ref(null);
-
 function resumeDraft(templateName) {
   emit("resume-draft", templateName);
   emit("close");
@@ -630,20 +629,31 @@ function resumeSpecificDraft(templateName, draftId) {
   emit("close");
 }
 
+const draftToDiscard = ref(null);
+const discardDialogOptions = computed(() => ({
+  title: __("Discard saved draft?"),
+  message: __("This draft will be removed from this device. This cannot be undone."),
+  size: "sm",
+  actions: [
+    { label: __("Discard draft"), variant: "solid", theme: "red", onClick: confirmDiscardDraft },
+    { label: __("Keep draft"), onClick: ({ close }) => close() },
+  ],
+}));
+
 function deleteSpecificDraft(responseUid) {
-  draftToDelete.value = responseUid;
+  draftToDiscard.value = responseUid;
 }
 
-async function confirmDeleteDraft() {
-  if (draftToDelete.value) {
-    try {
-      await db.responses.delete(draftToDelete.value);
-      await loadResponses();
-    } catch (e) {
-      console.warn("Failed to delete draft:", e);
-    } finally {
-      draftToDelete.value = null;
-    }
+async function confirmDiscardDraft({ close }) {
+  const responseUid = draftToDiscard.value;
+  close();
+  if (!responseUid) return;
+  try {
+    await db.responses.delete(responseUid);
+    await loadResponses();
+    emit("drafts-changed");
+  } catch (e) {
+    toast.error(__("Could not discard the draft: {0}", [e.message || e]));
   }
 }
 
@@ -833,7 +843,7 @@ async function exportToJson() {
     downloadAnchor.click();
     downloadAnchor.remove();
   } catch (e) {
-    syncFeedbackMessage.value = `${__("Export failed:")} ${e.message || e}`;
+    toast.error(__("Export failed: {0}", [e.message || e]));
   }
 }
 
@@ -861,7 +871,7 @@ function exportToCsv() {
     link.click();
     link.remove();
   } catch (e) {
-    syncFeedbackMessage.value = `${__("CSV export failed:")} ${e.message || e}`;
+    toast.error(__("CSV export failed: {0}", [e.message || e]));
   }
 }
 
@@ -960,7 +970,7 @@ Individual JSON files can be ingested directly into the OmniQuery backend.
     downloadAnchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   } catch (e) {
-    syncFeedbackMessage.value = `${__("ZIP archive creation failed:")} ${e.message || e}`;
+    toast.error(__("ZIP export failed: {0}", [e.message || e]));
   } finally {
     isExportingZip.value = false;
   }
@@ -973,8 +983,9 @@ function inspectResponse(resp) {
 async function handleCompactStorage() {
   const pruned = await compactLocalStorage(30);
   await loadResponses();
+  emit("drafts-changed");
   if (pruned > 0) {
-    syncFeedbackMessage.value = `${__('Cleaned up')} ${pruned} ${__('old synced responses to free local storage')}`;
+    syncFeedbackMessage.value = __('Cleaned up {0} old synced responses to free local storage', [pruned]);
   } else {
     syncFeedbackMessage.value = __('Storage already compact. Zero old records required cleanup.');
   }
@@ -982,19 +993,4 @@ async function handleCompactStorage() {
     syncFeedbackMessage.value = "";
   }, 4000);
 }
-
-watch(
-  () => props.isOpen,
-  (open) => {
-    if (open) {
-      loadResponses();
-    }
-  }
-);
-
-onMounted(() => {
-  if (props.isOpen) {
-    loadResponses();
-  }
-});
 </script>

@@ -173,7 +173,7 @@
               </div>
               <div>
                 <h3 class="text-sm font-bold text-slate-900 leading-tight">{{ userDisplayName }}</h3>
-                <p class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
+                <p v-if="userEmail && userEmail !== userDisplayName" class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
                 <div class="flex items-center gap-1.5 mt-1">
                   <span
                     :class="[
@@ -182,7 +182,7 @@
                     ]"
                   />
                   <span class="text-[11px] font-semibold text-slate-600">
-                    {{ isOnline ? __('Online') : __('Offline') }} · {{ __('Field Surveyor') }}
+                    {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
                   </span>
                 </div>
               </div>
@@ -235,7 +235,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Languages class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Text Size') }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Text size') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -302,7 +302,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <LayoutGrid class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Choice Layout') }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Choice layout') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -337,7 +337,7 @@
                 <span>{{ __('Waiting to upload') }}</span>
               </div>
               <p class="text-[11px] text-slate-500 mt-0.5">
-                {{ pendingWALCount }} {{ __('Pending Responses') }}
+                {{ __('{0} pending responses', [pendingWALCount]) }}
               </p>
             </div>
             <Button
@@ -353,12 +353,27 @@
           <!-- 5. Profile Details & Manage Link -->
           <div class="pt-1 flex items-center justify-between text-xs px-1">
             <span class="text-slate-500 font-medium">{{ __('Manage Profile & Credentials') }}</span>
+            <!-- /me is a server page the service worker does not cache, so offline it would replace the app with an error -->
             <a
-              href="/app/user-profile"
+              v-if="isOnline"
+              href="/me"
               class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
             >
-              <span>{{ __('ERPNext Profile') }}</span>
-              <span>↗</span>
+              <span>{{ __('My Account') }}</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+            <span v-else class="text-slate-500">{{ __('My Account needs internet') }}</span>
+          </div>
+
+          <!-- 6. Manager Review Workspace Link -->
+          <div v-if="isManager" class="pt-1 flex items-center justify-between text-xs px-1">
+            <span class="text-blue-700 font-semibold">{{ __('OmniQuery Review Workspace') }}</span>
+            <a
+              href="/desk/omniquery"
+              class="font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1"
+            >
+              <span>{{ __('Open Desk') }}</span>
+              <span aria-hidden="true">↗</span>
             </a>
           </div>
 
@@ -376,42 +391,22 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
+import { useUserRoles } from "../../composables/useUserRoles";
+import { useSession } from "../../composables/useSession";
+import { useOmniqueryContext } from "../../composables/useSurveyApp";
+import { THEME_KEY, storedTheme, applyTheme } from "../../utils/theme";
 
-const props = defineProps({
+defineProps({
   surveyTitle: {
     type: String,
     default: "",
   },
   showBack: {
-    type: Boolean,
-    default: false,
-  },
-  isOnline: {
-    type: Boolean,
-    default: true,
-  },
-  pendingWALCount: {
-    type: Number,
-    default: 0,
-  },
-  textSize: {
-    type: String,
-    default: "md",
-  },
-  progressPercent: {
-    type: Number,
-    default: 0,
-  },
-  isRecording: {
-    type: Boolean,
-    default: false,
-  },
-  isAudioPaused: {
     type: Boolean,
     default: false,
   },
@@ -422,25 +417,18 @@ const { __, currentLang, setLanguage } = useTranslation();
 
 const showConfigModal = ref(false);
 useScrollLock(showConfigModal);
-const activeTheme = ref("light");
+const activeTheme = ref(storedTheme());
 
-const userEmail = computed(() => {
-  return (window.frappe && window.frappe.user) || "surveyor@ommnomi.in";
-});
+const { email: userEmail, displayName: userDisplayName, userInitial } = useSession();
 
-const userDisplayName = computed(() => {
-  const f = window.frappe;
-  if (f && f.user_info && f.user && f.user_info[f.user]?.fullname) {
-    return f.user_info[f.user].fullname;
-  }
-  return (f && f.user) || "Surveyor";
-});
+const { isOnline, pendingWALCount, textSize, progressPercent, isRecording, isAudioPaused } = useOmniqueryContext();
+const { isGuest, isManager, isSurveyor, isAdmin } = useUserRoles();
 
-const userName = userDisplayName;
-
-const userInitial = computed(() => {
-  const name = userDisplayName.value || "S";
-  return name.charAt(0).toUpperCase();
+const roleLabel = computed(() => {
+  if (isAdmin.value) return __("OmniQuery Admin");
+  if (isManager.value) return __("OmniQuery Manager");
+  if (isSurveyor.value) return __("Field Surveyor");
+  return __("Public Respondent");
 });
 
 function setTextScale(size) {
@@ -450,11 +438,9 @@ function setTextScale(size) {
 function setAppTheme(theme) {
   activeTheme.value = theme;
   if (typeof localStorage !== "undefined") {
-    localStorage.setItem("omniquery_theme", theme);
+    localStorage.setItem(THEME_KEY, theme);
   }
-  if (typeof document !== "undefined") {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }
+  applyTheme(theme);
 }
 
 function triggerSync() {
@@ -480,10 +466,12 @@ watch(showConfigModal, (isOpen) => {
   }
 });
 
-onMounted(() => {
-  if (typeof localStorage !== "undefined") {
-    const savedTheme = localStorage.getItem("omniquery_theme") || "light";
-    setAppTheme(savedTheme);
-  }
+
+
+defineExpose({
+  roleLabel,
+  isGuest,
+  isManager,
+  showConfigModal
 });
 </script>
