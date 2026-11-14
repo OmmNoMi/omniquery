@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolveResponseTitle } from "../responseTitle";
+import vectors from "../../../test/fixtures/response_titles.json";
 
 describe("resolveResponseTitle", () => {
   it("resolves full tokens according to default format", () => {
@@ -60,5 +61,12 @@ describe("resolveResponseTitle", () => {
     expect(resolveResponseTitle({}, "", "Custom Fallback")).toBe("Custom Fallback");
     expect(resolveResponseTitle(null, "", "Custom Fallback")).toBe("Custom Fallback");
     expect(resolveResponseTitle(undefined)).toBe("In-Progress Draft");
+  });
+});
+
+// omniquery/tests/test_response_title.py runs the same cases through the Python resolver
+describe("resolveResponseTitle shared cases", () => {
+  it.each(vectors.cases)("gives $title", ({ answers, format, fallback, title }) => {
+    expect(resolveResponseTitle(answers, format, fallback)).toBe(title);
   });
 });

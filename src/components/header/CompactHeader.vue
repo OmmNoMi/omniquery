@@ -182,7 +182,7 @@
                     ]"
                   />
                   <span class="text-[11px] font-semibold text-slate-600">
-                    {{ isOnline ? __('Online') : __('Offline') }} · {{ __('Field Surveyor') }}
+                    {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
                   </span>
                 </div>
               </div>
@@ -353,12 +353,27 @@
           <!-- 5. Profile Details & Manage Link -->
           <div class="pt-1 flex items-center justify-between text-xs px-1">
             <span class="text-slate-500 font-medium">{{ __('Manage Profile & Credentials') }}</span>
+            <!-- /me is a server page the service worker does not cache, so offline it would replace the app with an error -->
             <a
+              v-if="isOnline"
               href="/me"
               class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
             >
               <span>{{ __('My Account') }}</span>
-              <span>↗</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+            <span v-else class="text-slate-500">{{ __('My Account needs internet') }}</span>
+          </div>
+
+          <!-- 6. Manager Review Workspace Link -->
+          <div v-if="isManager" class="pt-1 flex items-center justify-between text-xs px-1">
+            <span class="text-blue-700 font-semibold">{{ __('OmniQuery Review Workspace') }}</span>
+            <a
+              href="/desk/omniquery"
+              class="font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1"
+            >
+              <span>{{ __('Open Desk') }}</span>
+              <span aria-hidden="true">↗</span>
             </a>
           </div>
 
@@ -381,6 +396,7 @@ import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
+import { useUserRoles } from "../../composables/useUserRoles";
 
 const props = defineProps({
   surveyTitle: {
@@ -415,6 +431,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  userRoles: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-text-size", "toggle-audio"]);
@@ -423,11 +443,6 @@ const { __, currentLang, setLanguage } = useTranslation();
 const showConfigModal = ref(false);
 useScrollLock(showConfigModal);
 const activeTheme = ref("light");
-
-const isGuest = computed(() => {
-  const u = (window.frappe && window.frappe.user) || "";
-  return !u || u === "Guest";
-});
 
 const userEmail = computed(() => {
   return (window.frappe && window.frappe.user) || "surveyor@ommnomi.in";
@@ -446,6 +461,15 @@ const userName = userDisplayName;
 const userInitial = computed(() => {
   const name = userDisplayName.value || "S";
   return name.charAt(0).toUpperCase();
+});
+
+const { isGuest, isManager, isSurveyor, isAdmin } = useUserRoles(() => props.userRoles);
+
+const roleLabel = computed(() => {
+  if (isAdmin.value) return __("OmniQuery Admin");
+  if (isManager.value) return __("OmniQuery Manager");
+  if (isSurveyor.value) return __("Field Surveyor");
+  return __("Public Respondent");
 });
 
 function setTextScale(size) {
@@ -490,5 +514,12 @@ onMounted(() => {
     const savedTheme = localStorage.getItem("omniquery_theme") || "light";
     setAppTheme(savedTheme);
   }
+});
+
+defineExpose({
+  roleLabel,
+  isGuest,
+  isManager,
+  showConfigModal
 });
 </script>
