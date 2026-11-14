@@ -102,10 +102,12 @@ class TestIdempotentSync(unittest.TestCase):
 		count = frappe.db.count("OmniQuery Response", {"idempotency_key": test_uuid})
 		self.assertEqual(count, 1)
 
-		# Teardown test records
+		# Teardown test records, with any Response an earlier, crashed run left on the test template:
+		# one would otherwise block deleting the template on every later run
+		templates = frappe.get_all("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}, pluck="name")
 		delete_test_docs(
 			[
-				("OmniQuery Response", {"idempotency_key": test_uuid}),
+				("OmniQuery Response", {"survey_template": ["in", templates]}),
 				("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"}),
 				("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"}),
 				("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),
