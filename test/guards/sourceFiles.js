@@ -44,3 +44,37 @@ export function namedImports(source, module) {
   }
   return names;
 }
+
+// Class tokens in a class string or a bound :class expression: every word, with quotes and
+// object punctuation dropped. Variant prefixes stay on (`dark:bg-x`, `focus-visible:ring-2`).
+export const classTokens = (text) => text.split(/[\s'"`,{}()?]+/).filter(Boolean);
+
+// The static class plus every bound :class of one template element, as one string.
+// An attribute's static value and its bound (:name) expression, joined: `theme="gray"` and
+// `:theme="on ? 'green' : 'gray'"` both come back as text to search.
+export function elementProp(node, name) {
+  return node.props
+    .map((p) => {
+      if (p.type === 6 && p.name === name) return p.value?.content || "";
+      if (p.type === 7 && p.name === "bind" && p.arg?.content === name) return p.exp?.content || "";
+      return "";
+    })
+    .filter(Boolean)
+    .join(" ");
+}
+
+export const elementClasses = (node) => elementProp(node, "class");
+
+// Every element in a .vue file's template, v-if branches included, read with Vue's own compiler.
+export function templateElements(source) {
+  const { descriptor } = sfcParse(source);
+  if (!descriptor.template) return [];
+  const elements = [];
+  const walk = (node) => {
+    if (node.type === 1) elements.push(node);
+    (node.children || []).forEach(walk);
+    (node.branches || []).forEach(walk);
+  };
+  walk(descriptor.template.ast);
+  return elements;
+}

@@ -8,8 +8,9 @@
   >
     <template #body>
     <div class="bg-slate-950 text-white max-h-[calc(100dvh-6rem)] flex flex-col overflow-hidden p-2 sm:p-3 gap-2">
-      <!-- Top Navigation & Progress Header Card -->
-      <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 space-y-2 shrink-0">
+      <!-- Top Navigation & Progress Header Card. The panel is dark in either app theme, so its strips
+        take frappe-ui's dark tokens (data-theme="dark"); the question card between them stays on the page theme -->
+      <div data-theme="dark" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 space-y-2 shrink-0">
         <div class="flex items-center justify-between gap-2">
           <!-- Left: Focus Mode Badge & Counter -->
           <div class="flex items-center gap-2">
@@ -24,14 +25,11 @@
 
           <!-- Right: Close Button -->
           <Button
-            @click="emit('close')"
-            class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs transition border border-slate-700 active:scale-95 cursor-pointer"
-            :aria-label="__('Exit Focus Mode')"
-            :title="__('Exit Focus Mode')"
+            :icon="X"
             :label="__('Exit Focus Mode')"
-          >
-            <X class="w-3.5 h-3.5" />
-          </Button>
+            :title="__('Exit Focus Mode')"
+            @click="emit('close')"
+          />
         </div>
 
         <!-- Section Title & Progress Bar -->
@@ -94,24 +92,22 @@
       </div>
 
       <!-- Bottom Floating Navigation Bar: Tab sequence is Next (primary) -> Mode -> Previous -->
-      <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 shrink-0">
+      <div data-theme="dark" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 shrink-0">
         <!-- 1st in DOM (Focus 1): Next Question Button (Visual: Right) -->
         <Button
+          variant="solid"
+          size="md"
+          :label="currentIndex === questions.length - 1 ? __('Finish') : __('Next')"
+          :iconRight="ArrowRight"
+          class="order-3 shrink-0"
           @click="nextQuestion"
-          class="order-3 px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1 cursor-pointer shrink-0"
-        >
-          <span>{{ currentIndex === questions.length - 1 ? __('Finish') : __('Next') }}</span>
-          <span>→</span>
-        </Button>
+        />
 
         <!-- 2nd in DOM (Focus 2): Survey Mode menu (Visual: Center); its Focus Form toggle exits -->
         <SurveyModeMenu
-          class="order-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold tracking-tight border transition active:scale-95 shadow-2xs cursor-pointer select-none"
-          :class="[
-            (autoAdvance || isFullForm)
-              ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/80'
-              : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
-          ]"
+          class="order-2"
+          size="md"
+          :variant="autoAdvance || isFullForm ? 'subtle' : 'outline'"
           :autoAdvance="autoAdvance"
           :isFullForm="isFullForm"
           :isFocusMode="true"
@@ -122,13 +118,13 @@
 
         <!-- 3rd in DOM (Focus 3): Previous Question Button (Visual: Left) -->
         <Button
-          @click="prevQuestion"
+          size="md"
+          :label="__('Previous')"
+          :iconLeft="ArrowLeft"
           :disabled="currentIndex === 0"
-          class="order-1 px-3 sm:px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer shrink-0"
-        >
-          <span>←</span>
-          <span>{{ __('Previous') }}</span>
-        </Button>
+          class="order-1 shrink-0"
+          @click="prevQuestion"
+        />
       </div>
     </div>
     </template>
@@ -139,7 +135,7 @@
 import { computed, ref, watch, nextTick } from "vue";
 import { Button, Dialog } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
-import { X, ClipboardList } from "lucide-vue-next";
+import { ArrowLeft, ArrowRight, ClipboardList, X } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
 import MatrixQuestionCard from "./MatrixQuestionCard.vue";

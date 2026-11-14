@@ -120,9 +120,10 @@
         <!-- User Avatar Icon with Live Green Dot (Logged-in surveyor only) -->
         <Button
           v-else
+          variant="solid"
+          :label="__('Settings & Configuration')"
+          class="relative !h-9 !w-9 !px-0 rounded-full font-black select-none active:scale-95"
           @click="showConfigModal = true"
-          class="relative w-9 h-9 rounded-full bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-black text-xs flex items-center justify-center shadow-xs ring-2 ring-[#b8cdbf] transition cursor-pointer select-none"
-          :title="__('Settings & Configuration')"
         >
           <span>{{ userInitial }}</span>
 

@@ -39,7 +39,7 @@ describe("CompactHeader", () => {
     expect(wrapper.vm.isManager).toBe(true);
 
     // Open settings modal to verify rendered label inside bottom sheet
-    await wrapper.find("button[title*='Settings']").trigger("click");
+    await wrapper.find("button[aria-label='Settings & Configuration']").trigger("click");
     expect(document.body.textContent).toContain("OmniQuery Manager");
     wrapper.unmount();
   });
@@ -63,7 +63,7 @@ describe("CompactHeader", () => {
     expect(wrapper.vm.roleLabel).toBe("Field Surveyor");
     expect(wrapper.vm.isManager).toBe(false);
 
-    await wrapper.find("button[title*='Settings']").trigger("click");
+    await wrapper.find("button[aria-label='Settings & Configuration']").trigger("click");
     expect(document.body.textContent).toContain("Field Surveyor");
     wrapper.unmount();
   });
@@ -77,7 +77,7 @@ describe("CompactHeader", () => {
     expect(wrapper.vm.roleLabel).toBe("Public Respondent");
     expect(wrapper.vm.isManager).toBe(false);
 
-    await wrapper.find("button[title*='Settings']").trigger("click");
+    await wrapper.find("button[aria-label='Settings & Configuration']").trigger("click");
     expect(document.body.textContent).toContain("Public Respondent");
     expect(document.body.textContent).not.toContain("Field Surveyor");
     wrapper.unmount();
@@ -91,7 +91,7 @@ describe("CompactHeader", () => {
     expect(wrapper.vm.isGuest).toBe(true);
     expect(wrapper.vm.roleLabel).toBe("Public Respondent");
     expect(wrapper.find("a[href*='/login']").exists()).toBe(true);
-    expect(wrapper.find("button[title*='Settings']").exists()).toBe(false);
+    expect(wrapper.find("button[aria-label='Settings & Configuration']").exists()).toBe(false);
     wrapper.unmount();
   });
 
@@ -106,7 +106,7 @@ describe("CompactHeader", () => {
         ...context,
         attachTo: document.body,
       });
-      const settings = wrapper.find("button[title='Settings & Configuration']");
+      const settings = wrapper.find("button[aria-label='Settings & Configuration']");
       expect(settings.exists(), "settings button").toBe(true);
       await settings.trigger("click");
       return wrapper;
@@ -142,7 +142,7 @@ describe("CompactHeader", () => {
     async function openSettingsAs(user, user_fullname) {
       window.frappe = { ...original, user, user_fullname };
       const wrapper = mountHeader({ roles: ["OmniQuery User"], attachTo: document.body });
-      await wrapper.find("button[title='Settings & Configuration']").trigger("click");
+      await wrapper.find("button[aria-label='Settings & Configuration']").trigger("click");
       return wrapper;
     }
 
