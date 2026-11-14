@@ -33,35 +33,9 @@
         </div>
       </div>
 
-      <!-- Submitted Success View -->
-      <SuccessView
-        v-else-if="s.isSubmitted"
-        :isGuest="s.isGuest" :submittedResponseId="s.submittedResponseId" :hasCopiedCode="s.hasCopiedCode"
-        :isSubmissionSynced="s.isSubmissionSynced" :isOnline="s.isOnline" :isSyncingSubmission="s.isSyncingSubmission"
-        :activeTemplate="s.activeTemplate" :submittedTimestamp="s.submittedTimestamp"
-        @copy-response-code="s.copyResponseCode" @sync-submitted-now="s.handleSyncSubmittedNow"
-        @reset-survey="s.resetSurvey" @go-home="s.goHome"
-      />
-
-      <!-- Active Survey View -->
-      <SurveyView
-        v-else-if="s.activeSection"
-        :activeSection="s.activeSection" :activeSectionIndex="s.activeSectionIndex" :sections="s.sections"
-        :responses="s.responses" :validationErrors="s.validationErrors" :isSubmitting="s.isSubmitting"
-        :autoAdvance="s.autoAdvance" :isFullForm="s.isFullForm" :isFocusMode="s.isFocusMode"
-        :isRecording="s.isRecording" :isAudioPaused="s.isAudioPaused" :isGuest="s.isGuest"
-        :displayQuestionItems="s.displayQuestionItems" :activeQuestions="s.activeQuestions"
-        :focusQuestionIndex="s.focusQuestionIndex" :isQuestionVisible="s.isQuestionVisible" :isSectionComplete="s.isSectionComplete"
-        @open-focus-mode="s.openFocusMode" @toggle-focus-mode="s.toggleFocusMode"
-        @toggle-auto-advance="s.autoAdvance = !s.autoAdvance" @toggle-full-form="s.toggleFullForm"
-        @toggle-audio="s.toggleAudio" @prev-section="s.handlePrevSection" @next-section="s.handleNextSection"
-        @submit-form="s.submitForm" @group-response-update="s.onGroupResponseUpdate"
-        @question-answered="s.onQuestionAnswered" @capture-gps="s.captureGPS"
-        @close-focus-mode="s.isFocusMode = false"
-        @prev-focus-question="s.focusQuestionIndex = Math.max(0, s.focusQuestionIndex - 1)"
-        @next-focus-question="s.focusQuestionIndex = Math.min(s.activeQuestions.length - 1, s.focusQuestionIndex + 1)"
-        @finish-focus-section="s.onFocusModeFinishSection" @update-focus-response="s.onFocusModeUpdateResponse"
-      />
+      <!-- Views read the session from provideSurveyApp() instead of taking props -->
+      <SuccessView v-else-if="s.isSubmitted" />
+      <SurveyView v-else-if="s.activeSection" />
 
       <!-- Dedicated Project Page View -->
       <ProjectPage
@@ -71,15 +45,7 @@
       />
 
       <!-- Survey Catalog Hub & Surveyor KPI Dashboard View -->
-      <CatalogView
-        v-else
-        :availableTemplates="s.availableTemplates" :cachedTemplatesMap="s.cachedTemplatesMap" :isOnline="s.isOnline"
-        :pendingWALCount="s.pendingWALCount" :activeDrafts="s.activeDrafts" :downloadingSurveyId="s.downloadingSurveyId"
-        :loadingSurveyId="s.loadingSurveyId" v-model:selectedProject="s.selectedProject" :selectedWorkspace="s.selectedWorkspace"
-        @open-project-details="s.openProjectPage" @download-project-surveys="s.handleDownloadProjectSurveys"
-        @download-survey="s.handleDownloadSurvey" @select-survey="s.selectSurvey"
-        @open-wal="s.showWALDrawer = true" @open-filled-forms="s.openFilteredFilledForms" @sync-now="s.triggerSync"
-      />
+      <CatalogView v-else />
     </main>
 
     <!-- Offline WAL Queue Drawer Modal -->
@@ -98,7 +64,7 @@
             <Zap class="w-4 h-4" />
             <span>{{ s.__('Sync all records now') }}</span>
           </Button>
-          <Button @click="s.showWALDrawer = false; s.showFilledFormsModal = true" class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
+          <Button @click="s.openRecoveryFromWALDrawer" class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer">
             <ClipboardList class="w-4 h-4 text-emerald-600" />
             <span>{{ s.__('View saved responses') }}</span>
           </Button>
@@ -124,33 +90,15 @@
       </div>
     </BaseModal>
 
-    <!-- Discard Draft Confirmation Dialog -->
-    <BaseModal :isOpen="Boolean(s.draftToDiscard)" size="sm" hideHeader :showCloseButton="false" @close="s.draftToDiscard = null">
-      <div class="p-6 text-center space-y-4">
-        <div class="w-13 h-13 rounded-2xl mx-auto flex items-center justify-center bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 shadow-xs">
-          <AlertTriangle class="w-7 h-7 text-rose-600 dark:text-rose-400" />
-        </div>
-        <div class="space-y-1">
-          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">{{ s.__('Discard Saved Draft?') }}</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{{ s.__('Discard saved draft for this survey?') }}</p>
-        </div>
-        <div class="grid grid-cols-2 gap-2.5 pt-2">
-          <Button @click="s.draftToDiscard = null" class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer">{{ s.__('Cancel') }}</Button>
-          <Button @click="s.confirmDiscardDraft" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer">{{ s.__('Discard') }}</Button>
-        </div>
-      </div>
-    </BaseModal>
-
     <!-- Filled Forms Verification & Data Recovery Modal -->
-    <FilledFormsModal :isOpen="s.showFilledFormsModal" :initialFilter="s.filledFormsInitialFilter" :isOnline="s.isOnline" :templates="s.availableTemplates" @close="s.showFilledFormsModal = false" @sync-all="s.triggerSync" @resume-draft="s.handleResumeDraftFromModal" />
+    <FilledFormsModal :isOpen="s.showFilledFormsModal" :initialFilter="s.filledFormsInitialFilter" :isOnline="s.isOnline" :templates="s.availableTemplates" @close="s.showFilledFormsModal = false" @sync-all="s.triggerSync" @resume-draft="s.handleResumeDraftFromModal" @drafts-changed="s.loadActiveDrafts" />
   </div>
 </template>
 
 <script setup>
-import { provide } from "vue";
 import { Button } from "frappe-ui";
 import { AlertTriangle, ClipboardList, KeyRound, Zap } from "lucide-vue-next";
-import { useSurveyApp } from "./composables/useSurveyApp";
+import { provideSurveyApp } from "./composables/useSurveyApp";
 import CompactHeader from "./components/header/CompactHeader.vue";
 import BaseModal from "./components/common/BaseModal.vue";
 import ProjectPage from "./components/project/ProjectPage.vue";
@@ -159,8 +107,6 @@ import CatalogView from "./views/Catalog.vue";
 import SurveyView from "./views/Survey.vue";
 import SuccessView from "./views/Success.vue";
 
-const s = useSurveyApp();
-
-provide("omniqueryContext", s.omniqueryContext);
-provide("surveySession", s);
+// reactive session: templates read s.isLoading as a value and writes like s.showWALDrawer = true land in the ref
+const s = provideSurveyApp();
 </script>

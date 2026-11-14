@@ -2229,3 +2229,11 @@ msgstr ""
 msgid "🚀 Elevate Scope"
 msgstr ""
 
+
+#: omniquery/www/omniquery.html:35
+msgid "Loading OmniQuery..."
+msgstr "ओमनीक्वेरी खुल रहा है..."
+
+#: omniquery/www/omniquery.html:37
+msgid "OmniQuery needs JavaScript to run."
+msgstr "ओमनीक्वेरी चलाने के लिए JavaScript चालू करें।"

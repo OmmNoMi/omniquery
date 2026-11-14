@@ -7,21 +7,50 @@ from frappe import _
 from frappe.utils import (
 	cint,
 	flt,
-	get_datetime_str,
+	get_datetime,
 	now_datetime,
 )
+from frappe.utils.data import convert_utc_to_system_timezone
+
+from omniquery.omniquery.doctype.omniquery_surveyor.omniquery_surveyor import ensure_surveyor_for_user
 
 from .survey import resolve_template_name, user_has_template_permission
 
 
 def parse_local_datetime(val):
-	"""Converts ISO-8601 string or date object into Frappe standard datetime string."""
+	"""Return `val` as a system-timezone "YYYY-MM-DD HH:MM:SS" string.
+
+	The field app sends `new Date().toISOString()` (UTC, ending in "Z"), so values
+	with an offset are converted to the site's timezone. A missing value means
+	"captured now". A value that cannot be read returns None: the caller still
+	saves the answers, leaves captured_at_local empty and logs the raw value,
+	instead of inventing a time or rejecting the whole response.
+	"""
+	if isinstance(val, str):
+		val = val.strip()
 	if not val:
-		return now_datetime()
+		return now_datetime().strftime("%Y-%m-%d %H:%M:%S")
 	try:
-		return get_datetime_str(val)
-	except Exception:
-		return now_datetime()
+		dt = get_datetime(val)
+	except (ValueError, OverflowError, TypeError):
+		dt = None
+	if dt and dt.tzinfo:
+		dt = convert_utc_to_system_timezone(dt)
+	return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else None
+
+
+def log_invalid_captured_at(idempotency_key, raw_value):
+	"""Record an unreadable captured_at_local against the response it belongs to.
+
+	Safe inside the batch_push savepoint: Frappe stores Error Log as MyISAM, so a
+	rollback of the response never removes this entry.
+	"""
+	frappe.log_error(
+		title="OmniQuery: invalid captured_at_local",
+		message=f"Saved the answers with captured_at_local empty. Received: {raw_value!r}",
+		reference_doctype="OmniQuery Response",
+		reference_name=idempotency_key,
+	)
 
 
 def log_raw_ingestion_dump(endpoint, raw_payload, client_ip=None, surveyor=None):
@@ -62,14 +91,7 @@ def resolve_surveyor(user_or_name=None):
 	if s:
 		return s
 	try:
-		doc = frappe.get_doc({
-			"doctype": "OmniQuery Surveyor",
-			"surveyor_name": user.split("@")[0] if "@" in user else user,
-			"user": user if frappe.db.exists("User", user) else "Administrator",
-			"status": "Active",
-		})
-		doc.insert(ignore_permissions=True)
-		return doc.name
+		return ensure_surveyor_for_user(user if frappe.db.exists("User", user) else "Administrator")
 	except Exception:
 		return "SURV-Administrator"
 
@@ -135,88 +157,79 @@ def calculate_haversine_distance(lat1, lon1, lat2, lon2):
 		return None
 
 
+AUDIT_THRESHOLD_DEFAULTS = {
+	"speed_threshold_sec_per_question": 3,
+	"min_questions_for_speed_check": 5,
+	"gps_distance_threshold_m": 5000.0,
+}
+
+
 def process_automated_audit(resp_doc, raw_sub):
-	"""
-	Analyzes field survey telemetry and generates an OmniQuery Supervisor Audit record.
-	Detects:
-	1. Speedrunning: Total time spent < (question_count * 3 seconds).
-	2. GPS Variance: Distance from respondent or project centroid > 5,000 meters.
-	"""
+	"""Records the speedrun and GPS-variance quality signals on the Response. It never creates a
+	Supervisor Audit: an audit is a human sign-off, made only by a supervisor reviewing the response."""
 	try:
 		if not resp_doc or not resp_doc.name:
-			return None
-
-		items_count = len(resp_doc.items or [])
-		time_spent_seconds = None
-
-		# Calculate time spent if timing metadata is available
-		if raw_sub.get("time_spent_seconds"):
-			time_spent_seconds = int(raw_sub.get("time_spent_seconds"))
-		elif resp_doc.captured_at_local and resp_doc.creation:
-			from frappe.utils import get_datetime
-			t_local = get_datetime(resp_doc.captured_at_local)
-			t_sync = get_datetime(resp_doc.synced_at or now_datetime())
-			diff = abs((t_sync - t_local).total_seconds())
-			# If local and sync happened within same hour, diff can approximate duration
-			if 5 <= diff <= 14400:
-				time_spent_seconds = int(diff)
-
-		# GPS Variance Check
-		gps_variance_m = None
-		lat = resp_doc.gps_latitude
-		lon = resp_doc.gps_longitude
-		if lat and lon and resp_doc.respondent:
-			resp_geo = frappe.db.get_value(
-				"OmniQuery Respondent", resp_doc.respondent, ["gps_latitude", "gps_longitude"], as_dict=True
-			)
-			if resp_geo and resp_geo.gps_latitude and resp_geo.gps_longitude:
-				gps_variance_m = calculate_haversine_distance(
-					lat, lon, resp_geo.gps_latitude, resp_geo.gps_longitude
-				)
-
-		# Evaluate Outlier Invariants
-		is_outlier = 0
-		remarks = []
-
-		# Speedrun check: < 3 seconds per question (min 10 questions)
-		if items_count >= 5 and time_spent_seconds is not None:
-			min_expected_sec = items_count * 3
-			if time_spent_seconds < min_expected_sec:
-				is_outlier = 1
-				remarks.append(f"Speedrun detected: {time_spent_seconds}s for {items_count} questions (min threshold: {min_expected_sec}s)")
-
-		# GPS Outlier check: > 5km from centroid
-		if gps_variance_m is not None and gps_variance_m > 5000:
-			is_outlier = 1
-			remarks.append(f"GPS variance high: {gps_variance_m}m from respondent centroid (>5km)")
-
-		audit_name = f"AUDIT-{resp_doc.name}"
-		if frappe.db.exists("OmniQuery Supervisor Audit", audit_name):
-			audit_doc = frappe.get_doc("OmniQuery Supervisor Audit", audit_name)
-		else:
-			audit_doc = frappe.new_doc("OmniQuery Supervisor Audit")
-			audit_doc.name = audit_name
-			audit_doc.survey_response = resp_doc.name
-
-		audit_doc.supervisor = frappe.session.user or "Administrator"
-		audit_doc.time_spent_seconds = time_spent_seconds or 0
-		audit_doc.gps_distance_variance_meters = gps_variance_m
-		audit_doc.is_outlier_flagged = is_outlier
-		audit_doc.audit_verdict = "Flagged for Re-Survey" if is_outlier else "Verified"
-		audit_doc.audit_remarks = "; ".join(remarks) if remarks else "Automated telemetry verified."
-
-		audit_doc.save(ignore_permissions=True)
+			return
+		signals = quality_signals(resp_doc, raw_sub)
+		frappe.db.set_value("OmniQuery Response", resp_doc.name, signals)
 		frappe.db.commit()
+		resp_doc.update(signals)
+	except Exception:
+		frappe.log_error("Process automated audit error", frappe.get_traceback())
 
-		# If outlier, also update response status to Audit Flagged
-		if is_outlier and resp_doc.survey_status != "Approved":
-			frappe.db.set_value("OmniQuery Response", resp_doc.name, "survey_status", "Audit Flagged")
-			frappe.db.commit()
 
-		return audit_doc.name
-	except Exception as e:
-		frappe.log_error("Process automated audit error", str(e))
+def quality_signals(resp_doc, raw_sub):
+	"""Frappe number columns cannot be empty, so an unmeasured time or distance is stored as 0;
+	neither can really be 0 (time needs at least 5 seconds), and the form hides them when 0."""
+	thresholds = audit_thresholds()
+	time_spent, gps_variance = telemetry_time_spent(resp_doc, raw_sub), telemetry_gps_variance(resp_doc)
+	checks = (speedrun_reason(len(resp_doc.items or []), time_spent, thresholds), gps_reason(gps_variance, thresholds))
+	reasons = [reason for reason in checks if reason]
+	signals = {"time_spent_seconds": cint(time_spent), "gps_distance_variance_meters": flt(gps_variance),
+		"is_outlier_flagged": 1 if reasons else 0, "outlier_reasons": "; ".join(reasons) or None}
+	if reasons and resp_doc.survey_status != "Approved":
+		signals["survey_status"] = "Audit Flagged"
+	return signals
+
+
+def audit_thresholds():
+	"""Settings values, with the defaults only for a value that was never saved, so 0 is honoured."""
+	saved = frappe.db.get_singles_dict("OmniQuery Settings", cast=True)
+	return {key: default if saved.get(key) is None else saved[key] for key, default in AUDIT_THRESHOLD_DEFAULTS.items()}
+
+
+def telemetry_time_spent(resp_doc, raw_sub):
+	"""The client's own timing, else the gap between capture and sync when it looks like one sitting."""
+	if raw_sub.get("time_spent_seconds"):
+		return cint(raw_sub["time_spent_seconds"])
+	if not resp_doc.captured_at_local:
 		return None
+	gap = abs((get_datetime(resp_doc.synced_at or now_datetime()) - get_datetime(resp_doc.captured_at_local)).total_seconds())
+	return int(gap) if 5 <= gap <= 14400 else None
+
+
+def telemetry_gps_variance(resp_doc):
+	"""Metres between where the response was captured and where its respondent is recorded."""
+	if not (resp_doc.gps_latitude and resp_doc.gps_longitude and resp_doc.respondent):
+		return None
+	home = frappe.db.get_value("OmniQuery Respondent", resp_doc.respondent, ["gps_latitude", "gps_longitude"], as_dict=True)
+	if not (home and home.gps_latitude and home.gps_longitude):
+		return None
+	return calculate_haversine_distance(resp_doc.gps_latitude, resp_doc.gps_longitude, home.gps_latitude, home.gps_longitude)
+
+
+def speedrun_reason(items_count, time_spent, thresholds):
+	min_expected = items_count * thresholds["speed_threshold_sec_per_question"]
+	if items_count < thresholds["min_questions_for_speed_check"] or time_spent is None or time_spent >= min_expected:
+		return None
+	return f"Speedrun detected: {time_spent}s for {items_count} questions (min threshold: {min_expected}s)"
+
+
+def gps_reason(gps_variance, thresholds):
+	limit = thresholds["gps_distance_threshold_m"]
+	if gps_variance is None or gps_variance <= limit:
+		return None
+	return f"GPS variance high: {gps_variance}m from respondent centroid (>{limit}m)"
 
 
 @frappe.whitelist(allow_guest=True)
@@ -316,6 +329,72 @@ def sync_draft(data=None):
 	return {"status": "SUCCESS", "doc_name": resp_doc.name, "survey_status": "Draft"}
 
 
+def normalize_submission_payload(sub):
+	"""Map a legacy offline WAL entry {template_name, responses, saved_at, gps_coordinates} onto the
+	canonical batch_push fields. A canonical field the client already sent always wins. A non-dict gives {}."""
+	if not isinstance(sub, dict):
+		return {}
+	gps = sub["gps_coordinates"] if isinstance(sub.get("gps_coordinates"), dict) else {}
+	legacy = {
+		"survey_template": sub.get("template_name"),
+		"items": legacy_items(sub.get("responses")),
+		"captured_at_local": sub.get("saved_at"),
+		"gps_latitude": first_present(gps, "latitude", "lat"),
+		"gps_longitude": first_present(gps, "longitude", "lng", "lon"),
+		"gps_accuracy": gps.get("accuracy"),
+	}
+	return {**sub, **{k: v for k, v in legacy.items() if v is not None and sub.get(k) in (None, "", [])}}
+
+
+def legacy_items(responses):
+	"""Legacy WAL entries stored answers as {question_code: value}; a list is already item-shaped."""
+	if isinstance(responses, dict):
+		return [{"question_code": str(k), "value": v} for k, v in responses.items()]
+	return responses if isinstance(responses, list) else None
+
+
+def first_present(values, *keys):
+	"""The first of keys that is set, so a 0 coordinate is kept rather than skipped as falsy."""
+	return next((values[k] for k in keys if values.get(k) is not None), None)
+
+
+def resolve_idempotency_key(sub, template_name, payload_hash):
+	"""The client's key. Without one, a valid submission gets OQS-{template}-{random} as before, and an
+	invalid one gets a key derived from its payload, so its retries share one audit log and error row."""
+	if sub.get("idempotency_key"):
+		return sub["idempotency_key"]
+	if template_name:
+		return f"OQS-{template_name.replace('OQS-', '')}-{uuid.uuid4().hex[:6]}"
+	return f"OQS-INVALID-{payload_hash[:12]}"
+
+
+def upsert_audit_log(idempotency_key, fields):
+	"""Create or update the Sync Audit Log for a key and commit it. Returns its name; a failed
+	write is logged, never raised, so one bad audit write does not stop the rest of the batch."""
+	try:
+		name = frappe.db.get_value("OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name")
+		audit = frappe.get_doc("OmniQuery Sync Audit Log", name) if name else frappe.new_doc("OmniQuery Sync Audit Log")
+		audit.update({"idempotency_key": idempotency_key, "processed_at": now_datetime(), **fields})
+		(audit.save if name else audit.insert)(ignore_permissions=True)
+		frappe.db.commit()
+		return audit.name
+	except Exception:
+		frappe.log_error(f"Sync Audit Log write failed for {idempotency_key}", frappe.get_traceback())
+
+
+def log_field_error(idempotency_key, error_message, raw_payload_str, fields):
+	"""Insert one Field Error Log per (idempotency key, error), so client retries do not add duplicates."""
+	row = {"question_code": idempotency_key, "error_message": str(error_message)[:1000]}
+	try:
+		if frappe.db.exists("OmniQuery Field Error Log", row):
+			return
+		frappe.get_doc({"doctype": "OmniQuery Field Error Log", **row, **fields, "logged_at": now_datetime(),
+			"device_info": raw_payload_str[:4000]}).insert(ignore_permissions=True)
+		frappe.db.commit()
+	except Exception:
+		frappe.log_error(f"Field Error Log write failed for {idempotency_key}", frappe.get_traceback())
+
+
 @frappe.whitelist(allow_guest=True)
 def batch_push(submissions=None):
 	"""
@@ -360,43 +439,31 @@ def batch_push(submissions=None):
 
 	results = []
 
-	for sub in submissions:
-		template_name = resolve_template_name(sub.get("survey_template"))
-		idempotency_key = sub.get("idempotency_key")
-		if not idempotency_key:
-			clean_tmpl = (template_name or "SURVEY").replace("OQS-", "")
-			idempotency_key = f"OQS-{clean_tmpl}-{uuid.uuid4().hex[:6]}"
-
-		raw_payload_str = frappe.as_json(sub)
+	for raw_sub in submissions:
+		sub = normalize_submission_payload(raw_sub)
+		raw_payload_str = frappe.as_json(raw_sub)
 		payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
+		template_name = resolve_template_name(sub["survey_template"]) if sub.get("survey_template") else None
+		idempotency_key = resolve_idempotency_key(sub, template_name, payload_hash)
+
+		# Terminal: a payload with no template cannot become a Response, however often it is retried
+		if not template_name:
+			err_msg = "Unknown payload shape: missing survey_template"
+			upsert_audit_log(idempotency_key, {
+				"surveyor": resolve_surveyor(current_user), "sync_status": "FAILED", "client_ip": client_ip,
+				"payload_hash_sha256": payload_hash, "raw_payload": raw_payload_str, "error_message": err_msg,
+			})
+			log_field_error(idempotency_key, err_msg, raw_payload_str, {"surveyor": str(current_user)})
+			results.append({"idempotency_key": idempotency_key, "status": "INVALID_SHAPE", "error": err_msg})
+			continue
 
 		# Security: Strict template RBAC validation
 		if not user_has_template_permission(template_name, user=current_user):
 			err_msg = "Guest access not permitted for private survey template" if current_user == "Guest" else f"Permission denied for template {template_name}"
-			try:
-				existing_audit = frappe.db.get_value(
-					"OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name"
-				)
-				if existing_audit:
-					audit = frappe.get_doc("OmniQuery Sync Audit Log", existing_audit)
-				else:
-					audit = frappe.new_doc("OmniQuery Sync Audit Log")
-					audit.idempotency_key = idempotency_key
-
-				audit.surveyor = resolve_surveyor(sub.get("surveyor") or current_user)
-				audit.sync_status = "REJECTED"
-				audit.client_ip = client_ip
-				audit.processed_at = now_datetime()
-				audit.raw_payload = raw_payload_str
-				audit.error_message = err_msg
-				if existing_audit:
-					audit.save(ignore_permissions=True)
-				else:
-					audit.insert(ignore_permissions=True)
-				frappe.db.commit()
-			except Exception:
-				pass
-
+			upsert_audit_log(idempotency_key, {
+				"surveyor": resolve_surveyor(sub.get("surveyor") or current_user), "sync_status": "REJECTED",
+				"client_ip": client_ip, "raw_payload": raw_payload_str, "error_message": err_msg,
+			})
 			results.append({"idempotency_key": idempotency_key, "status": "REJECTED", "error": err_msg})
 			continue
 
@@ -415,8 +482,8 @@ def batch_push(submissions=None):
 				results.append({"idempotency_key": idempotency_key, "status": "REJECTED", "error": err_msg})
 				continue
 
-			existing_status = frappe.db.get_value("OmniQuery Response", doc_name, "survey_status")
-			if existing_status in ["Submitted", "Supervisor Verified", "Audit Flagged", "Approved"]:
+			# a submitted response is final, Rejected included: a retried payload must not undo a review
+			if frappe.db.get_value("OmniQuery Response", doc_name, "docstatus") == 1:
 				results.append({
 					"idempotency_key": idempotency_key,
 					"status": "DUPLICATE_SKIPPED",
@@ -425,32 +492,11 @@ def batch_push(submissions=None):
 				continue
 
 		# Phase 1: Pre-save in OmniQuery Sync Audit Log with PENDING status and full raw JSON dump
-		audit_doc_name = None
-		try:
-			existing_audit = frappe.db.get_value(
-				"OmniQuery Sync Audit Log", {"idempotency_key": idempotency_key}, "name"
-			)
-			if existing_audit:
-				audit = frappe.get_doc("OmniQuery Sync Audit Log", existing_audit)
-			else:
-				audit = frappe.new_doc("OmniQuery Sync Audit Log")
-				audit.idempotency_key = idempotency_key
-
-			audit.surveyor = resolve_surveyor(sub.get("surveyor") or current_user)
-			audit.sync_status = "PENDING"
-			audit.client_ip = client_ip
-			audit.payload_hash_sha256 = payload_hash
-			audit.processed_at = now_datetime()
-			audit.raw_payload = raw_payload_str
-			audit.error_message = None
-			if existing_audit:
-				audit.save(ignore_permissions=True)
-			else:
-				audit.insert(ignore_permissions=True)
-			audit_doc_name = audit.name
-			frappe.db.commit()
-		except Exception as audit_pre_err:
-			frappe.log_error("Audit Pre-Log write failed", frappe.get_traceback())
+		audit_doc_name = upsert_audit_log(idempotency_key, {
+			"surveyor": resolve_surveyor(sub.get("surveyor") or current_user), "sync_status": "PENDING",
+			"client_ip": client_ip, "payload_hash_sha256": payload_hash, "raw_payload": raw_payload_str,
+			"error_message": None,
+		})
 
 		# Phase 2: Savepoint-protected Response Document Creation
 		savepoint = f"sp_sync_{idempotency_key.replace('-', '_')}"
@@ -473,8 +519,11 @@ def batch_push(submissions=None):
 			resp_doc.gps_longitude = sub.get("gps_longitude")
 			resp_doc.gps_accuracy = sub.get("gps_accuracy")
 			resp_doc.captured_at_local = parse_local_datetime(sub.get("captured_at_local"))
+			if resp_doc.captured_at_local is None:
+				log_invalid_captured_at(idempotency_key, sub.get("captured_at_local"))
 			resp_doc.synced_at = now_datetime()
 			resp_doc.response_payload = raw_payload_str
+			resp_doc.docstatus = 1  # insert or save as a submit, in one write
 
 			resp_doc.set("items", [])
 			for item in sub.get("items", []):
@@ -543,21 +592,11 @@ def batch_push(submissions=None):
 				except Exception:
 					pass
 
-			# Record Field Error Log so administrators can inspect failed submissions in Desk
-			try:
-				field_err = frappe.new_doc("OmniQuery Field Error Log")
-				field_err.survey_template = template_name
-				field_err.template_version = sub.get("template_version") or 1
-				field_err.question_code = idempotency_key
-				field_err.surveyor = str(sub.get("surveyor") or current_user)
-				field_err.logged_at = now_datetime()
-				field_err.error_message = str(e)[:1000]
-				field_err.stack_trace = frappe.get_traceback()
-				field_err.device_info = raw_payload_str[:4000]
-				field_err.insert(ignore_permissions=True)
-				frappe.db.commit()
-			except Exception as field_err_ex:
-				frappe.log_error("Field error log write failed", frappe.get_traceback())
+			# Record Field Error Log so administrators can inspect failed submissions in Desk (Dedup on idempotency_key + error)
+			log_field_error(idempotency_key, e, raw_payload_str, {
+				"survey_template": template_name, "template_version": sub.get("template_version") or 1,
+				"surveyor": str(sub.get("surveyor") or current_user), "stack_trace": frappe.get_traceback(),
+			})
 
 			results.append({"idempotency_key": idempotency_key, "status": "FAILED", "error": str(e)})
 

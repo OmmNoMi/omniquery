@@ -2,32 +2,34 @@
   <div class="space-y-4">
     <!-- 0. Active Project Header Section with Persistent Switcher & Training Material Link -->
     <ProjectHeaderCard
-      :templates="availableTemplates"
-      :cachedTemplatesMap="cachedTemplatesMap"
-      :isOnline="isOnline"
-      :selectedProject="selectedProject"
-      @update:selectedProject="$emit('update:selectedProject', $event)"
-      @open-project-details="$emit('open-project-details', $event)"
-      @download-project-surveys="$emit('download-project-surveys', $event)"
+      v-if="s.showCatalog"
+      :templates="s.availableTemplates"
+      :cachedTemplatesMap="s.cachedTemplatesMap"
+      :isOnline="s.isOnline"
+      v-model:selectedProject="s.selectedProject"
+      @open-project-details="s.openProjectPage"
+      @download-project-surveys="s.handleDownloadProjectSurveys"
     />
 
     <!-- 1. Surveyor Daily KPI Dashboard -->
     <SurveyorDashboard
-      :pendingWALCount="pendingWALCount"
-      :isOnline="isOnline"
-      :activeDrafts="activeDrafts"
-      :templates="availableTemplates"
-      :selectedProject="selectedProject"
-      @open-wal="$emit('open-wal')"
-      @sync-now="$emit('sync-now')"
-      @resume-draft="$emit('select-survey', $event)"
-      @start-new-survey="$emit('select-survey', $event, { startNew: true })"
-      @open-filled-forms="$emit('open-filled-forms', 'all')"
-      @open-filtered-forms="$emit('open-filled-forms', $event)"
+      :pendingWALCount="s.pendingWALCount"
+      :isOnline="s.isOnline"
+      :activeDrafts="s.activeDrafts"
+      :drafts="s.allDrafts"
+      :templates="s.availableTemplates"
+      :selectedProject="s.selectedProject"
+      :isUnassigned="s.isUnassigned"
+      @open-wal="s.showWALDrawer = true"
+      @sync-now="s.triggerSync()"
+      @resume-draft="s.selectSurvey"
+      @start-new-survey="s.selectSurvey($event, { startNew: true })"
+      @open-filled-forms="s.openFilteredFilledForms('all')"
+      @open-filtered-forms="s.openFilteredFilledForms"
     />
 
     <!-- 2. Survey Templates Section Header & Search/Filter Controls -->
-    <div class="space-y-2.5 pt-1">
+    <div v-if="s.showCatalog" class="space-y-2.5 pt-1">
       <div class="flex items-center justify-between text-xs font-bold px-1">
         <span class="uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
           <ClipboardList class="w-3.5 h-3.5 text-slate-400" />
@@ -39,15 +41,14 @@
         <div class="relative flex-1">
           <TextInput
             type="text"
-            :modelValue="searchQuery"
-            @update:modelValue="(val) => (searchQuery = val)"
+            v-model="s.searchQuery"
             :placeholder="__('Search surveys...')"
             class="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-medium shadow-xs focus:border-emerald-500 focus:outline-none transition text-slate-900 dark:text-white"
           />
           <Search class="absolute left-3 top-3 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
           <Button
-            v-if="searchQuery"
-            @click="searchQuery = ''"
+            v-if="s.searchQuery"
+            @click="s.searchQuery = ''"
             class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
             :title="__('Clear search')"
             :aria-label="__('Clear search')"
@@ -59,8 +60,8 @@
       </div>
     </div>
 
-    <!-- Empty State -->
-    <div v-if="filteredTemplates.length === 0" class="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
+    <!-- Empty State (an unassigned user sees the dashboard's ask-your-supervisor card instead) -->
+    <div v-if="s.showCatalog && filteredTemplates.length === 0" class="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
       <p class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ __('No active surveys available.') }}</p>
       <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Check your network connection or permissions.') }}</p>
     </div>
@@ -78,11 +79,11 @@
         </span>
         <div class="flex items-center gap-2">
           <span
-            v-if="activeDrafts[tmpl.name]"
+            v-if="s.activeDrafts[tmpl.name]"
             class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs"
           >
             <FileText class="w-3 h-3 text-amber-600" />
-            <span>{{ __('Draft') }}: {{ activeDrafts[tmpl.name].progress_percent || 0 }}%</span>
+            <span>{{ __('Draft') }}: {{ s.activeDrafts[tmpl.name].progress_percent || 0 }}%</span>
           </span>
           <span class="text-xs font-medium text-slate-400">
             v{{ tmpl.version }}.0
@@ -112,23 +113,23 @@
       <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2">
         <div class="flex items-center gap-1.5 flex-wrap">
           <span
-            v-if="cachedTemplatesMap[tmpl.name]"
+            v-if="s.cachedTemplatesMap[tmpl.name]"
             class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400"
             :title="__('Survey questions and schema downloaded in device memory')"
           >
             <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-            <span>{{ __('Offline Ready') }} ({{ cachedTemplatesMap[tmpl.name].questionCount }} {{ __('Q') }})</span>
+            <span>{{ __('Offline Ready') }} ({{ s.cachedTemplatesMap[tmpl.name].questionCount }} {{ __('Q') }})</span>
           </span>
           <Button
-            v-else-if="isOnline"
-            @click.stop="$emit('download-survey', tmpl.name)"
-            :disabled="downloadingSurveyId === tmpl.name"
+            v-else-if="s.isOnline"
+            @click.stop="s.handleDownloadSurvey(tmpl.name)"
+            :disabled="s.downloadingSurveyId === tmpl.name"
             class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs disabled:opacity-50"
             :title="__('Pre-cache survey questions so you can fill it without internet')"
           >
-            <span v-if="downloadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full"></span>
+            <span v-if="s.downloadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-emerald-600 border-t-transparent rounded-full"></span>
             <Download v-else class="w-3.5 h-3.5" />
-            <span>{{ downloadingSurveyId === tmpl.name ? __('Downloading...') : __('Download offline') }}</span>
+            <span>{{ s.downloadingSurveyId === tmpl.name ? __('Downloading...') : __('Download offline') }}</span>
           </Button>
           <span
             v-else
@@ -140,8 +141,8 @@
         </div>
         <div class="flex items-center gap-2">
           <Button
-            v-if="activeDrafts[tmpl.name]"
-            @click.stop="$emit('select-survey', tmpl.name, { startNew: true })"
+            v-if="s.activeDrafts[tmpl.name]"
+            @click.stop="s.selectSurvey(tmpl.name, { startNew: true })"
             class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1"
             :title="__('Start a fresh blank survey without discarding saved drafts')"
           >
@@ -149,13 +150,13 @@
             <span>{{ __('Start New') }}</span>
           </Button>
           <Button
-            @click="$emit('select-survey', tmpl.name)"
-            :disabled="loadingSurveyId === tmpl.name"
+            @click="s.selectSurvey(tmpl.name)"
+            :disabled="s.loadingSurveyId === tmpl.name"
             class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
-            <span v-if="loadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
-            <span>{{ loadingSurveyId === tmpl.name ? __('Loading...') : (activeDrafts[tmpl.name] ? __('Resume Survey') : __('Start Survey')) }}</span>
-            <span v-if="loadingSurveyId !== tmpl.name">→</span>
+            <span v-if="s.loadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
+            <span>{{ s.loadingSurveyId === tmpl.name ? __('Loading...') : (s.activeDrafts[tmpl.name] ? __('Resume Survey') : __('Start Survey')) }}</span>
+            <span v-if="s.loadingSurveyId !== tmpl.name">→</span>
           </Button>
         </div>
       </div>
@@ -164,7 +165,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { computed } from "vue";
 import { Button, TextInput } from "frappe-ui";
 import {
   ClipboardList,
@@ -180,65 +181,15 @@ import {
 import ProjectHeaderCard from "../components/dashboard/ProjectHeaderCard.vue";
 import SurveyorDashboard from "../components/dashboard/SurveyorDashboard.vue";
 import { useTranslation } from "../composables/useTranslation";
+import { useSurveySession } from "../composables/useSurveyApp";
 
-const props = defineProps({
-  availableTemplates: {
-    type: Array,
-    default: () => [],
-  },
-  cachedTemplatesMap: {
-    type: Object,
-    default: () => ({}),
-  },
-  isOnline: {
-    type: Boolean,
-    default: true,
-  },
-  pendingWALCount: {
-    type: Number,
-    default: 0,
-  },
-  activeDrafts: {
-    type: Object,
-    default: () => ({}),
-  },
-  downloadingSurveyId: {
-    type: String,
-    default: "",
-  },
-  loadingSurveyId: {
-    type: String,
-    default: "",
-  },
-  selectedProject: {
-    type: String,
-    default: "ALL",
-  },
-  selectedWorkspace: {
-    type: String,
-    default: "ALL",
-  },
-});
-
-defineEmits([
-  "update:selectedProject",
-  "open-project-details",
-  "download-project-surveys",
-  "download-survey",
-  "select-survey",
-  "open-wal",
-  "open-filled-forms",
-  "sync-now",
-]);
-
+const s = useSurveySession();
 const { __ } = useTranslation();
-const searchQuery = ref("");
 
 const filteredTemplates = computed(() => {
-  const q = searchQuery.value.trim().toLowerCase();
-  return (props.availableTemplates || []).filter((t) => {
-    if (props.selectedProject !== "ALL" && t.project !== props.selectedProject && t.project_name !== props.selectedProject) return false;
-    if (props.selectedWorkspace !== "ALL" && t.workspace !== props.selectedWorkspace) return false;
+  const q = s.searchQuery.trim().toLowerCase();
+  return s.availableTemplates.filter((t) => {
+    if (s.selectedProject !== "ALL" && t.project !== s.selectedProject && t.project_name !== s.selectedProject) return false;
     if (!q) return true;
     const title = (t.title || "").toLowerCase();
     const name = (t.name || "").toLowerCase();

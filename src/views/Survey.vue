@@ -1,78 +1,80 @@
 <template>
   <div>
     <SectionCard
-      :section="activeSection"
-      :currentIndex="activeSectionIndex"
-      :totalSections="sections.length"
-      :isComplete="isSectionComplete(activeSection)"
-      :isSubmitting="isSubmitting"
-      :autoAdvance="autoAdvance"
-      :isFullForm="isFullForm"
-      :isFocusMode="isFocusMode"
-      :isRecording="isRecording"
-      :isAudioPaused="isAudioPaused"
-      :isGuest="isGuest"
-      @open-focus-mode="$emit('open-focus-mode')"
-      @toggle-focus-mode="$emit('toggle-focus-mode')"
-      @toggle-auto-advance="$emit('toggle-auto-advance')"
-      @toggle-full-form="$emit('toggle-full-form')"
-      @toggle-audio="$emit('toggle-audio')"
-      @prev="$emit('prev-section')"
-      @next="$emit('next-section')"
-      @submit="$emit('submit-form')"
+      :section="s.activeSection"
+      :currentIndex="s.activeSectionIndex"
+      :totalSections="s.sections.length"
+      :isComplete="s.isSectionComplete(s.activeSection)"
+      :isSubmitting="s.isSubmitting"
+      :autoAdvance="s.autoAdvance"
+      :isFullForm="s.isFullForm"
+      :isFocusMode="s.isFocusMode"
+      :isRecording="s.isRecording"
+      :isAudioPaused="s.isAudioPaused"
+      :isGuest="s.isGuest"
+      @open-focus-mode="s.openFocusMode()"
+      @toggle-focus-mode="s.toggleFocusMode()"
+      @toggle-auto-advance="s.autoAdvance = !s.autoAdvance"
+      @toggle-full-form="s.toggleFullForm()"
+      @toggle-audio="s.toggleAudio()"
+      @prev="s.handlePrevSection()"
+      @next="s.handleNextSection()"
+      @submit="s.submitForm()"
     >
-      <template v-for="item in displayQuestionItems" :key="item.type === 'group' ? item.group_code : (item.type === 'matrix' ? 'matrix_' + item.question.question_code : item.question.question_code)">
+      <template v-for="item in s.displayQuestionItems" :key="item.type === 'group' ? item.group_code : (item.type === 'matrix' ? 'matrix_' + item.question.question_code : item.question.question_code)">
         <GroupedQuestionCard
           v-if="item.type === 'group'"
           :group="item"
-          :responses="responses"
-          :validationErrors="validationErrors"
-          :notApplicable="item.questions && item.questions.every(q => !isQuestionVisible(q))"
-          @update-response="(qc, val) => $emit('group-response-update', qc, val)"
-          @answered="$emit('question-answered', $event)"
+          :responses="s.responses"
+          :validationErrors="s.validationErrors"
+          :notApplicable="item.questions && item.questions.every(q => !s.isQuestionVisible(q))"
+          @update-response="s.setResponse"
+          @answered="s.onQuestionAnswered($event)"
         />
         <MatrixQuestionCard
           v-else-if="item.type === 'matrix'"
           :id="'qc_' + item.question.question_code"
           :question="item.question"
-          v-model="responses[item.question.question_code]"
-          :errorMessage="validationErrors[item.question.question_code]"
-          :notApplicable="!isQuestionVisible(item.question)"
-          @answered="$emit('question-answered', item.question)"
-          @next="$emit('question-answered', item.question)"
+          :modelValue="s.responses[item.question.question_code]"
+          @update:modelValue="s.setResponse(item.question.question_code, $event)"
+          :errorMessage="s.validationErrors[item.question.question_code]"
+          :notApplicable="!s.isQuestionVisible(item.question)"
+          @answered="s.onQuestionAnswered(item.question)"
+          @next="s.onQuestionAnswered(item.question)"
         />
         <QuestionCard
           v-else
           :id="'qc_' + item.question.question_code"
           :question="item.question"
-          v-model="responses[item.question.question_code]"
-          :errorMessage="validationErrors[item.question.question_code]"
-          :notApplicable="!isQuestionVisible(item.question)"
-          @answered="$emit('question-answered', item.question)"
-          @next="$emit('question-answered', item.question)"
-          @capture-gps="$emit('capture-gps')"
+          :modelValue="s.responses[item.question.question_code]"
+          @update:modelValue="s.setResponse(item.question.question_code, $event)"
+          :errorMessage="s.validationErrors[item.question.question_code]"
+          :notApplicable="!s.isQuestionVisible(item.question)"
+          @answered="s.onQuestionAnswered(item.question)"
+          @next="s.onQuestionAnswered(item.question)"
+          @capture-gps="s.captureGPS()"
         />
       </template>
     </SectionCard>
 
     <!-- Focus Mode / Auto Form Popup Modal -->
     <FocusModeModal
-      :isOpen="isFocusMode"
-      :questions="activeQuestions"
-      :currentIndex="focusQuestionIndex"
-      :responses="responses"
-      :validationErrors="validationErrors"
-      :autoAdvance="autoAdvance"
-      :isFullForm="isFullForm"
-      :sectionTitle="activeSection ? activeSection.section_title || activeSection.section_code : ''"
-      @close="$emit('close-focus-mode')"
-      @prev-question="$emit('prev-focus-question')"
-      @next-question="$emit('next-focus-question')"
-      @finish-section="$emit('finish-focus-section')"
-      @update-response="(qc, val) => $emit('update-focus-response', qc, val)"
-      @toggle-auto-advance="$emit('toggle-auto-advance')"
-      @toggle-full-form="$emit('toggle-full-form')"
-      @capture-gps="$emit('capture-gps')"
+      :isOpen="s.isFocusMode"
+      :questions="s.activeQuestions"
+      :currentIndex="s.focusQuestionIndex"
+      :responses="s.responses"
+      :validationErrors="s.validationErrors"
+      :autoAdvance="s.autoAdvance"
+      :isFullForm="s.isFullForm"
+      :sectionTitle="s.activeSection ? s.activeSection.section_title || s.activeSection.section_code : ''"
+      @close="s.isFocusMode = false"
+      @prev-question="s.focusQuestionIndex = Math.max(0, s.focusQuestionIndex - 1)"
+      @next-question="s.focusQuestionIndex = Math.min(s.activeQuestions.length - 1, s.focusQuestionIndex + 1)"
+      @finish-section="s.onFocusModeFinishSection()"
+      @update-response="s.setResponse"
+      @toggle-auto-advance="s.autoAdvance = !s.autoAdvance"
+      @toggle-full-form="s.toggleFullForm()"
+      @capture-gps="s.captureGPS()"
     />
   </div>
 </template>
@@ -83,43 +85,8 @@ import QuestionCard from "../components/survey/QuestionCard.vue";
 import GroupedQuestionCard from "../components/survey/GroupedQuestionCard.vue";
 import MatrixQuestionCard from "../components/survey/MatrixQuestionCard.vue";
 import FocusModeModal from "../components/survey/FocusModeModal.vue";
+import { useSurveySession } from "../composables/useSurveyApp";
 
-defineProps({
-  activeSection: Object,
-  activeSectionIndex: Number,
-  sections: Array,
-  responses: Object,
-  validationErrors: Object,
-  isSubmitting: Boolean,
-  autoAdvance: Boolean,
-  isFullForm: Boolean,
-  isFocusMode: Boolean,
-  isRecording: Boolean,
-  isAudioPaused: Boolean,
-  isGuest: Boolean,
-  displayQuestionItems: Array,
-  activeQuestions: Array,
-  focusQuestionIndex: Number,
-  isQuestionVisible: Function,
-  isSectionComplete: Function,
-});
-
-defineEmits([
-  "open-focus-mode",
-  "toggle-focus-mode",
-  "toggle-auto-advance",
-  "toggle-full-form",
-  "toggle-audio",
-  "prev-section",
-  "next-section",
-  "submit-form",
-  "group-response-update",
-  "question-answered",
-  "capture-gps",
-  "close-focus-mode",
-  "prev-focus-question",
-  "next-focus-question",
-  "finish-focus-section",
-  "update-focus-response",
-]);
+// every answer goes through s.setResponse, so the session owns the one write path (#46)
+const s = useSurveySession();
 </script>

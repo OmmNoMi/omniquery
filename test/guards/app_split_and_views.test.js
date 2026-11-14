@@ -12,7 +12,7 @@ import path from "node:path";
  *    - src/views/Survey.vue
  *    - src/views/Success.vue
  * 3. CompactHeader takes at most 2 props.
- * 4. provide/inject architecture is utilized.
+ * 4. App.vue provides the session and the views read it, with no props or emits.
  */
 
 describe("Architectural Guard: App.vue Split & Views Decomposition (Issue #46)", () => {
@@ -83,11 +83,15 @@ describe("Architectural Guard: App.vue Split & Views Decomposition (Issue #46)",
     ).toBeLessThanOrEqual(2);
   });
 
-  it("enforces provide/inject usage in App.vue and child components", () => {
+  // file shape only: src/__tests__/App.spec.js mounts the shell to prove it actually renders
+  it("App.vue provides the session and the views read it instead of taking props", () => {
     const appContent = fs.readFileSync(appVuePath, "utf-8");
-    expect(
-      appContent.includes("provide("),
-      "App.vue must use provide() to pass state down the tree"
-    ).toBe(true);
+    expect(appContent, "App.vue must call provideSurveyApp()").toMatch(/provideSurveyApp\(\)/);
+    for (const viewName of ["Catalog.vue", "Survey.vue", "Success.vue"]) {
+      const view = fs.readFileSync(path.join(viewsDir, viewName), "utf-8");
+      expect(view, `${viewName} must read useSurveySession()`).toMatch(/useSurveySession\(\)/);
+      expect(view.includes("defineProps("), `${viewName} must not take props from App.vue`).toBe(false);
+      expect(view.includes("$emit("), `${viewName} must call the session, not emit up to App.vue`).toBe(false);
+    }
   });
 });
