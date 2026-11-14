@@ -107,6 +107,15 @@ describe("useWAL", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
+  it("rethrows when db.wal.add rejects due to quota exceeded or storage failure", async () => {
+    const { queueWAL } = useWAL();
+    vi.spyOn(db.wal, "add").mockRejectedValue(new Error("QuotaExceededError"));
+
+    await expect(
+      queueWAL("OmniQuery Response", { idempotency_key: "FAIL-001" }, false)
+    ).rejects.toThrow("QuotaExceededError");
+  });
+
   it("quarantines a WAL entry when rejected or reaching 5 failed attempts", async () => {
     const mockErrorResponse = {
       message: {

@@ -35,7 +35,10 @@ export function useWAL() {
     const walEntry = makeWalEntry(entityType, payload);
     try {
       await db.wal.add(walEntry);
-    } catch (e) {}
+    } catch (e) {
+      console.error("Failed to queue WAL entry:", e);
+      throw e;
+    }
     await updatePendingCount();
     if (isOnline.value && autoSync) syncWAL();
     return walEntry;
