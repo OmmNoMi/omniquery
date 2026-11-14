@@ -100,6 +100,7 @@ const CORE_HINDI = {
   "Theme": "थीम",
   "Light": "हल्की",
   "Dark": "गहरी",
+  "System": "सिस्टम",
   "Done": "हो गया",
 };
 

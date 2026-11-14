@@ -31,9 +31,9 @@
     <!-- Pinned Parent Context (When rendering a subquestion belonging to a table/matrix) -->
     <div
       v-if="question._parentTitle"
-      class="mb-3 p-3 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs text-blue-950 dark:text-blue-200"
+      class="mb-3 p-3 rounded-xl bg-surface-blue-1 border border-outline-blue-1 text-xs"
     >
-      <div class="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+      <div class="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">
         <ClipboardList class="w-3.5 h-3.5" />
         <span>{{ __('Main Table Question') }}</span>
       </div>

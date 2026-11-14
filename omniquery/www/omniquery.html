@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>{{ title or "OmniQuery · OmmNoMi Field Survey Platform" }}</title>
+  <meta name="theme-color" content="#15803d"><!-- before the script below, which sets it for the saved theme -->
   <script>
     window.csrf_token = "{{ csrf_token }}"; // frappe-ui's call, resources and uploads send this
     window.frappe = window.frappe || {};
@@ -14,12 +15,14 @@
     window.frappe.initial_project_id = "{{ initial_project_id or '' }}";
     window.__messages = {{ translations or '{}' }};
     try { // before first paint, so dark mode never flashes light; src/utils/theme.js does the same at runtime
-      var root = document.documentElement, theme = localStorage.getItem("omniquery_theme") === "dark" ? "dark" : "light";
-      root.classList.toggle("dark", theme === "dark"); root.dataset.theme = theme;
+      var root = document.documentElement, saved = localStorage.getItem("omniquery_theme");
+      // "auto" (System) follows the device; anything unknown is light
+      var dark = saved === "dark" || (saved === "auto" && !!window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      root.classList.toggle("dark", dark); root.dataset.theme = dark ? "dark" : "light";
       root.classList.add("text-scale-" + (localStorage.getItem("omniquery_text_size") || "md"));
+      document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#020617" : "#15803d");
     } catch (e) {}
   </script>
-  <meta name="theme-color" content="#15803d">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">

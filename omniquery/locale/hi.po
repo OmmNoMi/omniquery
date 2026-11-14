@@ -2411,6 +2411,10 @@ msgid "Dark"
 msgstr "गहरी"
 
 #: src/components/header/CompactHeader.vue
+msgid "System"
+msgstr "सिस्टम"
+
+#: src/components/header/CompactHeader.vue
 msgid "Done"
 msgstr "हो गया"
 

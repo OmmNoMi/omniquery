@@ -1,7 +1,10 @@
 <template>
   <!-- FrappeUIProvider mounts the frappe-ui toast viewport, so toast.* calls render -->
   <FrappeUIProvider>
-  <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
+  <!-- isolate: the app's z-indexes (header, carousel arrows, section footer) stay in this layer, so
+       frappe-ui's Dialogs, teleported to <body> with no z-index, cover all of it. The toast list
+       is outside this div, so a toast still shows above an open dialog. test/guards/dialog_layer.test.js -->
+  <div class="isolate min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
     <!-- Live Region for Screen Readers (WCAG 2.2 AA) -->
     <div id="omniquery-live-region" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
       {{ s.liveAnnouncementText }}
@@ -112,7 +115,10 @@ import FilledFormsModal from "./components/dashboard/FilledFormsModal.vue";
 import CatalogView from "./views/Catalog.vue";
 import SurveyView from "./views/Survey.vue";
 import SuccessView from "./views/Success.vue";
+import { useTheme } from "./utils/theme";
 
 // reactive session: templates read s.isLoading as a value and writes like s.showWALDrawer = true land in the ref
 const s = provideSurveyApp();
+// Held for the app's lifetime, so "System" keeps following the device even with Settings closed
+useTheme();
 </script>

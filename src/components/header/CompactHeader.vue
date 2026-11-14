@@ -233,12 +233,12 @@
 import { ref, computed, nextTick } from "vue";
 import { Button, Dialog, TabButtons } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
-import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package, X } from "lucide-vue-next";
+import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, Monitor, LayoutGrid, ChevronDown, Package, X } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useUserRoles } from "../../composables/useUserRoles";
 import { useSession } from "../../composables/useSession";
 import { useOmniqueryContext } from "../../composables/useSurveyApp";
-import { THEME_KEY, storedTheme, applyTheme } from "../../utils/theme";
+import { useTheme } from "../../utils/theme";
 
 defineProps({
   surveyTitle: {
@@ -256,7 +256,7 @@ const { __, currentLang, setLanguage } = useTranslation();
 
 const showConfigModal = ref(false);
 const avatarRef = ref(null);
-const activeTheme = ref(storedTheme());
+const { theme } = useTheme();
 
 const { email: userEmail, displayName: userDisplayName, userInitial } = useSession();
 
@@ -272,14 +272,6 @@ const roleLabel = computed(() => {
 
 function setTextScale(size) {
   emit("set-text-size", size);
-}
-
-function setAppTheme(theme) {
-  activeTheme.value = theme;
-  if (typeof localStorage !== "undefined") {
-    localStorage.setItem(THEME_KEY, theme);
-  }
-  applyTheme(theme);
 }
 
 // Sync Now opens the offline queue dialog in place of this one. Settings closes first, so it stops
@@ -333,9 +325,11 @@ const preferenceRows = computed(() => [
     id: "oq_settings_theme",
     label: __("Theme"),
     icon: Palette,
-    value: activeTheme.value,
-    set: setAppTheme,
+    value: theme.value,
+    set: (value) => (theme.value = value),
     buttons: [
+      // "auto" follows the device's light or dark setting
+      { label: __("System"), value: "auto", icon: Monitor },
       { label: __("Light"), value: "light", icon: Sun },
       { label: __("Dark"), value: "dark", icon: Moon },
     ],

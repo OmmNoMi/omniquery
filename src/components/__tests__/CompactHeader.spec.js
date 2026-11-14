@@ -255,6 +255,20 @@ describe("CompactHeader", () => {
       wrapper.unmount();
     });
 
+    it("offers System, Light and Dark, starts on Light and saves the pick (#39)", async () => {
+      localStorage.removeItem("omniquery_theme");
+      const { wrapper } = await openSettings();
+      const group = [...document.body.querySelectorAll("[role='radiogroup']")][2];
+      const radios = [...group.querySelectorAll("[role='radio']")];
+      expect(radios.map((r) => r.textContent.trim())).toEqual(["System", "Light", "Dark"]);
+      expect(group.querySelector("[aria-checked='true']")?.textContent.trim(), "never picked: light").toBe("Light");
+      radios[0].click();
+      await vi.waitFor(() => expect(localStorage.getItem("omniquery_theme")).toBe("auto"));
+      await vi.waitFor(() => expect(group.querySelector("[aria-checked='true']")?.textContent.trim()).toBe("System"));
+      localStorage.removeItem("omniquery_theme");
+      wrapper.unmount();
+    });
+
     it("opens the queue with focus on the avatar, so the queue gives focus back there", async () => {
       let focusedWhenQueueOpened = null;
       const { wrapper, avatar } = await openSettings({

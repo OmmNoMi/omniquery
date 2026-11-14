@@ -7,11 +7,14 @@
   --text-main: #0f172a;
 }
 
+/* No overflow on html: it would make html the scroll container, and frappe-ui Dialog's scroll
+   lock (overflow: hidden on body) would stop reaching the page, so the page scrolled behind every
+   open dialog. body's overflow-x below reaches the viewport instead. Guarded by
+   test/guards/scroll_lock.test.js. */
 html {
   font-size: 16px !important;
   width: 100%;
   max-width: 100vw;
-  overflow-x: hidden;
 }
 
 body {
@@ -117,12 +120,6 @@ html.dark .bg-slate-50 {
   border-color: #334155 !important;
 }
 
-/* Universal Modal Scroll Lock: Strictly prevents background scrolling, elastic bounce, and chaining */
-body.modal-open-scroll-locked,
-html.modal-open-scroll-locked {
-  overflow: hidden !important;
-  overscroll-behavior: none !important;
-}
 
 
 
