@@ -18,7 +18,7 @@ export const TITLE_CASE_ALLOWLIST = {
   "src/components/dashboard/FilledFormsModal.vue": 15,
   "src/components/dashboard/ProjectHeaderCard.vue": 5,
   "src/components/dashboard/SurveyorDashboard.vue": 9,
-  "src/components/header/CompactHeader.vue": 16,
+  "src/components/header/CompactHeader.vue": 15,
   "src/components/project/ProjectPage.vue": 23,
   "src/components/survey/FocusModeModal.vue": 5,
   "src/components/survey/GroupedQuestionCard.vue": 1,

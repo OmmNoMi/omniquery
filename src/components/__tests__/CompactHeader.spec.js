@@ -212,6 +212,73 @@ describe("CompactHeader", () => {
     });
   });
 
+  describe("settings dialog (#40)", () => {
+    beforeEach(() => {
+      useTranslation().setLanguage("en");
+    });
+
+    const avatarOf = (wrapper) => wrapper.find("button[aria-label='Settings & Configuration']").element;
+    const settingsOpen = () => Boolean(document.body.querySelector("[role='dialog']"));
+
+    async function openSettings(options = {}) {
+      const wrapper = mountHeader({ roles: ["OmniQuery User"], attachTo: document.body, ...options });
+      const avatar = avatarOf(wrapper);
+      avatar.focus();
+      await wrapper.find("button[aria-label='Settings & Configuration']").trigger("click");
+      await vi.waitFor(() => expect(settingsOpen(), "settings open").toBe(true));
+      return { wrapper, avatar };
+    }
+
+    it("closes on Escape and gives focus back to the avatar", async () => {
+      const { wrapper, avatar } = await openSettings();
+      expect(document.body.querySelector("[role='dialog']").contains(document.activeElement), "focus moved into the dialog").toBe(true);
+      document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await vi.waitFor(() => expect(settingsOpen()).toBe(false));
+      await vi.waitFor(() => expect(document.activeElement).toBe(avatar));
+      wrapper.unmount();
+    });
+
+    it("hides the page behind it from screen readers while open", async () => {
+      const { wrapper } = await openSettings();
+      expect(wrapper.element.closest("[aria-hidden='true']"), "header is aria-hidden behind the dialog").not.toBeNull();
+      expect(document.body.querySelector("[role='dialog']").getAttribute("aria-labelledby"), "named by its title").toBeTruthy();
+      wrapper.unmount();
+    });
+
+    it("makes each preference a radio group named by its row label", async () => {
+      const { wrapper } = await openSettings();
+      const groups = [...document.body.querySelectorAll("[role='radiogroup']")];
+      const names = groups.map((group) => document.getElementById(group.getAttribute("aria-labelledby"))?.textContent);
+      expect(names).toEqual(["Language", "Text size", "Theme", "Choice layout"]);
+      const checked = groups[0].querySelector("[aria-checked='true']");
+      expect(checked?.textContent.trim(), "the language on screen is the checked one").toBe("English");
+      wrapper.unmount();
+    });
+
+    it("opens the queue with focus on the avatar, so the queue gives focus back there", async () => {
+      let focusedWhenQueueOpened = null;
+      const { wrapper, avatar } = await openSettings({
+        pendingWALCount: 2,
+        attrs: { onOpenWal: () => (focusedWhenQueueOpened = document.activeElement) },
+      });
+      const sync = [...document.body.querySelectorAll("[role='dialog'] button")].find((b) => b.textContent.includes("Sync Now"));
+      sync.click();
+      await vi.waitFor(() => expect(wrapper.emitted("open-wal")).toHaveLength(1));
+      expect(focusedWhenQueueOpened).toBe(avatar);
+      await vi.waitFor(() => expect(settingsOpen()).toBe(false));
+      wrapper.unmount();
+    });
+
+    it("uses plain words: no queue jargon, no 'Credentials'", async () => {
+      const { wrapper } = await openSettings({ pendingWALCount: 3 });
+      const text = document.body.querySelector("[role='dialog']").textContent;
+      for (const jargon of ["WAL", "ERPNext", "Credentials"]) expect(text, jargon).not.toContain(jargon);
+      expect(text).toContain("Waiting to upload");
+      expect(text).toContain("Your account");
+      wrapper.unmount();
+    });
+  });
+
   describe("state from App's provided context (#46)", () => {
     beforeEach(() => {
       useTranslation().setLanguage("en");

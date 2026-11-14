@@ -30,7 +30,7 @@ export const BUTTON_COLOR_ALLOWLIST = {
   "src/components/dashboard/FilledFormsModal.vue": 22,
   "src/components/dashboard/ProjectHeaderCard.vue": 4,
   "src/components/dashboard/SurveyorDashboard.vue": 2,
-  "src/components/header/CompactHeader.vue": 15,
+  "src/components/header/CompactHeader.vue": 3,
   "src/components/project/ProjectPage.vue": 9,
   "src/components/survey/GroupedQuestionCard.vue": 3,
   "src/components/survey/MatrixQuestionCard.vue": 6,
