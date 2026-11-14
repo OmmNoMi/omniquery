@@ -95,6 +95,12 @@ const CORE_HINDI = {
   "Increase": "बढ़ाएँ",
   "{0} of {1}": "{1} में से {0}",
   "Download all survey templates for this project so they can be filled offline": "इस प्रोजेक्ट के सभी सर्वे टेम्पलेट डाउनलोड करें ताकि उन्हें ऑफ़लाइन भरा जा सके",
+  "Your account": "आपका खाता",
+  "Language": "भाषा",
+  "Theme": "थीम",
+  "Light": "हल्की",
+  "Dark": "गहरी",
+  "Done": "हो गया",
 };
 
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";

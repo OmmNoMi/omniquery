@@ -2389,3 +2389,31 @@ msgstr "{1} में से {0}"
 #: src/components/dashboard/ProjectHeaderCard.vue
 msgid "Download all survey templates for this project so they can be filled offline"
 msgstr "इस प्रोजेक्ट के सभी सर्वे टेम्पलेट डाउनलोड करें ताकि उन्हें ऑफ़लाइन भरा जा सके"
+
+#: src/components/header/CompactHeader.vue
+msgid "Your account"
+msgstr "आपका खाता"
+
+#: src/components/header/CompactHeader.vue
+msgid "Language"
+msgstr "भाषा"
+
+#: src/components/header/CompactHeader.vue
+msgid "Theme"
+msgstr "थीम"
+
+#: src/components/header/CompactHeader.vue
+msgid "Light"
+msgstr "हल्की"
+
+#: src/components/header/CompactHeader.vue
+msgid "Dark"
+msgstr "गहरी"
+
+#: src/components/header/CompactHeader.vue
+msgid "Done"
+msgstr "हो गया"
+
+#: src/components/header/CompactHeader.vue
+msgid "Dropdown"
+msgstr "ड्रॉपडाउन"

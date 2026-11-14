@@ -110,7 +110,7 @@
             class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-[#d0ded3] dark:border-[#142019] bg-slate-400"
             :title="__('Muted')"
           />
-        </button>
+        </Button>
 
         <!-- Guest Login Button -->
         <a
@@ -128,6 +128,7 @@
           v-else
           variant="solid"
           :label="__('Settings & Configuration')"
+          ref="avatarRef"
           class="relative !h-9 !w-9 !px-0 rounded-full font-black select-none active:scale-95"
           @click="showConfigModal = true"
         >
@@ -153,255 +154,86 @@
       </div>
     </div>
 
-    <!-- Unified Native Settings Bottom Sheet (Teleported to body with z-[9999] to completely overlay all chrome) -->
-    <Teleport to="body">
-      <div
-        v-if="showConfigModal"
-        class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-end justify-center overscroll-contain select-none"
-        @click.self="showConfigModal = false"
-        @wheel.stop
-        @touchmove.self.prevent
-      >
-        <div class="bg-white w-full max-w-lg rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto pb-safe overscroll-contain">
-          <!-- iOS Grabber Bar -->
-          <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto"></div>
-
-          <!-- Sheet Header: User Avatar & Live Status & WCAG 44x44 Close Button -->
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
-            <div class="flex items-center gap-3">
-              <div class="relative w-12 h-12 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shadow-xs ring-2 ring-emerald-100">
+    <!-- Settings: a frappe-ui Dialog (reka), which traps focus, makes the page behind it inert, locks
+      scrolling, closes on Escape only when it is the topmost layer, and gives focus back to the avatar -->
+    <Dialog v-model="showConfigModal" :options="{ size: 'md' }">
+      <template #body>
+        <div class="p-5 space-y-4">
+          <!-- Who is signed in, and the close button -->
+          <div class="flex items-center justify-between gap-3 pb-3 border-b border-outline-gray-1">
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="relative w-12 h-12 shrink-0 rounded-full bg-surface-gray-7 text-ink-white font-black flex items-center justify-center text-sm" aria-hidden="true">
                 {{ userInitial }}
-                <span
-                  :class="[
-                    'absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white',
-                    isOnline ? 'bg-emerald-500' : 'bg-amber-500'
-                  ]"
-                />
+                <span :class="['absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-outline-white', isOnline ? 'bg-emerald-500' : 'bg-amber-500']" />
               </div>
-              <div>
-                <h3 class="text-sm font-bold text-slate-900 leading-tight">{{ userDisplayName }}</h3>
-                <p v-if="userEmail && userEmail !== userDisplayName" class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
-                <div class="flex items-center gap-1.5 mt-1">
-                  <span
-                    :class="[
-                      'inline-block w-2 h-2 rounded-full',
-                      isOnline ? 'bg-emerald-500' : 'bg-amber-500'
-                    ]"
-                  />
-                  <span class="text-[11px] font-semibold text-slate-600">
-                    {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
-                  </span>
-                </div>
+              <div class="min-w-0">
+                <DialogTitle as="h3" class="text-sm font-bold text-ink-gray-9 leading-tight truncate">{{ userDisplayName }}</DialogTitle>
+                <p v-if="userEmail && userEmail !== userDisplayName" class="text-xs text-ink-gray-6 mt-0.5 truncate">{{ userEmail }}</p>
+                <DialogDescription as="p" class="text-xs font-semibold text-ink-gray-6 mt-1">
+                  {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
+                </DialogDescription>
               </div>
             </div>
-
-            <!-- Accessible WCAG 2.2 AA Close Button (44x44px target) -->
-            <Button
-              @click="showConfigModal = false"
-              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80"
-              :label="__('Close settings')"
-              :title="__('Close settings')"
-            >
-              <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </Button>
+            <Button variant="ghost" size="md" :icon="X" :label="__('Close settings')" :title="__('Close settings')" @click="showConfigModal = false" />
           </div>
 
-          <!-- Grouped Native Settings Rows -->
-          <div class="bg-slate-50 rounded-2xl border border-slate-200/80 divide-y divide-slate-200/60 overflow-hidden">
-            <!-- 1. Language Row -->
-            <div class="p-3.5 flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <Globe class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Language') }}</span>
+          <!-- Preferences: each row is a frappe-ui TabButtons radio group, named by its row label -->
+          <div class="rounded-2xl border border-outline-gray-1 bg-surface-gray-1 divide-y divide-outline-gray-1">
+            <div v-for="row in preferenceRows" :key="row.id" class="p-3.5 flex items-center justify-between gap-3 flex-wrap">
+              <div class="flex items-center gap-2 text-ink-gray-8">
+                <component :is="row.icon" class="w-4 h-4 text-ink-gray-5" aria-hidden="true" />
+                <span :id="row.id" class="text-xs font-bold">{{ row.label }}</span>
               </div>
-              <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
-                <Button
-                  @click="setLanguage('en')"
-                  :class="[
-                    'px-3.5 py-1.5 rounded-lg transition font-bold',
-                    currentLang === 'en' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  ]"
-                >
-                  English
-                </Button>
-                <Button
-                  @click="setLanguage('hi')"
-                  :class="[
-                    'px-3.5 py-1.5 rounded-lg transition font-bold',
-                    currentLang === 'hi' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  ]"
-                >
-                  हिन्दी
-                </Button>
-              </div>
-            </div>
-
-            <!-- 2. Text Scale Row -->
-            <div class="p-3.5 flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <Languages class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Text size') }}</span>
-              </div>
-              <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
-                <Button
-                  @click="setTextScale('md')"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg transition font-bold',
-                    textSize === 'md' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  ]"
-                >
-                  A
-                </Button>
-                <Button
-                  @click="setTextScale('lg')"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg transition font-bold',
-                    textSize === 'lg' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  ]"
-                >
-                  A+
-                </Button>
-                <Button
-                  @click="setTextScale('xl')"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg transition font-bold',
-                    textSize === 'xl' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  ]"
-                >
-                  A++
-                </Button>
-              </div>
-            </div>
-
-            <!-- 3. Theme Row -->
-            <div class="p-3.5 flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <Palette class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Theme') }}</span>
-              </div>
-              <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
-                <Button
-                  @click="setAppTheme('light')"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg transition flex items-center gap-1 font-bold',
-                    activeTheme === 'light' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  ]"
-                >
-                  <Sun class="w-3.5 h-3.5" />
-                  <span>Light</span>
-                </Button>
-                <Button
-                  @click="setAppTheme('dark')"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg transition flex items-center gap-1 font-bold',
-                    activeTheme === 'dark' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  ]"
-                >
-                  <Moon class="w-3.5 h-3.5" />
-                  <span>Dark</span>
-                </Button>
-              </div>
-            </div>
-
-            <!-- 4. Choice Layout Row -->
-            <div class="p-3.5 flex items-center justify-between gap-3">
-              <div class="flex items-center gap-2">
-                <LayoutGrid class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Choice layout') }}</span>
-              </div>
-              <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
-                <Button
-                  @click="setChoiceMode('grid')"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg transition font-bold flex items-center gap-1',
-                    activeChoiceMode === 'grid' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  ]"
-                >
-                  <LayoutGrid class="w-3.5 h-3.5" />
-                  <span>Grid</span>
-                </Button>
-                <Button
-                  @click="setChoiceMode('combobox')"
-                  :class="[
-                    'px-3 py-1.5 rounded-lg transition font-bold flex items-center gap-1',
-                    activeChoiceMode === 'combobox' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-600 hover:text-slate-900'
-                  ]"
-                >
-                  <ChevronDown class="w-3.5 h-3.5" />
-                  <span>Dropdown</span>
-                </Button>
-              </div>
+              <TabButtons :aria-labelledby="row.id" :buttons="row.buttons" :modelValue="row.value" @update:modelValue="row.set" />
             </div>
           </div>
 
-          <!-- 4. Offline WAL Queue & Sync Status -->
-          <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3">
+          <!-- Responses waiting to upload -->
+          <div class="p-3.5 rounded-2xl border border-outline-gray-1 bg-surface-gray-1 flex items-center justify-between gap-3">
             <div>
-              <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                <Package class="w-4 h-4 text-slate-500" />
+              <div class="flex items-center gap-1.5 text-xs font-bold text-ink-gray-8">
+                <Package class="w-4 h-4 text-ink-gray-5" aria-hidden="true" />
                 <span>{{ __('Waiting to upload') }}</span>
               </div>
-              <p class="text-[11px] text-slate-500 mt-0.5">
-                {{ __('{0} pending responses', [pendingWALCount]) }}
-              </p>
+              <p class="text-xs text-ink-gray-6 mt-0.5">{{ __('{0} pending responses', [pendingWALCount]) }}</p>
             </div>
-            <Button
-              @click="triggerSync"
-              :disabled="pendingWALCount === 0"
-              class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition shadow-xs disabled:opacity-40 flex items-center gap-1.5"
-            >
-              <Zap class="w-3.5 h-3.5" />
-              <span>{{ __('Sync Now') }}</span>
+            <Button variant="solid" :disabled="pendingWALCount === 0" @click="triggerSync">
+              <template #prefix><Zap class="w-3.5 h-3.5" aria-hidden="true" /></template>
+              {{ __('Sync Now') }}
             </Button>
           </div>
 
-          <!-- 5. Profile Details & Manage Link -->
-          <div class="pt-1 flex items-center justify-between text-xs px-1">
-            <span class="text-slate-500 font-medium">{{ __('Manage Profile & Credentials') }}</span>
-            <!-- /me is a server page the service worker does not cache, so offline it would replace the app with an error -->
-            <a
-              v-if="isOnline"
-              href="/me"
-              class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 min-h-6"
-            >
+          <!-- Account: /me is a server page the service worker does not cache, so offline it would replace the app with an error -->
+          <div class="flex items-center justify-between gap-3 text-xs px-1">
+            <span class="text-ink-gray-6 font-medium">{{ __('Your account') }}</span>
+            <a v-if="isOnline" href="/me" class="font-bold text-ink-gray-8 underline underline-offset-2 flex items-center gap-1 min-h-6 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3">
               <span>{{ __('My Account') }}</span>
               <span aria-hidden="true">↗</span>
             </a>
-            <span v-else class="text-slate-500">{{ __('My Account needs internet') }}</span>
+            <span v-else class="text-ink-gray-6">{{ __('My Account needs internet') }}</span>
           </div>
 
-          <!-- 6. Manager Review Workspace Link -->
-          <div v-if="isManager" class="pt-1 flex items-center justify-between text-xs px-1">
-            <span class="text-blue-700 font-semibold">{{ __('OmniQuery Review Workspace') }}</span>
-            <a
-              href="/desk/omniquery"
-              class="font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1"
-            >
+          <!-- Manager review workspace -->
+          <div v-if="isManager" class="flex items-center justify-between gap-3 text-xs px-1">
+            <span class="text-ink-gray-6 font-medium">{{ __('OmniQuery Review Workspace') }}</span>
+            <a href="/desk/omniquery" class="font-bold text-ink-gray-8 underline underline-offset-2 flex items-center gap-1 min-h-6 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3">
               <span>{{ __('Open Desk') }}</span>
               <span aria-hidden="true">↗</span>
             </a>
           </div>
 
-          <!-- Sheet Dismiss Button -->
-          <Button
-            @click="showConfigModal = false"
-            class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm transition shadow-sm"
-          >
-            {{ __('Done') }}
-          </Button>
+          <Button variant="subtle" size="lg" class="w-full" @click="showConfigModal = false">{{ __('Done') }}</Button>
         </div>
-      </div>
-    </Teleport>
+      </template>
+    </Dialog>
   </header>
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
-import { Button } from "frappe-ui";
-import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
-import { useScrollLock } from "../../composables/useScrollLock";
+import { ref, computed, nextTick } from "vue";
+import { Button, Dialog, TabButtons } from "frappe-ui";
+import { DialogDescription, DialogTitle } from "reka-ui";
+import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package, X } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useUserRoles } from "../../composables/useUserRoles";
 import { useSession } from "../../composables/useSession";
@@ -423,7 +255,7 @@ const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-te
 const { __, currentLang, setLanguage } = useTranslation();
 
 const showConfigModal = ref(false);
-useScrollLock(showConfigModal);
+const avatarRef = ref(null);
 const activeTheme = ref(storedTheme());
 
 const { email: userEmail, displayName: userDisplayName, userInitial } = useSession();
@@ -450,9 +282,14 @@ function setAppTheme(theme) {
   applyTheme(theme);
 }
 
-function triggerSync() {
-  emit("open-wal");
+// Sync Now opens the offline queue dialog in place of this one. Settings closes first, so it stops
+// trapping focus, and the avatar takes focus before the queue opens: the queue then records the
+// avatar, not the vanishing Sync Now button, as the place to return focus to (as SurveyModeMenu does).
+async function triggerSync() {
   showConfigModal.value = false;
+  await nextTick();
+  avatarRef.value?.rootRef?.focus(); // frappe-ui Button exposes its DOM element as rootRef
+  emit("open-wal");
 }
 
 const activeChoiceMode = ref(
@@ -467,13 +304,54 @@ function setChoiceMode(mode) {
   }
 }
 
-watch(showConfigModal, (isOpen) => {
-  if (typeof document !== "undefined") {
-    document.body.style.overflow = isOpen ? "hidden" : "";
-  }
-});
-
-
+// The preference rows of the settings dialog, one TabButtons radio group each
+const preferenceRows = computed(() => [
+  {
+    id: "oq_settings_language",
+    label: __("Language"),
+    icon: Globe,
+    value: currentLang.value,
+    set: setLanguage,
+    buttons: [
+      { label: "English", value: "en" },
+      { label: "हिन्दी", value: "hi" },
+    ],
+  },
+  {
+    id: "oq_settings_text_size",
+    label: __("Text size"),
+    icon: Languages,
+    value: textSize.value,
+    set: setTextScale,
+    buttons: [
+      { label: "A", value: "md" },
+      { label: "A+", value: "lg" },
+      { label: "A++", value: "xl" },
+    ],
+  },
+  {
+    id: "oq_settings_theme",
+    label: __("Theme"),
+    icon: Palette,
+    value: activeTheme.value,
+    set: setAppTheme,
+    buttons: [
+      { label: __("Light"), value: "light", icon: Sun },
+      { label: __("Dark"), value: "dark", icon: Moon },
+    ],
+  },
+  {
+    id: "oq_settings_choice_layout",
+    label: __("Choice layout"),
+    icon: LayoutGrid,
+    value: activeChoiceMode.value,
+    set: setChoiceMode,
+    buttons: [
+      { label: __("Grid"), value: "grid", icon: LayoutGrid },
+      { label: __("Dropdown"), value: "combobox", icon: ChevronDown },
+    ],
+  },
+]);
 
 defineExpose({
   roleLabel,
