@@ -57,7 +57,7 @@ self.addEventListener('fetch', event => {
 
       // 2. If navigating to any survey or sub-page, return cached /omniquery app shell
       if (event.request.mode === 'navigate' || event.request.destination === 'document') {
-        return (await caches.match('/omniquery')) || (await caches.match('/assets/omniquery/pwa/index.html'));
+        return await caches.match('/omniquery');
       }
     })
   );

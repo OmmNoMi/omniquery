@@ -32,26 +32,25 @@ def get_context(context):
 				ctx.title = f"{t_title} · OmniQuery"
 
 
-	try:
-		from frappe.sessions import get_csrf_token
-
-		ctx.csrf_token = get_csrf_token()
-	except Exception:
-		ctx.csrf_token = (
-			getattr(frappe.local.session.data, "csrf_token", "") if hasattr(frappe.local, "session") else ""
-		)
+	# as hrms and builder do: a GET is not committed, so persist a newly generated token for frappe-ui's POSTs
+	csrf_token = frappe.sessions.get_csrf_token()
+	frappe.db.commit()  # nosemgrep
+	ctx.csrf_token = csrf_token
 
 	import json
-	user_lang = frappe.local.lang or "hi"
+	user_lang = getattr(frappe.local, "lang", None) or "en"
 	try:
 		from frappe.translate import get_all_translations
 		translations = get_all_translations(user_lang)
 	except Exception:
 		translations = {}
 	ctx.translations = json.dumps(translations)
-	ctx.current_lang = user_lang
+	ctx.lang = user_lang
 
 	ctx.current_user = frappe.session.user
+	ctx.user_roles = json.dumps(frappe.get_roles(ctx.current_user))
+	# the PWA greets the surveyor by name (#51); the page writes it into a script with |tojson
+	ctx.current_user_fullname = frappe.utils.get_fullname(ctx.current_user) if ctx.current_user != "Guest" else ""
 	try:
 		import os
 		bundle_path = os.path.join(frappe.get_app_path("omniquery"), "public", "dist", "omniquery.bundle.js")

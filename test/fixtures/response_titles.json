@@ -1,0 +1,57 @@
+{
+  "_about": "Response title cases. src/utils/responseTitle.js and omniquery/services/response_title.py must both give these titles (#54).",
+  "cases": [
+    {
+      "answers": { "respondent_name": "Sunita Devi", "village_gp": "Rampur", "enterprise_name": "Devi Dairy" },
+      "format": "",
+      "title": "Sunita Devi - Rampur (Devi Dairy)"
+    },
+    {
+      "answers": { " RESPONDENT_NAME ": "  Radha Sharma  ", "village_gp": "Kalyanpur", "enterprise_name": "Radha Handicrafts" },
+      "format": "",
+      "title": "Radha Sharma - Kalyanpur (Radha Handicrafts)"
+    },
+    {
+      "answers": { "full_name": "Geeta Bai", "village": "Shivnagar", "business_name": "Shiv Garments" },
+      "format": "",
+      "title": "Geeta Bai - Shivnagar (Shiv Garments)"
+    },
+    {
+      "answers": { "respondent_name": "Meena Patel", "village_gp": "Gokulpur" },
+      "format": "{respondent_name} - {village_gp} ({enterprise_name})",
+      "title": "Meena Patel - Gokulpur"
+    },
+    {
+      "answers": { "respondent_name": "Kavita" },
+      "format": "{respondent_name} - {village_gp} ({enterprise_name})",
+      "title": "Kavita"
+    },
+    {
+      "answers": { "farmer_name": "Ramesh Kumar", "khasra_no": "412/9" },
+      "format": "{farmer_name} [Khasra {khasra_no}]",
+      "title": "Ramesh Kumar [Khasra 412/9]"
+    },
+    {
+      "answers": { "कारीगर": "मोहन", "गाँव": "मंडी" },
+      "format": "{कारीगर} - {गाँव}",
+      "title": "मोहन - मंडी"
+    },
+    {
+      "answers": { "respondent_name": "Lata", "household_size": 0 },
+      "format": "{respondent_name} ({household_size})",
+      "title": "Lata (0)"
+    },
+    {
+      "answers": {},
+      "format": "",
+      "fallback": "Dairy Survey, 13-11-2026",
+      "title": "Dairy Survey, 13-11-2026"
+    },
+    {
+      "answers": { "q1": "yes" },
+      "format": "{farmer_name}",
+      "fallback": "Dairy Survey, 13-11-2026",
+      "title": "Dairy Survey, 13-11-2026"
+    }
+  ]
+}
