@@ -16,7 +16,7 @@
     @touchcancel="onTouchCancel"
     @contextmenu.prevent="openConfigModal"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-28',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default scroll-mt-28',
       notApplicable
         ? 'bg-slate-50/70 dark:bg-slate-900/60 border-dashed border-slate-300 dark:border-slate-700 opacity-75'
         : errorMessage
@@ -156,7 +156,7 @@
                 @keydown.esc.prevent.stop="onSearchInputEsc"
                 @keydown.enter.prevent="onSearchInputEnter"
                 @keydown.down.prevent="focusFirstOption"
-                class="w-full text-xs sm:text-sm pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition shadow-2xs"
+                class="w-full text-xs sm:text-sm pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 transition shadow-2xs"
               />
               <Button
                 v-if="gridSearchQuery"
@@ -176,7 +176,7 @@
           </div>
 
           <div
-            class="grid gap-2.5 focus:outline-none outline-none"
+            class="grid gap-2.5"
             :class="displayedGridOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
             :role="isMultiSelect ? 'group' : 'radiogroup'"
             @keydown="onGridKeydown"
@@ -195,7 +195,7 @@
               @keydown.space.prevent="onOptionSpace(option.value)"
               @keydown="onOptionKeydown($event, index)"
               :class="[
-                'w-full text-left p-3 sm:p-3.5 rounded-xl border transition-all flex items-center group active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-pointer shadow-2xs gap-3',
+                'w-full text-left p-3 sm:p-3.5 rounded-xl border transition-all flex items-center group active:scale-[0.98] cursor-pointer shadow-2xs gap-3',
                 isOptionSelected(option.value)
                   ? (isMultiSelect
                       ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-600 text-emerald-950 dark:text-emerald-100 font-bold ring-1 ring-emerald-500/30'
@@ -297,7 +297,7 @@
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
         :placeholder="__('Enter value')"
-        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
+        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800"
       />
 
       <!-- 9. Date Input -->
@@ -313,7 +313,7 @@
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
-        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
+        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800"
       />
 
       <!-- 10. Default Text Input -->
@@ -330,7 +330,7 @@
         @keydown.enter="onInputEnter"
         @keydown.esc.stop="focusCard"
         :placeholder="__('Enter value')"
-        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-medium text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
+        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800"
       />
     </div>
 

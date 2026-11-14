@@ -2313,3 +2313,15 @@ msgstr "यह सर्वेक्षण अभी आपके डिवा�
 #: src/composables/useSurveyApp.js
 msgid "Survey synced to server successfully!"
 msgstr "सर्वेक्षण सर्वर पर सिंक हो गया!"
+
+#: src/views/Catalog.vue
+msgid "Search surveys..."
+msgstr "सर्वेक्षण खोजें..."
+
+#: src/views/Catalog.vue
+msgid "Search surveys"
+msgstr "सर्वेक्षण खोजें"
+
+#: src/views/Catalog.vue
+msgid "Clear search"
+msgstr "खोज साफ़ करें"

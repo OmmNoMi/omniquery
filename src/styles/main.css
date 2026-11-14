@@ -31,6 +31,14 @@ body {
   box-sizing: border-box;
 }
 
+/* Focus rings (#43). frappe-ui draws every focus ring in its --outline-gray-3 token, which is
+   #C7C7C7 in light mode and #424242 in dark mode: under 3:1 against the page in both. Re-point the
+   token on the focused element only, so frappe-ui's own rings (and ours, which use the same
+   ring-outline-gray-3 class) pass 3:1 on light and dark surfaces. test/guards/focus_rings.test.js checks it. */
+:focus-visible {
+  --outline-gray-3: theme("colors.emerald.600");
+}
+
 /* Scoped Typography Scale: Only scales survey question text, labels, inputs and options without resizing UI wrappers */
 html.text-scale-md main label { font-size: 1.05rem; }
 html.text-scale-lg main label { font-size: 1.25rem !important; }

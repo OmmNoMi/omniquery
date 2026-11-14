@@ -15,7 +15,7 @@
     <!-- Survey response code / Reference ID Card -->
     <div class="max-w-md mx-auto p-4 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-left space-y-2.5 shadow-2xs">
       <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 font-medium">
-        <span class="uppercase tracking-wider font-bold text-[10px] text-slate-400 dark:text-slate-500">
+        <span class="uppercase tracking-wider font-bold text-xs text-slate-600 dark:text-slate-300">
           {{ __('Survey response code') }}
         </span>
         <Button
@@ -34,7 +34,7 @@
           {{ s.submittedResponseId || __('Generating...') }}
         </code>
         <span
-          class="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 flex items-center gap-1"
+          class="px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wider shrink-0 flex items-center gap-1"
           :class="s.isSubmissionSynced ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'"
         >
           <Check v-if="s.isSubmissionSynced" class="w-3 h-3 text-emerald-600" />

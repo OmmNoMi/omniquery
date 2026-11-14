@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { getSourceFiles } from "./sourceFiles.js";
+import { getSourceFiles, namedImports } from "./sourceFiles.js";
 
 // Light-surface text in slate/gray/zinc 200 or 300 is under 2:1 on white, so it fails WCAG 2.2 AA
 // (4.5:1). 400 is about 2.6:1 and still fails; the existing uses are capped per file below and
@@ -19,21 +19,12 @@ export const SHADE_400_ALLOWLIST = {
   "src/components/project/ProjectPage.vue": 1,
   "src/components/survey/MatrixQuestionCard.vue": 4,
   "src/components/survey/QuestionCard.vue": 6,
-  "src/components/survey/SectionCard.vue": 1,
   "src/views/Catalog.vue": 2,
   "src/views/Success.vue": 1,
 };
 
-function lucideIcons(content) {
-  const names = new Set();
-  for (const m of content.matchAll(/import\s*\{([^}]*)\}\s*from\s*["']lucide-vue-next["']/g)) {
-    m[1].split(",").map((n) => n.trim().split(/\s+as\s+/).pop()).filter(Boolean).forEach((n) => names.add(n));
-  }
-  return names;
-}
-
 export function lightTextUses(content) {
-  const icons = lucideIcons(content);
+  const icons = namedImports(content, "lucide-vue-next");
   const uses = [];
   for (const m of content.matchAll(LIGHT_TEXT)) {
     if (m[1].split(":").includes("dark")) continue;
@@ -70,6 +61,8 @@ describe("Static Architectural Guard: Accessible Text Contrast (WCAG 2.2 AA) (#4
     expect(lightTextUses('<p class="hover:text-slate-200">').map((u) => u.shade)).toEqual(["200"]);
     expect(lightTextUses('<p class="group-hover:text-gray-300">').map((u) => u.shade)).toEqual(["300"]);
     expect(lightTextUses('<p class="dark:text-slate-200 dark:hover:text-slate-300">')).toEqual([]);
-    expect(lightTextUses('import { Star } from "lucide-vue-next";\n<Star\n  class="text-slate-300" />')).toEqual([]);
+    const sfc = '<template><Star\n  class="text-slate-300" /></template>\n<script setup>import { Star as Star } from "lucide-vue-next";</script>';
+    expect(lightTextUses(sfc)).toEqual([]);
+    expect(lightTextUses(sfc.replace("lucide-vue-next", "./Star.vue")).map((u) => u.shade)).toEqual(["300"]);
   });
 });

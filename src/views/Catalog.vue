@@ -38,32 +38,32 @@
       </div>
 
       <div class="flex items-center gap-2">
-        <div class="relative flex-1">
-          <TextInput
-            type="text"
-            v-model="s.searchQuery"
-            :placeholder="__('Search surveys...')"
-            class="w-full pl-9 pr-8 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-xs sm:text-sm font-medium shadow-xs focus:border-emerald-500 focus:outline-none transition text-slate-900 dark:text-white"
-          />
-          <Search class="absolute left-3 top-3 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-          <Button
-            v-if="s.searchQuery"
-            @click="s.searchQuery = ''"
-            class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 text-xs font-bold cursor-pointer"
-            :title="__('Clear search')"
-            :aria-label="__('Clear search')"
-            :label="__('Clear search')"
-          >
-            <X class="w-3.5 h-3.5" />
-          </Button>
-        </div>
+        <TextInput
+          type="text"
+          size="lg"
+          variant="outline"
+          ref="searchInput"
+          class="flex-1"
+          v-model="s.searchQuery"
+          :placeholder="__('Search surveys...')"
+          :aria-label="__('Search surveys')"
+        >
+          <template #prefix>
+            <Search class="w-4 h-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
+          </template>
+          <template v-if="s.searchQuery" #suffix>
+            <Button variant="ghost" :label="__('Clear search')" :title="__('Clear search')" @click="clearSearch">
+              <template #icon><X class="w-4 h-4" aria-hidden="true" /></template>
+            </Button>
+          </template>
+        </TextInput>
       </div>
     </div>
 
     <!-- Empty State (an unassigned user sees the dashboard's ask-your-supervisor card instead) -->
-    <div v-if="s.showCatalog && filteredTemplates.length === 0" class="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
-      <p class="text-sm font-bold text-slate-700 dark:text-slate-300">{{ __('No active surveys available.') }}</p>
-      <p class="text-xs text-slate-500 dark:text-slate-400">{{ __('Check your network connection or permissions.') }}</p>
+    <div v-if="s.showCatalog && filteredTemplates.length === 0" data-empty-templates class="p-8 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xs space-y-2">
+      <p class="text-sm font-bold text-slate-800 dark:text-slate-200">{{ __('No active surveys available.') }}</p>
+      <p class="text-xs text-slate-600 dark:text-slate-400">{{ __('Check your network connection or permissions.') }}</p>
     </div>
 
     <!-- Sleek, Native-Grade Survey Cards -->
@@ -74,18 +74,18 @@
     >
       <!-- Category Pill, Version & Draft Badge -->
       <div class="flex items-center justify-between gap-2">
-        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
+        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800">
           {{ tmpl.target_category || 'Survey' }}
         </span>
         <div class="flex items-center gap-2">
           <span
             v-if="s.activeDrafts[tmpl.name]"
-            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs"
+            class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs"
           >
             <FileText class="w-3 h-3 text-amber-600" />
             <span>{{ __('Draft') }}: {{ s.activeDrafts[tmpl.name].progress_percent || 0 }}%</span>
           </span>
-          <span class="text-xs font-medium text-slate-400">
+          <span class="text-xs font-medium text-slate-600 dark:text-slate-400">
             v{{ tmpl.version }}.0
           </span>
         </div>
@@ -165,7 +165,7 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, useTemplateRef } from "vue";
 import { Button, TextInput } from "frappe-ui";
 import {
   ClipboardList,
@@ -185,6 +185,13 @@ import { useSurveySession } from "../composables/useSurveyApp";
 
 const s = useSurveySession();
 const { __ } = useTranslation();
+
+// Clear search unmounts its own button, so focus goes back to the field instead of the page
+const searchInput = useTemplateRef("searchInput");
+function clearSearch() {
+  s.searchQuery = "";
+  searchInput.value?.el?.focus();
+}
 
 const filteredTemplates = computed(() => {
   const q = s.searchQuery.trim().toLowerCase();
