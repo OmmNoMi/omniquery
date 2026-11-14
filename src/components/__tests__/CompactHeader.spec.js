@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import CompactHeader from "../header/CompactHeader.vue";
+import { useTranslation } from "../../composables/useTranslation";
 
 describe("CompactHeader", () => {
   beforeEach(() => {
@@ -81,5 +82,37 @@ describe("CompactHeader", () => {
     expect(wrapper.find("a[href*='/login']").exists()).toBe(true);
     expect(wrapper.find("button[title*='Settings']").exists()).toBe(false);
     wrapper.unmount();
+  });
+
+  describe("account link in the settings sheet (#52)", () => {
+    beforeEach(() => {
+      useTranslation().setLanguage("en");
+    });
+
+    async function openSettings(props) {
+      const wrapper = mount(CompactHeader, {
+        props: { userRoles: ["OmniQuery User"], ...props },
+        attachTo: document.body,
+      });
+      const settings = wrapper.find("button[title='Settings & Configuration']");
+      expect(settings.exists(), "settings button").toBe(true);
+      await settings.trigger("click");
+      return wrapper;
+    }
+
+    it("links to Frappe's /me page as My Account", async () => {
+      const wrapper = await openSettings({ isOnline: true });
+      const link = document.body.querySelector("a[href='/me']");
+      expect(link?.textContent).toContain("My Account");
+      expect(document.body.textContent).not.toContain("ERPNext Profile");
+      wrapper.unmount();
+    });
+
+    it("shows no link while offline, since /me is not cached for offline use", async () => {
+      const wrapper = await openSettings({ isOnline: false });
+      expect(document.body.querySelector("a[href='/me']")).toBeNull();
+      expect(document.body.textContent).toContain("My Account needs internet");
+      wrapper.unmount();
+    });
   });
 });

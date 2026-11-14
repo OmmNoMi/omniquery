@@ -353,13 +353,16 @@
           <!-- 5. Profile Details & Manage Link -->
           <div class="pt-1 flex items-center justify-between text-xs px-1">
             <span class="text-slate-500 font-medium">{{ __('Manage Profile & Credentials') }}</span>
+            <!-- /me is a server page the service worker does not cache, so offline it would replace the app with an error -->
             <a
-              href="/app/user-profile"
+              v-if="isOnline"
+              href="/me"
               class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
             >
-              <span>{{ __('ERPNext Profile') }}</span>
+              <span>{{ __('My Account') }}</span>
               <span aria-hidden="true">↗</span>
             </a>
+            <span v-else class="text-slate-500">{{ __('My Account needs internet') }}</span>
           </div>
 
           <!-- 6. Manager Review Workspace Link -->
