@@ -1,8 +1,20 @@
+// the server refuses these without a reason (omniquery_response.REASON_STATES)
+const REASON_ACTIONS = ["Flag for Audit", "Reject"];
+
 frappe.ui.form.on("OmniQuery Response", {
 	refresh(frm) {
 		render_audio_player(frm);
 		render_gps_preview(frm);
-		setup_supervisor_workflow(frm);
+	},
+	before_workflow_action(frm) {
+		const action = frm.selected_workflow_action;
+		if (REASON_ACTIONS.includes(action)) {
+			// Frappe froze the page before calling this hook; unfreeze so the prompt can be used.
+			// The promise never settles, so Frappe's own apply_workflow (which drops the reason) never runs.
+			frappe.dom.unfreeze();
+			prompt_review_reason(frm, action);
+			return new Promise(() => {});
+		}
 	},
 	audio_recording(frm) {
 		render_audio_player(frm);
@@ -14,6 +26,26 @@ frappe.ui.form.on("OmniQuery Response", {
 		render_gps_preview(frm);
 	},
 });
+
+function prompt_review_reason(frm, action) {
+	const label = action === "Reject" ? __("Rejection Reason") : __("Audit Flag Reason");
+	frappe.prompt(
+		[{ fieldname: "reason", fieldtype: "Small Text", label, reqd: 1 }],
+		({ reason }) =>
+			frappe
+				.xcall("omniquery.omniquery.doctype.omniquery_response.omniquery_response.apply_response_workflow", {
+					doc: frm.doc.name,
+					action,
+					reason,
+				})
+				.then(() => {
+					frm.selected_workflow_action = null;
+					frm.reload_doc();
+				}),
+		__(action),
+		__("Confirm")
+	);
+}
 
 function render_audio_player(frm) {
 	if (!frm.doc.audio_recording) {
@@ -88,37 +120,5 @@ function render_gps_preview(frm) {
 	`;
 	if (frm.get_field("column_break_geo")) {
 		frm.get_field("column_break_geo").set_description(mapHtml);
-	}
-}
-
-function setup_supervisor_workflow(frm) {
-	if (frm.is_new()) return;
-
-	const status = frm.doc.survey_status;
-	if (["Submitted", "Draft"].includes(status)) {
-		frm.add_custom_button(__("Approve Response"), () => {
-			frappe.confirm(__("Approve this survey response as verified?"), () => {
-				frm.set_value("survey_status", "Approved");
-				frm.save();
-			});
-		}, __("Supervisor Audit")).addClass("btn-primary");
-
-		frm.add_custom_button(__("Flag for Audit"), () => {
-			frappe.prompt(
-				[{ fieldname: "reason", fieldtype: "Small Text", label: __("Audit Flag Reason"), reqd: 1 }],
-				(vals) => {
-					frm.set_value("survey_status", "Audit Flagged");
-					frm.save().then(() => {
-						frappe.msgprint(__("Survey marked as Audit Flagged"));
-					});
-				},
-				__("Audit Review")
-			);
-		}, __("Supervisor Audit"));
-	} else if (status === "Audit Flagged") {
-		frm.add_custom_button(__("Clear & Approve"), () => {
-			frm.set_value("survey_status", "Approved");
-			frm.save();
-		}, __("Supervisor Audit")).addClass("btn-primary");
 	}
 }

@@ -16,8 +16,6 @@ module.exports = {
 				emerald: colors.emerald,
 				amber: colors.amber,
 				rose: colors.rose,
-				blue: colors.blue,
-				purple: colors.purple,
 				brand: {
 					blue: '#4285F4',
 					green: '#34A853',

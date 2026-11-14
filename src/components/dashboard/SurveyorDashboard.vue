@@ -32,8 +32,88 @@
       </div>
     </div>
 
-    <!-- Daily Target Goal Progress Strip -->
-    <div class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5">
+    <!-- Active draft quick-resume card, right under the greeting so Resume is above the fold at 375px (#41) -->
+    <div
+      v-if="topDraft"
+      class="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 shadow-2xs space-y-2.5 min-w-0 overflow-hidden"
+    >
+      <!-- Top Row: Eyebrow Badge & Relative Time -->
+      <div class="flex items-center justify-between gap-2 text-xs flex-wrap min-w-0">
+        <div class="flex items-center gap-1.5 font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wider text-[11px] shrink-0">
+          <Clock class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+          <span>{{ __('In-Progress Draft') }}</span>
+        </div>
+        <span class="text-[11px] text-amber-700/90 dark:text-amber-400 font-medium shrink-0">
+          {{ __('Last saved') }} {{ formatRelativeTime(topDraft.updated_at) }}
+        </span>
+      </div>
+
+      <!-- Survey Title & Configured Dynamic Respondent Title -->
+      <div class="space-y-0.5 min-w-0">
+        <h4 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug break-words">
+          {{ resolveResponseTitle(topDraft.responses, topDraft.response_title_format, topDraft.title || topDraft.template_name) }}
+        </h4>
+        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
+          <ClipboardList class="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          <span class="truncate">{{ topDraft.title || topDraft.template_name }}</span>
+        </p>
+      </div>
+
+      <!-- Bottom Row: Progress Strip & Actions -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 border-t border-amber-200/80 dark:border-amber-800/60 min-w-0">
+        <!-- Progress Bar & Percentage -->
+        <div class="w-full sm:flex-1 space-y-1 min-w-0">
+          <div class="flex items-center justify-between text-[11px] font-bold text-amber-900 dark:text-amber-200">
+            <span>{{ __('Progress') }}</span>
+            <span class="font-mono text-xs font-black">{{ topDraft.progress_percent || 0 }}%</span>
+          </div>
+          <div class="w-full h-2 bg-amber-200/80 dark:bg-amber-900/60 rounded-full overflow-hidden p-0.5">
+            <div
+              class="h-full bg-amber-500 dark:bg-amber-400 rounded-full transition-all duration-300"
+              :style="{ width: `${topDraft.progress_percent || 0}%` }"
+            />
+          </div>
+        </div>
+
+        <!-- Start New and Resume: full width side by side at 375px, so neither is clipped -->
+        <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
+          <Button
+            variant="outline"
+            size="md"
+            :iconLeft="Plus"
+            :label="__('Start New')"
+            class="flex-1 sm:flex-initial"
+            :title="__('Start a fresh blank survey without discarding this draft')"
+            @click="$emit('start-new-survey', topDraft.template_name)"
+          />
+          <Button
+            variant="solid"
+            size="md"
+            :iconLeft="Play"
+            :label="__('Resume Survey')"
+            class="flex-1 sm:flex-initial"
+            :title="__('Resume editing this saved draft')"
+            @click="$emit('resume-draft', topDraft.template_name)"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Not in any project yet (#57); the draft above and the queue below stay, so unsynced work is never hidden -->
+    <div
+      v-if="isUnassigned"
+      role="status"
+      class="p-3 sm:p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 flex items-start gap-2.5 text-sm font-bold text-amber-900 dark:text-amber-200"
+    >
+      <UserX class="w-4 h-4 mt-0.5 shrink-0" aria-hidden="true" />
+      <p>{{ __('You are not assigned to a project yet. Ask your supervisor.') }}</p>
+    </div>
+
+    <!-- Daily Target Goal Progress Strip (Field Surveyors with a configured target) -->
+    <div
+      v-else-if="isSurveyor && !isManager && dailyTarget"
+      class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800/80 space-y-1.5"
+    >
       <div class="flex items-center justify-between text-xs font-bold text-slate-700 dark:text-slate-300">
         <div class="flex items-center gap-1.5">
           <Target class="w-4 h-4 text-emerald-700 dark:text-emerald-400" />
@@ -51,11 +131,43 @@
       </div>
     </div>
 
+    <!-- Manager Review Queue & Desk Access Banner -->
+    <div
+      v-else-if="isManager"
+      class="p-4 rounded-xl bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 space-y-2"
+    >
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <ClipboardList class="w-5 h-5 text-blue-700 dark:text-blue-300 shrink-0" />
+          <span class="text-xs font-bold uppercase tracking-wider text-blue-900 dark:text-blue-200">
+            {{ __('Manager Operations & Review Queue') }}
+          </span>
+        </div>
+        <span class="px-2 py-0.5 rounded-full text-[11px] font-black bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
+          {{ __('Manager View') }}
+        </span>
+      </div>
+      <p class="text-xs text-blue-800 dark:text-blue-300">
+        {{ __('You are signed in with manager permissions. Review submitted responses, verify audits, and track team progress in the OmniQuery Desk Workspace.') }}
+      </p>
+      <div class="pt-1 flex items-center gap-2 flex-wrap">
+        <a
+          href="/desk/omniquery"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
+        >
+          <span>{{ __('Go to Review Queue') }}</span>
+          <span aria-hidden="true">↗</span>
+        </a>
+      </div>
+    </div>
+
     <!-- 4 KPI Performance Cards Grid (Clickable to open filtered view in Filled Forms) -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full min-w-0">
       <!-- 1. Completed Today -->
       <div
         @click="$emit('open-filtered-forms', 'today')"
+        @keydown.enter.prevent="$emit('open-filtered-forms', 'today')"
+        @keydown.space.prevent="$emit('open-filtered-forms', 'today')"
         role="button"
         tabindex="0"
         class="p-3 sm:p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 text-left space-y-1 shadow-2xs hover:shadow-md hover:border-emerald-400 active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
@@ -77,6 +189,8 @@
       <!-- 2. Pending Offline Queue -->
       <div
         @click="$emit('open-filtered-forms', 'queue')"
+        @keydown.enter.prevent="$emit('open-filtered-forms', 'queue')"
+        @keydown.space.prevent="$emit('open-filtered-forms', 'queue')"
         role="button"
         tabindex="0"
         class="p-3 sm:p-3.5 rounded-xl border text-left space-y-1 shadow-2xs hover:shadow-md active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
@@ -114,6 +228,8 @@
       <!-- 3. Active Drafts -->
       <div
         @click="$emit('open-filtered-forms', 'drafts')"
+        @keydown.enter.prevent="$emit('open-filtered-forms', 'drafts')"
+        @keydown.space.prevent="$emit('open-filtered-forms', 'drafts')"
         role="button"
         tabindex="0"
         class="p-3 sm:p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/80 dark:border-blue-800/60 text-left space-y-1 shadow-2xs hover:shadow-md hover:border-blue-400 active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
@@ -135,6 +251,8 @@
       <!-- 4. Total Lifetime Submissions -->
       <div
         @click="$emit('open-filtered-forms', 'all')"
+        @keydown.enter.prevent="$emit('open-filtered-forms', 'all')"
+        @keydown.space.prevent="$emit('open-filtered-forms', 'all')"
         role="button"
         tabindex="0"
         class="p-3 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700 text-left space-y-1 shadow-2xs hover:shadow-md hover:border-slate-400 active:scale-[0.98] transition cursor-pointer select-none group min-w-0"
@@ -160,73 +278,6 @@
       </div>
     </div>
 
-    <!-- Active Draft Quick Resume Callout Card with Configurable Response Title -->
-    <div
-      v-if="topDraft"
-      class="p-4 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 shadow-2xs space-y-2.5 min-w-0 overflow-hidden"
-    >
-      <!-- Top Row: Eyebrow Badge & Relative Time -->
-      <div class="flex items-center justify-between gap-2 text-xs flex-wrap min-w-0">
-        <div class="flex items-center gap-1.5 font-extrabold text-amber-900 dark:text-amber-300 uppercase tracking-wider text-[11px] shrink-0">
-          <Clock class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-          <span>{{ __('In-Progress Draft') }}</span>
-        </div>
-        <span class="text-[11px] text-amber-700/90 dark:text-amber-400 font-medium shrink-0">
-          {{ __('Last saved') }} {{ formatRelativeTime(topDraft.updated_at) }}
-        </span>
-      </div>
-
-      <!-- Survey Title & Configured Dynamic Respondent Title -->
-      <div class="space-y-0.5 min-w-0">
-        <h4 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug break-words">
-          {{ resolveResponseTitle(topDraft.responses, topDraft.response_title_format, topDraft.title || topDraft.template_name) }}
-        </h4>
-        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
-          <ClipboardList class="w-3.5 h-3.5 text-slate-400" />
-          <span>{{ topDraft.title || topDraft.template_name }}</span>
-        </p>
-      </div>
-
-      <!-- Bottom Row: Progress Strip & Actions -->
-      <div class="flex items-center justify-between gap-3 pt-1 border-t border-amber-200/80 dark:border-amber-800/60 flex-wrap min-w-0">
-        <!-- Progress Bar & Percentage -->
-        <div class="flex-1 min-w-[130px] space-y-1">
-          <div class="flex items-center justify-between text-[11px] font-bold text-amber-900 dark:text-amber-200">
-            <span>{{ __('Progress') }}</span>
-            <span class="font-mono text-xs font-black">{{ topDraft.progress_percent || 0 }}%</span>
-          </div>
-          <div class="w-full h-2 bg-amber-200/80 dark:bg-amber-900/60 rounded-full overflow-hidden p-0.5">
-            <div
-              class="h-full bg-amber-500 dark:bg-amber-400 rounded-full transition-all duration-300"
-              :style="{ width: `${topDraft.progress_percent || 0}%` }"
-            />
-          </div>
-        </div>
-
-        <!-- Start New and Resume Buttons -->
-        <div class="flex items-center gap-2 shrink-0">
-          <Button
-            @click="$emit('start-new-survey', topDraft.template_name)"
-            class="px-3 py-2 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-amber-300 dark:border-amber-700 active:scale-95 text-slate-800 dark:text-slate-200 text-xs font-bold transition flex items-center gap-1 shadow-2xs cursor-pointer"
-            :title="__('Start a fresh blank survey without discarding this draft')"
-          >
-            <Plus class="w-3.5 h-3.5" />
-            <span>{{ __('Start New') }}</span>
-          </Button>
-
-          <Button
-            @click="$emit('resume-draft', topDraft.template_name)"
-            class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white text-xs font-bold shadow-xs transition flex items-center gap-1.5 cursor-pointer"
-            :title="__('Resume editing this saved draft')"
-          >
-            <Play class="w-3.5 h-3.5" />
-            <span>{{ __('Resume Survey') }}</span>
-            <span>→</span>
-          </Button>
-        </div>
-      </div>
-    </div>
-
     <!-- Quick Access to Filled Forms & Cross-Verification -->
     <div class="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 flex-wrap min-w-0">
       <div class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate min-w-0">
@@ -247,8 +298,10 @@
 <script setup>
 import { computed, ref, onMounted, watch } from "vue";
 import { Button, call } from "frappe-ui";
-import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play } from "lucide-vue-next";
+import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play, UserX } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { useUserRoles } from "../../composables/useUserRoles";
+import { useSession } from "../../composables/useSession";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db } from "../../services/db";
 
@@ -265,6 +318,11 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  // every Draft on this device, as the Filled Forms dialog lists them (#56)
+  drafts: {
+    type: Array,
+    default: () => [],
+  },
   templates: {
     type: Array,
     default: () => [],
@@ -272,6 +330,14 @@ const props = defineProps({
   selectedProject: {
     type: String,
     default: "ALL",
+  },
+  userRoles: {
+    type: Array,
+    default: () => [],
+  },
+  isUnassigned: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -286,25 +352,16 @@ const emit = defineEmits([
 
 const { __ } = useTranslation();
 
-const dailyTarget = ref(10);
+const dailyTarget = ref(null);
 const serverTodayCount = ref(0);
 const serverTotalCount = ref(0);
 const serverApprovedCount = ref(0);
 const localTodayCount = ref(0);
 const localTotalCount = ref(0);
 
-const user = computed(() => {
-  return (window.frappe && window.frappe.user) || "Administrator";
-});
+const { displayName, userInitial } = useSession();
 
-const displayName = computed(() => {
-  if (user.value === "Administrator") return "Administrator";
-  return user.value.split("@")[0] || user.value;
-});
-
-const userInitial = computed(() => {
-  return (displayName.value || "A").charAt(0).toUpperCase();
-});
+const { isManager, isSurveyor } = useUserRoles(() => props.userRoles);
 
 const formattedToday = computed(() => {
   const d = new Date();
@@ -363,8 +420,10 @@ async function fetchServerMetrics() {
       serverTodayCount.value = Number(msg.today_count) || 0;
       serverTotalCount.value = Number(msg.total_count) || 0;
       serverApprovedCount.value = Number(msg.approved_count) || 0;
-      if (msg.daily_target) {
+      if (msg.daily_target != null && Number(msg.daily_target) > 0) {
         dailyTarget.value = Number(msg.daily_target);
+      } else {
+        dailyTarget.value = null;
       }
     }
   } catch (e) {}
@@ -384,23 +443,16 @@ const targetProgressPct = computed(() => {
 });
 
 const remainingTodayText = computed(() => {
+  if (!dailyTarget.value) {
+    return completedToday.value === 1 ? __("1 survey today") : __("{0} surveys today", [completedToday.value]);
+  }
   const left = dailyTarget.value - completedToday.value;
   if (left <= 0) return __("Target reached!");
-  return `${left} ${__("left for target")}`;
+  return __("{0} left for target", [left]);
 });
 
-const activeDraftsCount = computed(() => {
-  let list = Object.values(props.activeDrafts || {});
-  if (props.selectedProject && props.selectedProject !== "ALL") {
-    const allowedTemplates = new Set(
-      props.templates
-        .filter((t) => (t.project || "default") === props.selectedProject)
-        .map((t) => t.name || t.template_name)
-    );
-    list = list.filter((d) => allowedTemplates.has(d.template_name));
-  }
-  return list.length;
-});
+// Device-wide, like the queue tile and the Filled Forms dialog it opens, so the two agree (#56)
+const activeDraftsCount = computed(() => props.drafts.length);
 
 const topDraft = computed(() => {
   let list = Object.values(props.activeDrafts || {});
