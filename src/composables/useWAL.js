@@ -1,8 +1,9 @@
-import { ref, onMounted, onUnmounted, getCurrentInstance } from "vue";
+import { ref, getCurrentScope, onScopeDispose } from "vue";
+import { createSharedComposable } from "@vueuse/core";
 import { call, fileToBase64 } from "frappe-ui";
-import { db } from "../services/db";
+import { db, audioRecordingsFor, recordingResponse } from "../services/db";
 
-export function useWAL() {
+export function createWAL() {
   const isOnline = ref(typeof navigator !== "undefined" ? navigator.onLine : true);
   const pendingWALCount = ref(0);
   const quarantinedWALCount = ref(0);
@@ -226,9 +227,7 @@ export function useWAL() {
     try {
       let pendingAudios = [];
       if (targetResponseUid) {
-        pendingAudios = await db.audio_recordings
-          .where("response_uid")
-          .equals(targetResponseUid)
+        pendingAudios = await audioRecordingsFor(targetResponseUid)
           .and((r) => r.status === "pending")
           .toArray();
       } else {
@@ -247,9 +246,9 @@ export function useWAL() {
           } catch (b64Err) {}
 
           const data = await call("omniquery.api.sync.upload_response_audio", {
-            response_name: rec.response_uid,
+            response_name: recordingResponse(rec),
             file_base64: b64,
-            filename: rec.file_name || `interview_${rec.response_uid}.webm`,
+            filename: rec.file_name || `interview_${recordingResponse(rec)}.webm`,
           });
 
           const msg = data && (data.message || data);
@@ -375,28 +374,26 @@ export function useWAL() {
     }
   }
 
-  if (getCurrentInstance()) {
-    onMounted(() => {
-      if (typeof window !== "undefined") {
-        window.addEventListener("online", handleOnline);
-        window.addEventListener("offline", handleOffline);
-        document.addEventListener("visibilitychange", handleVisibilityChange);
+  // one listener set and one 15s loop for the whole app: useWAL() below shares this instance
+  if (getCurrentScope()) {
+    if (typeof window !== "undefined") {
+      window.addEventListener("online", handleOnline);
+      window.addEventListener("offline", handleOffline);
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+    }
+    updatePendingCount().then(() => {
+      if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
+        syncWAL();
       }
-      updatePendingCount().then(() => {
-        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
-          syncWAL();
-        }
-      });
-
-      // Continuous background auto-sync check every 15 seconds
-      syncInterval = setInterval(() => {
-        if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
-          syncWAL();
-        }
-      }, 15000);
     });
 
-    onUnmounted(() => {
+    syncInterval = setInterval(() => {
+      if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
+        syncWAL();
+      }
+    }, 15000);
+
+    onScopeDispose(() => {
       if (syncInterval) clearInterval(syncInterval);
       if (typeof window !== "undefined") {
         window.removeEventListener("online", handleOnline);
@@ -423,3 +420,6 @@ export function useWAL() {
     updatePendingCount,
   };
 }
+
+// every component gets the same queue state, listeners and sync loop; they stop when the last one unmounts
+export const useWAL = createSharedComposable(createWAL);

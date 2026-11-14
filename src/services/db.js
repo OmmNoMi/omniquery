@@ -24,6 +24,18 @@ db.version(3).stores({
   audio_recordings: "response_uid, status, created_at",
 });
 
+// A response's recordings. The first is keyed by the response's ID. A draft left mid-recording and
+// recorded again after resuming adds parts keyed "<ID>~2", "<ID>~3", each naming its response (#37)
+export const recordingResponse = (rec) => rec.response_name || rec.response_uid;
+export const recordingKey = (responseUid, part) => (part > 1 ? `${responseUid}~${part}` : responseUid);
+
+export function audioRecordingsFor(responseUid) {
+  return db.audio_recordings
+    .where("response_uid")
+    .startsWith(responseUid)
+    .filter((rec) => recordingResponse(rec) === responseUid);
+}
+
 if (typeof window !== "undefined" && window.indexedDB) {
   try {
     window.indexedDB.deleteDatabase("OmniQueryDB");
@@ -58,7 +70,7 @@ export async function compactLocalStorage(retentionDays = 30) {
       await db.audio_recordings
         .where("status")
         .equals("synced")
-        .filter((a) => uidsToDelete.includes(a.response_uid))
+        .filter((a) => uidsToDelete.includes(recordingResponse(a)))
         .delete();
       return uidsToDelete.length;
     }

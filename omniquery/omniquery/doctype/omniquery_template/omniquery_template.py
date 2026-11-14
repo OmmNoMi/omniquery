@@ -18,13 +18,23 @@ class OmniQueryTemplate(Document):
 			project_sequence = project_parts[-1] if len(project_parts) >= 2 and project_parts[-1].isdigit() else "001"
 		self.name = frappe.model.naming.make_autoname(f"OQS-{workspace_sequence}-{project_sequence}-.###")
 
+	def before_insert(self):
+		# no_copy covers Desk's Amend, but server-side frappe.copy_doc keeps no_copy fields
+		if self.amended_from:
+			self.status, self.published_at = "Draft", None
+
+	def validate(self):
+		# validate runs after submit has set docstatus 1, so only a draft can trip this
+		if self.docstatus == 0 and self.status == "Published":
+			frappe.throw(frappe._("A template with status 'Published' must have docstatus 1. Use Submit to publish."))
+
 	def before_save(self):
 		self._validate_immutability()
 		self._compile_schema()
 
 	def before_submit(self):
 		self.status = "Published"
-		self.published_at = now_datetime()
+		self.published_at = self.published_at or now_datetime()
 		self._compile_schema()
 
 	def before_cancel(self):

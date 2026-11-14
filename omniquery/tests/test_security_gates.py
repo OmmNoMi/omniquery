@@ -6,6 +6,7 @@ import uuid
 import frappe
 from frappe.tests.utils import FrappeTestCase
 from omniquery.api.sync import upload_response_audio, sync_draft
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestSecurityGates(FrappeTestCase):
@@ -14,12 +15,7 @@ class TestSecurityGates(FrappeTestCase):
 
 	def tearDown(self):
 		frappe.set_user("Administrator")
-		for dt, dn in reversed(self.test_records):
-			try:
-				if frappe.db.exists(dt, dn):
-					frappe.delete_doc(dt, dn, force=True)
-			except Exception:
-				pass
+		delete_test_docs([(dt, {"name": dn}) for dt, dn in reversed(self.test_records)])
 		frappe.db.commit()
 
 	def _get_or_create_project(self):
@@ -77,10 +73,10 @@ class TestSecurityGates(FrappeTestCase):
 			"title": f"Private Staff Survey {rand_id}",
 			"project": proj,
 			"version": 1,
-			"status": "Published",
 			"is_public_citizen_link": 0,
 			"is_public": 0,
 		}).insert(ignore_permissions=True)
+		tmpl.submit()
 		self.test_records.append(("OmniQuery Template", tmpl.name))
 
 		resp = frappe.get_doc({
@@ -119,8 +115,8 @@ class TestSecurityGates(FrappeTestCase):
 			"title": f"Test Ext Template {rand_id}",
 			"project": proj,
 			"version": 1,
-			"status": "Published",
 		}).insert(ignore_permissions=True)
+		tmpl.submit()
 		self.test_records.append(("OmniQuery Template", tmpl.name))
 
 		resp = frappe.get_doc({
@@ -155,8 +151,8 @@ class TestSecurityGates(FrappeTestCase):
 			"title": f"Test Size Template {rand_id}",
 			"project": proj,
 			"version": 1,
-			"status": "Published",
 		}).insert(ignore_permissions=True)
+		tmpl.submit()
 		self.test_records.append(("OmniQuery Template", tmpl.name))
 
 		resp = frappe.get_doc({
@@ -193,8 +189,8 @@ class TestSecurityGates(FrappeTestCase):
 			"title": f"Test XSS Template {rand_id}",
 			"project": proj,
 			"version": 1,
-			"status": "Published",
 		}).insert(ignore_permissions=True)
+		tmpl.submit()
 		self.test_records.append(("OmniQuery Template", tmpl.name))
 
 		payload = {
