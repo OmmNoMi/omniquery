@@ -3,7 +3,9 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.workflow import apply_workflow
-from frappe.utils import now_datetime
+from frappe.utils import formatdate, now_datetime
+
+from omniquery.services.response_title import answers_from_items, resolve_response_title
 
 # written only by sync (with db.set_value), so a form or API save may not change them
 QUALITY_SIGNAL_FIELDS = ("time_spent_seconds", "gps_distance_variance_meters", "is_outlier_flagged", "outlier_reasons")
@@ -43,9 +45,23 @@ class OmniQueryResponse(Document):
 		super().validate_workflow()
 
 	def validate(self):
+		# validate runs on insert, save and submit; before_save is skipped when a draft is submitted
+		self.title = self.compute_title()
 		if self.is_new():
 			return
 		self._guard_quality_signals()
+
+	def compute_title(self):
+		fmt, template_title = "", ""
+		if self.survey_template:
+			fmt, template_title = frappe.db.get_value(
+				"OmniQuery Template", self.survey_template, ["response_title_format", "title"]
+			) or ("", "")
+		fallback = template_title or self.survey_template or _("Survey Response")
+		captured = self.captured_at_local or self.creation
+		if captured:
+			fallback = f"{fallback}, {formatdate(captured)}"
+		return resolve_response_title(answers_from_items(self.items), fmt or "", fallback_title=fallback)
 
 	def before_update_after_submit(self):
 		# every review step saves a submitted response, and validate never runs on those

@@ -9,3 +9,4 @@ omniquery.patches.v1_0.cleanup_orphan_records
 omniquery.patches.v1_0.remove_machine_supervisor_audits
 omniquery.patches.v1_0.submit_final_documents
 omniquery.patches.v1_0.sync_analyst_viewer_roles
+omniquery.patches.v1_0.backfill_response_titles

@@ -6,6 +6,7 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "title",
   "idempotency_key",
   "survey_template",
   "project",
@@ -34,13 +35,21 @@
  ],
  "fields": [
   {
-   "fieldname": "idempotency_key",
+   "fieldname": "title",
    "fieldtype": "Data",
    "in_list_view": 1,
+   "label": "Title",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "fieldname": "idempotency_key",
+   "fieldtype": "Data",
+   "in_list_view": 0,
    "label": "Idempotency UUID",
    "reqd": 1,
-   "unique": 1,
-   "search_index": 1
+   "search_index": 1,
+   "unique": 1
   },
   {
    "fieldname": "survey_template",
@@ -215,7 +224,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-13 12:00:00.000000",
+ "modified": "2026-11-14 10:00:00.000000",
  "modified_by": "Administrator",
  "is_submittable": 1,
  "module": "OmniQuery",
@@ -285,8 +294,11 @@
    "role": "OmniQuery Viewer"
   }
  ],
+ "search_fields": "title,surveyor,survey_template",
+ "show_title_field_in_link": 1,
  "sort_field": "creation",
  "sort_order": "DESC",
  "states": [],
+ "title_field": "title",
  "track_changes": 1
 }
