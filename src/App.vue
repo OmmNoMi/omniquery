@@ -1,4 +1,6 @@
 <template>
+  <!-- FrappeUIProvider mounts the frappe-ui toast viewport, so toast.* calls render -->
+  <FrappeUIProvider>
   <div class="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
     <!-- Live Region for Screen Readers (WCAG 2.2 AA) -->
     <div id="omniquery-live-region" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
@@ -49,15 +51,15 @@
     </main>
 
     <!-- frappe-ui Dialogs: focus trap, focus return, scroll lock and topmost-only Escape -->
-    <Dialog v-model="s.showWALDrawer" :options="{ title: s.__('Offline Sync Queue'), size: 'md' }">
+    <Dialog v-model="s.showWALDrawer" :options="{ title: s.__('Offline sync queue'), size: 'md' }">
       <template #body-content>
       <div class="space-y-4">
         <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1">
           <div class="font-extrabold flex items-center justify-between">
-            <span>{{ s.pendingWALCount }} {{ s.__('Pending Submissions In Device Memory') }}</span>
+            <span>{{ s.__('{0} pending submissions saved on this device', [s.pendingWALCount]) }}</span>
           </div>
           <DialogDescription as="p" class="text-[11px] text-amber-800/80 dark:text-amber-300">
-            {{ s.__('These records are saved safely in local offline storage. When connected, tap Force Sync All to push to the server.') }}
+            {{ s.__('These records are saved safely on this device. When you are online, tap Sync all records now to upload them.') }}
           </DialogDescription>
         </div>
         <div class="space-y-2 pt-1">
@@ -96,10 +98,11 @@
     <!-- Filled Forms Verification & Data Recovery Modal -->
     <FilledFormsModal :isOpen="s.showFilledFormsModal" :initialFilter="s.filledFormsInitialFilter" :isOnline="s.isOnline" :templates="s.availableTemplates" @close="s.showFilledFormsModal = false" @sync-all="s.triggerSync" @resume-draft="s.handleResumeDraftFromModal" @drafts-changed="s.loadActiveDrafts" />
   </div>
+  </FrappeUIProvider>
 </template>
 
 <script setup>
-import { Button, Dialog } from "frappe-ui";
+import { Button, Dialog, FrappeUIProvider } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
 import { AlertTriangle, ClipboardList, KeyRound, Zap } from "lucide-vue-next";
 import { provideSurveyApp } from "./composables/useSurveyApp";

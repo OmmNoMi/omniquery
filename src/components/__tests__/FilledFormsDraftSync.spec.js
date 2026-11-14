@@ -90,15 +90,23 @@ describe("Filled Forms drafts and dialog (#56)", () => {
     expect(tileCount(wrapper)).toBe(3);
   });
 
-  it("tells the dashboard when a draft is discarded, and the tile and the tab both drop to 2", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
+  const button = (label) => [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === label);
+
+  it("asks in a frappe-ui dialog before discarding, then the tile and the tab both drop to 2", async () => {
     const { wrapper, survey } = await mountDashboard();
     const modal = mountAttached(FilledFormsModal, { isOpen: true, isOnline: false, templates: TEMPLATES });
     await vi.waitFor(() => expect(document.body.textContent).toContain("Drafts (3)"));
 
-    const discard = [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Discard");
-    discard.click();
+    button("Discard").click();
+    // a nested dialog, named by its title, with focus inside: not window.confirm
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(2));
+    const confirmDialog = dialogs().at(-1);
+    expect(document.getElementById(confirmDialog.getAttribute("aria-labelledby")).textContent.trim()).toBe("Discard saved draft?");
+    expect(modal.emitted("drafts-changed"), "nothing is discarded before the answer").toBeFalsy();
+
+    button("Discard draft").click();
     await vi.waitFor(() => expect(modal.emitted("drafts-changed")).toBeTruthy());
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
 
     // App reloads on drafts-changed
     await survey.loadActiveDrafts();
@@ -106,6 +114,25 @@ describe("Filled Forms drafts and dialog (#56)", () => {
 
     expect(tileCount(wrapper)).toBe(2);
     expect(document.body.textContent).toContain("Drafts (2)");
+  });
+
+  it("keeps the draft on Keep draft, and Escape closes only the confirm", async () => {
+    const modal = mountAttached(FilledFormsModal, { isOpen: true, isOnline: false, templates: TEMPLATES });
+    await vi.waitFor(() => expect(document.body.textContent).toContain("Drafts (3)"));
+
+    button("Discard").click();
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(2));
+    button("Keep draft").click();
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
+
+    button("Discard").click();
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(2));
+    await vi.waitFor(() => expect(dialogs().at(-1).contains(document.activeElement)).toBe(true));
+    pressEscape();
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
+
+    expect(modal.emitted("drafts-changed")).toBeFalsy();
+    expect(await db.responses.count()).toBe(3);
   });
 
   it("is a modal dialog named by its title and described by its record count, with focus inside", async () => {

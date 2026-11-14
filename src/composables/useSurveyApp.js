@@ -1,5 +1,5 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, provide, inject, reactive } from "vue";
-import { call } from "frappe-ui";
+import { call, toast } from "frappe-ui";
 import { db } from "../services/db";
 import { useSurvey } from "./useSurvey";
 import { useWAL } from "./useWAL";
@@ -217,9 +217,7 @@ export function useSurveyApp() {
       const res = await syncWAL();
       if (res && res.syncedCount > 0) {
         isSubmissionSynced.value = true;
-        if (window.frappe && window.frappe.show_alert) {
-          window.frappe.show_alert({ message: __("Survey synced to server successfully!"), indicator: "green" });
-        }
+        toast.success(__("Survey synced to server successfully!"));
       }
     } catch (e) {
     } finally {
@@ -243,9 +241,7 @@ export function useSurveyApp() {
         document.body.removeChild(textarea);
       }
       hasCopiedCode.value = true;
-      if (window.frappe && window.frappe.show_alert) {
-        window.frappe.show_alert({ message: __("Response Code copied to clipboard"), indicator: "green" });
-      }
+      toast.success(__("Response Code copied to clipboard"));
       setTimeout(() => {
         hasCopiedCode.value = false;
       }, 2000);
@@ -664,14 +660,7 @@ export function useSurveyApp() {
     const tmpl = await loadTemplate(surveyName, options);
     loadingSurveyId.value = "";
     if (!tmpl) {
-      if (window.frappe && window.frappe.show_alert) {
-        window.frappe.show_alert({
-          message: __("This survey is not yet downloaded on your device. Please connect to the internet once to download it."),
-          indicator: "orange",
-        });
-      } else {
-        console.warn(__("This survey is not yet downloaded on your device. Please connect to the internet once to download it."));
-      }
+      toast.warning(__("This survey is not yet downloaded on your device. Please connect to the internet once to download it."));
       return;
     }
     if (window.history && window.history.pushState) {
@@ -735,9 +724,7 @@ export function useSurveyApp() {
         try {
           await syncPendingAudio(draftKey);
         } catch (audioSyncErr) {}
-        if (window.frappe && window.frappe.show_alert) {
-          window.frappe.show_alert({ message: __("Survey synced to server successfully!"), indicator: "green" });
-        }
+        toast.success(__("Survey synced to server successfully!"));
       } else {
         isSubmissionSynced.value = false;
       }

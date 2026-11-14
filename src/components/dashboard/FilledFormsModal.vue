@@ -53,6 +53,7 @@
       <!-- 2. Live Sync Feedback Toast Banner -->
       <div
         v-if="syncFeedbackMessage"
+        role="status"
         class="px-4 py-2.5 bg-emerald-600 text-white text-xs font-bold flex items-center justify-between gap-2 shrink-0 animate-fade-in shadow-xs"
       >
         <div class="flex items-center gap-2">
@@ -404,6 +405,13 @@
           </div>
         </template>
       </Dialog>
+
+      <!-- Discard-draft confirm: frappe-ui Dialog options render the title, message and actions -->
+      <Dialog
+        :modelValue="Boolean(draftToDiscard)"
+        :options="discardDialogOptions"
+        @update:modelValue="(open) => !open && (draftToDiscard = null)"
+      />
     </div>
     </template>
   </Dialog>
@@ -411,7 +419,7 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
-import { Button, Dialog } from "frappe-ui";
+import { Button, Dialog, toast } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
 import { X, Zap, ChevronDown, Trash2, FileText, Calendar, Check, Copy } from "lucide-vue-next";
 import JSZip from "jszip";
@@ -590,7 +598,8 @@ async function handleForceSync() {
       syncFeedbackMessage.value = "";
     }, 5000);
   } catch (e) {
-    syncFeedbackMessage.value = `Sync error: ${e.message || e}`;
+    syncFeedbackMessage.value = "";
+    toast.error(__("Sync failed: {0}", [e.message || e]));
   } finally {
     isSyncingLocal.value = false;
   }
@@ -620,15 +629,31 @@ function resumeSpecificDraft(templateName, draftId) {
   emit("close");
 }
 
-async function deleteSpecificDraft(responseUid) {
-  if (confirm(__("Are you sure you want to discard this saved draft?"))) {
-    try {
-      await db.responses.delete(responseUid);
-      await loadResponses();
-      emit("drafts-changed");
-    } catch (e) {
-      console.warn("Failed to delete draft:", e);
-    }
+const draftToDiscard = ref(null);
+const discardDialogOptions = computed(() => ({
+  title: __("Discard saved draft?"),
+  message: __("This draft will be removed from this device. This cannot be undone."),
+  size: "sm",
+  actions: [
+    { label: __("Discard draft"), variant: "solid", theme: "red", onClick: confirmDiscardDraft },
+    { label: __("Keep draft"), onClick: ({ close }) => close() },
+  ],
+}));
+
+function deleteSpecificDraft(responseUid) {
+  draftToDiscard.value = responseUid;
+}
+
+async function confirmDiscardDraft({ close }) {
+  const responseUid = draftToDiscard.value;
+  close();
+  if (!responseUid) return;
+  try {
+    await db.responses.delete(responseUid);
+    await loadResponses();
+    emit("drafts-changed");
+  } catch (e) {
+    toast.error(__("Could not discard the draft: {0}", [e.message || e]));
   }
 }
 
@@ -818,7 +843,7 @@ async function exportToJson() {
     downloadAnchor.click();
     downloadAnchor.remove();
   } catch (e) {
-    alert("Export failed: " + e.message);
+    toast.error(__("Export failed: {0}", [e.message || e]));
   }
 }
 
@@ -846,7 +871,7 @@ function exportToCsv() {
     link.click();
     link.remove();
   } catch (e) {
-    alert("CSV export failed: " + e.message);
+    toast.error(__("CSV export failed: {0}", [e.message || e]));
   }
 }
 
@@ -945,7 +970,7 @@ Individual JSON files can be ingested directly into the OmniQuery backend.
     downloadAnchor.remove();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
   } catch (e) {
-    alert("ZIP archive creation failed: " + (e.message || e));
+    toast.error(__("ZIP export failed: {0}", [e.message || e]));
   } finally {
     isExportingZip.value = false;
   }
@@ -960,7 +985,7 @@ async function handleCompactStorage() {
   await loadResponses();
   emit("drafts-changed");
   if (pruned > 0) {
-    syncFeedbackMessage.value = `${__('Cleaned up')} ${pruned} ${__('old synced responses to free local storage')}`;
+    syncFeedbackMessage.value = __('Cleaned up {0} old synced responses to free local storage', [pruned]);
   } else {
     syncFeedbackMessage.value = __('Storage already compact. Zero old records required cleanup.');
   }

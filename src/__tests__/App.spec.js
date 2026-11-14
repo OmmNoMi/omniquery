@@ -114,6 +114,21 @@ describe("App shell (#46)", () => {
     expect(wrapper.vm.s.showWALDrawer, "the one beneath stays open").toBe(true);
   });
 
+  it("tells the surveyor in a frappe-ui toast when a survey is not on the device", async () => {
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    const offline = vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+    try {
+      await wrapper.vm.s.selectSurvey("OQS-NOT-DOWNLOADED");
+      await vi.waitFor(() => {
+        const toast = [...document.body.querySelectorAll("li")].find((li) => li.textContent.includes("not yet downloaded on your device"));
+        expect(toast, "no toast rendered").toBeTruthy();
+      });
+    } finally {
+      offline.mockRestore();
+    }
+  });
+
   it("shows an unassigned surveyor the ask-your-supervisor note, not an empty catalog", async () => {
     bootstrap = { is_unassigned: true, templates: [] };
     wrapper = mount(App, { attachTo: document.body });
