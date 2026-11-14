@@ -229,6 +229,7 @@
       <div v-else class="space-y-4">
         <!-- 0. Active Project Header Section with Persistent Switcher & Training Material Link -->
         <ProjectHeaderCard
+          v-if="showCatalog"
           :templates="availableTemplates"
           :cachedTemplatesMap="cachedTemplatesMap"
           :isOnline="isOnline"
@@ -242,8 +243,10 @@
           :pendingWALCount="pendingWALCount"
           :isOnline="isOnline"
           :activeDrafts="activeDrafts"
+          :drafts="allDrafts"
           :templates="availableTemplates"
           :selectedProject="selectedProject"
+          :isUnassigned="isUnassigned"
           @open-wal="showWALDrawer = true"
           @sync-now="triggerSync"
           @resume-draft="selectSurvey"
@@ -253,7 +256,7 @@
         />
 
         <!-- 2. Survey Templates Section Header & Search/Filter Controls -->
-        <div class="space-y-2.5 pt-1">
+        <div v-if="showCatalog" class="space-y-2.5 pt-1">
           <div class="flex items-center justify-between text-xs font-bold px-1">
             <span class="uppercase tracking-wider text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
               <ClipboardList class="w-3.5 h-3.5 text-slate-400" />
@@ -287,8 +290,8 @@
 
 
 
-        <!-- Empty State -->
-        <div v-if="filteredTemplates.length === 0" class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
+        <!-- Empty State (an unassigned user sees the dashboard's ask-your-supervisor card instead) -->
+        <div v-if="showCatalog && filteredTemplates.length === 0" class="p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-xs space-y-2">
           <p class="text-sm font-bold text-slate-700">{{ __('No active surveys available.') }}</p>
           <p class="text-xs text-slate-500">{{ __('Check your network connection or permissions.') }}</p>
         </div>
@@ -419,7 +422,7 @@
           </Button>
 
           <Button
-            @click="showWALDrawer = false; showFilledFormsModal = true"
+            @click="openRecoveryFromWALDrawer"
             class="w-full py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-100 dark:hover:bg-slate-700 active:scale-95 transition flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <ClipboardList class="w-4 h-4 text-emerald-600" />
@@ -484,6 +487,7 @@
       @close="showFilledFormsModal = false"
       @sync-all="triggerSync"
       @resume-draft="handleResumeDraftFromModal"
+      @drafts-changed="loadActiveDrafts"
     />
   </div>
 </template>
@@ -510,7 +514,6 @@ import { useGPS } from "./composables/useGPS";
 import { useTextScale } from "./composables/useTextScale";
 import { useTranslation } from "./composables/useTranslation";
 import { useAudioRecorder } from "./composables/useAudioRecorder";
-import { provideSession } from "./composables/useSession";
 import CompactHeader from "./components/header/CompactHeader.vue";
 import SectionCard from "./components/survey/SectionCard.vue";
 import QuestionCard from "./components/survey/QuestionCard.vue";
@@ -545,6 +548,7 @@ const {
   activeTemplate,
   activeSectionIndex,
   availableTemplates,
+  isUnassigned,
   sections,
   activeSection,
   activeQuestions,
@@ -554,6 +558,7 @@ const {
   isSubmitted,
   currentDraftId,
   activeDrafts,
+  allDrafts,
   loadActiveDrafts,
   loadAvailableTemplates,
   loadTemplate,
@@ -610,8 +615,11 @@ if (typeof localStorage !== "undefined") {
 
 const activeProjectId = ref("");
 
-const session = provideSession();
-const isGuest = session.isGuest;
+const isGuest = computed(() => {
+  if (typeof window === "undefined") return true;
+  const user = (window.frappe && (window.frappe.user || (window.frappe.session && window.frappe.session.user))) || "Guest";
+  return user === "Guest";
+});
 
 function getRouteProjectId() {
   if (window.frappe && window.frappe.initial_project_id) {
@@ -664,6 +672,19 @@ const filledFormsInitialFilter = ref("all");
 function openFilteredFilledForms(filter = "all") {
   filledFormsInitialFilter.value = filter;
   showFilledFormsModal.value = true;
+}
+
+// The drawer's button goes away with the drawer, so hand focus back to whatever opened the
+// drawer first: the dialog then returns focus there when it closes (#56)
+let walDrawerOpener = null;
+watch(showWALDrawer, (open) => {
+  if (open) walDrawerOpener = document.activeElement;
+});
+
+function openRecoveryFromWALDrawer() {
+  showWALDrawer.value = false;
+  walDrawerOpener?.focus?.();
+  openFilteredFilledForms("all");
 }
 
 function handleResumeDraftFromModal(templateName, draftId) {
@@ -763,6 +784,9 @@ const workspacesList = computed(() => {
   }
   return Array.from(map.values());
 });
+
+// someone in no project with no public survey to fill has no catalog to show (#57)
+const showCatalog = computed(() => !isUnassigned.value || availableTemplates.value.length > 0);
 
 const filteredTemplates = computed(() => {
   const q = searchQuery.value.trim().toLowerCase();

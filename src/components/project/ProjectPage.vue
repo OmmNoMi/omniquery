@@ -361,12 +361,6 @@
             </a>
           </div>
 
-          <div v-if="projectStateLead" class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs flex items-center justify-between gap-2 flex-wrap">
-            <span class="text-slate-500 dark:text-slate-400">{{ __('State Lead') }}:</span>
-            <span class="font-extrabold text-slate-800 dark:text-slate-200">
-              {{ projectStateLead }}
-            </span>
-          </div>
         </div>
       </div>
     </div>
@@ -462,13 +456,8 @@ const projectMeta = computed(() => {
   };
 });
 
-const projectSupportEmail = computed(() => {
-  return projectMeta.value?.support_email || projectMeta.value?.contact_email || "";
-});
-
-const projectStateLead = computed(() => {
-  return projectMeta.value?.state_lead || projectMeta.value?.grantor_organization || "";
-});
+// set per project on OmniQuery Project; the card hides until someone sets it (#51)
+const projectSupportEmail = computed(() => projectMeta.value.support_email || "");
 
 // Filter templates that belong to this project
 const projectSurveys = computed(() => {

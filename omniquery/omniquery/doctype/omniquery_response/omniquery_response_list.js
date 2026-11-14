@@ -13,52 +13,6 @@ frappe.listview_settings["OmniQuery Response"] = {
 			return [__("Draft"), "gray", "survey_status,=,Draft"];
 		}
 	},
-	onload: function(listview) {
-		// Bulk Supervisor Approval Action
-		listview.page.add_action_item(__("Approve Selected"), function() {
-			const checked = listview.get_checked_items();
-			if (!checked.length) return;
-
-			frappe.confirm(
-				__("Approve {0} selected responses as supervisor verified?", [checked.length]),
-				function() {
-					frappe.call({
-						method: "frappe.client.bulk_update",
-						args: {
-							docs: checked.map(d => ({ doctype: "OmniQuery Response", name: d.name, survey_status: "Approved" }))
-						},
-						callback: function() {
-							frappe.show_alert({ message: __("Responses approved successfully"), indicator: "green" });
-							listview.refresh();
-						}
-					});
-				}
-			);
-		});
-
-		// Bulk Outlier / Re-Survey Flag Action
-		listview.page.add_action_item(__("Flag for Re-Survey"), function() {
-			const checked = listview.get_checked_items();
-			if (!checked.length) return;
-
-			frappe.prompt(
-				[{ fieldname: "reason", fieldtype: "Small Text", label: __("Reason for Re-Survey"), reqd: 1 }],
-				function(values) {
-					frappe.call({
-						method: "frappe.client.bulk_update",
-						args: {
-							docs: checked.map(d => ({ doctype: "OmniQuery Response", name: d.name, survey_status: "Audit Flagged" }))
-						},
-						callback: function() {
-							frappe.show_alert({ message: __("Responses flagged for re-survey"), indicator: "orange" });
-							listview.refresh();
-						}
-					});
-				},
-				__("Flag Responses")
-			);
-		});
-	},
 	button: {
 		show: function(doc) {
 			return Boolean(doc.audio_recording);

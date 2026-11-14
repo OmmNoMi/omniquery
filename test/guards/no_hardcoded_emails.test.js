@@ -1,61 +1,46 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
-import path from "node:path";
 import os from "node:os";
-import { fileURLToPath } from "node:url";
+import path from "node:path";
+import { getSourceFiles } from "./sourceFiles.js";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const srcRoot = path.resolve(__dirname, "../../src");
+// A hard-coded address is an invented identity or support contact: use the session or the project instead (#51).
+const EMAIL = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+const EXTENSIONS = [".vue", ".js", ".ts", ".py", ".html"];
+// The app's own publisher address, which Frappe reads from hooks.py.
+const ALLOWED = new Set(["omniquery/hooks.py: omniquery@ommnomi.com"]);
 
-const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+const appRoot = path.resolve(__dirname, "../..");
 
-export function findHardcodedEmails(dir) {
-  let violations = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === "__tests__" || entry.name === "test") continue;
-      violations = violations.concat(findHardcodedEmails(fullPath));
-    } else if (entry.isFile() && (entry.name.endsWith(".vue") || entry.name.endsWith(".js"))) {
-      if (entry.name.endsWith(".spec.js") || entry.name.endsWith(".test.js")) continue;
-      const content = fs.readFileSync(fullPath, "utf-8");
-      const matches = content.match(EMAIL_REGEX);
-      if (matches) {
-        for (const match of matches) {
-          violations.push({
-            file: path.relative(srcRoot, fullPath),
-            email: match,
-          });
-        }
-      }
-    }
-  }
-  return violations;
+function hardcodedEmails(roots, base) {
+  return getSourceFiles(roots, EXTENSIONS)
+    .flatMap((file) => {
+      const relative = path.relative(base, file);
+      return (fs.readFileSync(file, "utf-8").match(EMAIL) || []).map((email) => `${relative}: ${email}`);
+    })
+    .filter((hit) => !ALLOWED.has(hit));
 }
 
-describe("Static Architectural Guard: Zero Hardcoded Email Addresses (Issue #51)", () => {
-  it("enforces zero hard-coded email addresses across src/", () => {
-    const violations = findHardcodedEmails(srcRoot);
-    if (violations.length > 0) {
-      const details = violations.map((v) => `  - ${v.file}: ${v.email}`).join("\n");
-      expect.fail(`Found hard-coded email address(es) in src/:\n${details}\nUse dynamic session or project context instead of invented identities.`);
-    }
-    expect(violations).toHaveLength(0);
+describe("Static Architectural Guard: no hard-coded email addresses (#51)", () => {
+  it("has no email address in the PWA or the server code", () => {
+    const offenders = hardcodedEmails([path.join(appRoot, "src"), path.join(appRoot, "omniquery")], appRoot);
+    expect(offenders, "read it from the session or the project").toEqual([]);
   });
 
-  it("fails when a mutant file containing a hard-coded email is introduced", () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "email-mutant-"));
-    const mutantFile = path.join(tempDir, "MutantHeader.vue");
-    fs.writeFileSync(mutantFile, `<template><div>fallback: user@example.com</div></template>`, "utf-8");
-
+  it("catches an address in a component, a server file or a page, but not in a test", () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "email-mutant-"));
     try {
-      const violations = findHardcodedEmails(tempDir);
-      expect(violations.length).toBeGreaterThan(0);
-      expect(violations[0].email).toBe("user@example.com");
+      fs.writeFileSync(path.join(dir, "Header.vue"), `<p>{{ user || "surveyor@example.com" }}</p>`);
+      fs.writeFileSync(path.join(dir, "api.py"), `recipient = "admin@example.local"`);
+      fs.writeFileSync(path.join(dir, "page.html"), `<a href="mailto:help@example.org">Help</a>`);
+      fs.writeFileSync(path.join(dir, "Header.spec.js"), `const user = "fixture@example.com";`);
+      expect(hardcodedEmails([dir], dir).sort()).toEqual([
+        "Header.vue: surveyor@example.com",
+        "api.py: admin@example.local",
+        "page.html: help@example.org",
+      ]);
     } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      fs.rmSync(dir, { recursive: true, force: true });
     }
   });
 });

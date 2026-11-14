@@ -3,6 +3,8 @@ import json
 
 import frappe
 
+from omniquery.services.response_title import DEFAULT_RESPONSE_TITLE_FORMAT
+
 
 def compile_template_schema(template_document):
 	"""Compiles and hashes template schema into JSON fields."""
@@ -27,7 +29,7 @@ def build_schema_dictionary(template_document):
 		"version": template_document.version or 1,
 		"status": template_document.status,
 		"amended_from": template_document.amended_from,
-		"response_title_format": getattr(template_document, "response_title_format", None) or "{respondent_name} - {village_gp} ({enterprise_name})",
+		"response_title_format": getattr(template_document, "response_title_format", None) or DEFAULT_RESPONSE_TITLE_FORMAT,
 		"is_public_citizen_link": bool(template_document.is_public_citizen_link),
 		"auto_advance": bool(getattr(template_document, "auto_advance", 1)),
 		"presentation_mode": getattr(template_document, "presentation_mode", "Standard Section") or "Standard Section",
@@ -125,7 +127,7 @@ def resolve_option_set_items(option_set_name):
 	"""Resolves ordered option values from an OmniQuery Option Set."""
 	items = frappe.get_all(
 		"OmniQuery Option Item",
-		filters={"parent": option_set_name},
+		filters={"parent": option_set_name, "parenttype": "OmniQuery Option Set", "parentfield": "options"},
 		fields=["option_code"],
 		order_by="idx asc",
 	)
