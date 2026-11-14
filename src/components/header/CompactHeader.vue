@@ -8,7 +8,7 @@
           v-if="showBack"
           @click="$emit('exit')"
           class="w-8 h-8 rounded-full flex items-center justify-center bg-[#e6efe8] dark:bg-[#1c2c22] hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 text-slate-800 dark:text-emerald-100 border border-[#b8cdbf] dark:border-[#2a4033] transition"
-          :aria-label="__('Return to Home')"
+          :label="__('Return to Home')"
           :title="__('Return to Home')"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -16,15 +16,21 @@
           </svg>
         </Button>
 
-        <!-- Official OmniQuery Cloud Icon & Brand Title -->
-        <div class="flex items-center gap-2 cursor-pointer select-none" @click="$emit('home')">
+        <!-- Logo: a real link home. A plain click stays in the app (home, or the exit dialog mid-survey);
+             .exact leaves cmd/ctrl/shift-click to the browser, so it can open a new tab. The visible
+             wordmark names the link, so the icon is decorative. -->
+        <a
+          href="/omniquery"
+          @click.left.exact.prevent="$emit('home')"
+          class="flex items-center gap-2 cursor-pointer select-none rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+        >
           <img
             :src="'/assets/omniquery/icons/desktop_icons/solid/omniquery.svg'"
-            alt="OmniQuery"
+            alt=""
             class="w-7 h-7 rounded-lg shadow-xs"
           />
           <span class="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">OmniQuery</span>
-        </div>
+        </a>
       </div>
 
       <!-- Right: Progress Chip, Google Meet-style Microphone, and User Avatar -->
@@ -44,7 +50,7 @@
           @click="$emit('open-wal')"
           class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#fffbeb] dark:bg-amber-950/70 border border-amber-300 dark:border-amber-600 text-amber-900 dark:text-amber-200 flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition select-none hover:bg-amber-100 dark:hover:bg-amber-900/60"
           :title="`${pendingWALCount} ${__('Pending Offline Responses')} - ${__('Click to view & sync')}`"
-          :aria-label="`${pendingWALCount} ${__('Pending Offline Responses')}`"
+          :label="`${pendingWALCount} ${__('Pending Offline Responses')}`"
         >
           <Zap class="w-3.5 h-3.5 leading-none" />
           <span class="font-bold text-xs leading-none text-amber-900 dark:text-amber-200">{{ pendingWALCount }}</span>
@@ -61,7 +67,7 @@
               : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
           ]"
           :title="isRecording && !isAudioPaused ? __('Mute microphone') : __('Unmute / record microphone')"
-          :aria-label="isRecording && !isAudioPaused ? __('Mute microphone') : __('Unmute / record microphone')"
+          :label="isRecording && !isAudioPaused ? __('Mute microphone') : __('Unmute / record microphone')"
         >
           <!-- Mic Active Icon -->
           <svg
@@ -120,11 +126,10 @@
         <!-- User Avatar Icon with Live Green Dot (Logged-in surveyor only) -->
         <Button
           v-else
-          ref="avatarButtonRef"
-          @click="openConfigModal"
-          class="relative w-9 h-9 rounded-full bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-black text-xs flex items-center justify-center shadow-xs ring-2 ring-[#b8cdbf] transition cursor-pointer select-none"
-          :title="__('Settings & Configuration')"
-          :aria-label="__('Settings & Configuration')"
+          variant="solid"
+          :label="__('Settings & Configuration')"
+          class="relative !h-9 !w-9 !px-0 rounded-full font-black select-none active:scale-95"
+          @click="showConfigModal = true"
         >
           <span>{{ userInitial }}</span>
 
@@ -153,29 +158,29 @@
       <div
         v-if="showConfigModal"
         class="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-xs flex items-end justify-center overscroll-contain select-none"
-        @click.self="closeConfigModal"
+        @click.self="showConfigModal = false"
         @wheel.stop
         @touchmove.self.prevent
       >
-        <div class="bg-white dark:bg-slate-900 text-slate-900 dark:text-white w-full max-w-lg rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto pb-safe overscroll-contain border-t border-slate-200 dark:border-slate-800">
+        <div class="bg-white w-full max-w-lg rounded-t-3xl p-5 pb-8 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto pb-safe overscroll-contain">
           <!-- iOS Grabber Bar -->
-          <div class="w-12 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full mx-auto"></div>
+          <div class="w-12 h-1.5 bg-slate-300 rounded-full mx-auto"></div>
 
           <!-- Sheet Header: User Avatar & Live Status & WCAG 44x44 Close Button -->
-          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100">
             <div class="flex items-center gap-3">
-              <div class="relative w-12 h-12 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shadow-xs ring-2 ring-emerald-100 dark:ring-emerald-900/60">
+              <div class="relative w-12 h-12 rounded-full bg-emerald-600 text-white font-black flex items-center justify-center text-sm shadow-xs ring-2 ring-emerald-100">
                 {{ userInitial }}
                 <span
                   :class="[
-                    'absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-slate-900',
+                    'absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white',
                     isOnline ? 'bg-emerald-500' : 'bg-amber-500'
                   ]"
                 />
               </div>
               <div>
-                <h3 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">{{ userDisplayName }}</h3>
-                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{{ userEmail }}</p>
+                <h3 class="text-sm font-bold text-slate-900 leading-tight">{{ userDisplayName }}</h3>
+                <p v-if="userEmail && userEmail !== userDisplayName" class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
                 <div class="flex items-center gap-1.5 mt-1">
                   <span
                     :class="[
@@ -183,8 +188,8 @@
                       isOnline ? 'bg-emerald-500' : 'bg-amber-500'
                     ]"
                   />
-                  <span class="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
-                    {{ isOnline ? __('Online') : __('Offline') }} · {{ __(userRoleLabel) || userRoleLabel }}
+                  <span class="text-[11px] font-semibold text-slate-600">
+                    {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
                   </span>
                 </div>
               </div>
@@ -192,9 +197,9 @@
 
             <!-- Accessible WCAG 2.2 AA Close Button (44x44px target) -->
             <Button
-              @click="closeConfigModal"
-              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 active:scale-95 text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition flex items-center justify-center border border-slate-200/80 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              :aria-label="__('Close settings')"
+              @click="showConfigModal = false"
+              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80"
+              :label="__('Close settings')"
               :title="__('Close settings')"
             >
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -209,7 +214,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Globe class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Language') || 'Language' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Language') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -237,7 +242,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Languages class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Text Size') || 'Text Size' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Text size') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -274,7 +279,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Palette class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Theme') || 'Theme' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Theme') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -304,7 +309,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <LayoutGrid class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Choice Layout') || 'Choice Layout' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Choice layout') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -331,7 +336,7 @@
             </div>
           </div>
 
-          <!-- 4. Offline Responses & Sync Status -->
+          <!-- 4. Offline WAL Queue & Sync Status -->
           <div class="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between gap-3">
             <div>
               <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800">
@@ -339,7 +344,7 @@
                 <span>{{ __('Waiting to upload') }}</span>
               </div>
               <p class="text-[11px] text-slate-500 mt-0.5">
-                {{ pendingWALCount }} {{ __('Pending Responses') }}
+                {{ __('{0} pending responses', [pendingWALCount]) }}
               </p>
             </div>
             <Button
@@ -354,22 +359,37 @@
 
           <!-- 5. Profile Details & Manage Link -->
           <div class="pt-1 flex items-center justify-between text-xs px-1">
-            <span class="text-slate-500 font-medium">{{ __('User Profile & Account') }}</span>
+            <span class="text-slate-500 font-medium">{{ __('Manage Profile & Credentials') }}</span>
+            <!-- /me is a server page the service worker does not cache, so offline it would replace the app with an error -->
             <a
-              href="/app/user-profile"
-              class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+              v-if="isOnline"
+              href="/me"
+              class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 min-h-6"
             >
-              <span>{{ __('View Profile') }}</span>
-              <span>↗</span>
+              <span>{{ __('My Account') }}</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+            <span v-else class="text-slate-500">{{ __('My Account needs internet') }}</span>
+          </div>
+
+          <!-- 6. Manager Review Workspace Link -->
+          <div v-if="isManager" class="pt-1 flex items-center justify-between text-xs px-1">
+            <span class="text-blue-700 font-semibold">{{ __('OmniQuery Review Workspace') }}</span>
+            <a
+              href="/desk/omniquery"
+              class="font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1"
+            >
+              <span>{{ __('Open Desk') }}</span>
+              <span aria-hidden="true">↗</span>
             </a>
           </div>
 
           <!-- Sheet Dismiss Button -->
           <Button
-            @click="closeConfigModal"
-            class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm transition shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            @click="showConfigModal = false"
+            class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm transition shadow-sm"
           >
-            {{ __('Done') || 'Done' }}
+            {{ __('Done') }}
           </Button>
         </div>
       </div>
@@ -378,13 +398,17 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
+import { useUserRoles } from "../../composables/useUserRoles";
+import { useSession } from "../../composables/useSession";
+import { useOmniqueryContext } from "../../composables/useSurveyApp";
+import { THEME_KEY, storedTheme, applyTheme } from "../../utils/theme";
 
-const props = defineProps({
+defineProps({
   surveyTitle: {
     type: String,
     default: "",
@@ -393,102 +417,25 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  isOnline: {
-    type: Boolean,
-    default: true,
-  },
-  pendingWALCount: {
-    type: Number,
-    default: 0,
-  },
-  textSize: {
-    type: String,
-    default: "md",
-  },
-  progressPercent: {
-    type: Number,
-    default: 0,
-  },
-  isRecording: {
-    type: Boolean,
-    default: false,
-  },
-  isAudioPaused: {
-    type: Boolean,
-    default: false,
-  },
-  isGuest: {
-    type: Boolean,
-    default: false,
-  },
 });
 
 const emit = defineEmits(["exit", "home", "open-wal", "cycle-text-size", "set-text-size", "toggle-audio"]);
 const { __, currentLang, setLanguage } = useTranslation();
 
-const avatarButtonRef = ref(null);
 const showConfigModal = ref(false);
 useScrollLock(showConfigModal);
-const activeTheme = ref("light");
+const activeTheme = ref(storedTheme());
 
-function openConfigModal() {
-  showConfigModal.value = true;
-}
+const { email: userEmail, displayName: userDisplayName, userInitial } = useSession();
 
-function closeConfigModal() {
-  showConfigModal.value = false;
-  if (avatarButtonRef.value) {
-    const el = avatarButtonRef.value.$el || avatarButtonRef.value;
-    if (el && typeof el.focus === "function") {
-      el.focus();
-    }
-  }
-}
+const { isOnline, pendingWALCount, textSize, progressPercent, isRecording, isAudioPaused } = useOmniqueryContext();
+const { isGuest, isManager, isSurveyor, isAdmin } = useUserRoles();
 
-function onKeydown(e) {
-  if (e.key === "Escape" && showConfigModal.value) {
-    e.stopPropagation();
-    closeConfigModal();
-  }
-}
-
-const userEmail = computed(() => {
-  return (window.frappe && window.frappe.user) || "surveyor@ommnomi.in";
-});
-
-const userDisplayName = computed(() => {
-  const f = window.frappe;
-  if (f && f.user_info && f.user && f.user_info[f.user]?.fullname) {
-    return f.user_info[f.user].fullname;
-  }
-  return (f && f.user) || "Surveyor";
-});
-
-const userName = userDisplayName;
-
-const userInitial = computed(() => {
-  const name = userDisplayName.value || "S";
-  return name.charAt(0).toUpperCase();
-});
-
-const userRoleLabel = computed(() => {
-  const f = window.frappe;
-  if (!f) return "Field Surveyor";
-  if (f.user === "Administrator") return "Administrator";
-
-  const roles = (f.boot && f.boot.user && f.boot.user.roles) || f.user_roles || f.roles || [];
-  if (Array.isArray(roles)) {
-    if (roles.includes("Administrator")) return "Administrator";
-    if (roles.includes("System Manager")) return "System Manager";
-    if (roles.includes("OmniQuery Manager")) return "OmniQuery Manager";
-    if (roles.includes("Project Admin")) return "Project Admin";
-    if (roles.includes("Project Analyst")) return "Project Analyst";
-    if (roles.includes("Field Supervisor")) return "Field Supervisor";
-    if (roles.includes("Field Surveyor")) return "Field Surveyor";
-    const nonStandard = roles.find((r) => r !== "All" && r !== "Guest");
-    if (nonStandard) return nonStandard;
-  }
-  return "Field Surveyor";
+const roleLabel = computed(() => {
+  if (isAdmin.value) return __("OmniQuery Admin");
+  if (isManager.value) return __("OmniQuery Manager");
+  if (isSurveyor.value) return __("Field Surveyor");
+  return __("Public Respondent");
 });
 
 function setTextScale(size) {
@@ -498,16 +445,14 @@ function setTextScale(size) {
 function setAppTheme(theme) {
   activeTheme.value = theme;
   if (typeof localStorage !== "undefined") {
-    localStorage.setItem("omniquery_theme", theme);
+    localStorage.setItem(THEME_KEY, theme);
   }
-  if (typeof document !== "undefined") {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }
+  applyTheme(theme);
 }
 
 function triggerSync() {
   emit("open-wal");
-  closeConfigModal();
+  showConfigModal.value = false;
 }
 
 const activeChoiceMode = ref(
@@ -526,25 +471,14 @@ watch(showConfigModal, (isOpen) => {
   if (typeof document !== "undefined") {
     document.body.style.overflow = isOpen ? "hidden" : "";
   }
-  if (typeof window !== "undefined") {
-    if (isOpen) {
-      window.addEventListener("keydown", onKeydown);
-    } else {
-      window.removeEventListener("keydown", onKeydown);
-    }
-  }
 });
 
-onMounted(() => {
-  if (typeof localStorage !== "undefined") {
-    const savedTheme = localStorage.getItem("omniquery_theme") || "light";
-    setAppTheme(savedTheme);
-  }
-});
 
-onUnmounted(() => {
-  if (typeof window !== "undefined") {
-    window.removeEventListener("keydown", onKeydown);
-  }
+
+defineExpose({
+  roleLabel,
+  isGuest,
+  isManager,
+  showConfigModal
 });
 </script>
