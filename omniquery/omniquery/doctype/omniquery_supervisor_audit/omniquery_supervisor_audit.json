@@ -26,12 +26,15 @@
    "unique": 1
   },
   {
+   "default": "__user",
    "fieldname": "supervisor",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Auditing Supervisor",
    "options": "User",
-   "reqd": 1
+   "read_only": 1,
+   "reqd": 1,
+   "set_only_once": 1
   },
   {
    "default": "Verified",
@@ -94,6 +97,18 @@
   {
    "read": 1,
    "role": "All"
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "OmniQuery Manager",
+   "share": 1,
+   "write": 1
   }
  ],
  "sort_field": "creation",
