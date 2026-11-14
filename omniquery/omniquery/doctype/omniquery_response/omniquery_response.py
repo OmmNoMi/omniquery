@@ -1,7 +1,18 @@
 import uuid
 import frappe
+from frappe import _
 from frappe.model.document import Document
-from frappe.utils import now_datetime
+from frappe.model.workflow import apply_workflow
+from frappe.utils import formatdate, now_datetime
+
+from omniquery.services.response_title import answers_from_items, resolve_response_title
+
+# written only by sync (with db.set_value), so a form or API save may not change them
+QUALITY_SIGNAL_FIELDS = ("time_spent_seconds", "gps_distance_variance_meters", "is_outlier_flagged", "outlier_reasons")
+# the field app's own lifecycle: sync moves a response between these, reviewers move it on from Submitted
+FIELD_STATES = ("Draft", "Submitted")
+# a reviewer must say why, so these are reached only through apply_response_workflow
+REASON_STATES = ("Audit Flagged", "Rejected")
 
 
 class OmniQueryResponse(Document):
@@ -18,47 +29,65 @@ class OmniQueryResponse(Document):
 	def before_insert(self):
 		if not self.synced_at:
 			self.synced_at = now_datetime()
-		self.set_title()
 
-	def before_save(self):
-		self.set_title()
+	def before_submit(self):
+		if not self.synced_at:
+			self.synced_at = now_datetime()
+		if not self.survey_status or self.survey_status == "Draft":
+			self.survey_status = "Submitted"
 
-	def set_title(self):
-		import json
-		from omniquery.services.response_title import resolve_response_title
+	def validate_workflow(self):
+		# sync inserts a response as Submitted, or submits a live draft, as the surveyor; the
+		# workflow only governs review. Submitted cannot go back to Draft: docstatus 1 never returns to 0.
+		before = self.get_doc_before_save()
+		if self.survey_status in FIELD_STATES and (not before or before.survey_status in FIELD_STATES):
+			return
+		super().validate_workflow()
 
-		format_str = ""
-		if self.survey_template and frappe.db.exists("OmniQuery Template", self.survey_template):
-			format_str = (
-				frappe.db.get_value("OmniQuery Template", self.survey_template, "response_title_format") or ""
-			)
+	def validate(self):
+		# validate runs on insert, save and submit; before_save is skipped when a draft is submitted
+		self.title = self.compute_title()
+		if self.is_new():
+			return
+		self._guard_quality_signals()
 
-		answers = {}
-		if self.response_payload:
-			try:
-				payload = (
-					json.loads(self.response_payload)
-					if isinstance(self.response_payload, str)
-					else self.response_payload
-				)
-				if isinstance(payload, dict):
-					if isinstance(payload.get("responses"), dict):
-						answers.update(payload.get("responses"))
-					for k, v in payload.items():
-						if k != "responses" and not isinstance(v, (dict, list)):
-							answers[k] = v
-			except Exception:
-				pass
+	def compute_title(self):
+		fmt, template_title = "", ""
+		if self.survey_template:
+			fmt, template_title = frappe.db.get_value(
+				"OmniQuery Template", self.survey_template, ["response_title_format", "title"]
+			) or ("", "")
+		fallback = template_title or self.survey_template or _("Survey Response")
+		captured = self.captured_at_local or self.creation
+		if captured:
+			fallback = f"{fallback}, {formatdate(captured)}"
+		return resolve_response_title(answers_from_items(self.items), fmt or "", fallback_title=fallback)
 
-		for item in self.items or []:
-			code = getattr(item, "question_code", None)
-			if code and code not in answers:
-				val = (
-					getattr(item, "value_text", None)
-					or getattr(item, "value_numeric", None)
-					or getattr(item, "value_json", None)
-				)
-				if val is not None:
-					answers[code] = val
+	def before_update_after_submit(self):
+		# every review step saves a submitted response, and validate never runs on those
+		self._require_review_reason()
 
-		self.title = resolve_response_title(answers, format_str, fallback_title=self.name or "Survey Response")
+	def _guard_quality_signals(self):
+		"""Without this a reviewer with write access could quietly clear a sync outlier flag."""
+		changed = [field for field in QUALITY_SIGNAL_FIELDS if self.has_value_changed(field)]
+		if changed:
+			frappe.throw(_("Quality signals are recorded by sync and cannot be edited: {0}").format(", ".join(changed)))
+
+	def _require_review_reason(self):
+		# covers every path: the form, Desk's list workflow actions and the REST API all reach this save
+		if self.survey_status in REASON_STATES and self.has_value_changed("survey_status"):
+			if not frappe.flags.omniquery_review_reason:
+				frappe.throw(_("A reason is required to move a response to {0}.").format(_(self.survey_status)))
+
+
+@frappe.whitelist()
+def apply_response_workflow(doc: str, action: str, reason: str | None = None):
+	"""Frappe's apply_workflow with the reviewer's reason, which it records as a comment."""
+	frappe.flags.omniquery_review_reason = (reason or "").strip()
+	try:
+		updated = apply_workflow(frappe.get_doc("OmniQuery Response", doc), action)
+	finally:
+		frappe.flags.omniquery_review_reason = None
+	if (reason or "").strip():
+		updated.add_comment("Comment", text=_("{0}: {1}").format(_(action), reason.strip()))
+	return updated
