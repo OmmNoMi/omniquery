@@ -22,8 +22,8 @@ if (typeof FormData !== "undefined" && FormData.prototype) {
 
 // Global mock for Frappe window object
 if (typeof window !== "undefined") {
+  window.csrf_token = "test_csrf_token";
   window.frappe = {
-    csrf_token: "test_csrf_token",
     user: "test_surveyor@example.com",
     datetime: {
       now_datetime: () => new Date().toISOString(),

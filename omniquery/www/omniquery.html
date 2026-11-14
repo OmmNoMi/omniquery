@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>{{ title or "OmniQuery · OmmNoMi Field Survey Platform" }}</title>
   <script>
+    window.csrf_token = "{{ csrf_token }}"; // frappe-ui's call, resources and uploads send this
     window.frappe = window.frappe || {};
-    window.frappe.csrf_token = "{{ csrf_token or frappe.session.data.csrf_token or '' }}";
     window.frappe.user = "{{ current_user or frappe.session.user or '' }}";
     window.frappe.user_roles = {{ user_roles or '[]' }};
     window.frappe.user_fullname = {{ current_user_fullname | tojson }};
