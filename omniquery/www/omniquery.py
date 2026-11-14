@@ -32,14 +32,10 @@ def get_context(context):
 				ctx.title = f"{t_title} · OmniQuery"
 
 
-	try:
-		from frappe.sessions import get_csrf_token
-
-		ctx.csrf_token = get_csrf_token()
-	except Exception:
-		ctx.csrf_token = (
-			getattr(frappe.local.session.data, "csrf_token", "") if hasattr(frappe.local, "session") else ""
-		)
+	# as hrms and builder do: a GET is not committed, so persist a newly generated token for frappe-ui's POSTs
+	csrf_token = frappe.sessions.get_csrf_token()
+	frappe.db.commit()  # nosemgrep
+	ctx.csrf_token = csrf_token
 
 	import json
 	user_lang = getattr(frappe.local, "lang", None) or "en"

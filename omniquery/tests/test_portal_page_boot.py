@@ -26,6 +26,7 @@ class TestPortalPageBoot(unittest.TestCase):
 	def tearDown(self):
 		frappe.set_user("Administrator")
 		frappe.delete_doc("User", self.user, force=True, ignore_permissions=True)
+		frappe.db.commit()  # rendering the page commits, so commit the cleanup too or it is rolled back
 
 	def render_as(self, user):
 		frappe.set_user(user)
@@ -43,3 +44,11 @@ class TestPortalPageBoot(unittest.TestCase):
 	def test_guest_boots_no_name(self):
 		_html, booted = self.render_as("Guest")
 		self.assertEqual(booted, "")
+
+	def test_signed_in_page_hands_frappe_ui_the_session_csrf_token(self):
+		# frappe-ui's call() sends window.csrf_token; without it every signed-in POST fails CSRF
+		html, _booted = self.render_as(self.user)
+		boot_line = next(line for line in html.splitlines() if "window.csrf_token =" in line)
+		token = boot_line.split('"')[1]
+		self.assertTrue(token)
+		self.assertEqual(token, frappe.local.session.data.csrf_token)
