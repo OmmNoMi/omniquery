@@ -391,13 +391,14 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import { useUserRoles } from "../../composables/useUserRoles";
 import { useSession } from "../../composables/useSession";
+import { THEME_KEY, storedTheme, applyTheme } from "../../utils/theme";
 
 const props = defineProps({
   surveyTitle: {
@@ -443,7 +444,7 @@ const { __, currentLang, setLanguage } = useTranslation();
 
 const showConfigModal = ref(false);
 useScrollLock(showConfigModal);
-const activeTheme = ref("light");
+const activeTheme = ref(storedTheme());
 
 const { email: userEmail, displayName: userDisplayName, userInitial } = useSession();
 
@@ -463,11 +464,9 @@ function setTextScale(size) {
 function setAppTheme(theme) {
   activeTheme.value = theme;
   if (typeof localStorage !== "undefined") {
-    localStorage.setItem("omniquery_theme", theme);
+    localStorage.setItem(THEME_KEY, theme);
   }
-  if (typeof document !== "undefined") {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }
+  applyTheme(theme);
 }
 
 function triggerSync() {
@@ -493,12 +492,7 @@ watch(showConfigModal, (isOpen) => {
   }
 });
 
-onMounted(() => {
-  if (typeof localStorage !== "undefined") {
-    const savedTheme = localStorage.getItem("omniquery_theme") || "light";
-    setAppTheme(savedTheme);
-  }
-});
+
 
 defineExpose({
   roleLabel,

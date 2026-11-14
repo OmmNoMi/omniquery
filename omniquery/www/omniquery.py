@@ -42,14 +42,14 @@ def get_context(context):
 		)
 
 	import json
-	user_lang = frappe.local.lang or "hi"
+	user_lang = getattr(frappe.local, "lang", None) or "en"
 	try:
 		from frappe.translate import get_all_translations
 		translations = get_all_translations(user_lang)
 	except Exception:
 		translations = {}
 	ctx.translations = json.dumps(translations)
-	ctx.current_lang = user_lang
+	ctx.lang = user_lang
 
 	ctx.current_user = frappe.session.user
 	ctx.user_roles = json.dumps(frappe.get_roles(ctx.current_user))
