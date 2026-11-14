@@ -8,7 +8,7 @@
     @click="onCardClick"
     @focusin="onFocusIn"
     @focusout="onFocusOut"
-    @keydown.esc.stop="onCardEsc"
+    @keydown.esc="onCardEscape"
     @keydown="onCardKeydown"
     @touchstart="onTouchStart"
     @touchmove="onTouchMove"
@@ -101,7 +101,6 @@
         :ariaLabel="questionLabel"
         :ariaDescribedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
         @update:modelValue="onControlInput"
-        @esc="focusCard"
       />
 
       <!-- 3. Rating Control -->
@@ -134,7 +133,6 @@
           :options="normalizedOptions"
           :multiple="isMultiSelect"
           @update:modelValue="onComboboxUpdate"
-          @keydown.esc.stop="focusCard"
         />
 
         <!-- 5B. Interactive Option Grid with Quick Search & Explicit Checkbox vs Radio Distinction -->
@@ -180,7 +178,6 @@
             :class="displayedGridOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
             :role="isMultiSelect ? 'group' : 'radiogroup'"
             @keydown="onGridKeydown"
-            @keydown.esc.stop="focusCard"
           >
             <Button
               v-for="(option, index) in displayedGridOptions"
@@ -295,7 +292,6 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
-        @keydown.esc.stop="focusCard"
         :placeholder="__('Enter value')"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800"
       />
@@ -312,7 +308,6 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
-        @keydown.esc.stop="focusCard"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800"
       />
 
@@ -328,7 +323,6 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
-        @keydown.esc.stop="focusCard"
         :placeholder="__('Enter value')"
         class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800"
       />
@@ -555,6 +549,7 @@ import {
   CircleDot,
 } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { useCardEscape } from "../../composables/useCardEscape";
 import FSwitch from "../common/FSwitch.vue";
 import FRating from "../common/FRating.vue";
 import FCurrencyInput from "../common/FCurrencyInput.vue";
@@ -584,6 +579,7 @@ const emit = defineEmits(["update:modelValue", "capture-gps", "answered", "next"
 const { __, getQuestionLabel } = useTranslation();
 
 const cardRef = ref(null);
+const onCardEscape = useCardEscape(cardRef);
 const isFocused = ref(false);
 const isInputFocused = ref(false);
 const showConfigModal = ref(false);
@@ -658,12 +654,6 @@ function onFocusOut(e) {
     isFocused.value = false;
     isInputFocused.value = false;
     gridSearchQuery.value = "";
-  }
-}
-
-function onCardEsc() {
-  if (showConfigModal.value) {
-    showConfigModal.value = false;
   }
 }
 

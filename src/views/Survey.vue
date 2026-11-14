@@ -12,7 +12,6 @@
       :isRecording="s.isRecording"
       :isAudioPaused="s.isAudioPaused"
       :isGuest="s.isGuest"
-      @open-focus-mode="s.openFocusMode()"
       @toggle-focus-mode="s.toggleFocusMode()"
       @toggle-auto-advance="s.autoAdvance = !s.autoAdvance"
       @toggle-full-form="s.toggleFullForm()"

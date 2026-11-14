@@ -7,7 +7,7 @@
     :aria-label="parsedMeta.text"
     @focusin="onFocusIn"
     @focusout="onFocusOut"
-    @keydown.esc.stop="focusCard"
+    @keydown.esc="onCardEscape"
     :class="[
       'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default scroll-mt-20',
       notApplicable
@@ -365,6 +365,7 @@ import { computed, ref, reactive, watch, nextTick } from "vue";
 import { Button, TextInput, Select } from "frappe-ui";
 import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { useCardEscape } from "../../composables/useCardEscape";
 
 const props = defineProps({
   question: {
@@ -389,6 +390,7 @@ const emit = defineEmits(["update:modelValue", "answered", "next"]);
 const { __ } = useTranslation();
 
 const cardRef = ref(null);
+const onCardEscape = useCardEscape(cardRef);
 const isFocused = ref(false);
 const isInputFocused = ref(false);
 const cellInputRefs = ref({});
@@ -622,10 +624,6 @@ function onCellKeydown(e, rIdx, cIdx) {
       cellInputRefs.value[`${nextR}_${nextC}`]?.focus({ preventScroll: true });
     }
   }
-}
-
-function focusCard() {
-  cardRef.value?.focus();
 }
 
 function onFocusIn(e) {

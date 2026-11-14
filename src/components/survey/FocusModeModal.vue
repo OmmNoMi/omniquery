@@ -1,21 +1,21 @@
 <template>
-  <Teleport to="body">
-    <div
-      v-if="isOpen && currentQuestion"
-      class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex flex-col justify-between p-3 sm:p-6 overflow-y-auto animate-fade-in"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="__('Focus Mode Survey Form')"
-      @keydown.esc="onClose"
-    >
+  <!-- frappe-ui Dialog (reka): focus trap, focus return, inert background, scroll lock and an Escape
+    that closes only the topmost layer, so the mode menu or Question Settings close before focus mode (#42) -->
+  <Dialog
+    :modelValue="isOpen && Boolean(currentQuestion)"
+    :options="{ size: '2xl' }"
+    @update:modelValue="(open) => !open && emit('close')"
+  >
+    <template #body>
+    <div class="bg-slate-950 text-white max-h-[calc(100dvh-6rem)] flex flex-col overflow-hidden p-2 sm:p-3 gap-2">
       <!-- Top Navigation & Progress Header Card -->
-      <div class="max-w-2xl w-full mx-auto bg-slate-900/90 dark:bg-slate-900/95 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-xl backdrop-blur-md space-y-2 shrink-0">
+      <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 space-y-2 shrink-0">
         <div class="flex items-center justify-between gap-2">
           <!-- Left: Focus Mode Badge & Counter -->
           <div class="flex items-center gap-2">
             <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span>{{ __('Focus Mode') }}</span>
+              <DialogTitle as="span">{{ __('Focus Mode') }}</DialogTitle>
             </span>
             <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700">
               {{ currentIndex + 1 }} / {{ questions.length }}
@@ -24,7 +24,7 @@
 
           <!-- Right: Close Button -->
           <Button
-            @click="onClose"
+            @click="emit('close')"
             class="w-7 h-7 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center font-bold text-xs transition border border-slate-700 active:scale-95 cursor-pointer"
             :aria-label="__('Exit Focus Mode')"
             :title="__('Exit Focus Mode')"
@@ -37,7 +37,7 @@
         <!-- Section Title & Progress Bar -->
         <div class="space-y-1.5 pt-0.5 border-t border-slate-800/80">
           <div class="flex items-center justify-between text-xs font-medium">
-            <span class="font-bold text-slate-200 truncate pr-2">{{ sectionTitle }}</span>
+            <DialogDescription as="span" class="font-bold text-slate-200 truncate pr-2">{{ sectionTitle }}</DialogDescription>
             <span class="font-mono font-bold text-emerald-400 shrink-0">{{ progressPercent }}%</span>
           </div>
           <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50 p-0.5">
@@ -50,7 +50,7 @@
       </div>
 
       <!-- Top-Aligned Question Area: Mobile Keyboard-Friendly (no jumping/squishing) -->
-      <div ref="scrollAreaRef" class="max-w-2xl w-full mx-auto flex-1 pt-3 pb-3 overflow-y-auto">
+      <div ref="scrollAreaRef" class="w-full flex-1 min-h-0 py-1 overflow-y-auto">
         <!-- Pinned Parent Question Card (Sticky inside Focus Mode scroll area) -->
         <div
           v-if="currentQuestion?._parentTitle || currentQuestion?.parent_title"
@@ -94,7 +94,7 @@
       </div>
 
       <!-- Bottom Floating Navigation Bar: Tab sequence is Next (primary) -> Mode -> Previous -->
-      <div class="max-w-2xl w-full mx-auto bg-slate-900/90 dark:bg-slate-900/95 border border-slate-800 rounded-2xl p-2.5 sm:p-3 shadow-2xl backdrop-blur-md flex items-center justify-between gap-2 shrink-0">
+      <div class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 shrink-0">
         <!-- 1st in DOM (Focus 1): Next Question Button (Visual: Right) -->
         <Button
           @click="nextQuestion"
@@ -104,112 +104,21 @@
           <span>→</span>
         </Button>
 
-        <!-- 2nd in DOM (Focus 2): Mode Dropdown Menu (Visual: Center) -->
-        <div class="order-2 relative" ref="modeMenuRef">
-          <Button
-            @click.stop="isModeMenuOpen = !isModeMenuOpen"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none"
-            :class="[
-              (autoAdvance || isFullForm)
-                ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 ring-1 ring-emerald-500/30'
-                : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
-            ]"
-            :title="__('Survey Mode')"
-          >
-            <component :is="activeModeIcon" class="w-3.5 h-3.5" />
-            <span class="font-extrabold tracking-tight">{{ activeModeTitle }}</span>
-            <svg
-              class="w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0"
-              :class="{ 'rotate-180': isModeMenuOpen }"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-            >
-              <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
-            </svg>
-          </Button>
-
-          <!-- Dropdown Popover Menu (Upward) matching SectionCard.vue exactly -->
-          <div
-            v-if="isModeMenuOpen"
-            @click.stop
-            class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-2 space-y-1.5 z-50 animate-fade-in text-white"
-          >
-            <div class="text-xs font-extrabold text-slate-300 uppercase px-2.5 py-1 tracking-wider">
-              {{ __('Survey Options') }}
-            </div>
-
-            <!-- 1. Auto Advance Toggle -->
-            <Button
-              @click="$emit('toggle-auto-advance')"
-              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer hover:bg-slate-800 text-slate-200"
-            >
-              <div class="flex items-center gap-2">
-                <Zap class="w-4 h-4 text-amber-400" />
-                <div>
-                  <div class="text-xs font-bold text-slate-100">{{ __('Auto Advance') }}</div>
-                  <div class="text-xs text-slate-300">{{ __('Next question on answer') }}</div>
-                </div>
-              </div>
-              <span
-                :class="[
-                  'w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0',
-                  autoAdvance ? 'bg-emerald-600' : 'bg-slate-700'
-                ]"
-              >
-                <span
-                  :class="[
-                    'w-4 h-4 rounded-full bg-white transition-transform transform shadow-xs',
-                    autoAdvance ? 'translate-x-4' : 'translate-x-0'
-                  ]"
-                />
-              </span>
-            </Button>
-
-            <!-- 2. Full Form Toggle -->
-            <Button
-              @click="$emit('toggle-full-form')"
-              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer hover:bg-slate-800 text-slate-200"
-            >
-              <div class="flex items-center gap-2">
-                <ClipboardList class="w-4 h-4 text-blue-400" />
-                <div>
-                  <div class="text-xs font-bold text-slate-100">{{ __('Full Form') }}</div>
-                  <div class="text-xs text-slate-300">{{ __('Show all fields (incl. N/A)') }}</div>
-                </div>
-              </div>
-              <span
-                :class="[
-                  'w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0',
-                  isFullForm ? 'bg-emerald-600' : 'bg-slate-700'
-                ]"
-              >
-                <span
-                  :class="[
-                    'w-4 h-4 rounded-full bg-white transition-transform transform shadow-xs',
-                    isFullForm ? 'translate-x-4' : 'translate-x-0'
-                  ]"
-                />
-              </span>
-            </Button>
-
-            <!-- 3. Focus Form Toggle (Active - toggling exits Focus Mode) -->
-            <Button
-              @click="onClose"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5"
-            >
-              <div class="flex items-center gap-2">
-                <Target class="w-4 h-4 text-emerald-400" />
-                <div>
-                  <div class="text-xs font-bold text-slate-100">{{ __('Focus Form') }}</div>
-                  <div class="text-xs text-slate-300">{{ __('One-by-one popup card') }}</div>
-                </div>
-              </div>
-              <span class="w-9 h-5 rounded-full transition-colors relative flex items-center px-0.5 shrink-0 bg-emerald-600">
-                <span class="w-4 h-4 rounded-full bg-white transition-transform transform shadow-xs translate-x-4" />
-              </span>
-            </Button>
-          </div>
-        </div>
+        <!-- 2nd in DOM (Focus 2): Survey Mode menu (Visual: Center); its Focus Form toggle exits -->
+        <SurveyModeMenu
+          class="order-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold tracking-tight border transition active:scale-95 shadow-2xs cursor-pointer select-none"
+          :class="[
+            (autoAdvance || isFullForm)
+              ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/80'
+              : 'bg-slate-800 border-slate-700 text-slate-200 hover:bg-slate-700'
+          ]"
+          :autoAdvance="autoAdvance"
+          :isFullForm="isFullForm"
+          :isFocusMode="true"
+          @toggle-auto-advance="emit('toggle-auto-advance')"
+          @toggle-full-form="emit('toggle-full-form')"
+          @toggle-focus-mode="emit('close')"
+        />
 
         <!-- 3rd in DOM (Focus 3): Previous Question Button (Visual: Left) -->
         <Button
@@ -222,17 +131,19 @@
         </Button>
       </div>
     </div>
-  </Teleport>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
-import { computed, ref, watch, nextTick, toRef, onMounted, onUnmounted } from "vue";
-import { Button } from "frappe-ui";
-import { X, ClipboardList, Zap, Target } from "lucide-vue-next";
-import { useScrollLock } from "../../composables/useScrollLock";
+import { computed, ref, watch, nextTick } from "vue";
+import { Button, Dialog } from "frappe-ui";
+import { DialogDescription, DialogTitle } from "reka-ui";
+import { X, ClipboardList } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
 import MatrixQuestionCard from "./MatrixQuestionCard.vue";
+import SurveyModeMenu from "./SurveyModeMenu.vue";
 
 function isMatrixQuestion(q) {
   if (!q) return false;
@@ -297,10 +208,7 @@ const emit = defineEmits([
 ]);
 
 const { __ } = useTranslation();
-useScrollLock(toRef(props, "isOpen"));
 
-const isModeMenuOpen = ref(false);
-const modeMenuRef = ref(null);
 const questionCardRef = ref(null);
 const scrollAreaRef = ref(null);
 
@@ -314,33 +222,8 @@ function focusCurrentQuestion() {
   });
 }
 
-function handleOutsideClick(event) {
-  if (isModeMenuOpen.value && modeMenuRef.value && !modeMenuRef.value.contains(event.target)) {
-    isModeMenuOpen.value = false;
-  }
-}
-
 const currentQuestion = computed(() => {
   return props.questions[props.currentIndex] || null;
-});
-
-const activeModeTitle = computed(() => {
-  if (props.autoAdvance && props.isFullForm) {
-    return __('Full (Auto)');
-  }
-  if (props.autoAdvance) {
-    return __('Auto Advance');
-  }
-  if (props.isFullForm) {
-    return __('Full Form');
-  }
-  return __('Focus Form');
-});
-
-const activeModeIcon = computed(() => {
-  if (props.autoAdvance) return Zap;
-  if (props.isFullForm) return ClipboardList;
-  return Target;
 });
 
 const progressPercent = computed(() => {
@@ -396,11 +279,6 @@ function nextQuestion() {
   advanceToNext();
 }
 
-function onClose() {
-  isModeMenuOpen.value = false;
-  emit("close");
-}
-
 watch(
   () => props.currentIndex,
   () => {
@@ -420,16 +298,4 @@ watch(
   },
   { immediate: true }
 );
-
-onMounted(() => {
-  if (typeof document !== "undefined") {
-    document.addEventListener("click", handleOutsideClick);
-  }
-});
-
-onUnmounted(() => {
-  if (typeof document !== "undefined") {
-    document.removeEventListener("click", handleOutsideClick);
-  }
-});
 </script>
