@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import CompactHeader from "../header/CompactHeader.vue";
 import { useTranslation } from "../../composables/useTranslation";
@@ -112,6 +112,41 @@ describe("CompactHeader", () => {
       const wrapper = await openSettings({ isOnline: false });
       expect(document.body.querySelector("a[href='/me']")).toBeNull();
       expect(document.body.textContent).toContain("My Account needs internet");
+      wrapper.unmount();
+    });
+  });
+
+  describe("who is signed in, in the settings sheet (#51)", () => {
+    const original = window.frappe;
+    const EMAIL = "oq.surveyor.test@example.com";
+
+    beforeEach(() => {
+      useTranslation().setLanguage("en");
+    });
+    afterEach(() => {
+      window.frappe = original;
+    });
+
+    async function openSettingsAs(user, user_fullname) {
+      window.frappe = { ...original, user, user_fullname };
+      const wrapper = mount(CompactHeader, { props: { userRoles: ["OmniQuery User"] }, attachTo: document.body });
+      await wrapper.find("button[title='Settings & Configuration']").trigger("click");
+      return wrapper;
+    }
+
+    const timesShown = (needle) => document.body.textContent.split(needle).length - 1;
+
+    it("names the surveyor by full name and shows the email once", async () => {
+      const wrapper = await openSettingsAs(EMAIL, "OQ Test Surveyor");
+      expect(document.body.querySelector("h3")?.textContent).toBe("OQ Test Surveyor");
+      expect(timesShown(EMAIL)).toBe(1);
+      wrapper.unmount();
+    });
+
+    it("shows the email once, not twice, when it is all there is", async () => {
+      const wrapper = await openSettingsAs(EMAIL, "");
+      expect(document.body.querySelector("h3")?.textContent).toBe(EMAIL);
+      expect(timesShown(EMAIL)).toBe(1);
       wrapper.unmount();
     });
   });

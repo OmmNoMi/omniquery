@@ -53,6 +53,8 @@ def get_context(context):
 
 	ctx.current_user = frappe.session.user
 	ctx.user_roles = json.dumps(frappe.get_roles(ctx.current_user))
+	# the PWA greets the surveyor by name (#51); the page writes it into a script with |tojson
+	ctx.current_user_fullname = frappe.utils.get_fullname(ctx.current_user) if ctx.current_user != "Guest" else ""
 	try:
 		import os
 		bundle_path = os.path.join(frappe.get_app_path("omniquery"), "public", "dist", "omniquery.bundle.js")

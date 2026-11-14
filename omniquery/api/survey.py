@@ -86,7 +86,7 @@ def get_current_user_info():
 		"user": user,
 		"is_guest": user == "Guest",
 		"roles": roles,
-		"full_name": frappe.utils.get_fullname(user) if user != "Guest" else "Guest Surveyor",
+		"full_name": frappe.utils.get_fullname(user) if user != "Guest" else _("Guest Surveyor"),
 	}
 
 
@@ -299,73 +299,13 @@ def get_bootstrap_data():
 			}
 		)
 	return {
-		"user": (user_info.get("full_name") or user_info.get("user") or "Guest Surveyor")
+		"user": (user_info.get("full_name") or user_info.get("user") or _("Guest Surveyor"))
 		if isinstance(user_info, dict)
 		else str(user_info),
 		"templates": authorized,
 		# no project and no site-wide role: the PWA tells them to ask their supervisor (#57)
 		"is_unassigned": is_unassigned(current_user),
 	}
-
-
-@frappe.whitelist(allow_guest=True)
-def email_surveyor_backup(recipient_email=None, surveyor_name=None, note=None, data_json=None, data_csv=None):
-	"""
-	Emergency email backup endpoint: sends survey data dump (JSON/CSV) to admin email.
-	"""
-	if not recipient_email:
-		recipient_email = (
-			frappe.db.get_single_value("System Settings", "email_notification_recipient")
-			or "admin@ommnomi.local"
-		)
-
-	surveyor = surveyor_name or frappe.session.user or "Field Surveyor"
-	now_str = frappe.utils.now_datetime().strftime("%Y-%m-%d %H:%M:%S")
-
-	subject = f"[OmniQuery Emergency Data Backup] from {surveyor} ({now_str})"
-
-	body = f"""
-	<h3>OmniQuery Field Device Data Backup</h3>
-	<p><strong>Sent by:</strong> {frappe.utils.escape_html(str(surveyor))}</p>
-	<p><strong>Timestamp:</strong> {now_str}</p>
-	<p><strong>Notes / Error Report:</strong> {frappe.utils.escape_html(str(note or "Direct Emergency Backup Export from PWA"))}</p>
-	<hr>
-	<p>Attached are the raw JSON database dump and tabular CSV responses from the surveyor's offline device storage.</p>
-	"""
-
-	attachments = []
-	today_date = frappe.utils.today()
-	if data_json:
-		attachments.append(
-			{
-				"fname": f"OmniQuery_Backup_{today_date}.json",
-				"fcontent": data_json.encode("utf-8")
-				if isinstance(data_json, str)
-				else str(data_json).encode("utf-8"),
-			}
-		)
-	if data_csv:
-		attachments.append(
-			{
-				"fname": f"OmniQuery_Responses_{today_date}.csv",
-				"fcontent": data_csv.encode("utf-8")
-				if isinstance(data_csv, str)
-				else str(data_csv).encode("utf-8"),
-			}
-		)
-
-	try:
-		frappe.sendmail(
-			recipients=[recipient_email],
-			subject=subject,
-			message=body,
-			attachments=attachments,
-			delayed=False,
-		)
-		return {"status": "SUCCESS", "message": f"Backup email successfully dispatched to {recipient_email}"}
-	except Exception as e:
-		frappe.log_error("OmniQuery Emergency Backup Email Error", str(e))
-		return {"status": "ERROR", "error": str(e), "message": "Server mail dispatch error"}
 
 
 @frappe.whitelist(allow_guest=True)
@@ -481,7 +421,7 @@ def get_project_details(project_id=None):
 	# Support Helpline
 	helpline = {
 		"supervisor_name": "Field Operations Lead",
-		"email": "fieldsupport@ommnomi.in",
+		"email": proj.support_email or "",
 		"phone": "+91 1800-102-OMNI",
 		"hours": "8:00 AM – 7:00 PM IST (Mon–Sat)",
 	}
@@ -497,6 +437,7 @@ PROJECT_DETAIL_FIELDS = [
 	"name",
 	"project_name",
 	"grantor_organization",
+	"support_email",
 	"workspace",
 	"description",
 	"district_scope",

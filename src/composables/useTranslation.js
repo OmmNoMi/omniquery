@@ -57,6 +57,7 @@ const CORE_HINDI = {
   "Questions": "प्रश्न",
   "My Account": "मेरा खाता",
   "My Account needs internet": "मेरा खाता खोलने के लिए इंटरनेट चाहिए",
+  "Guest Surveyor": "अतिथि सर्वेक्षक",
 };
 
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";

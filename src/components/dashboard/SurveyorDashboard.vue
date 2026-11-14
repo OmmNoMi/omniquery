@@ -301,6 +301,7 @@ import { Button, call } from "frappe-ui";
 import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play, UserX } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useUserRoles } from "../../composables/useUserRoles";
+import { useSession } from "../../composables/useSession";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { db } from "../../services/db";
 
@@ -358,20 +359,9 @@ const serverApprovedCount = ref(0);
 const localTodayCount = ref(0);
 const localTotalCount = ref(0);
 
-const user = computed(() => {
-  return (window.frappe && window.frappe.user) || "Administrator";
-});
-
-const displayName = computed(() => {
-  if (user.value === "Administrator") return "Administrator";
-  return user.value.split("@")[0] || user.value;
-});
+const { displayName, userInitial } = useSession();
 
 const { isManager, isSurveyor } = useUserRoles(() => props.userRoles);
-
-const userInitial = computed(() => {
-  return (displayName.value || "A").charAt(0).toUpperCase();
-});
 
 const formattedToday = computed(() => {
   const d = new Date();

@@ -229,6 +229,17 @@ describe("SurveyorDashboard", () => {
     const wrapper = mount(SurveyorDashboard, { props: { templates: [], isOnline: true } });
     expect(wrapper.text()).not.toContain("not assigned to a project");
   });
+
+  it("welcomes the surveyor by full name, not by the start of their email (#51)", () => {
+    const original = window.frappe;
+    window.frappe = { ...original, user: "oq.surveyor.test@example.com", user_fullname: "OQ Test Surveyor" };
+    try {
+      const wrapper = mount(SurveyorDashboard, { props: { pendingWALCount: 0, isOnline: true } });
+      expect(wrapper.find("h2").text()).toBe("Welcome, OQ Test Surveyor");
+    } finally {
+      window.frappe = original;
+    }
+  });
 });
 
 function mockKpis(message) {

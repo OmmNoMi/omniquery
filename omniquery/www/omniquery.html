@@ -11,6 +11,7 @@
     window.frappe.csrf_token = "{{ csrf_token or frappe.session.data.csrf_token or '' }}";
     window.frappe.user = "{{ current_user or frappe.session.user or '' }}";
     window.frappe.user_roles = {{ user_roles or '[]' }};
+    window.frappe.user_fullname = {{ current_user_fullname | tojson }};
     window.frappe.initial_survey_id = "{{ initial_survey_id or '' }}";
     window.frappe.initial_project_id = "{{ initial_project_id or '' }}";
     window.__messages = {{ translations or '{}' }};

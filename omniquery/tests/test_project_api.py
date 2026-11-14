@@ -13,6 +13,7 @@ class TestProjectAPI(unittest.TestCase):
 				"doctype": "OmniQuery Project",
 				"project_name": "Rajasthan Livelihood Project",
 				"grantor_organization": "RGAVP / State Mission",
+				"support_email": "helpdesk@example.org",
 				"description": "Comprehensive socio-economic study on SHG micro-enterprises.",
 				"status": "Active",
 			}
@@ -42,6 +43,9 @@ class TestProjectAPI(unittest.TestCase):
 		self.assertIn("training_modules", details)
 		self.assertTrue(len(details["training_modules"]) >= 1)
 		self.assertIn("helpline", details)
+		# the helpline tab's email is the project's own, not an invented one (#51)
+		self.assertEqual(details["project"]["support_email"], "helpdesk@example.org")
+		self.assertEqual(details["helpline"]["email"], "helpdesk@example.org")
 
 	def test_unknown_project_gives_nothing_not_a_made_up_one(self):
 		# #57: the endpoint once invented a project and a grantor for any id it did not know

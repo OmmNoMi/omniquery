@@ -9,6 +9,7 @@
   "project_name",
   "workspace",
   "grantor_organization",
+  "support_email",
   "status",
   "column_break_dates",
   "start_date",
@@ -42,6 +43,13 @@
    "in_list_view": 1,
    "label": "Grantor / Sponsoring Org",
    "reqd": 1
+  },
+  {
+   "fieldname": "support_email",
+   "fieldtype": "Data",
+   "label": "Support Email",
+   "options": "Email",
+   "description": "Shown to surveyors on the project's helpline tab. Leave empty to hide the email card."
   },
   {
    "default": "Draft",
@@ -111,7 +119,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-13 13:00:00.000000",
+ "modified": "2026-11-14 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Project",
