@@ -1,9 +1,12 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import ProjectHeaderCard from "../dashboard/ProjectHeaderCard.vue";
 import { useTranslation } from "../../composables/useTranslation";
 
 describe("ProjectHeaderCard", () => {
+  // the app starts in Hindi; these tests read English labels unless they set a language
+  beforeEach(() => useTranslation().setLanguage("en"));
+
   it("deduplicates projects with matching normalized names", () => {
     const templates = [
       {
@@ -35,7 +38,7 @@ describe("ProjectHeaderCard", () => {
     expect(wrapper.vm.projectList.length).toBe(1);
     expect(wrapper.vm.projectList[0].project_name).toBe("Rajasthan Women Entrepreneurs Study");
     // Pagination controls should NOT be visible when length === 1
-    expect(wrapper.find("button[title*='Project']").exists()).toBe(false);
+    expect(wrapper.find("button[title='Next project']").exists()).toBe(false);
   });
 
   it("renders multiple unique projects and emits select-project on change", async () => {
@@ -60,7 +63,7 @@ describe("ProjectHeaderCard", () => {
     });
 
     expect(wrapper.vm.projectList.length).toBe(2);
-    expect(wrapper.find("button[title*='Project']").exists()).toBe(true);
+    expect(wrapper.find("button[title='Next project']").exists()).toBe(true);
 
     wrapper.vm.scrollToIndex(1);
     expect(wrapper.emitted("update:selectedProject")).toBeTruthy();
@@ -92,6 +95,24 @@ describe("ProjectHeaderCard", () => {
         expect(button.find("span.hidden.sm\\:inline").text()).toBe(full);
         await button.trigger("click");
         expect(wrapper.emitted("open-project-details")).toEqual([["PROJ-A"]]);
+      });
+    }
+  });
+
+  // frappe-ui Button drops an aria-label attribute, so the arrows are named with :label (PR #94)
+  describe("project arrows have an accessible name", () => {
+    afterEach(() => useTranslation().setLanguage("en"));
+    const NAMES = { en: ["Previous project", "Next project"], hi: ["पिछला प्रोजेक्ट", "अगला प्रोजेक्ट"] };
+
+    for (const [language, names] of Object.entries(NAMES)) {
+      it(`names the previous and next buttons, in ${language}`, () => {
+        useTranslation().setLanguage(language);
+        const templates = [
+          { project: "PROJ-A", project_name: "Dairy Project", template_name: "T1" },
+          { project: "PROJ-B", project_name: "Solar Energy Survey", template_name: "T2" },
+        ];
+        const wrapper = mount(ProjectHeaderCard, { props: { templates, selectedProject: "PROJ-A" } });
+        for (const name of names) expect(wrapper.find(`button[aria-label='${name}']`).exists(), name).toBe(true);
       });
     }
   });

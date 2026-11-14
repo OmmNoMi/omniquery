@@ -8,7 +8,7 @@
           v-if="showBack"
           @click="$emit('exit')"
           class="w-8 h-8 rounded-full flex items-center justify-center bg-[#e6efe8] dark:bg-[#1c2c22] hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 text-slate-800 dark:text-emerald-100 border border-[#b8cdbf] dark:border-[#2a4033] transition"
-          :aria-label="__('Return to Home')"
+          :label="__('Return to Home')"
           :title="__('Return to Home')"
         >
           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -50,7 +50,7 @@
           @click="$emit('open-wal')"
           class="px-2.5 py-1 rounded-full text-xs font-bold bg-[#fffbeb] dark:bg-amber-950/70 border border-amber-300 dark:border-amber-600 text-amber-900 dark:text-amber-200 flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 transition select-none hover:bg-amber-100 dark:hover:bg-amber-900/60"
           :title="`${pendingWALCount} ${__('Pending Offline Responses')} - ${__('Click to view & sync')}`"
-          :aria-label="`${pendingWALCount} ${__('Pending Offline Responses')}`"
+          :label="`${pendingWALCount} ${__('Pending Offline Responses')}`"
         >
           <Zap class="w-3.5 h-3.5 leading-none" />
           <span class="font-bold text-xs leading-none text-amber-900 dark:text-amber-200">{{ pendingWALCount }}</span>
@@ -67,7 +67,7 @@
               : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800'
           ]"
           :title="isRecording && !isAudioPaused ? __('Mute microphone') : __('Unmute / record microphone')"
-          :aria-label="isRecording && !isAudioPaused ? __('Mute microphone') : __('Unmute / record microphone')"
+          :label="isRecording && !isAudioPaused ? __('Mute microphone') : __('Unmute / record microphone')"
         >
           <!-- Mic Active Icon -->
           <svg
@@ -199,7 +199,7 @@
             <Button
               @click="showConfigModal = false"
               class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80"
-              :aria-label="__('Close settings')"
+              :label="__('Close settings')"
               :title="__('Close settings')"
             >
               <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">

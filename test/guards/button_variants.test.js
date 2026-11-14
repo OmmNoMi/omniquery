@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { classTokens, elementClasses, elementProp, getSourceFiles, namedImports, templateElements } from "./sourceFiles";
+import { classTokens, elementClasses, elementProp, getSourceFiles } from "./sourceFiles";
+import { buttonElements, buttonWrappers, forwardsAttrsToButton } from "./frappeButtons";
 import { choiceButtonProps } from "../../src/utils/choiceButton";
 
 // Button colours come from variant and theme. frappe-ui Button puts its own colour classes
@@ -27,7 +28,7 @@ export const BUTTON_COLOR_ALLOWLIST = {
   "src/components/common/FRating.vue": 1,
   "src/components/common/FSwitch.vue": 1,
   "src/components/dashboard/FilledFormsModal.vue": 22,
-  "src/components/dashboard/ProjectHeaderCard.vue": 5,
+  "src/components/dashboard/ProjectHeaderCard.vue": 4,
   "src/components/dashboard/SurveyorDashboard.vue": 2,
   "src/components/header/CompactHeader.vue": 15,
   "src/components/project/ProjectPage.vue": 9,
@@ -44,20 +45,6 @@ const COLOR_CLASS = new RegExp(`^(?:[\\w-]+:)*!?(?:bg|text|border(?:-[trblxy])?|
 
 export const colorClasses = (classText) => classTokens(classText).filter((t) => COLOR_CLASS.test(t));
 
-// the frappe-ui Button elements in a .vue file, under whatever name it was imported as, plus any
-// `extraTags` (components that pass their attributes on to a Button)
-function buttonElements(source, extraTags = []) {
-  const buttonNames = [...namedImports(source, "frappe-ui")].filter(([, exported]) => exported === "Button").map(([local]) => local);
-  const tags = [...buttonNames, ...extraTags];
-  if (!tags.length) return [];
-  return templateElements(source).filter((node) => tags.includes(node.tag));
-}
-
-// A component whose template puts v-bind="$attrs" on a frappe-ui Button (SurveyModeMenu): a theme
-// on it lands on that Button. Named by file, which is how the app names its component tags.
-export const forwardsAttrsToButton = (source) =>
-  buttonElements(source).some((node) => node.props.some((p) => p.type === 7 && p.name === "bind" && !p.arg && p.exp?.content === "$attrs"));
-
 // frappe-ui Buttons in a .vue file that carry colour classes: [{ line, classes }]
 export function coloredButtons(source) {
   return buttonElements(source)
@@ -66,8 +53,8 @@ export function coloredButtons(source) {
 }
 
 // frappe-ui Buttons whose theme can be anything but gray, or red on a solid Button: [{ line, theme }]
-export function nonGrayThemes(source, buttonWrappers = []) {
-  return buttonElements(source, buttonWrappers)
+export function nonGrayThemes(source, wrapperTags = []) {
+  return buttonElements(source, wrapperTags)
     .map((node) => ({ line: node.loc.start.line, theme: elementProp(node, "theme"), variant: elementProp(node, "variant") }))
     .filter(({ theme, variant }) => /\b(green|blue)\b/.test(theme) || (/\bred\b/.test(theme) && variant !== "solid"))
     .map(({ line, theme }) => ({ line, theme }));
@@ -97,7 +84,7 @@ describe("Button colours come from variant and theme", () => {
   });
 
   it("keeps every Button on theme gray, or solid red for a destructive action", () => {
-    const wrappers = files.filter((file) => forwardsAttrsToButton(fs.readFileSync(file, "utf8"))).map((file) => path.basename(file, ".vue"));
+    const wrappers = buttonWrappers(files);
     expect(wrappers, "SurveyModeMenu passes its attributes to a Button").toContain("SurveyModeMenu");
     const off = files
       .flatMap((file) => nonGrayThemes(fs.readFileSync(file, "utf8"), wrappers).map((hit) => `${rel(file)}:${hit.line} theme ${hit.theme}`));

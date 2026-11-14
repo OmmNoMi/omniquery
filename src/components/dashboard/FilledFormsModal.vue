@@ -361,7 +361,7 @@
               <Button
                 @click="selectedInspectResponse = null"
                 class="w-8 h-8 rounded-full text-slate-500 dark:text-slate-400 flex items-center justify-center cursor-pointer shrink-0"
-                :aria-label="__('Close')"
+                :label="__('Close')"
                 :title="__('Close')"
               >
                 <X class="w-4 h-4" aria-hidden="true" />
