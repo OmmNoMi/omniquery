@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
+import { getSourceFiles } from "./sourceFiles.js";
 
 /**
  * Static Architectural Guard: No Hand-Rolled Controls (Issue #12)
@@ -20,22 +21,6 @@ import path from "node:path";
 
 // Format: { "relative/path": { button: 0, input: 0, select: 0, textarea: 0, fetch: 0 } }
 export const ALLOWLIST = {};
-
-function getSourceFiles(dir) {
-  let files = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name === "__tests__" || entry.name === "test") continue;
-      files = files.concat(getSourceFiles(fullPath));
-    } else if (entry.isFile() && (entry.name.endsWith(".vue") || entry.name.endsWith(".js"))) {
-      if (entry.name.endsWith(".spec.js") || entry.name.endsWith(".test.js")) continue;
-      files.push(fullPath);
-    }
-  }
-  return files;
-}
 
 function findViolations(filePath) {
   const content = fs.readFileSync(filePath, "utf-8");

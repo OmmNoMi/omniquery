@@ -16,16 +16,17 @@
           </svg>
         </Button>
 
-        <!-- Official OmniQuery Cloud Icon & Brand Title -->
+        <!-- Logo: a real link home. A plain click stays in the app (home, or the exit dialog mid-survey);
+             .exact leaves cmd/ctrl/shift-click to the browser, so it can open a new tab. The visible
+             wordmark names the link, so the icon is decorative. -->
         <a
           href="/omniquery"
-          @click.prevent="$emit('home')"
-          class="flex items-center gap-2 cursor-pointer select-none rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          :aria-label="__('OmniQuery Home')"
+          @click.left.exact.prevent="$emit('home')"
+          class="flex items-center gap-2 cursor-pointer select-none rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
         >
           <img
             :src="'/assets/omniquery/icons/desktop_icons/solid/omniquery.svg'"
-            alt="OmniQuery"
+            alt=""
             class="w-7 h-7 rounded-lg shadow-xs"
           />
           <span class="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">OmniQuery</span>
@@ -125,9 +126,10 @@
         <!-- User Avatar Icon with Live Green Dot (Logged-in surveyor only) -->
         <Button
           v-else
+          variant="solid"
+          :label="__('Settings & Configuration')"
+          class="relative !h-9 !w-9 !px-0 rounded-full font-black select-none active:scale-95"
           @click="showConfigModal = true"
-          class="relative w-9 h-9 rounded-full bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-black text-xs flex items-center justify-center shadow-xs ring-2 ring-[#b8cdbf] transition cursor-pointer select-none"
-          :title="__('Settings & Configuration')"
         >
           <span>{{ userInitial }}</span>
 
@@ -178,7 +180,7 @@
               </div>
               <div>
                 <h3 class="text-sm font-bold text-slate-900 leading-tight">{{ userDisplayName }}</h3>
-                <p class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
+                <p v-if="userEmail && userEmail !== userDisplayName" class="text-xs text-slate-500 mt-0.5">{{ userEmail }}</p>
                 <div class="flex items-center gap-1.5 mt-1">
                   <span
                     :class="[
@@ -187,7 +189,7 @@
                     ]"
                   />
                   <span class="text-[11px] font-semibold text-slate-600">
-                    {{ isOnline ? __('Online') : __('Offline') }} · {{ __('Field Surveyor') }}
+                    {{ isOnline ? __('Online') : __('Offline') }} · {{ roleLabel }}
                   </span>
                 </div>
               </div>
@@ -196,7 +198,7 @@
             <!-- Accessible WCAG 2.2 AA Close Button (44x44px target) -->
             <Button
               @click="showConfigModal = false"
-              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              class="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-slate-100 hover:bg-slate-200 active:scale-95 text-slate-600 hover:text-slate-900 transition flex items-center justify-center border border-slate-200/80"
               :aria-label="__('Close settings')"
               :title="__('Close settings')"
             >
@@ -212,7 +214,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Globe class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Language') || 'Language' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Language') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -240,7 +242,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Languages class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Text Size') || 'Text Size' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Text size') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -277,7 +279,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <Palette class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Theme') || 'Theme' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Theme') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -307,7 +309,7 @@
             <div class="p-3.5 flex items-center justify-between gap-3">
               <div class="flex items-center gap-2">
                 <LayoutGrid class="w-4 h-4 text-slate-500" />
-                <span class="text-xs font-bold text-slate-800">{{ __('Choice Layout') || 'Choice Layout' }}</span>
+                <span class="text-xs font-bold text-slate-800">{{ __('Choice layout') }}</span>
               </div>
               <div class="inline-flex items-center p-0.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs font-bold">
                 <Button
@@ -339,10 +341,10 @@
             <div>
               <div class="flex items-center gap-1.5 text-xs font-bold text-slate-800">
                 <Package class="w-4 h-4 text-slate-500" />
-                <span>{{ __('WAL Queue') }}</span>
+                <span>{{ __('Waiting to upload') }}</span>
               </div>
               <p class="text-[11px] text-slate-500 mt-0.5">
-                {{ pendingWALCount }} {{ __('Pending Responses') }}
+                {{ __('{0} pending responses', [pendingWALCount]) }}
               </p>
             </div>
             <Button
@@ -358,12 +360,27 @@
           <!-- 5. Profile Details & Manage Link -->
           <div class="pt-1 flex items-center justify-between text-xs px-1">
             <span class="text-slate-500 font-medium">{{ __('Manage Profile & Credentials') }}</span>
+            <!-- /me is a server page the service worker does not cache, so offline it would replace the app with an error -->
             <a
-              href="/app/user-profile"
-              class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+              v-if="isOnline"
+              href="/me"
+              class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 min-h-6"
             >
-              <span>{{ __('ERPNext Profile') }}</span>
-              <span>↗</span>
+              <span>{{ __('My Account') }}</span>
+              <span aria-hidden="true">↗</span>
+            </a>
+            <span v-else class="text-slate-500">{{ __('My Account needs internet') }}</span>
+          </div>
+
+          <!-- 6. Manager Review Workspace Link -->
+          <div v-if="isManager" class="pt-1 flex items-center justify-between text-xs px-1">
+            <span class="text-blue-700 font-semibold">{{ __('OmniQuery Review Workspace') }}</span>
+            <a
+              href="/desk/omniquery"
+              class="font-bold text-blue-700 hover:text-blue-800 flex items-center gap-1"
+            >
+              <span>{{ __('Open Desk') }}</span>
+              <span aria-hidden="true">↗</span>
             </a>
           </div>
 
@@ -372,7 +389,7 @@
             @click="showConfigModal = false"
             class="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-95 text-white font-bold text-sm transition shadow-sm"
           >
-            {{ __('Done') || 'Done' }}
+            {{ __('Done') }}
           </Button>
         </div>
       </div>
@@ -381,42 +398,22 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch } from "vue";
 import { Button } from "frappe-ui";
 import { Zap, KeyRound, Globe, Languages, Palette, Sun, Moon, LayoutGrid, ChevronDown, Package } from "lucide-vue-next";
 import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
+import { useUserRoles } from "../../composables/useUserRoles";
+import { useSession } from "../../composables/useSession";
+import { useOmniqueryContext } from "../../composables/useSurveyApp";
+import { THEME_KEY, storedTheme, applyTheme } from "../../utils/theme";
 
-const props = defineProps({
+defineProps({
   surveyTitle: {
     type: String,
     default: "",
   },
   showBack: {
-    type: Boolean,
-    default: false,
-  },
-  isOnline: {
-    type: Boolean,
-    default: true,
-  },
-  pendingWALCount: {
-    type: Number,
-    default: 0,
-  },
-  textSize: {
-    type: String,
-    default: "md",
-  },
-  progressPercent: {
-    type: Number,
-    default: 0,
-  },
-  isRecording: {
-    type: Boolean,
-    default: false,
-  },
-  isAudioPaused: {
     type: Boolean,
     default: false,
   },
@@ -427,25 +424,18 @@ const { __, currentLang, setLanguage } = useTranslation();
 
 const showConfigModal = ref(false);
 useScrollLock(showConfigModal);
-const activeTheme = ref("light");
+const activeTheme = ref(storedTheme());
 
-const userEmail = computed(() => {
-  return (window.frappe && window.frappe.user) || "surveyor@ommnomi.in";
-});
+const { email: userEmail, displayName: userDisplayName, userInitial } = useSession();
 
-const userDisplayName = computed(() => {
-  const f = window.frappe;
-  if (f && f.user_info && f.user && f.user_info[f.user]?.fullname) {
-    return f.user_info[f.user].fullname;
-  }
-  return (f && f.user) || "Surveyor";
-});
+const { isOnline, pendingWALCount, textSize, progressPercent, isRecording, isAudioPaused } = useOmniqueryContext();
+const { isGuest, isManager, isSurveyor, isAdmin } = useUserRoles();
 
-const userName = userDisplayName;
-
-const userInitial = computed(() => {
-  const name = userDisplayName.value || "S";
-  return name.charAt(0).toUpperCase();
+const roleLabel = computed(() => {
+  if (isAdmin.value) return __("OmniQuery Admin");
+  if (isManager.value) return __("OmniQuery Manager");
+  if (isSurveyor.value) return __("Field Surveyor");
+  return __("Public Respondent");
 });
 
 function setTextScale(size) {
@@ -455,11 +445,9 @@ function setTextScale(size) {
 function setAppTheme(theme) {
   activeTheme.value = theme;
   if (typeof localStorage !== "undefined") {
-    localStorage.setItem("omniquery_theme", theme);
+    localStorage.setItem(THEME_KEY, theme);
   }
-  if (typeof document !== "undefined") {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-  }
+  applyTheme(theme);
 }
 
 function triggerSync() {
@@ -485,10 +473,12 @@ watch(showConfigModal, (isOpen) => {
   }
 });
 
-onMounted(() => {
-  if (typeof localStorage !== "undefined") {
-    const savedTheme = localStorage.getItem("omniquery_theme") || "light";
-    setAppTheme(savedTheme);
-  }
+
+
+defineExpose({
+  roleLabel,
+  isGuest,
+  isManager,
+  showConfigModal
 });
 </script>

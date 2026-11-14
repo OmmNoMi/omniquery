@@ -85,7 +85,7 @@ msgid "All"
 msgstr ""
 
 #: src/App.vue:44
-msgid "All Surveys"
+msgid "All surveys"
 msgstr ""
 
 #. Label of the allow_manual_override (Check) field in DocType 'OmniQuery
@@ -978,7 +978,7 @@ msgid "National ID / Registration No (Encrypted)"
 msgstr ""
 
 #: src/App.vue:37
-msgid "New Response"
+msgid "New response"
 msgstr ""
 
 #: src/components/survey/SectionCard.vue:56
@@ -1852,7 +1852,7 @@ msgid "Survey Sections / Pages"
 msgstr ""
 
 #: src/App.vue:29
-msgid "Survey Submitted"
+msgid "Survey submitted"
 msgstr "सर्वेक्षण सबमिट हुआ"
 
 #. Label of the survey_template (Link) field in DocType 'OmniQuery Field Error
@@ -2050,7 +2050,7 @@ msgid "Text Input"
 msgstr ""
 
 #: src/components/header/CompactHeader.vue:63
-msgid "Text Size"
+msgid "Text size"
 msgstr "अक्षर का आकार"
 
 #. Option for the 'Rating Icon' (Select) field in DocType 'OmniQuery Question'
@@ -2124,8 +2124,8 @@ msgid "Village / Town / City"
 msgstr ""
 
 #: src/App.vue:123
-msgid "WAL Queue"
-msgstr "कतार (ऑफलाइन)"
+msgid "Waiting to upload"
+msgstr "अपलोड के लिए प्रतीक्षारत"
 
 #. Option for the 'Scope' (Select) field in DocType 'OmniQuery Option Set'
 #. Label of the workspace (Link) field in DocType 'OmniQuery Option Set'
@@ -2229,3 +2229,107 @@ msgstr ""
 msgid "🚀 Elevate Scope"
 msgstr ""
 
+
+#: omniquery/www/omniquery.html:35
+msgid "Loading OmniQuery..."
+msgstr "ओमनीक्वेरी खुल रहा है..."
+
+#: omniquery/www/omniquery.html:37
+msgid "OmniQuery needs JavaScript to run."
+msgstr "ओमनीक्वेरी चलाने के लिए JavaScript चालू करें।"
+
+#: src/App.vue:55
+msgid "Offline sync queue"
+msgstr "ऑफ़लाइन सिंक कतार"
+
+#: src/App.vue:60
+msgid "{0} pending submissions saved on this device"
+msgstr "इस डिवाइस पर {0} प्रविष्टियाँ अपलोड के लिए सहेजी गई हैं"
+
+#: src/App.vue:63
+msgid "These records are saved safely on this device. When you are online, tap Sync all records now to upload them."
+msgstr "ये रिकॉर्ड इस डिवाइस पर सुरक्षित हैं। ऑनलाइन होने पर इन्हें अपलोड करने के लिए सभी रिकॉर्ड अभी सिंक करें दबाएँ।"
+
+#: src/App.vue:68
+msgid "Sync all records now"
+msgstr "सभी रिकॉर्ड अभी सिंक करें"
+
+#: src/components/header/CompactHeader.vue:340
+msgid "{0} pending responses"
+msgstr "{0} प्रतिक्रियाएँ बाकी"
+
+#: src/components/header/CompactHeader.vue:305
+msgid "Choice layout"
+msgstr "विकल्प लेआउट"
+
+#: src/views/Success.vue:77
+msgid "Fill again"
+msgstr "फिर से भरें"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Discard saved draft?"
+msgstr "सहेजा गया ड्राफ़्ट हटाएँ?"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "This draft will be removed from this device. This cannot be undone."
+msgstr "यह ड्राफ़्ट इस डिवाइस से हटा दिया जाएगा। इसे वापस नहीं लाया जा सकता।"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Discard draft"
+msgstr "ड्राफ़्ट हटाएँ"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Keep draft"
+msgstr "ड्राफ़्ट रखें"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Could not discard the draft: {0}"
+msgstr "ड्राफ़्ट नहीं हटाया जा सका: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Sync failed: {0}"
+msgstr "सिंक विफल: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Export failed: {0}"
+msgstr "निर्यात विफल: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "CSV export failed: {0}"
+msgstr "CSV निर्यात विफल: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "ZIP export failed: {0}"
+msgstr "ZIP निर्यात विफल: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Cleaned up {0} old synced responses to free local storage"
+msgstr "स्थानीय स्टोरेज खाली करने के लिए {0} पुरानी सिंक की गई प्रतिक्रियाएँ हटाई गईं"
+
+#: src/composables/useSurveyApp.js
+msgid "This survey is not yet downloaded on your device. Please connect to the internet once to download it."
+msgstr "यह सर्वेक्षण अभी आपके डिवाइस पर डाउनलोड नहीं हुआ है। इसे डाउनलोड करने के लिए एक बार इंटरनेट से जुड़ें।"
+
+#: src/composables/useSurveyApp.js
+msgid "Survey synced to server successfully!"
+msgstr "सर्वेक्षण सर्वर पर सिंक हो गया!"
+
+#: src/views/Catalog.vue
+msgid "Search surveys..."
+msgstr "सर्वेक्षण खोजें..."
+
+#: src/views/Catalog.vue
+msgid "Search surveys"
+msgstr "सर्वेक्षण खोजें"
+
+#: src/views/Catalog.vue
+msgid "Clear search"
+msgstr "खोज साफ़ करें"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Project details"
+msgstr "प्रोजेक्ट विवरण"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Project details and training materials"
+msgstr "प्रोजेक्ट विवरण और प्रशिक्षण सामग्री"
