@@ -4,7 +4,7 @@
       @click="toggle"
       @keydown="onKeydown"
       :class="[
-        'relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2',
+        'relative inline-flex h-9 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
         modelValue ? 'bg-emerald-600' : 'bg-slate-300'
       ]"
       :id="id"

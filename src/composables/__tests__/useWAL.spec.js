@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useWAL } from "../useWAL";
+import { createWAL } from "../useWAL";
 import { db } from "../../services/db";
 
 describe("useWAL", () => {
@@ -10,7 +10,7 @@ describe("useWAL", () => {
   });
 
   it("queues an insert payload into Dexie WAL and increments pending count", async () => {
-    const { queueWAL, pendingWALCount } = useWAL();
+    const { queueWAL, pendingWALCount } = createWAL();
 
     const payload = {
       idempotency_key: "SURVEY-TEST-001",
@@ -32,7 +32,7 @@ describe("useWAL", () => {
   });
 
   it("retrieves WAL queue items and extracts response values dictionary", async () => {
-    const { queueWAL, getWalQueueItems } = useWAL();
+    const { queueWAL, getWalQueueItems } = createWAL();
 
     await queueWAL("OmniQuery Response", {
       idempotency_key: "SUB-101",
@@ -73,7 +73,7 @@ describe("useWAL", () => {
       window.fetch = mockFetch;
     }
 
-    const { queueWAL, syncWAL, pendingWALCount } = useWAL();
+    const { queueWAL, syncWAL, pendingWALCount } = createWAL();
 
     await queueWAL("OmniQuery Response", {
       idempotency_key: "TEST-IDEM-001",
@@ -93,7 +93,7 @@ describe("useWAL", () => {
   });
 
   it("handles offline status gracefully without network calls", async () => {
-    const { isOnline, syncWAL } = useWAL();
+    const { isOnline, syncWAL } = createWAL();
     isOnline.value = false;
 
     const fetchSpy = vi.fn();
@@ -129,7 +129,7 @@ describe("useWAL", () => {
       window.fetch = mockFetch;
     }
 
-    const { queueWAL, syncWAL, quarantinedWALCount, getQuarantinedWalEntries, retryQuarantinedEntry } = useWAL();
+    const { queueWAL, syncWAL, quarantinedWALCount, getQuarantinedWalEntries, retryQuarantinedEntry } = createWAL();
 
     const entry = await queueWAL("OmniQuery Response", {
       idempotency_key: "TEST-FAIL-001",
@@ -189,7 +189,7 @@ describe("useWAL", () => {
       window.fetch = mockFetch;
     }
 
-    const { syncPendingAudio } = useWAL();
+    const { syncPendingAudio } = createWAL();
     const uploaded = await syncPendingAudio(testUid);
 
     expect(uploaded).toBe(1);

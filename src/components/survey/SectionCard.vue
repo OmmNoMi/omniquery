@@ -41,7 +41,7 @@
           <Button
             v-if="currentIndex < totalSections - 1"
             @click="$emit('next')"
-            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 cursor-pointer"
           >
             <span>{{ __('Next') }}</span>
             <span>→</span>
@@ -50,7 +50,7 @@
             v-else
             @click="$emit('submit')"
             :disabled="isSubmitting"
-            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <span>{{ isSubmitting ? __('Submitting...') : __('Submit Survey') }}</span>
           </Button>
@@ -60,7 +60,7 @@
         <div v-if="!isGuest" class="order-2 relative" ref="modeMenuRef">
           <Button
             @click.stop="isModeMenuOpen = !isModeMenuOpen"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none"
             :class="[
               (autoAdvance || isFullForm)
                 ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border-emerald-500/60 dark:border-emerald-500/50 ring-1 ring-emerald-500/20'
@@ -86,14 +86,14 @@
             @click.stop
             class="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl p-2 space-y-1 z-50 animate-fade-in"
           >
-            <div class="text-xs font-extrabold text-slate-400 dark:text-slate-500 uppercase px-2.5 py-1 tracking-wider">
+            <div class="text-xs font-extrabold text-slate-600 dark:text-slate-300 uppercase px-2.5 py-1 tracking-wider">
               {{ __('Survey Options') }}
             </div>
 
             <!-- 1. Auto Advance Toggle -->
             <Button
               @click="$emit('toggle-auto-advance')"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer"
             >
               <div class="flex items-center gap-2">
                 <Zap class="w-4 h-4 text-amber-500" />
@@ -120,7 +120,7 @@
             <!-- 2. Full Form Toggle -->
             <Button
               @click="$emit('toggle-full-form')"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer"
             >
               <div class="flex items-center gap-2">
                 <ClipboardList class="w-4 h-4 text-blue-500" />
@@ -147,7 +147,7 @@
             <!-- 3. Focus Form Toggle -->
             <Button
               @click="onToggleFocusMode"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-500"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-100 dark:border-slate-800 mt-1 pt-1.5"
             >
               <div class="flex items-center gap-2">
                 <Target class="w-4 h-4 text-emerald-500" />
@@ -180,7 +180,7 @@
         <Button
           v-if="currentIndex > 0"
           @click="$emit('prev')"
-          class="order-1 px-3 py-2 rounded-xl border border-[#b8cdbf] dark:border-[#2a4033] bg-[#e6efe8] dark:bg-[#1c2c22] font-bold text-slate-900 dark:text-emerald-100 hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 transition text-xs sm:text-sm shrink-0 flex items-center gap-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          class="order-1 px-3 py-2 rounded-xl border border-[#b8cdbf] dark:border-[#2a4033] bg-[#e6efe8] dark:bg-[#1c2c22] font-bold text-slate-900 dark:text-emerald-100 hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 transition text-xs sm:text-sm shrink-0 flex items-center gap-1"
         >
           <span>←</span>
           <span>{{ __('Previous') }}</span>

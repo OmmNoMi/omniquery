@@ -98,7 +98,7 @@
         <!-- 1st in DOM (Focus 1): Next Question Button (Visual: Right) -->
         <Button
           @click="nextQuestion"
-          class="order-3 px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900"
+          class="order-3 px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-950/40 transition flex items-center gap-1 cursor-pointer shrink-0"
         >
           <span>{{ currentIndex === questions.length - 1 ? __('Finish') : __('Next') }}</span>
           <span>→</span>
@@ -108,7 +108,7 @@
         <div class="order-2 relative" ref="modeMenuRef">
           <Button
             @click.stop="isModeMenuOpen = !isModeMenuOpen"
-            class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+            class="px-3.5 py-1.5 rounded-xl text-xs font-bold border transition flex items-center gap-1.5 active:scale-95 shadow-2xs cursor-pointer select-none"
             :class="[
               (autoAdvance || isFullForm)
                 ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300 ring-1 ring-emerald-500/30'
@@ -141,7 +141,7 @@
             <!-- 1. Auto Advance Toggle -->
             <Button
               @click="$emit('toggle-auto-advance')"
-              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400 hover:bg-slate-800 text-slate-200"
+              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer hover:bg-slate-800 text-slate-200"
             >
               <div class="flex items-center gap-2">
                 <Zap class="w-4 h-4 text-amber-400" />
@@ -168,7 +168,7 @@
             <!-- 2. Full Form Toggle -->
             <Button
               @click="$emit('toggle-full-form')"
-              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400 hover:bg-slate-800 text-slate-200"
+              class="w-full flex items-center justify-between p-2 rounded-xl transition text-left cursor-pointer hover:bg-slate-800 text-slate-200"
             >
               <div class="flex items-center gap-2">
                 <ClipboardList class="w-4 h-4 text-blue-400" />
@@ -195,7 +195,7 @@
             <!-- 3. Focus Form Toggle (Active - toggling exits Focus Mode) -->
             <Button
               @click="onClose"
-              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5 focus:outline-none focus-visible:ring-1 focus-visible:ring-emerald-400"
+              class="w-full flex items-center justify-between p-2 rounded-xl hover:bg-slate-800 transition text-left cursor-pointer border-t border-slate-800 mt-1 pt-1.5"
             >
               <div class="flex items-center gap-2">
                 <Target class="w-4 h-4 text-emerald-400" />
@@ -215,7 +215,7 @@
         <Button
           @click="prevQuestion"
           :disabled="currentIndex === 0"
-          class="order-1 px-3 sm:px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
+          class="order-1 px-3 sm:px-4 py-2 rounded-xl border border-slate-700 bg-slate-800/90 hover:bg-slate-700 active:scale-95 text-slate-200 font-bold text-xs sm:text-sm transition disabled:opacity-30 disabled:pointer-events-none flex items-center gap-1 cursor-pointer shrink-0"
         >
           <span>←</span>
           <span>{{ __('Previous') }}</span>

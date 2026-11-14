@@ -1,16 +1,19 @@
 import json
 import frappe
 
+from omniquery.permissions import DESK_APP_ROLES
+
 
 def after_migrate():
 	ensure_roles()
 	# The icon links to the sidebar and the sidebar links to the workspace, so create them in
 	# that order. Inserting the icon first fails the whole migrate whenever the sidebar is missing.
+	# The sidebar itself is the module file omniquery/sidebar/omniquery, which migrate imports.
 	ensure_number_cards()
 	ensure_workspace()
-	ensure_workspace_sidebar()
 	ensure_desktop_icon()
 	ensure_default_surveyor()
+	ensure_response_workflow()
 	sync_app_fixtures()
 
 
@@ -37,6 +40,8 @@ def ensure_roles():
 	roles = [
 		{"role_name": "OmniQuery Admin", "desk_access": 1},
 		{"role_name": "OmniQuery Manager", "desk_access": 1},
+		{"role_name": "OmniQuery Analyst", "desk_access": 1},
+		{"role_name": "OmniQuery Viewer", "desk_access": 1},
 		{"role_name": "OmniQuery User", "desk_access": 0},
 	]
 	for r in roles:
@@ -68,90 +73,19 @@ def get_icon_payload():
 		"standard": 1,
 		"hidden": 0,
 		"restrict_removal": 0,
+		"roles": [{"role": role} for role in DESK_APP_ROLES],
 	}
 
 
 def ensure_desktop_icon():
 	if not frappe.db.exists("DocType", "Desktop Icon"):
 		return
-	payload = get_icon_payload()
-	if not frappe.db.exists(payload["link_type"], payload["link_to"]):
-		return
 	existing = frappe.db.exists("Desktop Icon", "OmniQuery")
 	doc = frappe.get_doc("Desktop Icon", "OmniQuery") if existing else frappe.new_doc("Desktop Icon")
-	doc.update(payload)
-	doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
-
-
-def _get_sidebar_overview_items():
-	return [
-		{"type": "Section Break", "label": "Overview", "icon": "home", "indent": 1, "collapsible": 1},
-		{"type": "Link", "label": "Home", "link_type": "Workspace", "link_to": "OmniQuery", "icon": "home", "child": 1},
-		{"type": "Link", "label": "Field App (PWA)", "link_type": "URL", "url": "/omniquery", "icon": "tablet-smartphone", "child": 1},
-	]
-
-
-def _get_sidebar_survey_items():
-	return [
-		{"type": "Section Break", "label": "Surveys & Forms", "icon": "file-text", "indent": 1, "collapsible": 1},
-		{"type": "Link", "label": "Survey Templates", "link_type": "DocType", "link_to": "OmniQuery Template", "icon": "file-text", "child": 1},
-		{"type": "Link", "label": "Questions", "link_type": "DocType", "link_to": "OmniQuery Question", "icon": "help", "child": 1},
-		{"type": "Link", "label": "Option Sets", "link_type": "DocType", "link_to": "OmniQuery Option Set", "icon": "list-check", "child": 1},
-		{"type": "Link", "label": "Responses", "link_type": "DocType", "link_to": "OmniQuery Response", "icon": "circle-check", "child": 1},
-	]
-
-
-def _get_sidebar_ops_items():
-	return [
-		{"type": "Section Break", "label": "Field Operations", "icon": "users", "indent": 1, "collapsible": 1},
-		{"type": "Link", "label": "Surveyors", "link_type": "DocType", "link_to": "OmniQuery Surveyor", "icon": "user-check", "child": 1},
-		{"type": "Link", "label": "Respondents", "link_type": "DocType", "link_to": "OmniQuery Respondent", "icon": "users", "child": 1},
-		{"type": "Link", "label": "Supervisor Audits", "link_type": "DocType", "link_to": "OmniQuery Supervisor Audit", "icon": "clipboard-check", "child": 1},
-	]
-
-
-def _get_sidebar_org_and_log_items():
-	return [
-		{"type": "Section Break", "label": "Organization", "icon": "folder-kanban", "indent": 1, "collapsible": 1},
-		{"type": "Link", "label": "Projects", "link_type": "DocType", "link_to": "OmniQuery Project", "icon": "folder-kanban", "child": 1},
-		{"type": "Link", "label": "Workspaces", "link_type": "DocType", "link_to": "OmniQuery Workspace", "icon": "building-2", "child": 1},
-		{"type": "Section Break", "label": "Telemetry & Logs", "icon": "activity", "indent": 1, "collapsible": 1},
-		{"type": "Link", "label": "Field Error Logs", "link_type": "DocType", "link_to": "OmniQuery Field Error Log", "icon": "triangle-alert", "child": 1},
-		{"type": "Link", "label": "Sync Audit Logs", "link_type": "DocType", "link_to": "OmniQuery Sync Audit Log", "icon": "refresh-cw", "child": 1},
-	]
-
-
-def _get_sidebar_settings_items():
-	return [
-		{"type": "Section Break", "label": "Settings", "icon": "settings", "indent": 1, "collapsible": 1},
-		{"type": "Link", "label": "OmniQuery Settings", "link_type": "DocType", "link_to": "OmniQuery Settings", "icon": "settings", "child": 1},
-		{"type": "Link", "label": "Users", "link_type": "DocType", "link_to": "User", "icon": "user", "child": 1},
-		{"type": "Link", "label": "Roles", "link_type": "DocType", "link_to": "Role", "icon": "shield", "child": 1},
-	]
-
-
-def _get_all_sidebar_items():
-	return (
-		_get_sidebar_overview_items()
-		+ _get_sidebar_survey_items()
-		+ _get_sidebar_ops_items()
-		+ _get_sidebar_org_and_log_items()
-		+ _get_sidebar_settings_items()
-	)
-
-
-def ensure_workspace_sidebar():
-	if not frappe.db.exists("DocType", "Workspace Sidebar"):
-		return
-	existing = frappe.db.exists("Workspace Sidebar", "OmniQuery")
-	doc = frappe.get_doc("Workspace Sidebar", "OmniQuery") if existing else frappe.new_doc("Workspace Sidebar")
-	doc.name = "OmniQuery"
-	doc.title = "OmniQuery"
-	doc.module = "OmniQuery"
-	doc.header_icon = "clipboard-list"
-	doc.app = "omniquery"
-	doc.standard = 1
-	doc.set("items", _get_all_sidebar_items())
+	doc.update(get_icon_payload())
+	# link_to is a Dynamic Link to the retired Workspace Sidebar archive, which a fresh site no
+	# longer has; Frappe seeds its own icons with ignore_links for the same reason.
+	doc.flags.ignore_links = True
 	doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
 
 
@@ -277,4 +211,59 @@ def ensure_workspace():
 	doc.content = _build_workspace_content(shortcuts, number_cards)
 	doc.set("shortcuts", shortcuts)
 	doc.set("number_cards", number_cards)
+	doc.set("roles", [{"role": role} for role in DESK_APP_ROLES])
 	doc.save(ignore_permissions=True) if existing else doc.insert(ignore_permissions=True)
+
+
+RESPONSE_WORKFLOW = "OmniQuery Response Approval"
+WORKFLOW_ACTIONS = ("Approve", "Flag for Audit", "Reject", "Verify", "Submit")
+# (state, style, doc_status, allow_edit). Only Draft is docstatus 0: sync submits a response, and
+# Frappe refuses any transition from a submitted (1) state back to a draft (0) one.
+WORKFLOW_STATES = (
+	("Draft", "Inverse", "0", "OmniQuery User"),
+	("Submitted", "Primary", "1", "OmniQuery Manager"),
+	("Supervisor Verified", "Success", "1", "OmniQuery Manager"),
+	("Audit Flagged", "Danger", "1", "OmniQuery Manager"),
+	("Approved", "Success", "1", "OmniQuery Manager"),
+	("Rejected", "Danger", "1", "OmniQuery Manager"),
+)
+# (state, action, next_state); every review transition belongs to OmniQuery Manager
+WORKFLOW_TRANSITIONS = (
+	("Submitted", "Approve", "Approved"),
+	("Submitted", "Flag for Audit", "Audit Flagged"),
+	("Submitted", "Reject", "Rejected"),
+	("Submitted", "Verify", "Supervisor Verified"),
+	("Supervisor Verified", "Approve", "Approved"),
+	("Supervisor Verified", "Flag for Audit", "Audit Flagged"),
+	("Supervisor Verified", "Reject", "Rejected"),
+	("Audit Flagged", "Approve", "Approved"),
+	("Audit Flagged", "Reject", "Rejected"),
+	("Audit Flagged", "Verify", "Supervisor Verified"),
+)
+
+
+def ensure_response_workflow():
+	# Create only, like the number cards: an admin who edits or deactivates it in Desk keeps that.
+	if not frappe.db.exists("DocType", "Workflow") or frappe.db.exists("Workflow", RESPONSE_WORKFLOW):
+		return
+	_ensure_named("Workflow Action Master", "workflow_action_name", WORKFLOW_ACTIONS)
+	for state, style, _docstatus, _role in WORKFLOW_STATES:
+		_ensure_named("Workflow State", "workflow_state_name", (state,), style=style)
+	frappe.get_doc(_response_workflow_payload()).insert(ignore_permissions=True)
+
+
+def _ensure_named(doctype, name_field, names, **fields):
+	for name in names:
+		if not frappe.db.exists(doctype, name):
+			frappe.get_doc({"doctype": doctype, name_field: name, **fields}).insert(ignore_permissions=True)
+
+
+def _response_workflow_payload():
+	states = [{"state": s, "doc_status": d, "allow_edit": r} for s, _style, d, r in WORKFLOW_STATES]
+	submit = {"state": "Draft", "action": "Submit", "next_state": "Submitted", "allowed": "OmniQuery User"}
+	review = [{"state": s, "action": a, "next_state": n, "allowed": "OmniQuery Manager"} for s, a, n in WORKFLOW_TRANSITIONS]
+	transitions = [{**t, "allow_self_approval": 1} for t in [submit, *review]]
+	return {
+		"doctype": "Workflow", "workflow_name": RESPONSE_WORKFLOW, "document_type": "OmniQuery Response",
+		"workflow_state_field": "survey_status", "is_active": 1, "states": states, "transitions": transitions,
+	}

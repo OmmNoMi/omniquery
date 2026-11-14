@@ -9,7 +9,7 @@
     @focusout="onFocusOut"
     @keydown.esc.stop="focusCard"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-default scroll-mt-20',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default scroll-mt-20',
       notApplicable
         ? 'bg-slate-50/70 dark:bg-slate-900/60 border-dashed border-slate-300 dark:border-slate-700 opacity-75'
         : errorMessage
@@ -136,7 +136,7 @@
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
                   :placeholder="col.placeholder || '0'"
-                  class="w-16 sm:w-20 text-center rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                  class="w-16 sm:w-20 text-center rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
                 />
                 <Button
                   tabindex="-1"
@@ -159,7 +159,7 @@
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
                   :placeholder="col.placeholder || '0'"
-                  class="w-full text-right rounded-lg border border-slate-200 dark:border-slate-700 pl-6 pr-2.5 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                  class="w-full text-right rounded-lg border border-slate-200 dark:border-slate-700 pl-6 pr-2.5 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
                 />
               </div>
 
@@ -172,7 +172,7 @@
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="__('-- Select --')"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:border-emerald-500 outline-none"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:border-emerald-500"
               />
 
               <!-- Standard Text Input -->
@@ -184,7 +184,7 @@
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="col.placeholder || __('Enter text')"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none transition"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
               />
             </td>
           </tr>
@@ -258,7 +258,7 @@
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="col.placeholder || '0'"
-                class="w-14 text-center rounded-lg border border-slate-300 dark:border-slate-600 px-1.5 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none"
+                class="w-14 text-center rounded-lg border border-slate-300 dark:border-slate-600 px-1.5 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900"
               />
               <Button
                 tabindex="-1"
@@ -281,7 +281,7 @@
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="col.placeholder || '0'"
-                class="w-full text-right rounded-lg border border-slate-300 dark:border-slate-600 pl-5 pr-2 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none"
+                class="w-full text-right rounded-lg border border-slate-300 dark:border-slate-600 pl-5 pr-2 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900"
               />
             </div>
 
@@ -294,7 +294,7 @@
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
               :placeholder="__('-- Select --')"
-              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none shrink-0"
+              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 shrink-0"
             />
 
             <!-- Standard Text Input -->
@@ -306,7 +306,7 @@
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
               :placeholder="col.placeholder || __('Enter text')"
-              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none shrink-0"
+              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 shrink-0"
             />
           </div>
         </div>
