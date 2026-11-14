@@ -40,31 +40,31 @@
         <div class="order-3">
           <Button
             v-if="currentIndex < totalSections - 1"
+            variant="solid"
+            size="md"
+            :label="__('Next')"
+            :iconRight="ArrowRight"
+            class="shrink-0"
             @click="$emit('next')"
-            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>{{ __('Next') }}</span>
-            <span>→</span>
-          </Button>
+          />
           <Button
             v-else
+            variant="solid"
+            size="md"
+            :label="__('Submit Survey')"
+            :loading="isSubmitting"
+            :loadingText="__('Submitting...')"
+            class="shrink-0"
             @click="$emit('submit')"
-            :disabled="isSubmitting"
-            class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 dark:bg-emerald-500 dark:hover:bg-emerald-400 font-black text-white dark:text-slate-950 active:scale-95 shadow-md transition text-xs sm:text-sm shrink-0 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
-          >
-            <span>{{ isSubmitting ? __('Submitting...') : __('Submit Survey') }}</span>
-          </Button>
+          />
         </div>
 
         <!-- 2nd in DOM (Focus 2): Center: Survey Mode menu (Visual: Center) -->
         <SurveyModeMenu
           v-if="!isGuest"
-          class="order-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold tracking-tight border transition active:scale-95 shadow-2xs cursor-pointer select-none"
-          :class="[
-            (autoAdvance || isFullForm)
-              ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-200 border-emerald-500/60 dark:border-emerald-500/50'
-              : 'bg-[#e6efe8] dark:bg-[#1c2c22] text-slate-800 dark:text-emerald-100 border-[#b8cdbf] dark:border-[#2a4033] hover:bg-white dark:hover:bg-[#253a2d]'
-          ]"
+          class="order-2"
+          size="md"
+          :variant="autoAdvance || isFullForm ? 'subtle' : 'outline'"
           :autoAdvance="autoAdvance"
           :isFullForm="isFullForm"
           :isFocusMode="isFocusMode"
@@ -79,12 +79,13 @@
         <!-- 3rd in DOM (Focus 3): Previous Page Button (Visual: Left) -->
         <Button
           v-if="currentIndex > 0"
+          variant="outline"
+          size="md"
+          :label="__('Previous')"
+          :iconLeft="ArrowLeft"
+          class="order-1 shrink-0"
           @click="$emit('prev')"
-          class="order-1 px-3 py-2 rounded-xl border border-[#b8cdbf] dark:border-[#2a4033] bg-[#e6efe8] dark:bg-[#1c2c22] font-bold text-slate-900 dark:text-emerald-100 hover:bg-white dark:hover:bg-[#253a2d] active:scale-95 transition text-xs sm:text-sm shrink-0 flex items-center gap-1"
-        >
-          <span>←</span>
-          <span>{{ __('Previous') }}</span>
-        </Button>
+        />
         <div v-else class="order-1 w-12 sm:w-16"></div>
       </div>
     </div>
@@ -94,7 +95,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { Button } from "frappe-ui";
-import { Check } from "lucide-vue-next";
+import { ArrowLeft, ArrowRight, Check } from "lucide-vue-next";
 import SurveyModeMenu from "./SurveyModeMenu.vue";
 import { useTranslation } from "../../composables/useTranslation";
 

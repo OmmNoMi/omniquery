@@ -158,14 +158,13 @@
               />
               <Button
                 v-if="gridSearchQuery"
+                variant="ghost"
+                :icon="X"
+                :label="__('Clear search')"
+                class="absolute right-1.5"
                 @mousedown.prevent
                 @click="onClearSearch"
-                class="absolute right-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 text-xs font-bold cursor-pointer"
-                aria-label="Clear search"
-                :label="__('Clear search')"
-              >
-                <X class="w-3.5 h-3.5" />
-              </Button>
+              />
             </div>
             <!-- Filter summary if search is active -->
             <div v-if="gridSearchQuery" class="mt-1 px-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
@@ -191,23 +190,19 @@
               @keydown.enter.prevent="onOptionEnter"
               @keydown.space.prevent="onOptionSpace(option.value)"
               @keydown="onOptionKeydown($event, index)"
-              :class="[
-                'w-full text-left p-3 sm:p-3.5 rounded-xl border transition-all flex items-center group active:scale-[0.98] cursor-pointer shadow-2xs gap-3',
-                isOptionSelected(option.value)
-                  ? (isMultiSelect
-                      ? 'bg-emerald-50 dark:bg-emerald-950/50 border-emerald-600 text-emerald-950 dark:text-emerald-100 font-bold ring-1 ring-emerald-500/30'
-                      : 'bg-emerald-600 text-white border-emerald-600 shadow-sm ring-2 ring-emerald-500/30 font-bold')
-                  : 'bg-slate-50/80 dark:bg-slate-800/80 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 hover:border-emerald-400 hover:bg-emerald-50/30'
-              ]"
+              v-bind="choiceButtonProps(isOptionSelected(option.value))"
+              class="w-full !h-auto !justify-start text-left px-3 py-3 sm:px-3.5 sm:py-3.5 rounded-xl gap-3 group active:scale-[0.98] shadow-2xs"
             >
-              <!-- Left: Shape Indicator with Keyboard Hint (1, 2, 3...) INSIDE -->
+              <!-- Left: Shape Indicator with Keyboard Hint (1, 2, 3...) INSIDE. In Button's prefix slot:
+                   its default slot is a truncating span, which would stack the indicator above the text -->
+              <template #prefix>
               <!-- Multi-select: Square with hint/check -->
               <span
                 v-if="isMultiSelect"
                 :class="[
                   'w-6 h-6 rounded-[4px] border-2 flex items-center justify-center text-[11px] font-mono font-bold transition shrink-0',
                   isOptionSelected(option.value)
-                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                    ? 'border-current'
                     : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-emerald-400 group-hover:text-emerald-600'
                 ]"
               >
@@ -221,16 +216,17 @@
                 :class="[
                   'w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] font-mono font-bold transition shrink-0',
                   isOptionSelected(option.value)
-                    ? 'border-white bg-white/20 text-white'
+                    ? 'border-current'
                     : 'bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 group-hover:border-emerald-400 group-hover:text-emerald-600'
                 ]"
               >
-                <span v-if="isOptionSelected(option.value)" class="w-2 h-2 rounded-full bg-white"></span>
+                <span v-if="isOptionSelected(option.value)" class="w-2.5 h-2.5 rounded-full bg-current"></span>
                 <span v-else>{{ index + 1 }}</span>
               </span>
+              </template>
 
-              <!-- Option Text & Description: Full Width, No Crowding -->
-              <div class="flex-1 min-w-0">
+              <!-- Option Text & Description: wraps (whitespace-normal undoes the slot's truncate) -->
+              <div class="min-w-0 whitespace-normal">
                 <span class="text-sm sm:text-base font-bold leading-snug block">
                   {{ option.label }}
                 </span>
@@ -253,13 +249,10 @@
         <Button
           v-for="year in yearOptions"
           :key="year"
+          v-bind="choiceButtonProps(modelValue === year)"
+          size="md"
+          :aria-pressed="modelValue === year"
           @click="$emit('update:modelValue', year)"
-          :class="[
-            'px-4 py-2 rounded-xl text-sm font-bold border transition',
-            modelValue === year
-              ? 'bg-emerald-600 text-white border-emerald-600 shadow'
-              : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-          ]"
         >
           {{ year }}
         </Button>
@@ -272,12 +265,12 @@
           <span>{{ __('Location captured') }}: {{ formatCoords(modelValue) }}</span>
         </div>
         <Button
+          variant="solid"
+          size="lg"
+          :iconLeft="MapPin"
+          :label="modelValue ? __('Retry GPS') : __('Capturing GPS...')"
           @click="$emit('capture-gps')"
-          class="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-slate-900 dark:bg-slate-800 text-white font-bold text-sm hover:bg-slate-800 transition"
-        >
-          <MapPin class="w-4 h-4" />
-          <span>{{ modelValue ? __('Retry GPS') : __('Capturing GPS...') }}</span>
-        </Button>
+        />
       </div>
 
       <!-- 8. Number Input -->
@@ -390,7 +383,7 @@
             <div>
               <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <Smartphone class="w-3.5 h-3.5 text-slate-500" />
-                <span>{{ __('Display Style') }}</span>
+                <span :id="`q_cfg_${question.question_code}_display_style`">{{ __('Display Style') }}</span>
               </div>
               <div class="text-[11px] text-slate-500 dark:text-slate-400">
                 {{ __('Choose how options appear on your screen') }}
@@ -400,34 +393,15 @@
               {{ __('Default:') }} {{ templateDefaultModeLabel }}
             </span>
           </div>
-          <div class="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-            <Button
-              @click="setDisplayMode('grid')"
-              :class="[
-                'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                effectiveMode === 'grid'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-              ]"
-            >
-              <LayoutGrid class="w-3.5 h-3.5" />
-              <span>{{ __('Button Grid') }}</span>
-              <span v-if="templateDefaultMode === 'grid'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
-            </Button>
-            <Button
-              @click="setDisplayMode('combobox')"
-              :class="[
-                'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                effectiveMode === 'combobox'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-              ]"
-            >
-              <ChevronDown class="w-3.5 h-3.5" />
-              <span>{{ __('Dropdown') }}</span>
-              <span v-if="templateDefaultMode === 'combobox'" class="text-[10px] opacity-80 font-normal">({{ __('Default') }})</span>
-            </Button>
-          </div>
+          <TabButtons
+            :aria-labelledby="`q_cfg_${question.question_code}_display_style`"
+            :buttons="[
+              { label: __('Button Grid'), value: 'grid', icon: LayoutGrid },
+              { label: __('Dropdown'), value: 'combobox', icon: ChevronDown },
+            ]"
+            :modelValue="effectiveMode"
+            @update:modelValue="setDisplayMode"
+          />
         </div>
 
         <!-- Range Format Switcher (Buttons vs Slider) -->
@@ -435,38 +409,21 @@
           <div>
             <div class="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
               <Sliders class="w-3.5 h-3.5 text-slate-500" />
-              <span>{{ __('Range Presentation') }}</span>
+              <span :id="`q_cfg_${question.question_code}_range_format`">{{ __('Range Presentation') }}</span>
             </div>
             <div class="text-[11px] text-slate-500 dark:text-slate-400">
               {{ __('Choose between discrete button pills or draggable bar') }}
             </div>
           </div>
-          <div class="grid grid-cols-2 gap-1.5 p-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800">
-            <Button
-              @click="setRangeFormat('buttons')"
-              :class="[
-                'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                rangeFormat === 'buttons'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-              ]"
-            >
-              <CircleDot class="w-3.5 h-3.5" />
-              <span>{{ __('Button Pills') }}</span>
-            </Button>
-            <Button
-              @click="setRangeFormat('slider')"
-              :class="[
-                'py-2 px-3 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5',
-                rangeFormat === 'slider'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-              ]"
-            >
-              <Sliders class="w-3.5 h-3.5" />
-              <span>{{ __('Slider Bar') }}</span>
-            </Button>
-          </div>
+          <TabButtons
+            :aria-labelledby="`q_cfg_${question.question_code}_range_format`"
+            :buttons="[
+              { label: __('Button Pills'), value: 'buttons', icon: CircleDot },
+              { label: __('Slider Bar'), value: 'slider', icon: Sliders },
+            ]"
+            :modelValue="rangeFormat"
+            @update:modelValue="setRangeFormat"
+          />
         </div>
 
         <!-- Technical Question Specifications -->
@@ -519,12 +476,7 @@
             </svg>
             {{ __('Saved on your device') }}
           </span>
-          <Button
-            @click="showConfigModal = false"
-            class="px-5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 active:scale-95 text-white font-bold text-xs shadow-xs transition cursor-pointer"
-          >
-            {{ __('Done') }}
-          </Button>
+          <Button variant="solid" :label="__('Done')" @click="showConfigModal = false" />
         </div>
       </template>
     </Dialog>
@@ -533,7 +485,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
-import { Button, Dialog, TextInput } from "frappe-ui";
+import { Button, Dialog, TabButtons, TextInput } from "frappe-ui";
 import { DialogDescription } from "reka-ui";
 import {
   ClipboardList,
@@ -555,6 +507,7 @@ import FRating from "../common/FRating.vue";
 import FCurrencyInput from "../common/FCurrencyInput.vue";
 import FCombobox from "../common/FCombobox.vue";
 import FRangeSlider from "../common/FRangeSlider.vue";
+import { choiceButtonProps } from "../../utils/choiceButton";
 
 const props = defineProps({
   question: {

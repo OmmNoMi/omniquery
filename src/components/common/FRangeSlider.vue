@@ -41,16 +41,11 @@
         <Button
           v-for="val in steps"
           :key="val"
+          :variant="numericValue === val ? 'subtle' : 'ghost'"
+          :label="String(val)"
+          class="font-mono"
           @click="selectValue(val)"
-          :class="[
-            'px-2 py-0.5 rounded-md transition font-mono',
-            numericValue === val
-              ? 'bg-emerald-600 text-white font-black shadow-xs scale-110'
-              : 'hover:text-emerald-700 dark:hover:text-emerald-300'
-          ]"
-        >
-          {{ val }}
-        </Button>
+        />
       </div>
     </div>
 
@@ -69,15 +64,11 @@
         :tabindex="numericValue === val ? 0 : -1"
         @click="selectValue(val)"
         @keydown="handleKeydown"
-        :class="[
-          'py-3 text-center rounded-xl border-2 text-sm sm:text-base font-bold transition active:scale-95',
-          numericValue === val
-            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-slate-900 font-black'
-            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-emerald-400'
-        ]"
-      >
-        {{ val }}
-      </Button>
+        v-bind="choiceButtonProps(numericValue === val)"
+        size="xl"
+        :label="String(val)"
+        class="w-full rounded-xl active:scale-95"
+      />
     </div>
   </div>
 </template>
@@ -86,6 +77,7 @@
 import { ref, computed, nextTick } from "vue";
 import { Button, TextInput } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
+import { choiceButtonProps } from "../../utils/choiceButton";
 
 const props = defineProps({
   modelValue: {

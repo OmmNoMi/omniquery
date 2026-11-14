@@ -1,9 +1,8 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { parse } from "vue/compiler-sfc";
 import colors from "tailwindcss/colors";
-import { getSourceFiles, namedImports } from "./sourceFiles";
+import { classTokens as tokens, elementClasses, getSourceFiles, namedImports, templateElements } from "./sourceFiles";
 
 // Focus rings (#43). Keyboard users must always see where focus is.
 // - frappe-ui components (Button, TextInput, ...) draw their own focus ring, so their class prop
@@ -17,9 +16,6 @@ import { getSourceFiles, namedImports } from "./sourceFiles";
 
 const appDir = path.resolve(__dirname, "../..");
 const rel = (file) => path.relative(appDir, file);
-
-// class tokens of one element: static class plus every string in a bound :class
-const tokens = (text) => text.split(/[\s'"`,{}()?]+/).filter(Boolean);
 
 const REMOVES_OUTLINE = (t) => /(^|:)outline-none$/.test(t);
 const RING_OR_OUTLINE = (t) => /^(dark:)?(focus|focus-visible):(ring|outline)/.test(t) || REMOVES_OUTLINE(t);
@@ -42,31 +38,13 @@ export function focusProblems(classTokens, { component = null } = {}) {
   return problems;
 }
 
-function elementClasses(node) {
-  return node.props
-    .map((p) => {
-      if (p.type === 6 && p.name === "class") return p.value?.content || "";
-      if (p.type === 7 && p.name === "bind" && p.arg?.content === "class") return p.exp?.content || "";
-      return "";
-    })
-    .join(" ");
-}
-
 export function vueFocusViolations(source) {
-  const { descriptor } = parse(source);
-  if (!descriptor.template) return [];
   const frappeUi = namedImports(source, "frappe-ui");
-  const hits = [];
-  const walk = (node) => {
-    if (node.type === 1) {
-      for (const problem of focusProblems(tokens(elementClasses(node)), { component: frappeUi.get(node.tag) }))
-        hits.push(`line ${node.loc.start.line} <${node.tag}>: ${problem}`);
-    }
-    (node.children || []).forEach(walk);
-    (node.branches || []).forEach(walk);
-  };
-  walk(descriptor.template.ast);
-  return hits;
+  return templateElements(source).flatMap((node) =>
+    focusProblems(tokens(elementClasses(node)), { component: frappeUi.get(node.tag) }).map(
+      (problem) => `line ${node.loc.start.line} <${node.tag}>: ${problem}`,
+    ),
+  );
 }
 
 // .js files build class strings in code: check each string literal on its own
