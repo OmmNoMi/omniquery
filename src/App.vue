@@ -48,16 +48,17 @@
       <CatalogView v-else />
     </main>
 
-    <!-- Offline WAL Queue Drawer Modal -->
-    <BaseModal :isOpen="s.showWALDrawer" size="md" :title="s.__('Offline Sync Queue')" @close="s.showWALDrawer = false">
-      <div class="p-5 sm:p-6 space-y-4">
+    <!-- frappe-ui Dialogs: focus trap, focus return, scroll lock and topmost-only Escape -->
+    <Dialog v-model="s.showWALDrawer" :options="{ title: s.__('Offline Sync Queue'), size: 'md' }">
+      <template #body-content>
+      <div class="space-y-4">
         <div class="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1">
           <div class="font-extrabold flex items-center justify-between">
             <span>{{ s.pendingWALCount }} {{ s.__('Pending Submissions In Device Memory') }}</span>
           </div>
-          <p class="text-[11px] text-amber-800/80 dark:text-amber-300">
+          <DialogDescription as="p" class="text-[11px] text-amber-800/80 dark:text-amber-300">
             {{ s.__('These records are saved safely in local offline storage. When connected, tap Force Sync All to push to the server.') }}
-          </p>
+          </DialogDescription>
         </div>
         <div class="space-y-2 pt-1">
           <Button @click="s.triggerSync" :disabled="!s.isOnline" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs sm:text-sm transition shadow-xs flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer">
@@ -70,25 +71,27 @@
           </Button>
         </div>
       </div>
-    </BaseModal>
+      </template>
+    </Dialog>
 
-    <!-- Exit Survey Dialog -->
-    <BaseModal :isOpen="s.showExitDialog" size="sm" hideHeader :showCloseButton="false" @close="s.showExitDialog = false">
+    <Dialog v-model="s.showExitDialog" :options="{ size: 'sm' }">
+      <template #body>
       <div class="p-6 text-center space-y-4">
         <div class="w-13 h-13 rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-xs" :class="s.isGuest ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400' : 'bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400'">
           <KeyRound v-if="s.isGuest" class="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
           <AlertTriangle v-else class="w-7 h-7 text-amber-600 dark:text-amber-400" />
         </div>
         <div class="space-y-1">
-          <h3 class="text-base font-extrabold text-slate-900 dark:text-white">{{ s.isGuest ? s.__('Go to Login?') : s.__('Exit Survey?') }}</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{{ s.isGuest ? s.__('Sign in with your OmniQuery account for full surveyor and management access.') : s.__('Your responses are saved in offline drafts. Return to the survey list?') }}</p>
+          <DialogTitle as="h3" class="text-base font-extrabold text-slate-900 dark:text-white">{{ s.isGuest ? s.__('Go to Login?') : s.__('Exit Survey?') }}</DialogTitle>
+          <DialogDescription as="p" class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{{ s.isGuest ? s.__('Sign in with your OmniQuery account for full surveyor and management access.') : s.__('Your responses are saved in offline drafts. Return to the survey list?') }}</DialogDescription>
         </div>
         <div class="grid grid-cols-2 gap-2.5 pt-2">
           <Button @click="s.showExitDialog = false" class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer">{{ s.isGuest ? s.__('Stay Here') : s.__('Stay') }}</Button>
           <Button @click="s.confirmExit" :class="s.isGuest ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'" class="w-full py-2.5 rounded-xl text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer">{{ s.isGuest ? s.__('Login') : s.__('Exit') }}</Button>
         </div>
       </div>
-    </BaseModal>
+      </template>
+    </Dialog>
 
     <!-- Filled Forms Verification & Data Recovery Modal -->
     <FilledFormsModal :isOpen="s.showFilledFormsModal" :initialFilter="s.filledFormsInitialFilter" :isOnline="s.isOnline" :templates="s.availableTemplates" @close="s.showFilledFormsModal = false" @sync-all="s.triggerSync" @resume-draft="s.handleResumeDraftFromModal" @drafts-changed="s.loadActiveDrafts" />
@@ -96,11 +99,11 @@
 </template>
 
 <script setup>
-import { Button } from "frappe-ui";
+import { Button, Dialog } from "frappe-ui";
+import { DialogDescription, DialogTitle } from "reka-ui";
 import { AlertTriangle, ClipboardList, KeyRound, Zap } from "lucide-vue-next";
 import { provideSurveyApp } from "./composables/useSurveyApp";
 import CompactHeader from "./components/header/CompactHeader.vue";
-import BaseModal from "./components/common/BaseModal.vue";
 import ProjectPage from "./components/project/ProjectPage.vue";
 import FilledFormsModal from "./components/dashboard/FilledFormsModal.vue";
 import CatalogView from "./views/Catalog.vue";

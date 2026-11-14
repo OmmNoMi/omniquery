@@ -100,6 +100,20 @@ describe("App shell (#46)", () => {
     expect(wrapper.vm.s.showFilledFormsModal, "saved responses open").toBe(true);
   });
 
+  it("closes only the topmost dialog on Escape", async () => {
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    wrapper.vm.s.showWALDrawer = true;
+    await nextTick();
+    wrapper.vm.s.showFilledFormsModal = true;
+    await settle();
+
+    document.activeElement.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await settle();
+    expect(wrapper.vm.s.showFilledFormsModal, "top dialog closes").toBe(false);
+    expect(wrapper.vm.s.showWALDrawer, "the one beneath stays open").toBe(true);
+  });
+
   it("shows an unassigned surveyor the ask-your-supervisor note, not an empty catalog", async () => {
     bootstrap = { is_unassigned: true, templates: [] };
     wrapper = mount(App, { attachTo: document.body });
