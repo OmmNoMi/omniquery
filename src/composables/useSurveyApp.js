@@ -1,4 +1,4 @@
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, onBeforeUnmount, provide, inject, reactive } from "vue";
 import { call } from "frappe-ui";
 import { db } from "../services/db";
 import { useSurvey } from "./useSurvey";
@@ -8,13 +8,43 @@ import { useTextScale } from "./useTextScale";
 import { useTranslation } from "./useTranslation";
 import { useAudioRecorder } from "./useAudioRecorder";
 
+// exported so component tests can provide a stand-in session or context
+export const SURVEY_SESSION = Symbol("surveySession");
+export const OMNIQUERY_CONTEXT = Symbol("omniqueryContext");
+
+// App.vue calls this once. Views read the session with useSurveySession(), the header reads the
+// shared context with useOmniqueryContext(). reactive() unwraps the refs, so templates read
+// s.isLoading as a boolean and s.showWALDrawer = true writes the ref (#46)
+export function provideSurveyApp() {
+  const app = useSurveyApp();
+  provide(OMNIQUERY_CONTEXT, app.omniqueryContext);
+  const session = reactive(app);
+  provide(SURVEY_SESSION, session);
+  return session;
+}
+
+function injectOrThrow(key, name) {
+  const value = inject(key, null);
+  // a missing provider must fail loudly: falling back to "online, 0 pending" would lie offline
+  if (!value) throw new Error(`${name} used outside App.vue; call provideSurveyApp() first`);
+  return value;
+}
+
+export function useSurveySession() {
+  return injectOrThrow(SURVEY_SESSION, "useSurveySession");
+}
+
+// isOnline, pendingWALCount, textSize, progressPercent, isRecording and isAudioPaused, as refs
+export function useOmniqueryContext() {
+  return injectOrThrow(OMNIQUERY_CONTEXT, "useOmniqueryContext");
+}
+
 export function useSurveyApp() {
   const autoAdvance = ref(true);
   const isFocusMode = ref(false);
   const focusQuestionIndex = ref(0);
 
   const showExitDialog = ref(false);
-  const draftToDiscard = ref(null);
   const liveAnnouncementText = ref("");
 
   function announce(message) {
@@ -23,7 +53,7 @@ export function useSurveyApp() {
 
   const { __ } = useTranslation();
   const { textSize, cycleTextSize, setTextSize } = useTextScale();
-  const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio, retryQuarantinedEntry } = useWAL();
+  const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
   const { gpsCoords, captureGPS } = useGPS();
   const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
 
@@ -31,6 +61,7 @@ export function useSurveyApp() {
     activeTemplate,
     activeSectionIndex,
     availableTemplates,
+    isUnassigned,
     sections,
     activeSection,
     activeQuestions,
@@ -40,11 +71,11 @@ export function useSurveyApp() {
     isSubmitted,
     currentDraftId,
     activeDrafts,
+    allDrafts,
     loadActiveDrafts,
     loadAvailableTemplates,
     loadTemplate,
     saveDraftLocally,
-    discardDraft,
     generateSurveyId,
     isQuestionVisible,
     isFullForm,
@@ -85,8 +116,8 @@ export function useSurveyApp() {
   }
 
   const showWALDrawer = ref(false);
+  // lives here, not in Catalog, so the search survives opening a survey and coming back
   const searchQuery = ref("");
-  const selectedWorkspace = ref("ALL");
 
   const selectedProject = ref("ALL");
   if (typeof localStorage !== "undefined") {
@@ -153,6 +184,19 @@ export function useSurveyApp() {
   function openFilteredFilledForms(filter = "all") {
     filledFormsInitialFilter.value = filter;
     showFilledFormsModal.value = true;
+  }
+
+  // The drawer's button goes away with the drawer, so hand focus back to whatever opened the
+  // drawer first: the dialog then returns focus there when it closes (#56)
+  let walDrawerOpener = null;
+  watch(showWALDrawer, (open) => {
+    if (open) walDrawerOpener = document.activeElement;
+  });
+
+  function openRecoveryFromWALDrawer() {
+    showWALDrawer.value = false;
+    walDrawerOpener?.focus?.();
+    openFilteredFilledForms("all");
   }
 
   function handleResumeDraftFromModal(templateName, draftId) {
@@ -243,15 +287,8 @@ export function useSurveyApp() {
     return Math.round((filled / questions.length) * 100);
   });
 
-  const workspacesList = computed(() => {
-    const map = new Map();
-    for (const t of availableTemplates.value) {
-      const id = t.workspace || "default";
-      const title = t.workspace_title || t.workspace || "General";
-      if (!map.has(id)) map.set(id, { id, title });
-    }
-    return Array.from(map.values());
-  });
+  // someone in no project with no public survey to fill has no catalog to show (#57)
+  const showCatalog = computed(() => !isUnassigned.value || availableTemplates.value.length > 0);
 
   function getRouteSurveyId() {
     if (window.frappe && window.frappe.initial_survey_id) {
@@ -443,7 +480,8 @@ export function useSurveyApp() {
     return items;
   });
 
-  function onGroupResponseUpdate(code, value) {
+  // the one write path for answers, from plain, grouped, matrix and focus-mode questions alike
+  function setResponse(code, value) {
     responses.value[code] = value;
   }
 
@@ -487,10 +525,6 @@ export function useSurveyApp() {
         target.focus({ preventScroll: true });
       }
     }, 100);
-  }
-
-  function onFocusModeUpdateResponse(code, value) {
-    responses.value[code] = value;
   }
 
   function onFocusModeFinishSection() {
@@ -600,17 +634,6 @@ export function useSurveyApp() {
     },
     { deep: true }
   );
-
-  function onDiscardDraft(templateName) {
-    draftToDiscard.value = templateName;
-  }
-
-  async function confirmDiscardDraft() {
-    if (draftToDiscard.value) {
-      await discardDraft(draftToDiscard.value);
-      draftToDiscard.value = null;
-    }
-  }
 
   async function goHome() {
     if (isGuest.value) {
@@ -794,26 +817,27 @@ export function useSurveyApp() {
     await loadActiveDrafts();
   }
 
+  async function onPopState() {
+    const projId = getRouteProjectId();
+    const survId = getRouteSurveyId();
+    if (projId) {
+      activeProjectId.value = projId;
+      activeTemplate.value = null;
+    } else if (survId) {
+      activeProjectId.value = "";
+      await loadTemplate(survId);
+    } else {
+      activeProjectId.value = "";
+      activeTemplate.value = null;
+      await loadAvailableTemplates();
+    }
+  }
+
   onMounted(() => {
     init();
-    if (typeof window !== "undefined") {
-      window.addEventListener("popstate", async () => {
-        const projId = getRouteProjectId();
-        const survId = getRouteSurveyId();
-        if (projId) {
-          activeProjectId.value = projId;
-          activeTemplate.value = null;
-        } else if (survId) {
-          activeProjectId.value = "";
-          await loadTemplate(survId);
-        } else {
-          activeProjectId.value = "";
-          activeTemplate.value = null;
-          await loadAvailableTemplates();
-        }
-      });
-    }
+    window.addEventListener("popstate", onPopState);
   });
+  onBeforeUnmount(() => window.removeEventListener("popstate", onPopState));
 
   const headerTitle = computed(() => {
     return activeTemplate.value
@@ -826,8 +850,6 @@ export function useSurveyApp() {
   const omniqueryContext = {
     isOnline,
     pendingWALCount,
-    forceSyncAll,
-    retryQuarantinedEntry,
     textSize,
     progressPercent,
     isRecording,
@@ -840,15 +862,12 @@ export function useSurveyApp() {
     isFocusMode,
     focusQuestionIndex,
     showExitDialog,
-    draftToDiscard,
     liveAnnouncementText,
-    announce,
     textSize,
     cycleTextSize,
     setTextSize,
     isOnline,
     pendingWALCount,
-    gpsCoords,
     captureGPS,
     isRecording,
     isAudioPaused,
@@ -856,6 +875,8 @@ export function useSurveyApp() {
     activeTemplate,
     activeSectionIndex,
     availableTemplates,
+    isUnassigned,
+    showCatalog,
     sections,
     activeSection,
     activeQuestions,
@@ -865,13 +886,14 @@ export function useSurveyApp() {
     isSubmitted,
     currentDraftId,
     activeDrafts,
+    allDrafts,
+    loadActiveDrafts,
     cachedTemplatesMap,
     isLoading,
     loadingSurveyId,
     downloadingSurveyId,
     showWALDrawer,
     searchQuery,
-    selectedWorkspace,
     selectedProject,
     activeProjectId,
     isGuest,
@@ -885,7 +907,6 @@ export function useSurveyApp() {
     isSubmissionSynced,
     isSyncingSubmission,
     progressPercent,
-    workspacesList,
     displayQuestionItems,
     isFullForm,
     toggleFullForm,
@@ -896,20 +917,18 @@ export function useSurveyApp() {
     openProjectPage,
     closeProjectPage,
     openFilteredFilledForms,
+    openRecoveryFromWALDrawer,
     handleResumeDraftFromModal,
     handleSyncSubmittedNow,
     copyResponseCode,
     toggleFocusMode,
     openFocusMode,
     onQuestionAnswered,
-    onGroupResponseUpdate,
-    onFocusModeUpdateResponse,
+    setResponse,
     onFocusModeFinishSection,
     onExit,
     onHome,
     confirmExit,
-    onDiscardDraft,
-    confirmDiscardDraft,
     goHome,
     selectSurvey,
     handlePrevSection,

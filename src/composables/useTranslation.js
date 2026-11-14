@@ -1,6 +1,12 @@
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 
 const CORE_HINDI = {
+  "{0} surveys today": "आज {0} सर्वेक्षण",
+  "1 survey today": "आज 1 सर्वेक्षण",
+  "On this device": "इस डिवाइस पर",
+  "{0} records": "{0} रिकॉर्ड",
+  "1 record": "1 रिकॉर्ड",
+  "{0} left for target": "लक्ष्य के लिए {0} शेष",
   "Surveys": "सर्वेक्षण सूची",
   "Start Survey": "सर्वेक्षण शुरू करें",
   "Start Survey →": "सर्वेक्षण शुरू करें →",
@@ -45,17 +51,43 @@ const CORE_HINDI = {
   "Saved offline": "ऑफ़लाइन सुरक्षित किया गया",
   "No active surveys available.": "कोई सक्रिय सर्वेक्षण उपलब्ध नहीं है।",
   "Check your network connection or permissions.": "अपना नेटवर्क कनेक्शन या अनुमतियां जांचें।",
+  "You are not assigned to a project yet. Ask your supervisor.": "आपको अभी किसी परियोजना में नहीं जोड़ा गया है। अपने पर्यवेक्षक से पूछें।",
   "Text Size": "अक्षर आकार",
   "Sections": "अनुभाग",
   "Questions": "प्रश्न",
+  "My Account": "मेरा खाता",
+  "My Account needs internet": "मेरा खाता खोलने के लिए इंटरनेट चाहिए",
+  "Guest Surveyor": "अतिथि सर्वेक्षक",
 };
 
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";
 const currentLang = ref(initialLang);
+// <html lang> names the language on screen, so screen readers pick the right voice (#45).
+// The server renders it from the Frappe language for the loading screen; the PWA's languages are both left-to-right.
+if (typeof document !== "undefined") {
+  watch(
+    currentLang,
+    (lang) => {
+      document.documentElement.lang = lang;
+      document.documentElement.dir = "ltr";
+    },
+    { immediate: true, flush: "sync" }
+  );
+}
+
+function fillPlaceholders(text, args) {
+  if (!args) return text;
+  return text.replace(/\{(\d+)\}/g, (match, i) => (args[i] === undefined ? match : String(args[i])));
+}
 
 export function useTranslation() {
-  function __(text) {
+  // same signature as Frappe's __(text, replace): "{0}" placeholders are filled from args
+  function __(text, args) {
     if (!text) return "";
+    return fillPlaceholders(translate(text), args);
+  }
+
+  function translate(text) {
     if (currentLang.value === "en") return text;
     const globalDict = (typeof window !== "undefined" && window.__messages) || {};
     return globalDict[text] || CORE_HINDI[text] || text;
@@ -65,7 +97,6 @@ export function useTranslation() {
     currentLang.value = currentLang.value === "hi" ? "en" : "hi";
     if (typeof window !== "undefined") {
       localStorage.setItem("omniquery_lang", currentLang.value);
-      document.documentElement.lang = currentLang.value;
     }
   }
 
@@ -73,7 +104,6 @@ export function useTranslation() {
     currentLang.value = lang === "en" ? "en" : "hi";
     if (typeof window !== "undefined") {
       localStorage.setItem("omniquery_lang", currentLang.value);
-      document.documentElement.lang = currentLang.value;
     }
   }
 
