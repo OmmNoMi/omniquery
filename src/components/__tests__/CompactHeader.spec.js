@@ -1,18 +1,37 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { ref } from "vue";
 import { mount } from "@vue/test-utils";
 import CompactHeader from "../header/CompactHeader.vue";
 import { useTranslation } from "../../composables/useTranslation";
+import { OMNIQUERY_CONTEXT } from "../../composables/useSurveyApp";
+
+// The header reads roles from the boot data and online/queue state from App's provided context (#46)
+function mountHeader({ roles = [], isOnline = true, pendingWALCount = 0, ...options } = {}) {
+  window.frappe = { ...window.frappe, user_roles: roles };
+  const context = {
+    isOnline: ref(isOnline),
+    pendingWALCount: ref(pendingWALCount),
+    textSize: ref("md"),
+    progressPercent: ref(0),
+    isRecording: ref(false),
+    isAudioPaused: ref(false),
+  };
+  return mount(CompactHeader, { ...options, global: { provide: { [OMNIQUERY_CONTEXT]: context } } });
+}
 
 describe("CompactHeader", () => {
+  const bootFrappe = window.frappe;
+
   beforeEach(() => {
     vi.restoreAllMocks();
   });
+  afterEach(() => {
+    window.frappe = bootFrappe;
+  });
 
   it("computes 'OmniQuery Manager' role label for manager users", async () => {
-    const wrapper = mount(CompactHeader, {
-      props: {
-        userRoles: ["OmniQuery Manager"],
-      },
+    const wrapper = mountHeader({
+      roles: ["OmniQuery Manager"],
       attachTo: document.body,
     });
 
@@ -26,10 +45,8 @@ describe("CompactHeader", () => {
   });
 
   it("computes 'OmniQuery Admin' role label for System Manager / OmniQuery Admin", async () => {
-    const wrapper = mount(CompactHeader, {
-      props: {
-        userRoles: ["OmniQuery Admin", "System Manager"],
-      },
+    const wrapper = mountHeader({
+      roles: ["OmniQuery Admin", "System Manager"],
     });
 
     expect(wrapper.vm.roleLabel).toBe("OmniQuery Admin");
@@ -38,10 +55,8 @@ describe("CompactHeader", () => {
   });
 
   it("computes 'Field Surveyor' role label only when user has OmniQuery User role", async () => {
-    const wrapper = mount(CompactHeader, {
-      props: {
-        userRoles: ["OmniQuery User"],
-      },
+    const wrapper = mountHeader({
+      roles: ["OmniQuery User"],
       attachTo: document.body,
     });
 
@@ -54,10 +69,8 @@ describe("CompactHeader", () => {
   });
 
   it("computes 'Public Respondent' for desk users or users without surveyor or manager roles", async () => {
-    const wrapper = mount(CompactHeader, {
-      props: {
-        userRoles: ["Desk User"],
-      },
+    const wrapper = mountHeader({
+      roles: ["Desk User"],
       attachTo: document.body,
     });
 
@@ -71,10 +84,8 @@ describe("CompactHeader", () => {
   });
 
   it("renders Guest login button and identifies as guest when no roles or Guest role is passed", () => {
-    const wrapper = mount(CompactHeader, {
-      props: {
-        userRoles: ["Guest"],
-      },
+    const wrapper = mountHeader({
+      roles: ["Guest"],
     });
 
     expect(wrapper.vm.isGuest).toBe(true);
@@ -89,9 +100,10 @@ describe("CompactHeader", () => {
       useTranslation().setLanguage("en");
     });
 
-    async function openSettings(props) {
-      const wrapper = mount(CompactHeader, {
-        props: { userRoles: ["OmniQuery User"], ...props },
+    async function openSettings(context) {
+      const wrapper = mountHeader({
+        roles: ["OmniQuery User"],
+        ...context,
         attachTo: document.body,
       });
       const settings = wrapper.find("button[title='Settings & Configuration']");
@@ -129,7 +141,7 @@ describe("CompactHeader", () => {
 
     async function openSettingsAs(user, user_fullname) {
       window.frappe = { ...original, user, user_fullname };
-      const wrapper = mount(CompactHeader, { props: { userRoles: ["OmniQuery User"] }, attachTo: document.body });
+      const wrapper = mountHeader({ roles: ["OmniQuery User"], attachTo: document.body });
       await wrapper.find("button[title='Settings & Configuration']").trigger("click");
       return wrapper;
     }
@@ -148,6 +160,24 @@ describe("CompactHeader", () => {
       expect(document.body.querySelector("h3")?.textContent).toBe(EMAIL);
       expect(timesShown(EMAIL)).toBe(1);
       wrapper.unmount();
+    });
+  });
+
+  describe("state from App's provided context (#46)", () => {
+    beforeEach(() => {
+      useTranslation().setLanguage("en");
+    });
+
+    it("shows offline and the queued count from the injected context", () => {
+      const wrapper = mountHeader({ roles: ["OmniQuery User"], isOnline: false, pendingWALCount: 3 });
+      expect(wrapper.find("[title='Offline']").exists(), "offline dot").toBe(true);
+      expect(wrapper.find("[title^='3 Pending Offline Responses']").exists(), "queue badge").toBe(true);
+      wrapper.unmount();
+    });
+
+    it("refuses to render without App's provider instead of claiming to be online", () => {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      expect(() => mount(CompactHeader)).toThrow(/provideSurveyApp/);
     });
   });
 });

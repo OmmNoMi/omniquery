@@ -398,9 +398,10 @@ import { useScrollLock } from "../../composables/useScrollLock";
 import { useTranslation } from "../../composables/useTranslation";
 import { useUserRoles } from "../../composables/useUserRoles";
 import { useSession } from "../../composables/useSession";
+import { useOmniqueryContext } from "../../composables/useSurveyApp";
 import { THEME_KEY, storedTheme, applyTheme } from "../../utils/theme";
 
-const props = defineProps({
+defineProps({
   surveyTitle: {
     type: String,
     default: "",
@@ -408,34 +409,6 @@ const props = defineProps({
   showBack: {
     type: Boolean,
     default: false,
-  },
-  isOnline: {
-    type: Boolean,
-    default: true,
-  },
-  pendingWALCount: {
-    type: Number,
-    default: 0,
-  },
-  textSize: {
-    type: String,
-    default: "md",
-  },
-  progressPercent: {
-    type: Number,
-    default: 0,
-  },
-  isRecording: {
-    type: Boolean,
-    default: false,
-  },
-  isAudioPaused: {
-    type: Boolean,
-    default: false,
-  },
-  userRoles: {
-    type: Array,
-    default: () => [],
   },
 });
 
@@ -448,7 +421,8 @@ const activeTheme = ref(storedTheme());
 
 const { email: userEmail, displayName: userDisplayName, userInitial } = useSession();
 
-const { isGuest, isManager, isSurveyor, isAdmin } = useUserRoles(() => props.userRoles);
+const { isOnline, pendingWALCount, textSize, progressPercent, isRecording, isAudioPaused } = useOmniqueryContext();
+const { isGuest, isManager, isSurveyor, isAdmin } = useUserRoles();
 
 const roleLabel = computed(() => {
   if (isAdmin.value) return __("OmniQuery Admin");
