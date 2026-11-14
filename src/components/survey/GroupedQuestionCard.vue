@@ -121,7 +121,7 @@
             <Button
               @click="stepNumber(q.question_code, -1)"
               class="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-100 active:scale-95 transition"
-              aria-label="Decrement"
+              :label="__('Decrease')"
             >
               -
             </Button>
@@ -135,7 +135,7 @@
             <Button
               @click="stepNumber(q.question_code, 1)"
               class="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-100 active:scale-95 transition"
-              aria-label="Increment"
+              :label="__('Increase')"
             >
               +
             </Button>

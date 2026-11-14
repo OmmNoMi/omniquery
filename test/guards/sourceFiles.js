@@ -49,7 +49,11 @@ export function namedImports(source, module) {
 // object punctuation dropped. Variant prefixes stay on (`dark:bg-x`, `focus-visible:ring-2`).
 export const classTokens = (text) => text.split(/[\s'"`,{}()?]+/).filter(Boolean);
 
-// The static class plus every bound :class of one template element, as one string.
+// Whether a template element sets the attribute `name` at all, statically or bound:
+// `label="Save"`, `:label="x"` and `label=""` all count.
+export const hasProp = (node, name) =>
+  node.props.some((p) => (p.type === 6 && p.name === name) || (p.type === 7 && p.name === "bind" && p.arg?.content === name));
+
 // An attribute's static value and its bound (:name) expression, joined: `theme="gray"` and
 // `:theme="on ? 'green' : 'gray'"` both come back as text to search.
 export function elementProp(node, name) {
@@ -63,6 +67,7 @@ export function elementProp(node, name) {
     .join(" ");
 }
 
+// The static class plus every bound :class of one template element, as one string.
 export const elementClasses = (node) => elementProp(node, "class");
 
 // Every element in a .vue file's template, v-if branches included, read with Vue's own compiler.

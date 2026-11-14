@@ -28,8 +28,8 @@
         @click.stop="scrollToIndex(activeIndex - 1)"
         :disabled="activeIndex === 0"
         class="absolute left-1.5 sm:left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/95 dark:bg-slate-800/95 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 disabled:opacity-0 disabled:pointer-events-none transition-all active:scale-90 cursor-pointer"
-        :title="__('Previous Project')"
-        aria-label="Previous Project"
+        :title="__('Previous project')"
+        :label="__('Previous project')"
       >
         <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
@@ -42,8 +42,8 @@
         @click.stop="scrollToIndex(activeIndex + 1)"
         :disabled="activeIndex === projectList.length - 1"
         class="absolute right-1.5 sm:right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-white/95 dark:bg-slate-800/95 shadow-md border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white hover:border-emerald-600 disabled:opacity-0 disabled:pointer-events-none transition-all active:scale-90 cursor-pointer"
-        :title="__('Next Project')"
-        aria-label="Next Project"
+        :title="__('Next project')"
+        :label="__('Next project')"
       >
         <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
@@ -122,12 +122,11 @@
             <Button
               v-if="!isProjectFullyCached(proj.id) && isOnline && getProjectSurveys(proj.id).length > 0"
               @click.stop="$emit('download-project-surveys', proj.id)"
-              class="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-[11px] transition active:scale-95 cursor-pointer flex items-center gap-1 shadow-2xs"
+              variant="subtle"
+              :iconLeft="Download"
+              :label="__('Download all for offline')"
               :title="__('Download all survey templates for this project so they can be filled offline')"
-            >
-              <Download class="w-3.5 h-3.5" />
-              <span>{{ __('Download all for offline') }}</span>
-            </Button>
+            />
           </div>
 
           <!-- Bottom Action Row: On-Card Interactive Switcher + Training Materials -->
@@ -138,7 +137,7 @@
                 @click.stop="scrollToIndex(activeIndex - 1)"
                 :disabled="activeIndex === 0"
                 class="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 dark:hover:bg-slate-700 transition disabled:opacity-30 disabled:pointer-events-none active:scale-95 cursor-pointer flex items-center gap-1"
-                :title="__('Previous Project')"
+                :title="__('Previous project')"
               >
                 <span>←</span>
                 <span class="hidden sm:inline">{{ __('Prev') }}</span>
@@ -158,7 +157,7 @@
                 @click.stop="scrollToIndex(activeIndex + 1)"
                 :disabled="activeIndex === projectList.length - 1"
                 class="px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-300 dark:hover:bg-slate-700 transition disabled:opacity-30 disabled:pointer-events-none active:scale-95 cursor-pointer flex items-center gap-1"
-                :title="__('Next Project')"
+                :title="__('Next project')"
               >
                 <span class="hidden sm:inline">{{ __('Next') }}</span>
                 <span>→</span>

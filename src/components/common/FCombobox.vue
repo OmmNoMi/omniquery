@@ -7,7 +7,7 @@
         role="combobox"
         :aria-expanded="isOpen ? 'true' : 'false'"
         :aria-haspopup="multiple ? 'listbox' : 'listbox'"
-        :aria-label="ariaLabel || __('Select options')"
+        :label="ariaLabel || __('Select options')"
         :disabled="disabled"
         @click="toggleCombobox"
         @keydown="onTriggerKeydown"
@@ -61,7 +61,7 @@
       <Button
         v-if="clearable && hasSelection && !disabled"
         @click.stop="clearAll"
-        :aria-label="__('Clear selection')"
+        :label="__('Clear selection')"
         class="absolute right-9 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-md transition cursor-pointer"
       >
         <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -100,7 +100,7 @@
             @mousedown.prevent
             @click="onClearSearch"
             class="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-0.5 cursor-pointer"
-            aria-label="Clear search"
+            :label="__('Clear search')"
           >
             <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <line x1="18" y1="6" x2="6" y2="18"></line>

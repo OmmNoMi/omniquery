@@ -81,6 +81,20 @@ const CORE_HINDI = {
   "Cleaned up {0} old synced responses to free local storage": "स्थानीय स्टोरेज खाली करने के लिए {0} पुरानी सिंक की गई प्रतिक्रियाएँ हटाई गईं",
   "This survey is not yet downloaded on your device. Please connect to the internet once to download it.": "यह सर्वेक्षण अभी आपके डिवाइस पर डाउनलोड नहीं हुआ है। इसे डाउनलोड करने के लिए एक बार इंटरनेट से जुड़ें।",
   "Survey synced to server successfully!": "सर्वेक्षण सर्वर पर सिंक हो गया!",
+  "Return to Home": "होम पर लौटें",
+  "Pending Offline Responses": "लंबित ऑफ़लाइन उत्तर",
+  "Mute microphone": "माइक्रोफ़ोन म्यूट करें",
+  "Unmute / record microphone": "माइक्रोफ़ोन चालू करें / रिकॉर्ड करें",
+  "Close settings": "सेटिंग्स बंद करें",
+  "Previous project": "पिछला प्रोजेक्ट",
+  "Next project": "अगला प्रोजेक्ट",
+  "Download all for offline": "ऑफ़लाइन के लिए सभी डाउनलोड करें",
+  "Select options": "विकल्प चुनें",
+  "Clear selection": "चयन साफ़ करें",
+  "Decrease": "घटाएँ",
+  "Increase": "बढ़ाएँ",
+  "{0} of {1}": "{1} में से {0}",
+  "Download all survey templates for this project so they can be filled offline": "इस प्रोजेक्ट के सभी सर्वे टेम्पलेट डाउनलोड करें ताकि उन्हें ऑफ़लाइन भरा जा सके",
 };
 
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";

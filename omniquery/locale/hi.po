@@ -2333,3 +2333,59 @@ msgstr "प्रोजेक्ट विवरण"
 #: src/components/dashboard/ProjectHeaderCard.vue
 msgid "Project details and training materials"
 msgstr "प्रोजेक्ट विवरण और प्रशिक्षण सामग्री"
+
+#: src/components/header/CompactHeader.vue
+msgid "Return to Home"
+msgstr "होम पर लौटें"
+
+#: src/components/header/CompactHeader.vue
+msgid "Pending Offline Responses"
+msgstr "लंबित ऑफ़लाइन उत्तर"
+
+#: src/components/header/CompactHeader.vue
+msgid "Mute microphone"
+msgstr "माइक्रोफ़ोन म्यूट करें"
+
+#: src/components/header/CompactHeader.vue
+msgid "Unmute / record microphone"
+msgstr "माइक्रोफ़ोन चालू करें / रिकॉर्ड करें"
+
+#: src/components/header/CompactHeader.vue
+msgid "Close settings"
+msgstr "सेटिंग्स बंद करें"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Previous project"
+msgstr "पिछला प्रोजेक्ट"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Next project"
+msgstr "अगला प्रोजेक्ट"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Download all for offline"
+msgstr "ऑफ़लाइन के लिए सभी डाउनलोड करें"
+
+#: src/components/common/FCombobox.vue
+msgid "Select options"
+msgstr "विकल्प चुनें"
+
+#: src/components/common/FCombobox.vue
+msgid "Clear selection"
+msgstr "चयन साफ़ करें"
+
+#: src/components/survey/GroupedQuestionCard.vue
+msgid "Decrease"
+msgstr "घटाएँ"
+
+#: src/components/survey/GroupedQuestionCard.vue
+msgid "Increase"
+msgstr "बढ़ाएँ"
+
+#: src/components/common/FRating.vue
+msgid "{0} of {1}"
+msgstr "{1} में से {0}"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Download all survey templates for this project so they can be filled offline"
+msgstr "इस प्रोजेक्ट के सभी सर्वे टेम्पलेट डाउनलोड करें ताकि उन्हें ऑफ़लाइन भरा जा सके"

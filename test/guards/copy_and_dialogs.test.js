@@ -16,7 +16,7 @@ export const TITLE_CASE_ALLOWLIST = {
   "src/components/common/FCurrencyInput.vue": 2,
   "src/components/common/FRangeSlider.vue": 1,
   "src/components/dashboard/FilledFormsModal.vue": 15,
-  "src/components/dashboard/ProjectHeaderCard.vue": 10,
+  "src/components/dashboard/ProjectHeaderCard.vue": 5,
   "src/components/dashboard/SurveyorDashboard.vue": 9,
   "src/components/header/CompactHeader.vue": 16,
   "src/components/project/ProjectPage.vue": 23,
