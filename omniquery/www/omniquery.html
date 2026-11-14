@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="{{ lang }}" dir="{{ 'rtl' if is_rtl() else 'ltr' }}">
+<html lang="{{ lang | e }}" dir="{{ ('rtl' if is_rtl() else 'ltr') | e }}">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <title>{{ title or "OmniQuery · OmmNoMi Field Survey Platform" }}</title>
+  <title>{{ title | e }}</title><!-- markup values are |e: Frappe's Jinja does not autoescape www pages -->
   <meta name="theme-color" content="#15803d"><!-- before the script below, which sets it for the saved theme -->
   <script>
-    window.csrf_token = "{{ csrf_token }}"; // frappe-ui's call, resources and uploads send this
+    window.csrf_token = {{ csrf_token | tojson }}; // frappe-ui's call, resources and uploads send this
     window.frappe = window.frappe || {};
-    window.frappe.user = "{{ current_user or frappe.session.user or '' }}";
-    window.frappe.user_roles = {{ user_roles or '[]' }};
+    window.frappe.user = {{ current_user | tojson }};
+    window.frappe.user_roles = {{ user_roles | tojson }};
     window.frappe.user_fullname = {{ current_user_fullname | tojson }};
-    window.frappe.initial_survey_id = "{{ initial_survey_id or '' }}";
-    window.frappe.initial_project_id = "{{ initial_project_id or '' }}";
-    window.__messages = {{ translations or '{}' }};
+    window.frappe.initial_survey_id = {{ initial_survey_id | tojson }}; // from the URL, so |tojson and never hand-quoted (shell_script_escaping.test.js)
+    window.frappe.initial_project_id = {{ initial_project_id | tojson }};
+    window.__messages = {{ translations | tojson }};
     try { // before first paint, so dark mode never flashes light; src/utils/theme.js does the same at runtime
       var root = document.documentElement, saved = localStorage.getItem("omniquery_theme");
       // "auto" (System) follows the device; anything unknown is light
@@ -31,13 +31,13 @@
   <link rel="icon" type="image/svg+xml" href="/assets/omniquery/icons/desktop_icons/solid/omniquery.svg">
   <link rel="apple-touch-icon" href="/assets/omniquery/pwa/icon-192.png">
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/omniquery/pwa/icon-192.png">
-  <link rel="stylesheet" href="/assets/omniquery/dist/omniquery.bundle.css?v={{ bundle_version or '20260930_1950' }}">
+  <link rel="stylesheet" href="/assets/omniquery/dist/omniquery.bundle.css?v={{ bundle_version | e }}">
 </head>
 <body class="bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased min-h-screen">
   <div id="app">
-    <p role="status" class="min-h-screen flex items-center justify-center text-sm font-medium text-slate-600 dark:text-slate-300">{{ _("Loading OmniQuery...") }}</p>
+    <p role="status" class="min-h-screen flex items-center justify-center text-sm font-medium text-slate-600 dark:text-slate-300">{{ _("Loading OmniQuery...") | e }}</p>
   </div>
-  <noscript><p class="p-6 text-center">{{ _("OmniQuery needs JavaScript to run.") }}</p></noscript>
-  <script src="/assets/omniquery/dist/omniquery.bundle.js?v={{ bundle_version or '20260930_1950' }}"></script>
+  <noscript><p class="p-6 text-center">{{ _("OmniQuery needs JavaScript to run.") | e }}</p></noscript>
+  <script src="/assets/omniquery/dist/omniquery.bundle.js?v={{ bundle_version | e }}"></script>
 </body>
 </html>

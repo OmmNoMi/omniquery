@@ -7,7 +7,6 @@ import frappe
 from omniquery.www.omniquery import get_context
 
 SHELL = Path(frappe.get_app_path("omniquery")) / "www" / "omniquery.html"
-MAX_SHELL_LINES = 40  # OmmNoMi thin-shell rule: the page boots the bundle, the app lives in src/ (#45)
 
 
 class TestOmniQueryShell(unittest.TestCase):
@@ -43,8 +42,9 @@ class TestOmniQueryShell(unittest.TestCase):
 		self.assertIn("Loading OmniQuery", app.group(1))
 
 	def test_shell_stays_thin(self):
+		# by what it holds, not its line count, as test/guards/thin_shell.test.js does (#45, #49):
+		# a needed <meta> or <link> must not fail it
 		source = SHELL.read_text(encoding="utf-8")
-		self.assertLessEqual(len(source.splitlines()), MAX_SHELL_LINES)
 		self.assertNotIn("<style", source, "styles belong in src/styles")
 		self.assertNotIn(' style="', source, "styles belong in src/styles")
 		self.assertNotIn("serviceWorker", source, "the service worker is registered from src/main.js")

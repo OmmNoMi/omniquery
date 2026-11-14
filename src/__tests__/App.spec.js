@@ -13,13 +13,18 @@ const assigned = {
   ],
 };
 let bootstrap = assigned;
+// get_schema by template name, as the server answers it; a slug is resolved only by the page (omniquery.py)
+const schemas = {
+  "OQS-WATER": { template_name: "OQS-WATER", title: "Water Access Survey", project: "P-1", sections: [{ section_title: "Water source", questions: [] }] },
+};
 
 vi.mock("frappe-ui", async (importOriginal) => {
   const actual = await importOriginal();
   return {
     ...actual,
-    call: vi.fn(async (method) => {
+    call: vi.fn(async (method, args) => {
       if (method === "omniquery.api.survey.get_bootstrap_data") return bootstrap;
+      if (method === "omniquery.api.survey.get_schema") return schemas[args.template_name] ?? null;
       return {};
     }),
   };
@@ -54,6 +59,7 @@ describe("App shell (#46)", () => {
   afterEach(() => {
     wrapper?.unmount();
     document.body.innerHTML = "";
+    delete window.frappe;
   });
 
   it("leaves the loading screen and lists the surveys", async () => {
@@ -138,3 +144,106 @@ describe("App shell (#46)", () => {
     expect(document.body.textContent).not.toContain("No active surveys available");
   });
 });
+
+// What the app shows, read from the page as a surveyor sees it
+function shownView() {
+  if (document.body.querySelector("input[placeholder='Search surveys...']")) return "catalog";
+  const heading = document.body.querySelector("main h1, main h2, main h3");
+  return heading ? heading.textContent.trim() : "";
+}
+
+// The session history as a browser keeps it. happy-dom's test window has no browser frame, so its
+// history.back() does nothing: record each entry the app pushes or replaces, and go Back as a
+// browser does, to the entry before, with the URL and state the app gave it
+let entries = [];
+const { pushState, replaceState } = window.history;
+function recordHistory() {
+  vi.spyOn(window.history, "pushState").mockImplementation((state, _title, url) => {
+    pushState.call(window.history, state, "", url);
+    entries.push({ state: structuredClone(state), url: window.location.pathname });
+  });
+  vi.spyOn(window.history, "replaceState").mockImplementation((state, _title, url) => {
+    replaceState.call(window.history, state, "", url);
+    entries[entries.length - 1] = { state: structuredClone(state), url: window.location.pathname };
+  });
+}
+async function goBack() {
+  entries.pop();
+  const { state, url } = entries[entries.length - 1];
+  replaceState.call(window.history, state, "", url);
+  // happy-dom's PopStateEvent is a plain Event that drops `state`; a browser's carries the entry's
+  window.dispatchEvent(Object.defineProperty(new Event("popstate"), "state", { value: state }));
+  await settle();
+}
+
+// A deep link as the portal page boots it: the path, plus the IDs omniquery.py resolved from it
+function openLink(path, boot = {}) {
+  replaceState.call(window.history, null, "", path);
+  entries = [{ state: null, url: path }];
+  window.frappe = { user: "surveyor@ommnomi.test", initial_project_id: "", initial_survey_id: "", ...boot };
+}
+
+describe("Back and Forward show the page each entry was (#38)", () => {
+  let wrapper;
+
+  beforeEach(async () => {
+    bootstrap = assigned;
+    useTranslation().setLanguage("en");
+    await db.templates.clear();
+    await db.responses.clear();
+    window.scrollTo = vi.fn();
+    recordHistory();
+  });
+  afterEach(() => {
+    wrapper?.unmount();
+    document.body.innerHTML = "";
+    delete window.frappe;
+    vi.restoreAllMocks();
+  });
+
+  it("opens a project link, and Back from a survey opened there returns to the project, then the catalog", async () => {
+    openLink("/omniquery/project/P-1", { initial_project_id: "P-1" });
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    expect(shownView()).toBe("Village Water");
+
+    await wrapper.vm.s.selectSurvey("OQS-WATER");
+    await settle();
+    expect(document.body.textContent).toContain("Water source");
+
+    await goBack();
+    expect(shownView(), "Back from the survey").toBe("Village Water");
+
+    wrapper.vm.s.closeProjectPage();
+    await settle();
+    expect(shownView()).toBe("catalog");
+    await goBack();
+    expect(shownView(), "Back from the catalog the project page led to").toBe("Village Water");
+  });
+
+  it("comes back to a survey opened by its slug under the name the server resolved", async () => {
+    openLink("/omniquery/water-access", { initial_survey_id: "OQS-WATER" });
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    expect(document.body.textContent).toContain("Water source");
+    expect(window.history.state, "the first entry records the resolved name").toEqual({ type: "survey", surveyName: "OQS-WATER" });
+
+    await wrapper.vm.s.goHome();
+    await settle();
+    expect(shownView()).toBe("catalog");
+
+    window.frappe.initial_survey_id = ""; // Back reads the entry, not what the page booted
+    await goBack();
+    expect(document.body.textContent, "Back to the slug link").toContain("Water source");
+    expect(wrapper.vm.s.activeTemplate?.template_name).toBe("OQS-WATER");
+  });
+
+  it("reads an entry with no state from its path: the offline shell boots no IDs", async () => {
+    openLink("/omniquery/project/P-1");
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    expect(shownView()).toBe("Village Water");
+    expect(window.history.state).toEqual({ type: "project", projectId: "P-1" });
+  });
+});
+

@@ -37,19 +37,19 @@ def get_context(context):
 	frappe.db.commit()  # nosemgrep
 	ctx.csrf_token = csrf_token
 
-	import json
 	user_lang = getattr(frappe.local, "lang", None) or "en"
 	try:
 		from frappe.translate import get_all_translations
 		translations = get_all_translations(user_lang)
 	except Exception:
 		translations = {}
-	ctx.translations = json.dumps(translations)
+	ctx.translations = translations
 	ctx.lang = user_lang
 
 	ctx.current_user = frappe.session.user
-	ctx.user_roles = json.dumps(frappe.get_roles(ctx.current_user))
-	# the PWA greets the surveyor by name (#51); the page writes it into a script with |tojson
+	ctx.user_roles = frappe.get_roles(ctx.current_user)
+	# the PWA greets the surveyor by name (#51). Every value above and below goes into the page's
+	# script through |tojson, so the template, not this code, encodes it
 	ctx.current_user_fullname = frappe.utils.get_fullname(ctx.current_user) if ctx.current_user != "Guest" else ""
 	try:
 		import os

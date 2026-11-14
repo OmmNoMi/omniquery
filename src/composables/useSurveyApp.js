@@ -7,6 +7,7 @@ import { useGPS } from "./useGPS";
 import { useTextScale } from "./useTextScale";
 import { useTranslation } from "./useTranslation";
 import { useAudioRecorder } from "./useAudioRecorder";
+import { bootRoute, catalogRoute, projectRoute, pushRoute, replaceRoute, routeFromPath, routeFromState, surveyRoute } from "../utils/route";
 
 // exported so component tests can provide a stand-in session or context
 export const SURVEY_SESSION = Symbol("surveySession");
@@ -133,18 +134,6 @@ export function useSurveyApp() {
     return user === "Guest";
   });
 
-  function getRouteProjectId() {
-    if (window.frappe && window.frappe.initial_project_id) {
-      return window.frappe.initial_project_id;
-    }
-    const path = (window.location && window.location.pathname) || "";
-    const parts = path.split("/").filter(Boolean);
-    if (parts.length >= 3 && parts[0] === "omniquery" && parts[1] === "project") {
-      return decodeURIComponent(parts[2]);
-    }
-    return "";
-  }
-
   const activeProjectTitle = computed(() => {
     if (!activeProjectId.value) return "";
     const match = availableTemplates.value.find(
@@ -163,9 +152,7 @@ export function useSurveyApp() {
         : projectIdOrData?.name || projectIdOrData?.id || projectIdOrData?.project_name || selectedProject.value;
     activeProjectId.value = pId;
     activeTemplate.value = null;
-    if (window.history && window.history.pushState) {
-      window.history.pushState({ type: "project", projectId: pId }, "", `/omniquery/project/${encodeURIComponent(pId)}`);
-    }
+    pushRoute(projectRoute(pId));
     if (typeof window !== "undefined") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -173,9 +160,7 @@ export function useSurveyApp() {
 
   function closeProjectPage() {
     activeProjectId.value = "";
-    if (window.history && window.history.pushState) {
-      window.history.pushState({}, "", "/omniquery");
-    }
+    pushRoute(catalogRoute());
   }
 
   const showFilledFormsModal = ref(false);
@@ -286,29 +271,27 @@ export function useSurveyApp() {
   // someone in no project with no public survey to fill has no catalog to show (#57)
   const showCatalog = computed(() => !isUnassigned.value || availableTemplates.value.length > 0);
 
-  function getRouteSurveyId() {
-    if (window.frappe && window.frappe.initial_survey_id) {
-      return window.frappe.initial_survey_id;
+  // Shows a route without adding a history entry: the first page, and Back or Forward (#38)
+  async function showRoute(route) {
+    if (route.type === "project") {
+      activeProjectId.value = route.projectId;
+      activeTemplate.value = null;
+    } else if (route.type === "survey") {
+      activeProjectId.value = "";
+      await loadTemplate(route.surveyName);
+    } else {
+      activeProjectId.value = "";
+      activeTemplate.value = null;
+      await loadAvailableTemplates();
     }
-    const path = (window.location && window.location.pathname) || "";
-    const parts = path.split("/").filter(Boolean);
-    if (parts.length >= 2 && parts[0] === "omniquery") {
-      if (parts[1] === "project") return "";
-      return decodeURIComponent(parts[1]);
-    }
-    return "";
   }
 
   async function init() {
     isLoading.value = true;
     await loadAvailableTemplates();
-    const initialProjectId = getRouteProjectId();
-    const initialSurveyId = getRouteSurveyId();
-    if (initialProjectId) {
-      activeProjectId.value = initialProjectId;
-    } else if (initialSurveyId) {
-      await loadTemplate(initialSurveyId);
-    }
+    const route = bootRoute();
+    replaceRoute(route); // so Back to this first entry shows it, with the survey name the server resolved
+    if (route.type !== "catalog") await showRoute(route);
     isLoading.value = false;
   }
 
@@ -648,9 +631,7 @@ export function useSurveyApp() {
     isSubmissionSynced.value = false;
     currentDraftId.value = "";
     responses.value = {};
-    if (window.history && window.history.pushState) {
-      window.history.pushState({}, "", "/omniquery");
-    }
+    pushRoute(catalogRoute());
     await loadAvailableTemplates();
   }
 
@@ -663,9 +644,7 @@ export function useSurveyApp() {
       toast.warning(__("This survey is not yet downloaded on your device. Please connect to the internet once to download it."));
       return;
     }
-    if (window.history && window.history.pushState) {
-      window.history.pushState({ type: "survey", surveyName }, "", `/omniquery/${encodeURIComponent(surveyName)}`);
-    }
+    pushRoute(surveyRoute(surveyName));
   }
 
   async function saveOfflineRecord() {
@@ -804,21 +783,8 @@ export function useSurveyApp() {
     await loadActiveDrafts();
   }
 
-  async function onPopState() {
-    const projId = getRouteProjectId();
-    const survId = getRouteSurveyId();
-    if (projId) {
-      activeProjectId.value = projId;
-      activeTemplate.value = null;
-    } else if (survId) {
-      activeProjectId.value = "";
-      await loadTemplate(survId);
-    } else {
-      activeProjectId.value = "";
-      activeTemplate.value = null;
-      await loadAvailableTemplates();
-    }
-  }
+  // The entry's own route; one with none (a link from outside the app) is read from its path
+  const onPopState = (event) => showRoute(routeFromState(event.state) || routeFromPath(window.location.pathname));
 
   onMounted(() => {
     init();
