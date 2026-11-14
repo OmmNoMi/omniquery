@@ -49,7 +49,6 @@ def get_context(context):
 	except Exception:
 		translations = {}
 	ctx.translations = json.dumps(translations)
-	ctx.current_lang = user_lang
 	ctx.lang = user_lang
 
 	ctx.current_user = frappe.session.user

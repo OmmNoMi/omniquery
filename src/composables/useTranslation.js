@@ -1,4 +1,4 @@
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 
 const CORE_HINDI = {
   "{0} surveys today": "आज {0} सर्वेक्षण",
@@ -62,6 +62,18 @@ const CORE_HINDI = {
 
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";
 const currentLang = ref(initialLang);
+// <html lang> names the language on screen, so screen readers pick the right voice (#45).
+// The server renders it from the Frappe language for the loading screen; the PWA's languages are both left-to-right.
+if (typeof document !== "undefined") {
+  watch(
+    currentLang,
+    (lang) => {
+      document.documentElement.lang = lang;
+      document.documentElement.dir = "ltr";
+    },
+    { immediate: true, flush: "sync" }
+  );
+}
 
 function fillPlaceholders(text, args) {
   if (!args) return text;
@@ -85,7 +97,6 @@ export function useTranslation() {
     currentLang.value = currentLang.value === "hi" ? "en" : "hi";
     if (typeof window !== "undefined") {
       localStorage.setItem("omniquery_lang", currentLang.value);
-      document.documentElement.lang = currentLang.value;
     }
   }
 
@@ -93,7 +104,6 @@ export function useTranslation() {
     currentLang.value = lang === "en" ? "en" : "hi";
     if (typeof window !== "undefined") {
       localStorage.setItem("omniquery_lang", currentLang.value);
-      document.documentElement.lang = currentLang.value;
     }
   }
 
