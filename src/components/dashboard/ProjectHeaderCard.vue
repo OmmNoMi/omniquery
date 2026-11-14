@@ -166,13 +166,17 @@
             </div>
             <div v-else class="text-[11px] text-slate-400 font-medium"></div>
 
+            <!-- Two whole labels, not one split in half, so each translates as a phrase; the long one
+                 waits for sm: so the button fits at 375px (#41) -->
             <Button
+              variant="subtle"
+              :iconLeft="BookOpen"
+              :iconRight="ArrowRight"
+              class="min-w-0 max-w-full"
               @click.stop="$emit('open-project-details', proj.id)"
-              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 active:scale-95 text-xs font-bold transition shadow-2xs cursor-pointer shrink-0"
             >
-              <BookOpen class="w-3.5 h-3.5" />
-              <span>{{ __('Project Details & Training Materials') }}</span>
-              <span>→</span>
+              <span class="sm:hidden">{{ __('Project details') }}</span>
+              <span class="hidden sm:inline">{{ __('Project details and training materials') }}</span>
             </Button>
           </div>
         </div>
@@ -184,7 +188,7 @@
 <script setup>
 import { computed, ref, onMounted, nextTick } from "vue";
 import { Button } from "frappe-ui";
-import { Landmark, ClipboardList, Download, BookOpen } from "lucide-vue-next";
+import { Landmark, ClipboardList, Download, BookOpen, ArrowRight } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 
 const props = defineProps({

@@ -21,6 +21,15 @@ const benchTest = (module) => ({
   cwd: benchDir,
 });
 
+// [find, replace] that moves the block from marker `a` up to `b` down to just before `c`: a mutant
+// that changes the order of sections without editing either one
+function moveBlockBelow(file, a, b, c) {
+  const text = fs.readFileSync(file, "utf8");
+  const [start, middle, end] = [a, b, c].map((marker) => text.indexOf(marker));
+  if (!(start >= 0 && start < middle && middle < end)) return [`${a} missing or out of order`, ""];
+  return [text.slice(start, end), text.slice(middle, end) + text.slice(start, middle)];
+}
+
 // [guard, description, file, find, replace, test]
 const MUTANTS = [
   [
@@ -350,6 +359,66 @@ const MUTANTS = [
     "@toggle-focus-mode=\"emit('close')\"",
     "",
     vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the logo link swallows cmd/ctrl-click, so it cannot open a new tab",
+    src("src/components/header/CompactHeader.vue"),
+    '@click.left.exact.prevent="$emit(\'home\')"',
+    '@click.prevent="$emit(\'home\')"',
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the logo icon is announced as well as the wordmark",
+    src("src/components/header/CompactHeader.vue"),
+    'alt=""\n            class="w-7 h-7 rounded-lg shadow-xs"',
+    'alt="OmniQuery"\n            class="w-7 h-7 rounded-lg shadow-xs"',
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the My Account link is shorter than 24px",
+    src("src/components/header/CompactHeader.vue"),
+    "flex items-center gap-1 min-h-6",
+    "flex items-center gap-1",
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "a settings sheet button shrinks to 16px",
+    src("src/components/header/CompactHeader.vue"),
+    "w-11 h-11 min-w-[44px] min-h-[44px]",
+    "w-11 h-11 !h-4 min-w-[44px]",
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the draft card goes back below the Daily Target strip and KPI tiles",
+    src("src/components/dashboard/SurveyorDashboard.vue"),
+    ...moveBlockBelow(
+      src("src/components/dashboard/SurveyorDashboard.vue"),
+      "    <!-- Active draft quick-resume card",
+      "    <!-- Not in any project yet",
+      "    <!-- Quick Access to Filled Forms",
+    ),
+    vitest("src/components/__tests__/SurveyorDashboard.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "Resume drops to a small 28px button",
+    src("src/components/dashboard/SurveyorDashboard.vue"),
+    'size="md"\n            :iconLeft="Play"',
+    'size="sm"\n            :iconLeft="Play"',
+    vitest("src/components/__tests__/SurveyorDashboard.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the short details label is split into two translated pieces again",
+    src("src/components/dashboard/ProjectHeaderCard.vue"),
+    "<span class=\"sm:hidden\">{{ __('Project details') }}</span>",
+    "<span class=\"sm:hidden\">{{ __('Project') }} {{ __('details') }}</span>",
+    vitest("src/components/__tests__/ProjectHeaderCard.spec.js"),
   ],
 ];
 

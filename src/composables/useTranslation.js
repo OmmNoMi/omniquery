@@ -18,6 +18,8 @@ const CORE_HINDI = {
   "Search surveys...": "सर्वेक्षण खोजें...",
   "Search surveys": "सर्वेक्षण खोजें",
   "Clear search": "खोज साफ़ करें",
+  "Project details": "प्रोजेक्ट विवरण",
+  "Project details and training materials": "प्रोजेक्ट विवरण और प्रशिक्षण सामग्री",
   "Loading...": "लोड हो रहा है...",
   "Survey submitted": "सर्वेक्षण सफलतापूर्वक दर्ज",
   "Response recorded successfully in offline queue.": "प्रतिक्रिया ऑफ़लाइन कतार में सफलतापूर्वक दर्ज कर ली गई है।",

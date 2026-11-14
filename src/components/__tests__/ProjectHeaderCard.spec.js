@@ -1,6 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import ProjectHeaderCard from "../dashboard/ProjectHeaderCard.vue";
+import { useTranslation } from "../../composables/useTranslation";
 
 describe("ProjectHeaderCard", () => {
   it("deduplicates projects with matching normalized names", () => {
@@ -64,5 +65,34 @@ describe("ProjectHeaderCard", () => {
     wrapper.vm.scrollToIndex(1);
     expect(wrapper.emitted("update:selectedProject")).toBeTruthy();
     expect(wrapper.emitted("update:selectedProject")[0]).toEqual(["PROJ-B"]);
+  });
+
+  describe("project details button at 375px (#41)", () => {
+    afterEach(() => useTranslation().setLanguage("en"));
+
+    const mountCard = () =>
+      mount(ProjectHeaderCard, {
+        props: { templates: [{ project: "PROJ-A", project_name: "Dairy Project", template_name: "T1" }], selectedProject: "PROJ-A" },
+      });
+    const detailsButton = (wrapper) => wrapper.findAll("button").find((b) => b.find("span.sm\\:hidden").exists());
+
+    // each label is one whole phrase, so a translation can reorder its words; the short one fits a phone
+    const LABELS = {
+      en: ["Project details", "Project details and training materials"],
+      hi: ["प्रोजेक्ट विवरण", "प्रोजेक्ट विवरण और प्रशिक्षण सामग्री"],
+    };
+
+    for (const [language, [short, full]] of Object.entries(LABELS)) {
+      it(`shows the short label on a phone and the full one from sm up, in ${language}`, async () => {
+        useTranslation().setLanguage(language);
+        const wrapper = mountCard();
+        const button = detailsButton(wrapper);
+        expect(button, "details button").toBeDefined();
+        expect(button.find("span.sm\\:hidden").text()).toBe(short);
+        expect(button.find("span.hidden.sm\\:inline").text()).toBe(full);
+        await button.trigger("click");
+        expect(wrapper.emitted("open-project-details")).toEqual([["PROJ-A"]]);
+      });
+    }
   });
 });

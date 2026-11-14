@@ -16,15 +16,21 @@
           </svg>
         </Button>
 
-        <!-- Official OmniQuery Cloud Icon & Brand Title -->
-        <div class="flex items-center gap-2 cursor-pointer select-none" @click="$emit('home')">
+        <!-- Logo: a real link home. A plain click stays in the app (home, or the exit dialog mid-survey);
+             .exact leaves cmd/ctrl/shift-click to the browser, so it can open a new tab. The visible
+             wordmark names the link, so the icon is decorative. -->
+        <a
+          href="/omniquery"
+          @click.left.exact.prevent="$emit('home')"
+          class="flex items-center gap-2 cursor-pointer select-none rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+        >
           <img
             :src="'/assets/omniquery/icons/desktop_icons/solid/omniquery.svg'"
-            alt="OmniQuery"
+            alt=""
             class="w-7 h-7 rounded-lg shadow-xs"
           />
           <span class="font-extrabold text-base text-slate-900 dark:text-white tracking-tight">OmniQuery</span>
-        </div>
+        </a>
       </div>
 
       <!-- Right: Progress Chip, Google Meet-style Microphone, and User Avatar -->
@@ -358,7 +364,7 @@
             <a
               v-if="isOnline"
               href="/me"
-              class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+              class="font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 min-h-6"
             >
               <span>{{ __('My Account') }}</span>
               <span aria-hidden="true">↗</span>

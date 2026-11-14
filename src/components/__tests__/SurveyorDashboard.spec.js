@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import SurveyorDashboard from "../dashboard/SurveyorDashboard.vue";
 import { useTranslation } from "../../composables/useTranslation.js";
+import { classTargetSize } from "../../test/tapTargets";
 
 describe("SurveyorDashboard", () => {
   beforeEach(() => {
@@ -130,6 +131,47 @@ describe("SurveyorDashboard", () => {
     await startNewBtn.trigger("click");
     expect(wrapper.emitted("start-new-survey")).toBeTruthy();
     expect(wrapper.emitted("start-new-survey")[0]).toEqual(["TMPL-SHG"]);
+  });
+
+  describe("at 375px (#41)", () => {
+    const draft = { response_uid: "DRAFT-1", template_name: "TMPL-SHG", progress_percent: 40, updated_at: new Date().toISOString() };
+
+    async function mountSurveyorWithDraft() {
+      mockKpis({ today_count: 2, total_count: 10, daily_target: 6 });
+      const wrapper = mount(SurveyorDashboard, {
+        props: {
+          isOnline: true,
+          userRoles: ["OmniQuery User"],
+          activeDrafts: { "TMPL-SHG": draft },
+          templates: [{ template_name: "TMPL-SHG", title: "SHG Study" }],
+        },
+      });
+      await vi.waitFor(() => expect(wrapper.text()).toContain("Daily Target"));
+      return wrapper;
+    }
+
+    const elementWithText = (wrapper, text) => wrapper.findAll("span").find((s) => s.text() === text)?.element;
+    const isBefore = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    it("puts the draft's Resume above the Daily Target strip and the KPI tiles, so it is above the fold", async () => {
+      const wrapper = await mountSurveyorWithDraft();
+      const draftCard = elementWithText(wrapper, "In-Progress Draft");
+      const target = elementWithText(wrapper, "Daily Target:");
+      const firstKpi = wrapper.find("[role='button']").element;
+      expect(draftCard && target && firstKpi, "draft card, target strip and KPI tile rendered").toBeTruthy();
+      expect(isBefore(draftCard, target), "draft before Daily Target").toBe(true);
+      expect(isBefore(draftCard, firstKpi), "draft before the KPI tiles").toBe(true);
+    });
+
+    it("sizes Start New and Resume at 32px and shares the row between them", async () => {
+      const wrapper = await mountSurveyorWithDraft();
+      for (const label of ["Start New", "Resume Survey"]) {
+        const button = wrapper.findAll("button").find((b) => b.text() === label);
+        expect(button, label).toBeDefined();
+        expect(classTargetSize(button.attributes("class")).height, label).toBeGreaterThanOrEqual(32);
+        expect(button.classes(), label).toContain("flex-1");
+      }
+    });
   });
 
   it("renders Manager Review Queue banner and Desk link when user has OmniQuery Manager role", async () => {

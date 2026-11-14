@@ -2325,3 +2325,11 @@ msgstr "सर्वेक्षण खोजें"
 #: src/views/Catalog.vue
 msgid "Clear search"
 msgstr "खोज साफ़ करें"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Project details"
+msgstr "प्रोजेक्ट विवरण"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Project details and training materials"
+msgstr "प्रोजेक्ट विवरण और प्रशिक्षण सामग्री"

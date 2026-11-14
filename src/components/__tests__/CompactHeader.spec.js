@@ -4,6 +4,7 @@ import { mount } from "@vue/test-utils";
 import CompactHeader from "../header/CompactHeader.vue";
 import { useTranslation } from "../../composables/useTranslation";
 import { OMNIQUERY_CONTEXT } from "../../composables/useSurveyApp";
+import { smallTapTargets } from "../../test/tapTargets";
 
 // The header reads roles from the boot data and online/queue state from App's provided context (#46)
 function mountHeader({ roles = [], isOnline = true, pendingWALCount = 0, ...options } = {}) {
@@ -160,6 +161,54 @@ describe("CompactHeader", () => {
       expect(document.body.querySelector("h3")?.textContent).toBe(EMAIL);
       expect(timesShown(EMAIL)).toBe(1);
       wrapper.unmount();
+    });
+  });
+
+  describe("at 375px (#41)", () => {
+    beforeEach(() => {
+      useTranslation().setLanguage("en");
+    });
+
+    // a cancelable click, so the spec can see whether the header kept the browser from following the link
+    function clickLogo(wrapper, init = {}) {
+      const event = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, ...init });
+      wrapper.find("a[href='/omniquery']").element.dispatchEvent(event);
+      return event;
+    }
+
+    it("makes the logo a link home, named by its wordmark", () => {
+      const wrapper = mountHeader({ roles: ["OmniQuery User"] });
+      const logo = wrapper.find("a[href='/omniquery']");
+      expect(logo.exists(), "logo link").toBe(true);
+      expect(logo.text()).toBe("OmniQuery");
+      expect(logo.find("img").attributes("alt"), "the icon is decorative next to the wordmark").toBe("");
+      wrapper.unmount();
+    });
+
+    it("stays in the app on a plain click, and leaves cmd, ctrl or shift-click to the browser", () => {
+      const wrapper = mountHeader({ roles: ["OmniQuery User"] });
+      expect(clickLogo(wrapper).defaultPrevented, "plain click").toBe(true);
+      expect(wrapper.emitted("home")).toHaveLength(1);
+      for (const key of ["metaKey", "ctrlKey", "shiftKey"]) {
+        expect(clickLogo(wrapper, { [key]: true }).defaultPrevented, key).toBe(false);
+      }
+      expect(wrapper.emitted("home"), "a modifier click opens a tab instead").toHaveLength(1);
+      wrapper.unmount();
+    });
+
+    it("gives every button and link in the header and settings sheet a 24px target", async () => {
+      const wrapper = mountHeader({ roles: ["OmniQuery User"], pendingWALCount: 2, attachTo: document.body });
+      await wrapper.find("button[aria-label='Settings & Configuration']").trigger("click");
+      expect(document.body.querySelector("a[href='/me']"), "settings sheet open").not.toBeNull();
+      expect(smallTapTargets(document.body)).toEqual([]);
+      wrapper.unmount();
+    });
+
+    it("finds a target under 24px, or one with no height at all", () => {
+      document.body.innerHTML = `<button class="h-5 sm:h-10">a</button><a href="/x" class="flex">b</a>
+        <a href="/y"><img class="w-7 h-7"></a><button class="!h-9 !w-4">c</button><button class="h-7 !h-4 w-11">e</button><span role="button" class="min-h-[44px]">d</span>`;
+      expect(smallTapTargets(document.body)).toEqual(["a: ?x20px", "b: ?x?px", "c: 16x36px", "e: 44x16px"]);
+      document.body.innerHTML = "";
     });
   });
 
