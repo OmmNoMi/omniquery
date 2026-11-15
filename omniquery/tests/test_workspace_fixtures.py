@@ -1,6 +1,8 @@
 # Copyright (c) 2026, OmmNoMi Automation LLP and contributors
 # For license information, please see license.txt
 
+from unittest.mock import patch
+
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
@@ -13,8 +15,9 @@ class TestWorkspaceFixtures(FrappeTestCase):
 		self.assertEqual(ws.module, "OmniQuery")
 
 	def test_workspace_sidebar_structure_and_grouping(self):
-		self.assertTrue(frappe.db.exists("Workspace Sidebar", "OmniQuery"))
-		sidebar = frappe.get_doc("Workspace Sidebar", "OmniQuery")
+		# a module Sidebar shipped as omniquery/sidebar/omniquery; Workspace Sidebar is Frappe's inert archive
+		sidebar = frappe.get_doc("Sidebar", "OmniQuery")
+		self.assertEqual(sidebar.standard, 1)
 		labels = [item.label for item in sidebar.items]
 
 		expected_sections = [
@@ -45,21 +48,22 @@ class TestWorkspaceFixtures(FrappeTestCase):
 		self.assertEqual(icon.link_type, "Workspace Sidebar")
 		self.assertEqual(icon.link_to, "OmniQuery")
 
-	def test_after_migrate_recreates_navigation_when_sidebar_is_missing(self):
-		# Production on 2026-10-08: the sidebar and icon were gone, and after_migrate inserted
-		# the icon before the sidebar it links to, so every migrate of the site failed.
+	def test_after_migrate_recreates_the_icon_without_the_sidebar_archive(self):
+		# Production on 2026-10-08: the icon was gone and after_migrate failed every migrate. The
+		# icon's link_to points at the retired Workspace Sidebar archive, which a fresh site lacks.
 		from omniquery import install
 
-		frappe.delete_doc("Desktop Icon", "OmniQuery", force=True, ignore_missing=True)
-		frappe.delete_doc("Workspace Sidebar", "OmniQuery", force=True, ignore_missing=True)
-		previous = frappe.flags.in_migrate
-		frappe.flags.in_migrate = True  # the sidebar archive only accepts rows during a migrate
-		try:
-			install.after_migrate()
-		finally:
-			frappe.flags.in_migrate = previous
+		real_exists = frappe.db.exists
 
-		self.assertTrue(frappe.db.exists("Workspace Sidebar", "OmniQuery"))
+		def exists_without_archive(doctype, *args, **kwargs):
+			return None if doctype == "Workspace Sidebar" else real_exists(doctype, *args, **kwargs)
+
+		# in developer mode, deleting and re-inserting a standard icon deletes and rewrites its shipped JSON file
+		with patch.dict(frappe.conf, {"developer_mode": 0}):
+			frappe.delete_doc("Desktop Icon", "OmniQuery", force=True, ignore_permissions=True)
+			with patch.object(frappe.db, "exists", exists_without_archive):
+				install.after_migrate()
+
 		self.assertTrue(frappe.db.exists("Desktop Icon", "OmniQuery"))
 
 	def test_manager_workspace_has_number_cards_and_review_shortcut(self):
