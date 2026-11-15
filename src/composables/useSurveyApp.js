@@ -7,6 +7,7 @@ import { useGPS } from "./useGPS";
 import { useTextScale } from "./useTextScale";
 import { useTranslation } from "./useTranslation";
 import { useAudioRecorder } from "./useAudioRecorder";
+import { buildResponsePayload, draftStored } from "../utils/responsePayload";
 import { bootRoute, catalogRoute, projectRoute, pushRoute, replaceRoute, routeFromPath, routeFromState, surveyRoute } from "../utils/route";
 
 // exported so component tests can provide a stand-in session or context
@@ -549,49 +550,32 @@ export function useSurveyApp() {
   let draftSyncTimer = null;
   const isSyncingDraft = ref(false);
 
-  async function syncDraftToServer() {
-    if (!isOnline.value || !activeTemplate.value || !currentDraftId.value || isSubmitted.value) return;
+  // the survey on screen, or nothing once it is submitted
+  function openDraft() {
+    if (isSubmitted.value) return {};
+    return { template: activeTemplate.value, responses: responses.value, responseId: currentDraftId.value };
+  }
 
-    const qList = (activeTemplate.value && activeTemplate.value.questions) || [];
-    const items = Object.entries(responses.value)
-      .filter(([_, val]) => val !== undefined && val !== null && String(val).trim() !== "")
-      .map(([code, val]) => {
-        const q = qList.find((item) => item.question_code === code);
-        return {
-          question_code: code,
-          question_label: q ? (q.label_en || q.label || code) : code,
-          value: val,
-        };
-      });
-
-    if (items.length === 0) return;
-
-    const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
-    const draftPayload = {
-      idempotency_key: currentDraftId.value,
-      survey_template: tmplName,
-      template_version: activeTemplate.value.version || 1,
-      respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
-      surveyor: (window.frappe && window.frappe.session && window.frappe.session.user) || "Administrator",
-      captured_at_local: new Date().toISOString(),
-      gps_latitude: gpsCoords.value?.latitude || null,
-      gps_longitude: gpsCoords.value?.longitude || null,
-      gps_accuracy: gpsCoords.value?.accuracy || null,
-      items: items,
-    };
+  // Sends a draft to the server and marks it synced only when the server stored it. A draft that
+  // is not marked stays for syncAllDrafts to send when the device is next online.
+  async function syncDraftToServer(draft = openDraft()) {
+    const { template, responses: answers, responseId } = draft;
+    if (!isOnline.value || !template || !responseId) return false;
+    const payload = buildResponsePayload({ template, responses: answers, responseId, gps: gpsCoords.value });
+    if (payload.items.length === 0) return false;
 
     try {
       isSyncingDraft.value = true;
-      const res = await call("omniquery.api.sync.sync_draft", {
-        draft: draftPayload,
-      });
-      if (res) {
-        try {
-          await db.responses.update(currentDraftId.value, { synced: true });
-        } catch (e) {}
+      const res = await call("omniquery.api.sync.sync_draft", { draft: payload });
+      if (!draftStored(res)) {
+        console.warn("Draft not stored on the server:", res);
+        return false;
       }
+      await db.responses.update(responseId, { synced: true });
+      return true;
     } catch (e) {
       console.warn("In-flight draft sync non-critical warning:", e);
+      return false;
     } finally {
       isSyncingDraft.value = false;
     }
@@ -619,10 +603,18 @@ export function useSurveyApp() {
       window.location.href = "/login?redirect-to=/omniquery";
       return;
     }
-    if (!isSubmitted.value && activeTemplate.value) {
-      scheduleDraftSaveAndSync();
-    } else {
-      if (draftSyncTimer) clearTimeout(draftSyncTimer);
+    if (draftSyncTimer) {
+      clearTimeout(draftSyncTimer);
+      draftSyncTimer = null;
+    }
+    // Take the survey being left before the reset below empties it; a debounced sync would read
+    // the emptied state, so the last answers never reached the server (#35).
+    const leaving = openDraft();
+    let leavingSync = null;
+    if (leaving.template) {
+      await saveDraftLocally(progressPercent.value);
+      // saving gives a draft that had no id its id
+      leavingSync = syncDraftToServer({ ...leaving, responseId: currentDraftId.value });
     }
     activeTemplate.value = null;
     activeProjectId.value = "";
@@ -632,7 +624,7 @@ export function useSurveyApp() {
     currentDraftId.value = "";
     responses.value = {};
     pushRoute(catalogRoute());
-    await loadAvailableTemplates();
+    await Promise.all([loadAvailableTemplates(), leavingSync]);
   }
 
   async function selectSurvey(surveyName, options = {}) {
@@ -649,35 +641,17 @@ export function useSurveyApp() {
 
   async function saveOfflineRecord() {
     if (draftSyncTimer) clearTimeout(draftSyncTimer);
-    const qList = (activeTemplate.value && activeTemplate.value.questions) || [];
-    const items = Object.entries(responses.value)
-      .filter(([_, val]) => val !== undefined && val !== null && String(val).trim() !== "")
-      .map(([code, val]) => {
-        const q = qList.find((item) => item.question_code === code);
-        return {
-          question_code: code,
-          question_label: q ? (q.label_en || q.label || code) : code,
-          value: val,
-        };
-      });
-
     const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
     const draftKey = currentDraftId.value || generateSurveyId(tmplName);
     submittedResponseId.value = draftKey;
     submittedTimestamp.value = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    const payload = {
-      idempotency_key: draftKey,
-      survey_template: tmplName,
-      template_version: activeTemplate.value.version || 1,
-      respondent: responses.value.respondent_name || responses.value.entrepreneur_name || "",
-      surveyor: (window.frappe && (window.frappe.user || (window.frappe.session && window.frappe.session.user))) || "Administrator",
-      captured_at_local: new Date().toISOString(),
-      gps_latitude: gpsCoords.value?.latitude || null,
-      gps_longitude: gpsCoords.value?.longitude || null,
-      gps_accuracy: gpsCoords.value?.accuracy || null,
-      items: items,
-    };
+    const payload = buildResponsePayload({
+      template: activeTemplate.value,
+      responses: responses.value,
+      responseId: draftKey,
+      gps: gpsCoords.value,
+    });
 
     try {
       await db.responses.put({

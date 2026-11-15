@@ -78,21 +78,17 @@ def log_raw_ingestion_dump(endpoint, raw_payload, client_ip=None, surveyor=None)
 		pass
 
 
-def resolve_surveyor(user_or_name=None):
-	"""Resolves linked OmniQuery Surveyor or defaults to SURV-Administrator."""
-	user = str(user_or_name or frappe.session.user or "Administrator").strip()
-	if frappe.db.exists("OmniQuery Surveyor", user):
-		return user
-	s = (
-		frappe.db.get_value("OmniQuery Surveyor", {"user": user}, "name")
-		or frappe.db.get_value("OmniQuery Surveyor", {"surveyor_name": user}, "name")
-		or frappe.db.get_value("OmniQuery Surveyor", {"status": "Active"}, "name")
-	)
-	if s:
-		return s
+def resolve_surveyor(user=None):
+	"""The Surveyor linked to `user`, by default the session user (#35).
+
+	Callers pass nothing: who did a survey comes from the session, never from a name in the
+	payload, so a client can neither pick another person's Surveyor nor mint new ones.
+	"""
+	user = user or frappe.session.user
 	try:
-		return ensure_surveyor_for_user(user if frappe.db.exists("User", user) else "Administrator")
+		return ensure_surveyor_for_user(user)
 	except Exception:
+		frappe.log_error(f"Could not resolve a Surveyor for {user}", frappe.get_traceback())
 		return "SURV-Administrator"
 
 
@@ -290,7 +286,7 @@ def sync_draft(data=None):
 		resp_doc.idempotency_key = idempotency_key
 		resp_doc.survey_template = template_name
 		resp_doc.survey_status = "Draft"
-		resp_doc.surveyor = resolve_surveyor(sub.get("surveyor") or current_user)
+		resp_doc.surveyor = resolve_surveyor()
 
 	resp_doc.template_version = sub.get("template_version") or 1
 	resp_doc.respondent = resolve_respondent(sub.get("respondent"))
@@ -417,7 +413,15 @@ def batch_push(submissions=None):
 			submissions = payload
 		elif not submissions and "idempotency_key" in payload:
 			submissions = [payload]
+	return push_submissions(submissions, raw_data=raw_data)
 
+
+def push_submissions(submissions, surveyor=None, raw_data=None):
+	"""File each submission as a Response, credited to `surveyor`.
+
+	Only server code passes `surveyor`: a replayed audit log credits the Surveyor it recorded at the
+	first attempt. batch_push, the client endpoint, never does, so a client's work is always credited
+	to the session user's Surveyor (#35)."""
 	client_ip = getattr(frappe.local, "request_ip", "127.0.0.1")
 	current_user = frappe.session.user
 
@@ -435,8 +439,9 @@ def batch_push(submissions=None):
 		}
 
 	# Durable file-system dump: guaranteed never to fail even under DB lockouts
-	log_raw_ingestion_dump("batch_push", raw_data if "raw_data" in locals() and raw_data else submissions, client_ip=client_ip, surveyor=current_user)
+	log_raw_ingestion_dump("batch_push", raw_data or submissions, client_ip=client_ip, surveyor=current_user)
 
+	surveyor = surveyor or resolve_surveyor()
 	results = []
 
 	for raw_sub in submissions:
@@ -450,7 +455,7 @@ def batch_push(submissions=None):
 		if not template_name:
 			err_msg = "Unknown payload shape: missing survey_template"
 			upsert_audit_log(idempotency_key, {
-				"surveyor": resolve_surveyor(current_user), "sync_status": "FAILED", "client_ip": client_ip,
+				"surveyor": surveyor, "sync_status": "FAILED", "client_ip": client_ip,
 				"payload_hash_sha256": payload_hash, "raw_payload": raw_payload_str, "error_message": err_msg,
 			})
 			log_field_error(idempotency_key, err_msg, raw_payload_str, {"surveyor": str(current_user)})
@@ -461,7 +466,7 @@ def batch_push(submissions=None):
 		if not user_has_template_permission(template_name, user=current_user):
 			err_msg = "Guest access not permitted for private survey template" if current_user == "Guest" else f"Permission denied for template {template_name}"
 			upsert_audit_log(idempotency_key, {
-				"surveyor": resolve_surveyor(sub.get("surveyor") or current_user), "sync_status": "REJECTED",
+				"surveyor": surveyor, "sync_status": "REJECTED",
 				"client_ip": client_ip, "raw_payload": raw_payload_str, "error_message": err_msg,
 			})
 			results.append({"idempotency_key": idempotency_key, "status": "REJECTED", "error": err_msg})
@@ -493,7 +498,7 @@ def batch_push(submissions=None):
 
 		# Phase 1: Pre-save in OmniQuery Sync Audit Log with PENDING status and full raw JSON dump
 		audit_doc_name = upsert_audit_log(idempotency_key, {
-			"surveyor": resolve_surveyor(sub.get("surveyor") or current_user), "sync_status": "PENDING",
+			"surveyor": surveyor, "sync_status": "PENDING",
 			"client_ip": client_ip, "payload_hash_sha256": payload_hash, "raw_payload": raw_payload_str,
 			"error_message": None,
 		})
@@ -513,7 +518,7 @@ def batch_push(submissions=None):
 
 			resp_doc.template_version = sub.get("template_version") or 1
 			resp_doc.survey_status = "Submitted"
-			resp_doc.surveyor = resolve_surveyor(sub.get("surveyor") or current_user)
+			resp_doc.surveyor = surveyor
 			resp_doc.respondent = resolve_respondent(sub.get("respondent"))
 			resp_doc.gps_latitude = sub.get("gps_latitude")
 			resp_doc.gps_longitude = sub.get("gps_longitude")
@@ -595,7 +600,7 @@ def batch_push(submissions=None):
 			# Record Field Error Log so administrators can inspect failed submissions in Desk (Dedup on idempotency_key + error)
 			log_field_error(idempotency_key, e, raw_payload_str, {
 				"survey_template": template_name, "template_version": sub.get("template_version") or 1,
-				"surveyor": str(sub.get("surveyor") or current_user), "stack_trace": frappe.get_traceback(),
+				"surveyor": current_user, "stack_trace": frappe.get_traceback(),
 			})
 
 			results.append({"idempotency_key": idempotency_key, "status": "FAILED", "error": str(e)})

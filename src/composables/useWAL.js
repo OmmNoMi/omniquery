@@ -2,6 +2,7 @@ import { ref, getCurrentScope, onScopeDispose } from "vue";
 import { createSharedComposable } from "@vueuse/core";
 import { call, fileToBase64 } from "frappe-ui";
 import { db, audioRecordingsFor, recordingResponse } from "../services/db";
+import { buildResponsePayload, draftStored } from "../utils/responsePayload";
 
 export function createWAL() {
   const isOnline = ref(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -183,7 +184,15 @@ export function createWAL() {
     }
   }
 
-  async function syncAllDrafts() {
+  // startup, the online event and the Sync button can each ask at once: they share one run, so no
+  // draft goes to the server twice
+  let draftSyncRun = null;
+  function syncAllDrafts() {
+    draftSyncRun ||= sendUnsyncedDrafts().finally(() => (draftSyncRun = null));
+    return draftSyncRun;
+  }
+
+  async function sendUnsyncedDrafts() {
     const isGuest =
       typeof window !== "undefined" &&
       window.frappe &&
@@ -192,27 +201,25 @@ export function createWAL() {
 
     let syncedCount = 0;
     try {
-      const drafts = await db.responses.where("status").equals("Draft").toArray();
+      // a draft is marked synced once the server stores it, and every local save unmarks it
+      const drafts = await db.responses.where("status").equals("Draft").filter((d) => !d.synced).toArray();
       for (const draft of drafts) {
-        if (!draft.responses || Object.keys(draft.responses).length === 0) continue;
-        const items = Object.entries(draft.responses).map(([code, val]) => ({
-          question_code: code,
-          question_label: code,
-          value: val,
-        }));
-        const payload = {
-          idempotency_key: draft.response_uid,
-          survey_template: draft.template_name,
-          template_version: draft.template_version || 1,
-          respondent: draft.responses.respondent_name || draft.responses.entrepreneur_name || "",
-          surveyor: (window.frappe && window.frappe.user) || "Administrator",
-          captured_at_local: draft.updated_at || draft.created_at || new Date().toISOString(),
-          items,
-        };
-        const res = await call("omniquery.api.sync.sync_draft", { draft: payload });
-        if (res !== undefined && res !== null) {
-          await db.responses.where("response_uid").equals(draft.response_uid).modify({ synced: true });
-          syncedCount++;
+        const payload = buildResponsePayload({
+          template: { name: draft.template_name, version: draft.template_version },
+          responses: draft.responses,
+          responseId: draft.response_uid,
+          capturedAt: draft.updated_at || draft.created_at || new Date().toISOString(),
+        });
+        if (payload.items.length === 0) continue;
+        try {
+          const res = await call("omniquery.api.sync.sync_draft", { draft: payload });
+          if (draftStored(res)) {
+            await db.responses.update(draft.response_uid, { synced: true });
+            syncedCount++;
+          }
+        } catch (e) {
+          // one draft the server refuses does not hold back the others
+          console.warn("Draft sync failed:", draft.response_uid, e);
         }
       }
     } catch (e) {
@@ -358,6 +365,8 @@ export function createWAL() {
   function handleOnline() {
     isOnline.value = true;
     syncWAL();
+    // a draft whose sync failed, for instance as the surveyor left the survey offline (#35)
+    syncAllDrafts();
   }
 
   function handleOffline() {
@@ -386,6 +395,7 @@ export function createWAL() {
         syncWAL();
       }
     });
+    if (isOnline.value) syncAllDrafts();
 
     syncInterval = setInterval(() => {
       if (isOnline.value && pendingWALCount.value > 0 && !isSyncing.value) {
