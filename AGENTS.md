@@ -26,3 +26,19 @@ cost real time to learn. Add to it when you learn something new.
   deletes its shipped JSON file. To remove one in a test, use `frappe.db.delete` and delete the
   child rows too.
 - When you change a shipped doctype or fixture JSON, bump its `modified` so migrate syncs it.
+
+## frappe-ui answer choices and TextInput
+
+- A frappe-ui `Button`'s colour comes from `variant` and `theme`, not `bg-*`/`text-*` classes,
+  and only theme gray is built from light/dark tokens. For an answer choice use
+  `choiceButtonProps(selected)` from `src/utils/choiceButton.js`: an outline gray Button, plus
+  the `choice-selected` class when selected, a pale green card with dark green text and a thick
+  green edge set in `src/styles/main.css` for light and dark mode (solid gray was too heavy on a
+  phone, a light gray fill too faint outdoors). Draw anything inside a choice in `currentColor`.
+  `test/guards/button_variants.test.js` enforces it and checks the contrast.
+- `TextInput` has `inheritAttrs: false`. `class` and `style` go on its wrapper `<div>`, and
+  every other attribute (`aria-label`, `placeholder`) goes on the `<input>`. So focus classes on a
+  `TextInput` do nothing, and border, background, padding, height and text classes draw a second
+  box around frappe-ui's own input. Use its `size`/`variant` props (a survey answer is
+  `size="lg" variant="outline"`), and keep `class` to layout (width, margin, flex).
+  `test/guards/text_inputs.test.js` enforces it, with a shrinking per-file count.

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import colors from "tailwindcss/colors";
+import { contrastRatio } from "./contrast";
 import { classTokens as tokens, elementClasses, getSourceFiles, namedImports, templateElements } from "./sourceFiles";
 
 // Focus rings (#43). Keyboard users must always see where focus is.
@@ -54,17 +55,6 @@ export function jsFocusViolations(source) {
   return [...source.matchAll(STRING_LITERAL)].flatMap((m) =>
     focusProblems(tokens(m[2])).map((problem) => `"${m[2].slice(0, 60)}": ${problem}`),
   );
-}
-
-// WCAG 2.2 contrast ratio of two #rrggbb colours
-export function contrastRatio(a, b) {
-  const luminance = (hex) => {
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
-    const lin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  };
-  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
-  return (hi + 0.05) / (lo + 0.05);
 }
 
 // the colour main.css gives the frappe-ui ring token on :focus-visible, or null

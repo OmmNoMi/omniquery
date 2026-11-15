@@ -286,7 +286,9 @@
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         :placeholder="__('Enter value')"
-        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+        size="lg"
+        variant="outline"
+        class="w-full"
       />
 
       <!-- 9. Date Input -->
@@ -301,7 +303,9 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
-        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+        size="lg"
+        variant="outline"
+        class="w-full"
       />
 
       <!-- 10. Default Text Input -->
@@ -317,7 +321,9 @@
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
         :placeholder="__('Enter value')"
-        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800"
+        size="lg"
+        variant="outline"
+        class="w-full"
       />
     </div>
 

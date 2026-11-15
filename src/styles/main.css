@@ -42,6 +42,28 @@ body {
   --outline-gray-3: theme("colors.emerald.600");
 }
 
+/* A selected answer choice (choiceButtonProps in src/utils/choiceButton.js): a pale green card with
+   dark green text and a 2.5px green edge, readable in sunlight (text about 13:1, edge about 5:1).
+   frappe-ui's outline Button has no green that survives dark mode, so the look is set here on top
+   of the gray outline variant. `button.` and the :hover/:active line outrank frappe-ui's hover and
+   active utilities. The edge is a 1px border plus an inset shadow carried in --tw-shadow, so
+   Tailwind's focus-visible ring (also a box-shadow) still draws around it. */
+button.choice-selected,
+button.choice-selected:is(:hover, :active) {
+  background-color: theme("colors.emerald.50");
+  border-color: theme("colors.emerald.700");
+  color: theme("colors.emerald.900");
+  --tw-shadow: inset 0 0 0 1.5px theme("colors.emerald.700");
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+.dark button.choice-selected,
+.dark button.choice-selected:is(:hover, :active) {
+  background-color: theme("colors.emerald.950");
+  border-color: theme("colors.emerald.400");
+  color: theme("colors.emerald.50");
+  --tw-shadow: inset 0 0 0 1.5px theme("colors.emerald.400");
+}
+
 /* Scoped Typography Scale: Only scales survey question text, labels, inputs and options without resizing UI wrappers */
 html.text-scale-md main label { font-size: 1.05rem; }
 html.text-scale-lg main label { font-size: 1.25rem !important; }
