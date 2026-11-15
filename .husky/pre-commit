@@ -5,6 +5,12 @@ echo "=========================================================="
 echo "[TDD++ Pre-Commit Gate] Verifying local test suite..."
 echo "=========================================================="
 
+# 0. Built bundle stays out of git (bench build regenerates it, as in Frappe CRM / Helpdesk)
+if git diff --cached --name-only --diff-filter=ACMR | grep -q '^omniquery/public/dist/'; then
+    echo "[FAIL] omniquery/public/dist/ is build output; unstage it (git restore --staged omniquery/public/dist)."
+    exit 1
+fi
+
 # 1. Zero-Glyph & No-Emoji Policy Verification
 echo "[1/3] Running Zero-Glyph & No-Emoji Guard..."
 python3 scripts/check_no_glyphs.py
