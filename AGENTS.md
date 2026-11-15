@@ -42,3 +42,18 @@ cost real time to learn. Add to it when you learn something new.
   box around frappe-ui's own input. Use its `size`/`variant` props (a survey answer is
   `size="lg" variant="outline"`), and keep `class` to layout (width, margin, flex).
   `test/guards/text_inputs.test.js` enforces it, with a shrinking per-file count.
+
+## Offline queue and IndexedDB
+
+- A response's `synced` is stored as `SYNCED` (1) or `NOT_SYNCED` (0) from `src/services/db.js`,
+  never `true`/`false`: IndexedDB cannot index a boolean, so a boolean row drops out of
+  `where("synced")`. `test/guards/synced_encoding.test.js` enforces it on every `db.responses` write.
+- A failed frappe-ui `call()` throws an Error carrying `status`, `exc_type` and `messages`.
+  `failureKind(err)` in `useWAL.js` sorts it: 401/403 and Frappe's auth exc_types are a lost
+  session (`needsLogin`), 417 (`ValidationError`) and other 4xx a refused submission, 5xx a 30s
+  backoff, no status the network. Reuse it rather than reading `err.status` again.
+- An acknowledged WAL entry is deleted, not kept as "synced"; its audio stays for
+  `syncPendingAudio`. An entry the server did not answer stays pending as it was.
+- Test sync against frappe-ui's `call()`, mocked with
+  `vi.mock("frappe-ui", async (importOriginal) => ({ ...(await importOriginal()), call: vi.fn() }))`,
+  and `createWAL()` called outside a component, which starts no listeners or interval.

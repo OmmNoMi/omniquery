@@ -111,6 +111,13 @@ const CORE_HINDI = {
   "Dark": "गहरी",
   "System": "सिस्टम",
   "Done": "हो गया",
+  "Session expired": "सत्र समाप्त हो गया",
+  "Sign in again to upload 1 interview": "1 साक्षात्कार अपलोड करने के लिए फिर से साइन इन करें",
+  "Sign in again to upload {0} interviews": "{0} साक्षात्कार अपलोड करने के लिए फिर से साइन इन करें",
+  "Sign in": "साइन इन करें",
+  "Interview not saved": "साक्षात्कार सहेजा नहीं गया",
+  "The interview could not be saved on this device. Storage may be full. Please try again.": "साक्षात्कार इस डिवाइस पर सहेजा नहीं जा सका। स्टोरेज भर गया हो सकता है। कृपया फिर से प्रयास करें।",
+  "Try again": "फिर से प्रयास करें",
 };
 
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";

@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
 import { call } from "frappe-ui";
-import { db, audioRecordingsFor } from "../services/db";
+import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
+import { responseItems } from "../utils/responsePayload";
 
 export function generateSurveyId(templateName) {
   const cleanId = (templateName || "SURVEY").replace(/^OQS-/, "");
@@ -330,11 +331,17 @@ export function useSurvey() {
     const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
     if (!tmplName) return;
 
-    if (!currentDraftId.value) {
-      currentDraftId.value = generateSurveyId(tmplName);
-    }
-
     try {
+      // An untouched survey is not saved, so opening one and leaving adds no empty draft. A saved
+      // draft whose answers were all cleared is still written, or the old answers would come back (#34)
+      const hasAnswers = responseItems(responses.value).length > 0;
+      if (!hasAnswers && !(currentDraftId.value && (await db.responses.get(currentDraftId.value)))) return;
+
+      if (!currentDraftId.value) {
+        currentDraftId.value = generateSurveyId(tmplName);
+      }
+
+      // the created_at here applies to a new draft only: db.js keeps an existing draft's own
       await db.responses.put({
         response_uid: currentDraftId.value,
         template_name: tmplName,
@@ -346,7 +353,7 @@ export function useSurvey() {
         status: "Draft",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        synced: false,
+        synced: NOT_SYNCED,
       });
       await loadActiveDrafts();
     } catch (e) {

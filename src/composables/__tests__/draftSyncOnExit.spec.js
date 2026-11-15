@@ -3,7 +3,7 @@ import { mount } from "@vue/test-utils";
 import { defineComponent, h } from "vue";
 import { useSurveyApp } from "../useSurveyApp";
 import { useWAL } from "../useWAL";
-import { db } from "../../services/db";
+import { db, NOT_SYNCED, SYNCED } from "../../services/db";
 import { buildResponsePayload, draftStored } from "../../utils/responsePayload";
 
 // #35: leaving a survey sends its last answers to the server as a draft. The server decides who did
@@ -69,7 +69,7 @@ describe("leaving a survey (#35)", () => {
     expect(draft.items).toEqual([{ question_code: "q_name", question_label: "Respondent Name", value: "Ramesh Sharma" }]);
     expect(draft).not.toHaveProperty("surveyor");
     expect(app.activeTemplate.value).toBeNull();
-    expect((await stored()).synced).toBe(true);
+    expect((await stored()).synced).toBe(SYNCED);
   });
 
   it("keeps a draft the server rejected unsynced", async () => {
@@ -80,7 +80,7 @@ describe("leaving a survey (#35)", () => {
     await app.goHome();
 
     expect(draftCalls()).not.toHaveLength(0);
-    expect((await stored()).synced).toBe(false);
+    expect((await stored()).synced).toBe(NOT_SYNCED);
   });
 
   it("sends a draft left offline once the device is back online", async () => {
@@ -90,26 +90,26 @@ describe("leaving a survey (#35)", () => {
 
     await app.goHome();
     expect(draftCalls()).toHaveLength(0);
-    expect((await stored()).synced).toBe(false);
+    expect((await stored()).synced).toBe(NOT_SYNCED);
 
     setOnline(true);
-    await vi.waitFor(async () => expect((await stored()).synced).toBe(true));
+    await vi.waitFor(async () => expect((await stored()).synced).toBe(SYNCED));
     expect(draftCalls().map((d) => d.idempotency_key)).toContain("OQS-TEST-001-abc123");
   });
 });
 
 describe("syncAllDrafts", () => {
-  const putDraft = (uid, answers, synced = false) =>
+  const putDraft = (uid, answers, synced = NOT_SYNCED) =>
     db.responses.put({ response_uid: uid, template_name: "TMPL-TEST-001", status: "Draft", responses: answers, synced, created_at: "2026-11-14T00:00:00Z" });
 
   it("sends only unsynced drafts and marks only the stored ones", async () => {
-    await putDraft("D-DONE", { q_name: "Already sent" }, true);
+    await putDraft("D-DONE", { q_name: "Already sent" }, SYNCED);
     await putDraft("D-OK", { q_name: "Sita" });
     await putDraft("D-FAIL", { q_name: "Gita" });
     await putDraft("D-EMPTY", {});
     fetchMock.mockImplementation(async (url, opts) => {
       const uid = JSON.parse(opts.body).draft?.idempotency_key;
-      if (uid === "D-FAIL") return { ok: false, status: 500, headers: new Headers(), json: async () => ({}) };
+      if (uid === "D-FAIL") return { ok: false, status: 500, headers: new Headers(), json: async () => ({}), text: async () => "{}" };
       return { ok: true, status: 200, headers: new Headers({ "content-type": "application/json" }), json: async () => ({ message: { status: "SUCCESS" } }) };
     });
 
@@ -119,8 +119,8 @@ describe("syncAllDrafts", () => {
 
     expect(draftCalls().map((d) => d.idempotency_key).sort()).toEqual(["D-FAIL", "D-OK"]);
     expect(draftCalls().every((d) => !("surveyor" in d))).toBe(true);
-    expect((await db.responses.get("D-OK")).synced).toBe(true);
-    expect((await db.responses.get("D-FAIL")).synced).toBe(false);
+    expect((await db.responses.get("D-OK")).synced).toBe(SYNCED);
+    expect((await db.responses.get("D-FAIL")).synced).toBe(NOT_SYNCED);
   });
 });
 

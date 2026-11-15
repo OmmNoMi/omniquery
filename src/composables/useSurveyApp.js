@@ -1,6 +1,7 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, provide, inject, reactive } from "vue";
 import { call, toast } from "frappe-ui";
-import { db } from "../services/db";
+import { watchDebounced } from "@vueuse/core";
+import { db, SYNCED, NOT_SYNCED } from "../services/db";
 import { useSurvey } from "./useSurvey";
 import { useWAL } from "./useWAL";
 import { useGPS } from "./useGPS";
@@ -9,6 +10,8 @@ import { useTranslation } from "./useTranslation";
 import { useAudioRecorder } from "./useAudioRecorder";
 import { buildResponsePayload, draftStored } from "../utils/responsePayload";
 import { bootRoute, catalogRoute, projectRoute, pushRoute, replaceRoute, routeFromPath, routeFromState, surveyRoute } from "../utils/route";
+
+const LOGIN_URL = "/login?redirect-to=/omniquery";
 
 // exported so component tests can provide a stand-in session or context
 export const SURVEY_SESSION = Symbol("surveySession");
@@ -55,7 +58,7 @@ export function useSurveyApp() {
 
   const { __ } = useTranslation();
   const { textSize, cycleTextSize, setTextSize } = useTextScale();
-  const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
+  const { isOnline, pendingWALCount, needsLogin, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
   const { gpsCoords, captureGPS } = useGPS();
   const { state: audioState, isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
 
@@ -191,6 +194,8 @@ export function useSurveyApp() {
   }
 
   const submittedResponseId = ref("");
+  // why the last submit failed, shown over the survey with a Try again
+  const submissionError = ref("");
   const submittedTimestamp = ref("");
   const hasCopiedCode = ref(false);
   const isSubmissionSynced = ref(false);
@@ -538,10 +543,14 @@ export function useSurveyApp() {
     }
   }
 
+  function signIn() {
+    window.location.href = LOGIN_URL;
+  }
+
   function confirmExit() {
     showExitDialog.value = false;
     if (isGuest.value) {
-      window.location.href = "/login?redirect-to=/omniquery";
+      signIn();
       return;
     }
     goHome();
@@ -571,7 +580,7 @@ export function useSurveyApp() {
         console.warn("Draft not stored on the server:", res);
         return false;
       }
-      await db.responses.update(responseId, { synced: true });
+      await db.responses.update(responseId, { synced: SYNCED });
       return true;
     } catch (e) {
       console.warn("In-flight draft sync non-critical warning:", e);
@@ -582,7 +591,8 @@ export function useSurveyApp() {
   }
 
   function scheduleDraftSaveAndSync() {
-    if (!activeTemplate.value || isSubmitted.value) return;
+    // a debounced save landing mid-submit would write the submitted interview back as a draft
+    if (!activeTemplate.value || isSubmitted.value || isSubmitting.value) return;
     saveDraftLocally(progressPercent.value);
     if (draftSyncTimer) clearTimeout(draftSyncTimer);
     draftSyncTimer = setTimeout(() => {
@@ -590,17 +600,13 @@ export function useSurveyApp() {
     }, 1200);
   }
 
-  watch(
-    responses,
-    () => {
-      scheduleDraftSaveAndSync();
-    },
-    { deep: true }
-  );
+  // Typing saves once the surveyor pauses, not on every key (#34). Leaving, changing section and
+  // submitting save straight away, so the pause never loses an answer.
+  watchDebounced(responses, scheduleDraftSaveAndSync, { debounce: 300, deep: true });
 
   async function goHome() {
     if (isGuest.value) {
-      window.location.href = "/login?redirect-to=/omniquery";
+      signIn();
       return;
     }
     if (draftSyncTimer) {
@@ -620,6 +626,7 @@ export function useSurveyApp() {
     activeProjectId.value = "";
     activeSectionIndex.value = 0;
     isSubmitted.value = false;
+    submissionError.value = "";
     isSubmissionSynced.value = false;
     currentDraftId.value = "";
     responses.value = {};
@@ -654,6 +661,7 @@ export function useSurveyApp() {
     });
 
     try {
+      // created_at is the draft's own when there was one: db.js keeps it
       await db.responses.put({
         response_uid: draftKey,
         template_name: tmplName,
@@ -663,12 +671,17 @@ export function useSurveyApp() {
         active_section_index: activeSectionIndex.value,
         progress_percent: 100,
         status: "Submitted",
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        synced: false,
+        synced: NOT_SYNCED,
       });
       await loadActiveDrafts();
-    } catch (e) {}
+    } catch (e) {
+      // the queue entry below still carries the interview
+      console.warn("Failed to save the submitted response locally:", e);
+    }
 
+    // throws when the queue cannot be written: submitForm then keeps the survey open (#32)
     await queueWAL("OmniQuery Response", payload, false);
     if (isOnline.value) {
       const res = await syncWAL();
@@ -722,6 +735,7 @@ export function useSurveyApp() {
     }
     if (draftSyncTimer) clearTimeout(draftSyncTimer);
     isSubmitting.value = true;
+    submissionError.value = "";
 
     const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name || "";
     const draftKey = currentDraftId.value || generateSurveyId(tmplName);
@@ -735,9 +749,17 @@ export function useSurveyApp() {
       console.warn("Failed saving audio recording:", audioErr);
     }
 
-    await saveOfflineRecord();
-    isSubmitting.value = false;
-    isSubmitted.value = true;
+    // A submit the device could not store stays on screen with its answers and a Try again, instead
+    // of a success screen for an interview that was never queued, or a spinner that never stops (#32)
+    try {
+      await saveOfflineRecord();
+      isSubmitted.value = true;
+    } catch (err) {
+      console.error("Failed to submit survey:", err);
+      submissionError.value = __("The interview could not be saved on this device. Storage may be full. Please try again.");
+    } finally {
+      isSubmitting.value = false;
+    }
   }
 
   function resetSurvey() {
@@ -746,6 +768,7 @@ export function useSurveyApp() {
     responses.value = {};
     activeSectionIndex.value = 0;
     isSubmitted.value = false;
+    submissionError.value = "";
     isSubmissionSynced.value = false;
     submittedResponseId.value = "";
     hasCopiedCode.value = false;
@@ -775,6 +798,16 @@ export function useSurveyApp() {
   const microphoneAlert = computed(() => {
     const alert = canRecord.value && MICROPHONE_ALERTS[audioState.value];
     return alert ? { title: __(alert[0]), description: __(alert[1]) } : null;
+  });
+
+  // Queued interviews wait while the session is gone; a guest's queue is not theirs to sign in for (#33)
+  const sessionAlert = computed(() => {
+    if (!needsLogin.value || isGuest.value) return null;
+    const count = pendingWALCount.value;
+    return {
+      title: __("Session expired"),
+      description: count === 1 ? __("Sign in again to upload 1 interview") : __("Sign in again to upload {0} interviews", [count]),
+    };
   });
 
   async function triggerSync() {
@@ -827,6 +860,9 @@ export function useSurveyApp() {
     toggleAudio,
     microphoneAlert,
     dismissMicrophoneAlert: discardAudio,
+    sessionAlert,
+    signIn,
+    submissionError,
     activeTemplate,
     activeSectionIndex,
     availableTemplates,

@@ -1,8 +1,25 @@
 import { ref, getCurrentScope, onScopeDispose } from "vue";
 import { createSharedComposable } from "@vueuse/core";
 import { call, fileToBase64 } from "frappe-ui";
-import { db, audioRecordingsFor, recordingResponse } from "../services/db";
+import { db, audioRecordingsFor, recordingResponse, SYNCED } from "../services/db";
 import { buildResponsePayload, draftStored } from "../utils/responsePayload";
+
+const SERVER_BACKOFF_MS = 30000;
+const AUTH_EXC_TYPES = ["AuthenticationError", "SessionExpired", "CSRFTokenError"];
+
+const acknowledged = (result) => result.status === "SUCCESS" || result.status === "DUPLICATE_SKIPPED";
+const resultsOf = (res) => (res && (Array.isArray(res) ? res : res.results)) || [];
+
+// How a failed batch_push is handled (#33). frappe-ui's call() throws an Error carrying the HTTP
+// status and Frappe's exc_type. "auth": the session is gone, so sign in again; "server": back off
+// for 30s; "client": one submission the server refuses, so send the batch one by one; "network":
+// no answer at all. 417 is Frappe's ValidationError, a refused submission and not a lost session.
+export function failureKind(err) {
+  if (err?.status === 401 || err?.status === 403 || AUTH_EXC_TYPES.includes(err?.exc_type)) return "auth";
+  if (err?.status >= 500) return "server";
+  if (err?.status >= 400) return "client";
+  return "network";
+}
 
 export function createWAL() {
   const isOnline = ref(typeof navigator !== "undefined" ? navigator.onLine : true);
@@ -10,6 +27,9 @@ export function createWAL() {
   const quarantinedWALCount = ref(0);
   const isSyncing = ref(false);
   const lastSyncResult = ref(null);
+  // the server answered 401/403: queued interviews wait until the surveyor signs in again
+  const needsLogin = ref(false);
+  let serverBackoffUntil = 0;
 
   async function updatePendingCount() {
     try {
@@ -35,15 +55,15 @@ export function createWAL() {
 
   async function queueWAL(entityType, payload, autoSync = true) {
     const walEntry = makeWalEntry(entityType, payload);
-    try {
-      await db.wal.add(walEntry);
-    } catch (e) {}
+    // no catch: a submission that never reached the queue must fail the submit, not report success (#32)
+    await db.wal.add(walEntry);
     await updatePendingCount();
     if (isOnline.value && autoSync) syncWAL();
     return walEntry;
   }
 
-  async function getPendingWalEntries() {
+  // the next pending entries this pass has not tried yet
+  async function getPendingWalEntries(tried) {
     try {
       const isGuest =
         typeof window !== "undefined" &&
@@ -51,7 +71,12 @@ export function createWAL() {
         (window.frappe.user === "Guest" || (window.frappe.session && window.frappe.session.user === "Guest"));
       // Chunk to max 5 records (or 1 for Guest) to eliminate memory spikes, payload limits, and guest batch rejections
       const limitCount = isGuest ? 1 : 5;
-      return await db.wal.where("status").equals("pending").limit(limitCount).toArray();
+      return await db.wal
+        .where("status")
+        .equals("pending")
+        .filter((e) => !tried.has(e.wal_id))
+        .limit(limitCount)
+        .toArray();
     } catch (e) {
       return [];
     }
@@ -79,105 +104,120 @@ export function createWAL() {
     } catch (e) {}
   }
 
-  async function postWalEntries(entries) {
-    const submissions = entries
-      .map((e) => {
+  // Each entry's submission keyed by its idempotency key, the key batch_push answers with. Each
+  // payload is parsed once; a corrupt one is quarantined.
+  async function readChunk(entries) {
+    const chunk = new Map();
+    for (const entry of entries) {
+      try {
+        const payload = JSON.parse(entry.payload_json);
+        const key = payload.idempotency_key || entry.wal_id;
+        chunk.set(key, { entry, submission: { ...payload, idempotency_key: key } });
+      } catch (err) {
         try {
-          const payload = JSON.parse(e.payload_json);
-          return {
-            idempotency_key: payload.idempotency_key || e.wal_id,
-            ...payload,
-          };
-        } catch (err) {
-          db.wal.where("wal_id").equals(e.wal_id).modify({
+          await db.wal.update(entry.wal_id, {
             status: "quarantined",
             quarantine_reason: `Corrupt WAL payload: ${err.message}`,
             quarantined_at: new Date().toISOString(),
-          }).catch(() => {});
-          return null;
-        }
-      })
-      .filter(Boolean);
-
-    if (!submissions.length) return null;
-
-    try {
-      const res = await call("omniquery.api.sync.batch_push", { submissions });
-      return res ? { message: res } : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  async function markSynced(results, entries) {
-    if (!Array.isArray(results)) return;
-    for (const r of results) {
-      const entry = entries.find((e) => {
-        try {
-          const p = JSON.parse(e.payload_json);
-          return p.idempotency_key === r.idempotency_key || e.wal_id === r.idempotency_key;
-        } catch (err) {
-          return e.wal_id === r.idempotency_key;
-        }
-      });
-
-      if (r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED") {
-        if (entry) {
-          try {
-            await db.wal.where("wal_id").equals(entry.wal_id).modify({ status: "synced" });
-          } catch (e) {}
-        }
-        try {
-          if (r.idempotency_key) {
-            await db.responses.where("response_uid").equals(r.idempotency_key).modify({ synced: true });
-          }
-        } catch (e) {}
-      } else if (entry) {
-        try {
-          const nextAttempts = (entry.attempts || 0) + 1;
-          const isQuarantined = nextAttempts >= 5 || r.status === "REJECTED";
-          await db.wal.where("wal_id").equals(entry.wal_id).modify((e) => {
-            e.attempts = nextAttempts;
-            e.last_error = r.error || "Sync rejected";
-            if (isQuarantined) {
-              e.status = "quarantined";
-              e.quarantined_at = new Date().toISOString();
-              e.quarantine_reason = r.error || "Exceeded 5 sync attempts";
-            }
           });
         } catch (e) {}
       }
     }
+    return chunk;
+  }
+
+  // batch_push's results for a chunk, plus `error` when the pass has to stop
+  async function postChunk(chunk) {
+    try {
+      const res = await call("omniquery.api.sync.batch_push", { submissions: [...chunk.values()].map((c) => c.submission) });
+      needsLogin.value = false;
+      return { results: resultsOf(res) };
+    } catch (err) {
+      const kind = failureKind(err);
+      if (kind === "auth") needsLogin.value = true;
+      if (kind === "server") serverBackoffUntil = Date.now() + SERVER_BACKOFF_MS;
+      if (kind !== "client") return { results: [], error: kind };
+      if (chunk.size === 1) {
+        const [key] = chunk.keys();
+        return { results: [{ idempotency_key: key, status: "FAILED_ATTEMPT", error: err.message || "Client error (4xx)" }] };
+      }
+      // one refused submission fails the whole batch: send each alone, so the others still go
+      const results = [];
+      for (const [key, c] of chunk) {
+        const single = await postChunk(new Map([[key, c]]));
+        results.push(...single.results);
+        if (single.error) return { results, error: single.error };
+      }
+      return { results };
+    }
+  }
+
+  // An acknowledged entry leaves the queue and its response is marked synced; its audio stays for
+  // syncPendingAudio to upload. Any other answer is a failed attempt, quarantined at the fifth or
+  // when the server rejects it. An entry with no answer at all stays pending as it was (#87).
+  async function markSynced(results, chunk) {
+    for (const r of results) {
+      const c = chunk.get(r.idempotency_key);
+      if (!c) continue;
+      try {
+        if (acknowledged(r)) {
+          await db.wal.delete(c.entry.wal_id);
+          await db.responses.where("response_uid").equals(r.idempotency_key).modify({ synced: SYNCED });
+        } else {
+          const attempts = (c.entry.attempts || 0) + 1;
+          const quarantine = attempts >= 5 || r.status === "REJECTED";
+          await db.wal.update(c.entry.wal_id, {
+            attempts,
+            last_error: r.error || "Sync rejected",
+            ...(quarantine && {
+              status: "quarantined",
+              quarantined_at: new Date().toISOString(),
+              quarantine_reason: r.error || "Exceeded 5 sync attempts",
+            }),
+          });
+        }
+      } catch (e) {}
+    }
     await updatePendingCount();
+  }
+
+  // Pushes the pending queue chunk by chunk, each entry at most once per pass, and stops when the
+  // session is gone, the server is failing or the device gets no answer. syncWAL and the Sync
+  // button's forceSyncAll both run it.
+  async function pushPendingChunks() {
+    const tally = { attempted: 0, synced: 0, errors: 0, results: [] };
+    if (Date.now() < serverBackoffUntil) return tally;
+    const tried = new Set();
+    while (true) {
+      const entries = await getPendingWalEntries(tried);
+      if (!entries.length) break;
+      for (const e of entries) tried.add(e.wal_id);
+      const chunk = await readChunk(entries);
+      if (!chunk.size) continue;
+      const { results, error } = await postChunk(chunk);
+      await markSynced(results, chunk);
+      const synced = results.filter((r) => acknowledged(r) && chunk.has(r.idempotency_key)).length;
+      tally.attempted += chunk.size;
+      tally.synced += synced;
+      tally.errors += chunk.size - synced;
+      tally.results.push(...results);
+      if (error) break;
+    }
+    return tally;
   }
 
   async function syncWAL() {
     if (isSyncing.value || !isOnline.value) return null;
     isSyncing.value = true;
-    let totalSynced = 0;
-    const allResults = [];
     try {
-      while (true) {
-        const entries = await getPendingWalEntries();
-        if (!entries.length) break;
-        const data = await postWalEntries(entries);
-        const msg = data && data.message;
-        const results = (msg && (Array.isArray(msg) ? msg : msg.results)) || [];
-        if (!results.length) break;
-        await markSynced(results, entries);
-        const chunkSynced = results.filter((r) => r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED").length;
-        totalSynced += chunkSynced;
-        allResults.push(...results);
-        // Break if no successful progress was made to avoid infinite retry loop
-        if (chunkSynced === 0) break;
-      }
+      const { synced, results } = await pushPendingChunks();
       try {
         await syncPendingAudio();
       } catch (audioErr) {}
-      return { syncedCount: totalSynced, results: allResults };
+      return { syncedCount: synced, results };
     } catch (err) {
       console.warn("syncWAL error:", err);
-      return { syncedCount: totalSynced, error: err.message };
+      return { syncedCount: 0, error: err.message };
     } finally {
       isSyncing.value = false;
       await updatePendingCount();
@@ -214,7 +254,7 @@ export function createWAL() {
         try {
           const res = await call("omniquery.api.sync.sync_draft", { draft: payload });
           if (draftStored(res)) {
-            await db.responses.update(draft.response_uid, { synced: true });
+            await db.responses.update(draft.response_uid, { synced: SYNCED });
             syncedCount++;
           }
         } catch (e) {
@@ -291,20 +331,10 @@ export function createWAL() {
     };
 
     try {
-      while (true) {
-        const entries = await getPendingWalEntries();
-        if (!entries.length) break;
-        summary.walCount += entries.length;
-        const data = await postWalEntries(entries);
-        const msg = data && data.message;
-        const results = (msg && (Array.isArray(msg) ? msg : msg.results)) || [];
-        if (!results.length) break;
-        await markSynced(results, entries);
-        const chunkSynced = results.filter((r) => r.status === "SUCCESS" || r.status === "DUPLICATE_SKIPPED").length;
-        summary.walSynced += chunkSynced;
-        summary.walErrors += results.length - chunkSynced;
-        if (chunkSynced === 0) break;
-      }
+      const tally = await pushPendingChunks();
+      summary.walCount = tally.attempted;
+      summary.walSynced = tally.synced;
+      summary.walErrors = tally.errors;
 
       summary.draftsSynced = await syncAllDrafts();
       summary.audioSynced = await syncPendingAudio();
@@ -419,6 +449,7 @@ export function createWAL() {
     quarantinedWALCount,
     isSyncing,
     lastSyncResult,
+    needsLogin,
     queueWAL,
     syncWAL,
     syncPendingAudio,

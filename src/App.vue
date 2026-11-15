@@ -33,6 +33,20 @@
         </template>
       </Alert>
 
+      <!-- The session ended while interviews wait in the queue: they upload once the surveyor signs in (#33) -->
+      <Alert v-if="s.sessionAlert" class="mb-4" theme="yellow" :title="s.sessionAlert.title" :description="s.sessionAlert.description" :dismissable="false">
+        <template #footer>
+          <Button variant="solid" :iconLeft="KeyRound" :label="s.__('Sign in')" @click="s.signIn()" />
+        </template>
+      </Alert>
+
+      <!-- The submit could not be stored on the device; the answers are still on screen (#32) -->
+      <Alert v-if="s.submissionError" class="mb-4" theme="red" :title="s.__('Interview not saved')" :description="s.submissionError" :dismissable="false">
+        <template #footer>
+          <Button variant="solid" :label="s.__('Try again')" :loading="s.isSubmitting" @click="s.submitForm()" />
+        </template>
+      </Alert>
+
       <!-- Loading State -->
       <div v-if="s.isLoading" class="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center select-none">
         <div class="relative mb-3">

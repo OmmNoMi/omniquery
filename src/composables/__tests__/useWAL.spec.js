@@ -89,8 +89,8 @@ describe("useWAL", () => {
     expect(res.syncedCount).toBe(1);
     expect(pendingWALCount.value).toBe(0);
 
-    const walRecords = await db.wal.toArray();
-    expect(walRecords[0].status).toBe("synced");
+    // an acknowledged entry leaves the WAL: the server holds the submission now
+    expect(await db.wal.toArray()).toEqual([]);
   });
 
   it("handles offline status gracefully without network calls", async () => {
@@ -156,8 +156,7 @@ describe("useWAL", () => {
       }),
     });
     await retryQuarantinedEntry(entry.wal_id);
-    const walRecord = await db.wal.get(entry.wal_id);
-    expect(walRecord.status).toBe("synced");
+    expect(await db.wal.get(entry.wal_id)).toBeUndefined();
   });
 
   it("syncs pending audio recordings and updates status to synced", async () => {

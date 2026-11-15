@@ -42,7 +42,7 @@
  * @property {'Draft'|'Submitted'} status
  * @property {string} created_at
  * @property {string} updated_at
- * @property {boolean} synced
+ * @property {0|1} synced 1 once the server stored it (db.js SYNCED; IndexedDB cannot index a boolean)
  */
 
 /**

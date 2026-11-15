@@ -2457,3 +2457,31 @@ msgstr "हो गया"
 #: src/components/header/CompactHeader.vue
 msgid "Dropdown"
 msgstr "ड्रॉपडाउन"
+
+#: src/App.vue
+msgid "Session expired"
+msgstr "सत्र समाप्त हो गया"
+
+#: src/App.vue
+msgid "Sign in again to upload 1 interview"
+msgstr "1 साक्षात्कार अपलोड करने के लिए फिर से साइन इन करें"
+
+#: src/App.vue
+msgid "Sign in again to upload {0} interviews"
+msgstr "{0} साक्षात्कार अपलोड करने के लिए फिर से साइन इन करें"
+
+#: src/App.vue
+msgid "Sign in"
+msgstr "साइन इन करें"
+
+#: src/App.vue
+msgid "Interview not saved"
+msgstr "साक्षात्कार सहेजा नहीं गया"
+
+#: src/App.vue
+msgid "The interview could not be saved on this device. Storage may be full. Please try again."
+msgstr "साक्षात्कार इस डिवाइस पर सहेजा नहीं जा सका। स्टोरेज भर गया हो सकता है। कृपया फिर से प्रयास करें।"
+
+#: src/App.vue
+msgid "Try again"
+msgstr "फिर से प्रयास करें"
