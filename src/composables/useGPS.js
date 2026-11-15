@@ -1,15 +1,33 @@
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
+// GeolocationPositionError codes (W3C Geolocation API)
+const ERROR_STATES = { 1: "denied", 2: "unavailable", 3: "timeout" };
+
+// The words the server stores in gps_status (omniquery/services/location.py)
+const SERVER_STATUS = {
+  denied: "Denied",
+  unavailable: "Unavailable",
+  timeout: "Timed out",
+  unsupported: "Unsupported",
+};
+
+/**
+ * gpsStatus: idle | locating | success | denied | unavailable | timeout | unsupported.
+ * gpsReport is what a response records: the last fix with its accuracy, or why there is none (#27).
+ */
 export function useGPS() {
   const gpsStatus = ref("idle");
   const gpsCoords = ref(null);
   const gpsAccuracy = ref(null);
-  const gpsErrorMessage = ref("");
+
+  const gpsReport = computed(() => {
+    if (gpsCoords.value) return { ...gpsCoords.value, accuracy: gpsAccuracy.value, status: "Captured" };
+    return { status: SERVER_STATUS[gpsStatus.value] || "Not captured" };
+  });
 
   function captureGPS() {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       gpsStatus.value = "unsupported";
-      gpsErrorMessage.value = "Geolocation is not supported by your browser";
       return;
     }
     gpsStatus.value = "locating";
@@ -21,20 +39,10 @@ export function useGPS() {
         };
         gpsAccuracy.value = Math.round(pos.coords.accuracy);
         gpsStatus.value = "success";
-        gpsErrorMessage.value = "";
       },
       (err) => {
         console.warn("[GPS Warning]", err);
-        gpsStatus.value = "error";
-        if (err.code === 1 || (err.message && err.message.toLowerCase().includes("denied"))) {
-          gpsErrorMessage.value = "Allow location access to tag this interview";
-        } else if (err.code === 2) {
-          gpsErrorMessage.value = "Location unavailable. Please check device GPS settings.";
-        } else if (err.code === 3) {
-          gpsErrorMessage.value = "Location request timed out. Please try again.";
-        } else {
-          gpsErrorMessage.value = err.message || "Failed to acquire GPS location";
-        }
+        gpsStatus.value = ERROR_STATES[err.code] || "unavailable";
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
     );
@@ -44,7 +52,7 @@ export function useGPS() {
     gpsStatus,
     gpsCoords,
     gpsAccuracy,
-    gpsErrorMessage,
+    gpsReport,
     captureGPS,
   };
 }
