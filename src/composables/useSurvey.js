@@ -199,7 +199,7 @@ export function useSurvey() {
               const schema = payload.schema || payload;
               cacheTemplateLocally(tmpl.name, schema, payload);
             }
-          }).catch(() => {});
+          }).catch((e) => console.warn(`Could not prefetch the survey ${tmpl.name}:`, e));
         }
       }
     } catch (e) {
@@ -241,7 +241,9 @@ export function useSurvey() {
         schema: JSON.parse(JSON.stringify(schema)),
         modified: new Date().toISOString(),
       });
-    } catch (e) {}
+    } catch (e) {
+      console.warn(`Could not cache the survey ${surveyId} on this device:`, e);
+    }
   }
 
   async function fetchRemoteSchema(surveyId) {

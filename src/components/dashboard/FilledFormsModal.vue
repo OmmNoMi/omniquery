@@ -217,14 +217,18 @@
               <!-- Top Row: Survey Code, Status Pill & Time -->
               <div class="flex items-center justify-between gap-2 flex-wrap">
                 <div class="flex items-center gap-2">
-                  <span
-                    @click="copyCode(resp.response_uid)"
-                    class="font-mono text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 cursor-pointer hover:border-emerald-400 transition"
+                  <Button
+                    variant="subtle"
+                    size="sm"
+                    class="font-mono font-bold"
                     :title="__('Click to copy code')"
+                    @click="copyCode(resp.response_uid)"
                   >
                     {{ resp.response_uid }}
-                    <Check v-if="copiedCode === resp.response_uid" class="w-3 h-3 text-emerald-600 inline ml-1" />
-                  </span>
+                    <template #suffix>
+                      <Check v-if="copiedCode === resp.response_uid" class="w-3 h-3" aria-hidden="true" />
+                    </template>
+                  </Button>
                 </div>
 
                 <div class="flex items-center gap-2">
@@ -419,6 +423,7 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
+import { useClipboard } from "@vueuse/core";
 import { Button, Dialog, toast } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
 import { X, Zap, ChevronDown, Trash2, FileText, Calendar, Check, Copy } from "lucide-vue-next";
@@ -511,7 +516,9 @@ async function loadResponses() {
       let payload = {};
       try {
         payload = JSON.parse(entry.payload_json || "{}");
-      } catch (e) {}
+      } catch (e) {
+        // a corrupt entry is still listed, with no answers, so it can be seen and retried
+      }
 
       const key = payload.idempotency_key || entry.wal_id;
       const tmpl = props.templates.find((t) => (t.name || t.template_name) === payload.survey_template);
@@ -613,7 +620,7 @@ async function handleRetryQuarantined(walId) {
     await loadResponses();
     emit("sync-all");
   } catch (e) {
-    console.warn("Retry quarantined entry failed:", e);
+    toast.error(__("Sync failed: {0}", [e.message || e]));
   } finally {
     isSyncingLocal.value = false;
   }
@@ -772,25 +779,31 @@ function formatValue(val) {
   return String(val);
 }
 
-function copyCode(code) {
+// VueUse falls back to execCommand where the Clipboard API is missing or refused. `mark` is the
+// ref that shows "Copied" beside the copied item: it holds `value` for two seconds, then `empty`.
+// Returns whether the copy went through.
+const { copy: copyText } = useClipboard({ legacy: true });
+async function copyAndMark(text, mark, value, empty = "") {
   try {
-    navigator.clipboard?.writeText(code);
-    copiedCode.value = code;
+    await copyText(text);
+    mark.value = value;
     setTimeout(() => {
-      copiedCode.value = "";
+      if (mark.value === value) mark.value = empty;
     }, 2000);
-  } catch (e) {}
+    return true;
+  } catch (e) {
+    toast.error(__("Could not copy: {0}", [e.message || e]));
+    return false;
+  }
+}
+
+// the check mark is only seen, so the toast says it to a screen reader too
+async function copyCode(code) {
+  if (await copyAndMark(code, copiedCode, code)) toast.success(__("Response code copied"));
 }
 
 function copyResponseJson(resp) {
-  try {
-    const payload = JSON.stringify(resp, null, 2);
-    navigator.clipboard?.writeText(payload);
-    copiedJsonId.value = resp.response_uid;
-    setTimeout(() => {
-      copiedJsonId.value = "";
-    }, 2000);
-  } catch (e) {}
+  return copyAndMark(JSON.stringify(resp, null, 2), copiedJsonId, resp.response_uid);
 }
 
 async function generateFullBackupPayload() {
@@ -851,13 +864,10 @@ async function exportToJson() {
 async function copyFullBackupJson() {
   try {
     const backupData = await generateFullBackupPayload();
-    const payload = JSON.stringify(backupData, null, 2);
-    navigator.clipboard?.writeText(payload);
-    hasCopiedAll.value = true;
-    setTimeout(() => {
-      hasCopiedAll.value = false;
-    }, 2500);
-  } catch (e) {}
+    await copyAndMark(JSON.stringify(backupData, null, 2), hasCopiedAll, true, false);
+  } catch (e) {
+    toast.error(__("Could not copy: {0}", [e.message || e]));
+  }
 }
 
 function exportToCsv() {

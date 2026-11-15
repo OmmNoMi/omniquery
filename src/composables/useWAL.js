@@ -90,18 +90,17 @@ export function createWAL() {
     }
   }
 
+  // throws when the entry cannot be reset, so the Retry button can say so
   async function retryQuarantinedEntry(walId) {
-    try {
-      await db.wal.where("wal_id").equals(walId).modify({
-        status: "pending",
-        attempts: 0,
-        last_error: null,
-      });
-      await updatePendingCount();
-      if (isOnline.value) {
-        return await syncWAL();
-      }
-    } catch (e) {}
+    await db.wal.where("wal_id").equals(walId).modify({
+      status: "pending",
+      attempts: 0,
+      last_error: null,
+    });
+    await updatePendingCount();
+    if (isOnline.value) {
+      return await syncWAL();
+    }
   }
 
   // Each entry's submission keyed by its idempotency key, the key batch_push answers with. Each
@@ -120,7 +119,9 @@ export function createWAL() {
             quarantine_reason: `Corrupt WAL payload: ${err.message}`,
             quarantined_at: new Date().toISOString(),
           });
-        } catch (e) {}
+        } catch (e) {
+          console.warn(`Could not quarantine the corrupt queue entry ${entry.wal_id}:`, e);
+        }
       }
     }
     return chunk;
@@ -176,7 +177,9 @@ export function createWAL() {
             }),
           });
         }
-      } catch (e) {}
+      } catch (e) {
+        console.warn("Could not record a sync attempt:", e);
+      }
     }
     await updatePendingCount();
   }
@@ -211,9 +214,8 @@ export function createWAL() {
     isSyncing.value = true;
     try {
       const { synced, results } = await pushPendingChunks();
-      try {
-        await syncPendingAudio();
-      } catch (audioErr) {}
+      // syncPendingAudio logs its own failures and leaves the audio queued
+      await syncPendingAudio();
       return { syncedCount: synced, results };
     } catch (err) {
       console.warn("syncWAL error:", err);
@@ -287,10 +289,8 @@ export function createWAL() {
       for (const rec of pendingAudios) {
         if (!rec.blob || !rec.response_uid) continue;
         try {
-          let b64 = "";
-          try {
-            b64 = await fileToBase64(rec.blob);
-          } catch (b64Err) {}
+          // a recording that cannot be read is not uploaded empty: it stays pending, and the catch logs it
+          const b64 = await fileToBase64(rec.blob);
 
           const data = await call("omniquery.api.sync.upload_response_audio", {
             response_name: recordingResponse(rec),
@@ -364,7 +364,9 @@ export function createWAL() {
         let payload = {};
         try {
           payload = JSON.parse(entry.payload_json || "{}");
-        } catch (e) {}
+        } catch (e) {
+          // a corrupt entry is still listed, with no answers, so it can be seen and retried
+        }
         return {
           wal_id: entry.wal_id,
           status: entry.status,

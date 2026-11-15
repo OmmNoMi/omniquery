@@ -171,6 +171,9 @@ OmniQuery adopts a clean **Raven-style in-app membership architecture**: instead
 - [ ] **A draft cleared to no answers keeps its old answers on the server (#128, PR #87).** #87 saves the cleared draft locally as `{}`, but `syncAllDrafts` skips a draft with no items, so the server copy and other devices still show the removed answers.
 - [ ] **The recovery ZIP omits audio that compaction pruned (#129, PR #87).** `FilledFormsModal.vue` packs only blobs still in IndexedDB. List each server-side recording (file URL) in the archive's manifest instead.
 - [ ] **`forceSyncAll` summary messages are English only (#130, PR #87).** "Synced {n} queue item(s)…", "Sync error: …" and "Sync already in progress" in `useWAL.js` need `__()`, `hi.po` and `CORE_HINDI`.
+- [x] **A recording that could not be read was uploaded empty and marked synced (found fixing PR #84).** `syncPendingAudio` swallowed the `fileToBase64` error and sent `""`, so the device dropped the real audio. It now stays pending and the failure is logged. Fixed in PR #84.
+- [ ] **Move the PWA lint to Node 20+ and ESLint 10 (PR #84).** The shell's Node is 18, so `eslint.config.js` runs on ESLint 9, which npm marks as no longer supported. ESLint 10 needs Node ^20.19, as Frappe Builder's frontend uses. Bump the dev Node, then ESLint, `eslint-plugin-vue` and `vue-eslint-parser` together.
+- [ ] **224 PWA strings render in English in Hindi mode (#131, found checking PR #84).** 239 `__()` strings under `src/` have no `msgid` in `hi.po`, and 224 of those are not in `CORE_HINDI` either; the Success screen and catalog buttons are among them. Run `bench generate-pot-file` + `bench update-po-files --locale hi`, translate, and add a guard that every `__()` string has a `hi.po` msgid.
 
 ---
 

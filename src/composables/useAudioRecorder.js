@@ -37,7 +37,9 @@ function createRecorder(stream) {
   for (const options of [{ mimeType: currentMimeType, audioBitsPerSecond: 48000 }, { mimeType: currentMimeType }, undefined]) {
     try {
       return new MediaRecorder(stream, options);
-    } catch (e) {}
+    } catch (e) {
+      // this browser refuses these options: the next, plainer set is tried
+    }
   }
   return null;
 }
@@ -55,7 +57,9 @@ function release() {
     if (mediaRecorder.state !== "inactive") {
       try {
         mediaRecorder.stop();
-      } catch (e) {}
+      } catch (e) {
+        // the recorder ended on its own in between: there is nothing left to stop
+      }
     }
     mediaRecorder = null;
   }

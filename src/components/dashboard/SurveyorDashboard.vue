@@ -426,7 +426,10 @@ async function fetchServerMetrics() {
         dailyTarget.value = null;
       }
     }
-  } catch (e) {}
+  } catch (e) {
+    // the counts keep the last values, and the local queue still shows today's work
+    console.warn("Could not load the surveyor KPIs:", e);
+  }
 }
 
 const completedToday = computed(() => {

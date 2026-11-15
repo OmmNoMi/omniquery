@@ -2,10 +2,20 @@ import "fake-indexeddb/auto";
 import { Blob as NodeBlob } from "node:buffer";
 
 // Ensure native cloneable Blob and compatible FormData in test environment
+const DomBlob = globalThis.Blob;
 Object.defineProperty(NodeBlob, Symbol.hasInstance, {
   value: (inst) => inst && typeof inst.size === "number",
 });
 globalThis.Blob = NodeBlob;
+// happy-dom's FileReader reads only its own Blob, and a blob read back from fake-indexeddb is a
+// Node Blob, so hand it the same bytes as a happy-dom Blob. A browser reads either.
+if (typeof FileReader !== "undefined") {
+  const readAsDataURL = FileReader.prototype.readAsDataURL;
+  FileReader.prototype.readAsDataURL = function (blob) {
+    if (blob instanceof DomBlob || typeof blob?.arrayBuffer !== "function") return readAsDataURL.call(this, blob);
+    blob.arrayBuffer().then((bytes) => readAsDataURL.call(this, new DomBlob([bytes], { type: blob.type })));
+  };
+}
 if (typeof FormData !== "undefined" && FormData.prototype) {
   const origAppend = FormData.prototype.append;
   FormData.prototype.append = function (name, value, filename) {

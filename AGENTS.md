@@ -26,6 +26,17 @@ cost real time to learn. Add to it when you learn something new.
   deletes its shipped JSON file. To remove one in a test, use `frappe.db.delete` and delete the
   child rows too.
 - When you change a shipped doctype or fixture JSON, bump its `modified` so migrate syncs it.
+- `yarn test` runs ESLint over `src/` (`test/guards/eslint.test.js`, rules in `eslint.config.js`;
+  `yarn lint` runs it alone). `no-undef` finds a name used without an import, and `no-empty` an
+  empty block. A catch that means to ignore an error says why in a comment, which `no-empty`
+  accepts; one that hides a real failure logs it or shows a toast. The repo's `.eslintrc` is the
+  Frappe boilerplate for Desk JS and does not cover the PWA.
+- `src/test/setup.js` swaps in Node's `Blob` so fake-indexeddb can clone recordings, and a blob
+  read back from it is a Node Blob, which happy-dom's `FileReader` refuses. The setup converts it
+  for `readAsDataURL`. Without that, an audio test only passes when upload code ignores the error.
+- Copy to the clipboard with VueUse `useClipboard({ legacy: true })`. Its `copy` rejects when the
+  browser refuses, so catch it and show `toast.error`. The PWA has no `frappe.show_alert`; use
+  frappe-ui `toast`.
 
 ## frappe-ui answer choices and TextInput
 

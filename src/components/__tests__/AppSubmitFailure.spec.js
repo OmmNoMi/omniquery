@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
-import { nextTick } from "vue";
+import { effectScope, nextTick } from "vue";
 
 // What the surveyor sees when an interview cannot be stored (#32) or uploaded for a lost session
 // (#33). Only the server is faked, at frappe-ui's call(); the app, its views and IndexedDB are real.
@@ -17,9 +17,11 @@ vi.mock("frappe-ui", async (importOriginal) => {
   };
 });
 
+import { toast } from "frappe-ui";
 import App from "../../App.vue";
-import { db } from "../../services/db";
+import { db, SYNCED, NOT_SYNCED } from "../../services/db";
 import { useTranslation } from "../../composables/useTranslation";
+import { useWAL } from "../../composables/useWAL";
 
 const template = {
   name: "TMPL-TEST",
@@ -83,6 +85,61 @@ describe("App alerts for an interview that did not get through", () => {
     await vi.waitFor(() => expect(s.isSubmitted).toBe(true));
     expect(s.submissionError).toBe("");
     expect(text()).not.toContain("Interview not saved");
+  });
+
+  it("stores a submitted interview as Submitted and, once the server takes it, as synced (#31)", async () => {
+    const s = await fillSurvey();
+
+    await s.submitForm();
+    await vi.waitFor(async () => expect((await db.responses.get("OQS-TEST-SUBMIT"))?.synced).toBe(SYNCED));
+
+    const row = await db.responses.get("OQS-TEST-SUBMIT");
+    expect(row.status, "the row is no longer a Draft").toBe("Submitted");
+    expect(row.progress_percent).toBe(100);
+    expect(s.isSubmitted).toBe(true);
+  });
+
+  it("keeps a submitted interview marked not synced while the server has not taken it (#31)", async () => {
+    const s = await fillSurvey();
+    batchPush.mockRejectedValue(Object.assign(new Error("offline"), { status: 0 }));
+
+    await s.submitForm();
+    await flushPromises();
+
+    const row = await db.responses.get("OQS-TEST-SUBMIT");
+    expect(row.status).toBe("Submitted");
+    expect(row.synced).toBe(NOT_SYNCED);
+  });
+
+  it("Sync now says the interview is still on the device when the upload fails again (#31)", async () => {
+    const s = await fillSurvey();
+    batchPush.mockRejectedValue(Object.assign(new Error("offline"), { status: 0 }));
+    await s.submitForm();
+    await flushPromises();
+
+    await s.handleSyncSubmittedNow();
+    await vi.waitFor(() => expect(text()).toContain("Not uploaded yet"));
+    expect(s.isSubmissionSynced).toBe(false);
+  });
+
+  it("Sync now reports an interview another sync pass already sent as synced (#31)", async () => {
+    const s = await fillSurvey();
+    batchPush.mockRejectedValueOnce(Object.assign(new Error("offline"), { status: 0 }));
+    await s.submitForm();
+    await flushPromises();
+    // a background pass, on the app's shared queue: a scope of its own lets go of it afterwards
+    const scope = effectScope();
+    await scope.run(() => useWAL()).syncWAL();
+    scope.stop();
+    expect((await db.responses.get("OQS-TEST-SUBMIT")).synced, "the background pass sent it").toBe(SYNCED);
+
+    const warning = vi.spyOn(toast, "warning");
+    const success = vi.spyOn(toast, "success");
+    await s.handleSyncSubmittedNow();
+    await flushPromises();
+    expect(s.isSubmissionSynced).toBe(true);
+    expect(warning, "no 'Not uploaded yet' for an interview on the server").not.toHaveBeenCalled();
+    expect(success).toHaveBeenCalledWith("Survey synced to server successfully!");
   });
 
   it("asks the surveyor to sign in again when the server says the session is gone (#33)", async () => {

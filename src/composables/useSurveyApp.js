@@ -1,6 +1,6 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount, provide, inject, reactive } from "vue";
 import { call, toast } from "frappe-ui";
-import { watchDebounced } from "@vueuse/core";
+import { useClipboard, watchDebounced } from "@vueuse/core";
 import { db, SYNCED, NOT_SYNCED } from "../services/db";
 import { useSurvey } from "./useSurvey";
 import { useWAL } from "./useWAL";
@@ -197,7 +197,8 @@ export function useSurveyApp() {
   // why the last submit failed, shown over the survey with a Try again
   const submissionError = ref("");
   const submittedTimestamp = ref("");
-  const hasCopiedCode = ref(false);
+  // VueUse falls back to execCommand where the Clipboard API is missing or refused
+  const { copy: copyText, copied: hasCopiedCode } = useClipboard({ legacy: true, copiedDuring: 2000 });
   const isSubmissionSynced = ref(false);
   const isSyncingSubmission = ref(false);
 
@@ -206,37 +207,29 @@ export function useSurveyApp() {
     isSyncingSubmission.value = true;
     try {
       const res = await syncWAL();
-      if (res && res.syncedCount > 0) {
+      // a pass that finds the interview already sent counts 0, so the response's own row decides
+      const row = await db.responses.get(submittedResponseId.value);
+      if (res?.syncedCount > 0 || row?.synced === SYNCED) {
         isSubmissionSynced.value = true;
         toast.success(__("Survey synced to server successfully!"));
+      } else {
+        toast.warning(__("Not uploaded yet. The interview is kept on this device and will be sent later."));
       }
     } catch (e) {
+      toast.error(__("Sync failed: {0}", [e.message || e]));
     } finally {
       isSyncingSubmission.value = false;
     }
   }
 
-  function copyResponseCode() {
+  async function copyResponseCode() {
     if (!submittedResponseId.value) return;
     try {
-      if (window.frappe && window.frappe.utils && window.frappe.utils.copy_to_clipboard) {
-        window.frappe.utils.copy_to_clipboard(submittedResponseId.value);
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(submittedResponseId.value);
-      } else {
-        const textarea = document.createElement("textarea");
-        textarea.value = submittedResponseId.value;
-        document.body.appendChild(textarea);
-        textarea.select();
-        document.execCommand("copy");
-        document.body.removeChild(textarea);
-      }
-      hasCopiedCode.value = true;
-      toast.success(__("Response Code copied to clipboard"));
-      setTimeout(() => {
-        hasCopiedCode.value = false;
-      }, 2000);
-    } catch (e) {}
+      await copyText(submittedResponseId.value);
+      toast.success(__("Response code copied"));
+    } catch (e) {
+      toast.error(__("Could not copy: {0}", [e.message || e]));
+    }
   }
 
   async function restoreSubmittedResponseId() {
@@ -253,7 +246,9 @@ export function useSurveyApp() {
         submittedResponseId.value = latest[0].response_uid;
         submittedTimestamp.value = new Date(latest[0].updated_at || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       }
-    } catch (e) {}
+    } catch (e) {
+      console.warn("Could not read the last submitted response:", e);
+    }
   }
 
   watch(isSubmitted, (val) => {
@@ -687,9 +682,8 @@ export function useSurveyApp() {
       const res = await syncWAL();
       if (res && res.syncedCount > 0) {
         isSubmissionSynced.value = true;
-        try {
-          await syncPendingAudio(draftKey);
-        } catch (audioSyncErr) {}
+        // syncPendingAudio logs its own failures and leaves the audio queued
+        await syncPendingAudio(draftKey);
         toast.success(__("Survey synced to server successfully!"));
       } else {
         isSubmissionSynced.value = false;

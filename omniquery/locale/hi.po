@@ -2291,6 +2291,20 @@ msgid "Sync failed: {0}"
 msgstr "सिंक विफल: {0}"
 
 #: src/components/dashboard/FilledFormsModal.vue
+#: src/composables/useSurveyApp.js
+msgid "Could not copy: {0}"
+msgstr "कॉपी नहीं हो सका: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+#: src/composables/useSurveyApp.js
+msgid "Response code copied"
+msgstr "प्रतिक्रिया कोड कॉपी हो गया"
+
+#: src/composables/useSurveyApp.js
+msgid "Not uploaded yet. The interview is kept on this device and will be sent later."
+msgstr "अभी अपलोड नहीं हुआ। साक्षात्कार इस डिवाइस पर सुरक्षित है और बाद में भेजा जाएगा।"
+
+#: src/components/dashboard/FilledFormsModal.vue
 msgid "Export failed: {0}"
 msgstr "निर्यात विफल: {0}"
 

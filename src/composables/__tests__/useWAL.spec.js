@@ -228,4 +228,17 @@ describe("useWAL", () => {
     expect((await db.audio_recordings.get(`${uid}~2`)).status).toBe("synced");
     expect((await db.audio_recordings.get(`${uid}2`)).status, "another response's recording waits its turn").toBe("pending");
   });
+  it("keeps a recording it cannot read pending, and does not upload it empty (#31)", async () => {
+    await db.audio_recordings.clear();
+    const uid = "OQS-UNREADABLE-AUDIO";
+    await db.audio_recordings.put({ response_uid: uid, blob: { size: 3 }, status: "pending", created_at: new Date().toISOString() });
+    const mockFetch = vi.fn();
+    globalThis.fetch = mockFetch;
+    if (typeof window !== "undefined") window.fetch = mockFetch;
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(await createWAL().syncPendingAudio(uid)).toBe(0);
+    expect(mockFetch, "no upload with an empty file").not.toHaveBeenCalled();
+    expect((await db.audio_recordings.get(uid)).status).toBe("pending");
+  });
 });

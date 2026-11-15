@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import JSZip from "jszip";
+import { toast } from "frappe-ui";
 import FilledFormsModal from "../dashboard/FilledFormsModal.vue";
 import { db } from "../../services/db";
 import { useTranslation } from "../../composables/useTranslation.js";
@@ -261,6 +262,29 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
     expect(zipFileSpy).toHaveBeenCalledWith("records_summary.csv", expect.any(String));
     expect(zipFileSpy).toHaveBeenCalledWith("README.txt", expect.any(String));
     expect(zipFolderSpy).toHaveBeenCalledWith("individual_surveys");
+
+    wrapper.unmount();
+  });
+
+  it("copies a response code with a toast, and says so when the browser refuses (#31)", async () => {
+    const success = vi.spyOn(toast, "success");
+    const error = vi.spyOn(toast, "error");
+    const wrapper = mount(FilledFormsModal, { props: { isOpen: true, isOnline: true }, attachTo: el });
+    let codeBtn;
+    await vi.waitFor(() => {
+      codeBtn = Array.from(document.body.querySelectorAll("button")).find((b) => b.textContent.trim() === "RESP-SYNCED-001");
+      expect(codeBtn).toBeDefined();
+    });
+
+    codeBtn.click();
+    await vi.waitFor(() => expect(success).toHaveBeenCalledWith("Response code copied"));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("RESP-SYNCED-001");
+
+    success.mockClear();
+    navigator.clipboard.writeText.mockRejectedValueOnce(new Error("Write permission denied"));
+    codeBtn.click();
+    await vi.waitFor(() => expect(error).toHaveBeenCalledWith("Could not copy: Write permission denied"));
+    expect(success, "no 'copied' for a copy that failed").not.toHaveBeenCalled();
 
     wrapper.unmount();
   });
