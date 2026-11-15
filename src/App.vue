@@ -12,6 +12,7 @@
 
     <!-- 1. Sleek Native Mobile Header (At most 2 props; session & WAL injected) -->
     <CompactHeader
+      ref="header"
       :surveyTitle="s.headerTitle"
       :showBack="Boolean(s.activeTemplate || s.activeProjectId)"
       @exit="s.onExit"
@@ -24,6 +25,14 @@
 
     <!-- 2. Main View Container -->
     <main :class="['flex-1 w-full min-w-0 mx-auto p-3 sm:p-6 transition-all', s.activeProjectId ? 'max-w-4xl' : 'max-w-3xl', s.activeSection ? 'pb-0' : 'pb-24']">
+      <!-- Why the microphone did not start. frappe-ui's own dismiss control has no name, so a named
+           Button in the footer slot takes its place. -->
+      <Alert v-if="s.microphoneAlert" class="mb-4" theme="red" :title="s.microphoneAlert.title" :description="s.microphoneAlert.description" :dismissable="false">
+        <template #footer>
+          <Button variant="ghost" :icon="X" :label="s.__('Dismiss')" :title="s.__('Dismiss')" @click="dismissMicrophoneAlert" />
+        </template>
+      </Alert>
+
       <!-- Loading State -->
       <div v-if="s.isLoading" class="min-h-[50vh] flex flex-col items-center justify-center p-8 text-center select-none">
         <div class="relative mb-3">
@@ -91,8 +100,10 @@
           <DialogDescription as="p" class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">{{ s.isGuest ? s.__('Sign in with your OmniQuery account for full surveyor and management access.') : s.__('Your responses are saved in offline drafts. Return to the survey list?') }}</DialogDescription>
         </div>
         <div class="grid grid-cols-2 gap-2.5 pt-2">
-          <Button @click="s.showExitDialog = false" class="w-full py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs sm:text-sm hover:bg-slate-50 dark:hover:bg-slate-700 active:scale-95 transition cursor-pointer">{{ s.isGuest ? s.__('Stay Here') : s.__('Stay') }}</Button>
-          <Button @click="s.confirmExit" :class="s.isGuest ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'" class="w-full py-2.5 rounded-xl text-white font-bold text-xs sm:text-sm active:scale-95 transition shadow-xs cursor-pointer">{{ s.isGuest ? s.__('Login') : s.__('Exit') }}</Button>
+          <!-- colour by variant and theme (test/guards/button_variants.test.js): a bg-* class lost to the
+               Button's own background and left Exit as white text on light grey -->
+          <Button variant="outline" size="md" class="w-full font-bold" :label="s.isGuest ? s.__('Stay Here') : s.__('Stay')" @click="s.showExitDialog = false" />
+          <Button variant="solid" size="md" :theme="s.isGuest ? 'gray' : 'red'" class="w-full font-bold" :label="s.isGuest ? s.__('Login') : s.__('Exit')" @click="s.confirmExit" />
         </div>
       </div>
       </template>
@@ -105,9 +116,10 @@
 </template>
 
 <script setup>
-import { Button, Dialog, FrappeUIProvider } from "frappe-ui";
+import { useTemplateRef } from "vue";
+import { Alert, Button, Dialog, FrappeUIProvider } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
-import { AlertTriangle, ClipboardList, KeyRound, Zap } from "lucide-vue-next";
+import { AlertTriangle, ClipboardList, KeyRound, X, Zap } from "lucide-vue-next";
 import { provideSurveyApp } from "./composables/useSurveyApp";
 import CompactHeader from "./components/header/CompactHeader.vue";
 import ProjectPage from "./components/project/ProjectPage.vue";
@@ -121,4 +133,11 @@ import { useTheme } from "./utils/theme";
 const s = provideSurveyApp();
 // Held for the app's lifetime, so "System" keeps following the device even with Settings closed
 useTheme();
+
+// Dismissing the microphone alert returns focus to the microphone that raised it, not to <body>
+const header = useTemplateRef("header");
+function dismissMicrophoneAlert() {
+  s.dismissMicrophoneAlert();
+  header.value?.focusMicrophone();
+}
 </script>

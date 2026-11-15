@@ -1,168 +1,177 @@
-import { ref } from "vue";
-import { db } from "../services/db";
+import { ref, computed } from "vue";
+import { db, audioRecordingsFor, recordingKey } from "../services/db";
 
-const isRecording = ref(false);
-const isPaused = ref(false);
-const audioBlob = ref(null);
+// One recorder for the whole app. `state` is the only source of truth; the header, the session and
+// the microphone alert all read from it (#37):
+// idle | requesting | recording | paused | denied | unsupported | no-device | error
+const state = ref("idle");
+const isRecording = computed(() => state.value === "recording" || state.value === "paused");
+const isPaused = computed(() => state.value === "paused");
+const audioBlob = ref(null); // the last recording stopRecording() returned
 let mediaRecorder = null;
 let audioChunks = [];
 let mediaStream = null;
 let currentMimeType = "audio/webm";
+// Bumped each time the microphone is released, so a permission prompt answered after the surveyor
+// left the survey does not start a recording that nothing on screen can stop
+let session = 0;
+// Resolves the stopRecording() in progress. The browser stops a recorder asynchronously, so the
+// surveyor can leave in between: release() then settles it with null rather than leave it hanging.
+let finishStop = null;
 
 function getSupportedMimeType() {
-  if (typeof MediaRecorder === "undefined") return "audio/webm";
-  const candidates = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/ogg;codecs=opus",
-    "audio/mp4",
-    "audio/aac",
-  ];
-  for (const t of candidates) {
-    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) {
-      return t;
-    }
-  }
-  return "audio/webm";
+  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4", "audio/aac"];
+  return candidates.find((t) => MediaRecorder.isTypeSupported?.(t)) || "audio/webm";
 }
 
-export function useAudioRecorder() {
-  async function initStream() {
-    if (mediaStream) return mediaStream;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
-    mediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        channelCount: 1, // Mono: single source voice; saves 50% byte weight with zero vocal fidelity loss
-        sampleRate: 48000, // 48 kHz full-band voice capture
-        echoCancellation: true, // Hardware/browser acoustic echo cancellation
-        noiseSuppression: true, // Filters out field environmental & wind noise
-        autoGainControl: true, // Normalizes distant respondent speech levels
-      },
-    });
-    return mediaStream;
-  }
+// The getUserMedia failure, as a state the alert can explain
+function failureState(error) {
+  if (error?.name === "NotAllowedError" || error?.name === "PermissionDeniedError" || error?.name === "SecurityError") return "denied";
+  if (error?.name === "NotFoundError" || error?.name === "DevicesNotFoundError") return "no-device";
+  return "error";
+}
 
-  function handleDataAvailable(e) {
-    if (e.data && e.data.size > 0) {
-      audioChunks.push(e.data);
-    }
-  }
-
-  function handleRecorderStop() {
-    if (audioChunks.length > 0) {
-      audioBlob.value = new Blob(audioChunks, { type: currentMimeType });
-    }
-    isRecording.value = false;
-    isPaused.value = false;
-  }
-
-  async function startRecording() {
+function createRecorder(stream) {
+  currentMimeType = getSupportedMimeType();
+  // 48 kbps Opus is transparent for voice; older browsers reject the options, so fall back step by step
+  for (const options of [{ mimeType: currentMimeType, audioBitsPerSecond: 48000 }, { mimeType: currentMimeType }, undefined]) {
     try {
-      const stream = await initStream();
-      if (!stream) return;
-      audioChunks = [];
-      currentMimeType = getSupportedMimeType();
-      const recorderOptions = {
-        mimeType: currentMimeType,
-        audioBitsPerSecond: 48000, // 48 kbps Opus: perceptually transparent/lossless full-band voice compression
-      };
-      try {
-        mediaRecorder = new MediaRecorder(stream, recorderOptions);
-      } catch (optErr) {
-        try {
-          mediaRecorder = new MediaRecorder(stream, { mimeType: currentMimeType });
-        } catch (mimeErr) {
-          mediaRecorder = new MediaRecorder(stream);
-        }
-      }
-      mediaRecorder.ondataavailable = handleDataAvailable;
-      mediaRecorder.onstop = handleRecorderStop;
-      mediaRecorder.start(1000);
-      isRecording.value = true;
-      isPaused.value = false;
-    } catch (e) {
-      console.warn("Audio recording unavailable or denied:", e);
-    }
+      return new MediaRecorder(stream, options);
+    } catch (e) {}
   }
+  return null;
+}
 
-  function pauseRecording() {
-    if (mediaRecorder && mediaRecorder.state === "recording") {
-      mediaRecorder.pause();
-      isPaused.value = true;
-    }
-  }
-
-  function resumeRecording() {
-    if (mediaRecorder && mediaRecorder.state === "paused") {
-      mediaRecorder.resume();
-      isPaused.value = false;
-    }
-  }
-
-  async function toggleAudio() {
-    if (!isRecording.value) {
-      await startRecording();
-    } else if (isPaused.value) {
-      resumeRecording();
-    } else {
-      pauseRecording();
-    }
-  }
-
-  async function stopRecording() {
-    if (!mediaRecorder || mediaRecorder.state === "inactive") {
-      if (mediaStream) {
-        mediaStream.getTracks().forEach((track) => track.stop());
-        mediaStream = null;
-      }
-      isRecording.value = false;
-      isPaused.value = false;
-      return audioBlob.value;
-    }
-
-    return new Promise((resolve) => {
-      const originalOnStop = mediaRecorder.onstop;
-      mediaRecorder.onstop = (e) => {
-        if (originalOnStop) originalOnStop(e);
-        if (mediaStream) {
-          mediaStream.getTracks().forEach((track) => track.stop());
-          mediaStream = null;
-        }
-        resolve(audioBlob.value);
-      };
-      mediaRecorder.stop();
-    });
-  }
-
-  function discardAudio() {
-    if (mediaRecorder && mediaRecorder.state !== "inactive") {
+// Stops the recorder and the microphone without keeping what was recorded. The recorder's handlers
+// are detached first, so its late stop event cannot fill audioBlob for whoever records next.
+function release() {
+  session++;
+  const finish = finishStop;
+  finishStop = null;
+  finish?.(null);
+  if (mediaRecorder) {
+    mediaRecorder.ondataavailable = null;
+    mediaRecorder.onstop = null;
+    if (mediaRecorder.state !== "inactive") {
       try {
         mediaRecorder.stop();
       } catch (e) {}
     }
-    if (mediaStream) {
-      try {
-        mediaStream.getTracks().forEach((track) => track.stop());
-      } catch (e) {}
-      mediaStream = null;
-    }
     mediaRecorder = null;
+  }
+  mediaStream?.getTracks().forEach((track) => track.stop());
+  mediaStream = null;
+  audioChunks = [];
+  state.value = "idle";
+}
+
+export function useAudioRecorder() {
+  async function startRecording() {
+    if (isRecording.value || state.value === "requesting") return;
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
+      state.value = "unsupported";
+      return;
+    }
+    const mine = session;
+    state.value = "requesting";
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          channelCount: 1, // mono: one voice, half the bytes
+          sampleRate: 48000, // full-band voice
+          echoCancellation: true,
+          noiseSuppression: true, // field and wind noise
+          autoGainControl: true, // evens out a distant respondent
+        },
+      });
+    } catch (e) {
+      console.warn("Microphone unavailable:", e);
+      if (mine === session) state.value = failureState(e);
+      return;
+    }
+    if (mine !== session) {
+      // the surveyor left while the browser was asking for permission
+      stream.getTracks().forEach((track) => track.stop());
+      return;
+    }
+    const recorder = createRecorder(stream);
+    if (!recorder) {
+      stream.getTracks().forEach((track) => track.stop());
+      state.value = "unsupported";
+      return;
+    }
+    mediaStream = stream;
+    mediaRecorder = recorder;
     audioChunks = [];
-    audioBlob.value = null;
-    isRecording.value = false;
-    isPaused.value = false;
+    recorder.ondataavailable = (e) => {
+      if (e.data?.size > 0) audioChunks.push(e.data);
+    };
+    recorder.start(1000);
+    state.value = "recording";
   }
 
+  function pauseRecording() {
+    if (mediaRecorder?.state === "recording") {
+      mediaRecorder.pause();
+      state.value = "paused";
+    }
+  }
+
+  function resumeRecording() {
+    if (mediaRecorder?.state === "paused") {
+      mediaRecorder.resume();
+      state.value = "recording";
+    }
+  }
+
+  async function toggleAudio() {
+    if (!isRecording.value) await startRecording();
+    else if (isPaused.value) resumeRecording();
+    else pauseRecording();
+  }
+
+  // Stops recording and releases the microphone. Resolves with what was recorded since the last
+  // start, or null when nothing was: never with an older recording.
+  async function stopRecording() {
+    const recorder = mediaRecorder;
+    if (!recorder || recorder.state === "inactive") {
+      release();
+      return null;
+    }
+    return new Promise((resolve) => {
+      finishStop = resolve;
+      recorder.onstop = () => {
+        finishStop = null;
+        const blob = audioChunks.length > 0 ? new Blob(audioChunks, { type: currentMimeType }) : null;
+        audioBlob.value = blob;
+        release();
+        resolve(blob);
+      };
+      recorder.stop();
+    });
+  }
+
+  // Drops the recording in progress, if any, and clears a microphone error
+  function discardAudio() {
+    release();
+    audioBlob.value = null;
+  }
+
+  // Saves a recording for a response. A response that already has one gets the next part, so a
+  // draft recorded before and after resuming keeps both (#37).
   async function saveAudioForResponse(responseUid, blob = null, mimeType = null) {
     const b = blob || audioBlob.value;
     if (!b || b.size === 0 || !responseUid) return null;
     const resolvedMime = mimeType || b.type || currentMimeType || "audio/webm";
     const ext = resolvedMime.includes("mp4") ? "mp4" : "webm";
+    const part = (await audioRecordingsFor(responseUid).count()) + 1;
     const record = {
-      response_uid: responseUid,
+      response_uid: recordingKey(responseUid, part),
+      response_name: responseUid,
       blob: b,
       mime_type: resolvedMime,
-      file_name: `interview_${responseUid}.${ext}`,
+      file_name: part > 1 ? `interview_${responseUid}_part${part}.${ext}` : `interview_${responseUid}.${ext}`,
       size: b.size,
       status: "pending",
       created_at: new Date().toISOString(),
@@ -177,6 +186,7 @@ export function useAudioRecorder() {
   }
 
   return {
+    state,
     isRecording,
     isPaused,
     audioBlob,

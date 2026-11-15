@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createWAL } from "../useWAL";
 import { db } from "../../services/db";
+import { useAudioRecorder } from "../useAudioRecorder";
 
 describe("useWAL", () => {
   beforeEach(async () => {
@@ -201,5 +202,31 @@ describe("useWAL", () => {
     const updated = await db.audio_recordings.get(testUid);
     expect(updated.status).toBe("synced");
     expect(updated.file_url).toBe(`/private/files/interview_${testUid}.webm`);
+  });
+  it("uploads every part of a response's recording to that response, and only that response's (#37)", async () => {
+    await db.audio_recordings.clear();
+    const uid = "OQS-WATER-AUDIO";
+    const { saveAudioForResponse } = useAudioRecorder();
+    await saveAudioForResponse(uid, new Blob(["before leaving"], { type: "audio/webm" }));
+    await saveAudioForResponse(uid, new Blob(["after resuming"], { type: "audio/webm" }));
+    await saveAudioForResponse(`${uid}2`, new Blob(["another response"], { type: "audio/webm" }));
+
+    const mockFetch = vi.fn().mockImplementation(async (_url, init) => ({
+      ok: true,
+      json: async () => ({ message: { status: "SUCCESS", file_url: `/private/files/${JSON.parse(init.body).filename}` } }),
+    }));
+    globalThis.fetch = mockFetch;
+    if (typeof window !== "undefined") window.fetch = mockFetch;
+
+    const uploaded = await createWAL().syncPendingAudio(uid);
+
+    expect(uploaded).toBe(2);
+    const sent = mockFetch.mock.calls.map(([, init]) => JSON.parse(init.body));
+    expect(sent.map((b) => [b.response_name, b.filename]).sort()).toEqual([
+      [uid, `interview_${uid}.webm`],
+      [uid, `interview_${uid}_part2.webm`],
+    ]);
+    expect((await db.audio_recordings.get(`${uid}~2`)).status).toBe("synced");
+    expect((await db.audio_recordings.get(`${uid}2`)).status, "another response's recording waits its turn").toBe("pending");
   });
 });

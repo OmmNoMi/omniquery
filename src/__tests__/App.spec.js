@@ -33,6 +33,8 @@ vi.mock("frappe-ui", async (importOriginal) => {
 import App from "../App.vue";
 import { db } from "../services/db";
 import { useTranslation } from "../composables/useTranslation";
+import { useAudioRecorder } from "../composables/useAudioRecorder";
+import { fakeMicrophone, micError } from "../test/microphone";
 
 const surveyTitles = () => Array.from(document.body.querySelectorAll("h2")).map((h) => h.textContent.trim());
 
@@ -247,3 +249,83 @@ describe("Back and Forward show the page each entry was (#38)", () => {
   });
 });
 
+
+describe("the microphone records for the draft being filled (#37)", () => {
+  let wrapper;
+  let microphone;
+  const micButton = () => document.body.querySelector("header button[aria-label*='microphone']");
+
+  beforeEach(async () => {
+    bootstrap = assigned;
+    useTranslation().setLanguage("en");
+    await db.templates.clear();
+    await db.responses.clear();
+    await db.audio_recordings.clear();
+    window.scrollTo = vi.fn();
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    microphone = fakeMicrophone();
+    recordHistory();
+    openLink("/omniquery/project/P-1", { initial_project_id: "P-1", user_roles: ["OmniQuery User"] });
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+  });
+  afterEach(() => {
+    wrapper?.unmount();
+    useAudioRecorder().discardAudio();
+    document.body.innerHTML = "";
+    delete window.frappe;
+    vi.restoreAllMocks();
+  });
+
+  async function openSurvey() {
+    await wrapper.vm.s.selectSurvey("OQS-WATER");
+    await settle();
+  }
+
+  it("offers no microphone on the project page", () => {
+    expect(shownView()).toBe("Village Water");
+    expect(micButton()).toBeNull();
+  });
+
+  it("releases the microphone on Back and keeps what was recorded with the draft that was left", async () => {
+    await openSurvey();
+    const draftId = wrapper.vm.s.currentDraftId;
+    micButton().click();
+    await vi.waitFor(() => expect(wrapper.vm.s.isRecording).toBe(true));
+
+    await goBack();
+    expect(shownView()).toBe("Village Water");
+    expect(wrapper.vm.s.isRecording).toBe(false);
+    expect(microphone.track.stop, "the browser's recording indicator goes off").toHaveBeenCalled();
+    await vi.waitFor(async () => expect(await db.audio_recordings.get(draftId)).toMatchObject({ response_name: draftId, status: "pending" }));
+  });
+
+  it("explains a blocked microphone in an alert the surveyor can dismiss by name", async () => {
+    navigator.mediaDevices.getUserMedia.mockRejectedValue(micError("NotAllowedError"));
+    await openSurvey();
+    micButton().click();
+    await vi.waitFor(() => expect(document.body.textContent).toContain("Microphone access is blocked"));
+    expect(document.body.textContent).toContain("Allow microphone access for this site in your browser settings");
+
+    const dismiss = Array.from(document.body.querySelectorAll("main button")).find((b) => b.getAttribute("aria-label") === "Dismiss" || b.textContent.trim() === "Dismiss");
+    expect(dismiss, "a Dismiss button with a name").toBeTruthy();
+    dismiss.click();
+    await nextTick();
+    expect(document.body.textContent).not.toContain("Microphone access is blocked");
+    expect(document.activeElement, "focus goes back to the microphone, not to the page").toBe(micButton());
+  });
+
+  it("keeps the recording with the submitted response and takes the microphone away on the success screen", async () => {
+    await openSurvey();
+    const draftId = wrapper.vm.s.currentDraftId;
+    micButton().click();
+    await vi.waitFor(() => expect(wrapper.vm.s.isRecording).toBe(true));
+
+    await wrapper.vm.s.submitForm();
+    await settle();
+    expect(wrapper.vm.s.isSubmitted).toBe(true);
+    expect(micButton(), "nothing left to record").toBeNull();
+    expect(await db.audio_recordings.get(draftId)).toMatchObject({ response_name: draftId });
+    expect(await db.audio_recordings.count(), "saved once, not again by the exit watcher").toBe(1);
+  });
+});

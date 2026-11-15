@@ -1,7 +1,7 @@
 import { ref, getCurrentScope, onScopeDispose } from "vue";
 import { createSharedComposable } from "@vueuse/core";
 import { call, fileToBase64 } from "frappe-ui";
-import { db } from "../services/db";
+import { db, audioRecordingsFor, recordingResponse } from "../services/db";
 import { buildResponsePayload, draftStored } from "../utils/responsePayload";
 
 export function createWAL() {
@@ -234,9 +234,7 @@ export function createWAL() {
     try {
       let pendingAudios = [];
       if (targetResponseUid) {
-        pendingAudios = await db.audio_recordings
-          .where("response_uid")
-          .equals(targetResponseUid)
+        pendingAudios = await audioRecordingsFor(targetResponseUid)
           .and((r) => r.status === "pending")
           .toArray();
       } else {
@@ -255,9 +253,9 @@ export function createWAL() {
           } catch (b64Err) {}
 
           const data = await call("omniquery.api.sync.upload_response_audio", {
-            response_name: rec.response_uid,
+            response_name: recordingResponse(rec),
             file_base64: b64,
-            filename: rec.file_name || `interview_${rec.response_uid}.webm`,
+            filename: rec.file_name || `interview_${recordingResponse(rec)}.webm`,
           });
 
           const msg = data && (data.message || data);

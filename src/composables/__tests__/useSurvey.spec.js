@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useSurvey, generateSurveyId } from "../useSurvey";
-import { db } from "../../services/db";
+import { db, audioRecordingsFor } from "../../services/db";
+import { useAudioRecorder } from "../useAudioRecorder";
 
 describe("useSurvey", () => {
   beforeEach(async () => {
@@ -334,5 +335,27 @@ describe("useSurvey", () => {
     expect(validPass).toBe(true);
     expect(survey.validationErrors.value.q_expenses).toBeUndefined();
   });
-});
+  it("takes a discarded draft's recordings with it, and leaves a submitted response's alone (#37)", async () => {
+    await db.audio_recordings.clear();
+    const { saveAudioForResponse } = useAudioRecorder();
+    const take = (text) => new Blob([text], { type: "audio/webm" });
+    await db.responses.bulkPut([
+      { response_uid: "OQS-WATER-aaa111", template_name: "OQS-WATER", status: "Draft", updated_at: "2026-11-01" },
+      { response_uid: "OQS-WATER-bbb222", template_name: "OQS-WATER", status: "Draft", updated_at: "2026-11-02" },
+      { response_uid: "OQS-WATER-ccc333", template_name: "OQS-WATER", status: "Submitted", updated_at: "2026-11-03" },
+    ]);
+    await saveAudioForResponse("OQS-WATER-aaa111", take("one"));
+    await saveAudioForResponse("OQS-WATER-aaa111", take("one, after resuming"));
+    await saveAudioForResponse("OQS-WATER-bbb222", take("two"));
+    await saveAudioForResponse("OQS-WATER-ccc333", take("submitted"));
 
+    const { discardDraft } = useSurvey();
+    await discardDraft(null, "OQS-WATER-aaa111");
+    expect(await audioRecordingsFor("OQS-WATER-aaa111").count(), "both parts of the one draft").toBe(0);
+    expect(await audioRecordingsFor("OQS-WATER-bbb222").count(), "the other draft keeps its recording").toBe(1);
+
+    await discardDraft("OQS-WATER");
+    expect(await audioRecordingsFor("OQS-WATER-bbb222").count(), "every draft of the survey").toBe(0);
+    expect(await audioRecordingsFor("OQS-WATER-ccc333").count(), "a submitted response is not a draft").toBe(1);
+  });
+});

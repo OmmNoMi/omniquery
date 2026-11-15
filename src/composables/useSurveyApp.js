@@ -36,7 +36,7 @@ export function useSurveySession() {
   return injectOrThrow(SURVEY_SESSION, "useSurveySession");
 }
 
-// isOnline, pendingWALCount, textSize, progressPercent, isRecording and isAudioPaused, as refs
+// isOnline, pendingWALCount, textSize, progressPercent, isRecording, isAudioPaused and canRecord, as refs
 export function useOmniqueryContext() {
   return injectOrThrow(OMNIQUERY_CONTEXT, "useOmniqueryContext");
 }
@@ -57,7 +57,7 @@ export function useSurveyApp() {
   const { textSize, cycleTextSize, setTextSize } = useTextScale();
   const { isOnline, pendingWALCount, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
   const { gpsCoords, captureGPS } = useGPS();
-  const { isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
+  const { state: audioState, isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
 
   const {
     activeTemplate,
@@ -752,6 +752,31 @@ export function useSurveyApp() {
     currentDraftId.value = generateSurveyId(activeTemplate.value?.name || activeTemplate.value?.template_name || "");
   }
 
+  // The microphone records for the draft being filled, and only while one is: not on the project
+  // page or the success screen (#37)
+  const canRecord = computed(() => Boolean(activeTemplate.value) && !isSubmitted.value);
+  const recordingDraftId = computed(() => (canRecord.value ? currentDraftId.value || "" : ""));
+
+  // Leaving the draft by any route (Home, Back, another survey, a resumed draft, submitting) releases
+  // the microphone, and what was recorded stays with the draft it was recorded for. Submitting has
+  // already saved its recording by then, so stopRecording() finds nothing to keep.
+  watch(recordingDraftId, async (_, leftDraftId) => {
+    const blob = await stopRecording();
+    if (blob && leftDraftId) await saveAudioForResponse(leftDraftId, blob);
+  });
+
+  // What the microphone alert says for each failure; null when there is nothing to say
+  const MICROPHONE_ALERTS = {
+    denied: ["Microphone access is blocked", "Allow microphone access for this site in your browser settings, then tap the microphone again."],
+    unsupported: ["Recording is not available", "This browser cannot record audio. The survey still saves without a recording."],
+    "no-device": ["No microphone found", "Connect a microphone, then tap the microphone again."],
+    error: ["Could not start the microphone", "Another app may be using it. Close that app, then tap the microphone again."],
+  };
+  const microphoneAlert = computed(() => {
+    const alert = canRecord.value && MICROPHONE_ALERTS[audioState.value];
+    return alert ? { title: __(alert[0]), description: __(alert[1]) } : null;
+  });
+
   async function triggerSync() {
     await forceSyncAll();
     await loadActiveDrafts();
@@ -781,6 +806,7 @@ export function useSurveyApp() {
     progressPercent,
     isRecording,
     isAudioPaused,
+    canRecord,
     triggerSync,
   };
 
@@ -799,6 +825,8 @@ export function useSurveyApp() {
     isRecording,
     isAudioPaused,
     toggleAudio,
+    microphoneAlert,
+    dismissMicrophoneAlert: discardAudio,
     activeTemplate,
     activeSectionIndex,
     availableTemplates,

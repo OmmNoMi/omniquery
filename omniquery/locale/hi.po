@@ -2350,6 +2350,42 @@ msgstr "माइक्रोफ़ोन म्यूट करें"
 msgid "Unmute / record microphone"
 msgstr "माइक्रोफ़ोन चालू करें / रिकॉर्ड करें"
 
+#: src/composables/useSurveyApp.js
+msgid "Microphone access is blocked"
+msgstr "माइक्रोफ़ोन की अनुमति बंद है"
+
+#: src/composables/useSurveyApp.js
+msgid "Allow microphone access for this site in your browser settings, then tap the microphone again."
+msgstr "ब्राउज़र की सेटिंग में इस साइट को माइक्रोफ़ोन की अनुमति दें, फिर माइक्रोफ़ोन दोबारा दबाएँ।"
+
+#: src/composables/useSurveyApp.js
+msgid "Recording is not available"
+msgstr "रिकॉर्डिंग उपलब्ध नहीं है"
+
+#: src/composables/useSurveyApp.js
+msgid "This browser cannot record audio. The survey still saves without a recording."
+msgstr "यह ब्राउज़र ऑडियो रिकॉर्ड नहीं कर सकता। सर्वेक्षण बिना रिकॉर्डिंग के भी सहेजा जाएगा।"
+
+#: src/composables/useSurveyApp.js
+msgid "No microphone found"
+msgstr "कोई माइक्रोफ़ोन नहीं मिला"
+
+#: src/composables/useSurveyApp.js
+msgid "Connect a microphone, then tap the microphone again."
+msgstr "माइक्रोफ़ोन जोड़ें, फिर माइक्रोफ़ोन दोबारा दबाएँ।"
+
+#: src/composables/useSurveyApp.js
+msgid "Could not start the microphone"
+msgstr "माइक्रोफ़ोन चालू नहीं हो सका"
+
+#: src/composables/useSurveyApp.js
+msgid "Another app may be using it. Close that app, then tap the microphone again."
+msgstr "शायद कोई दूसरा ऐप इसका उपयोग कर रहा है। उस ऐप को बंद करें, फिर माइक्रोफ़ोन दोबारा दबाएँ।"
+
+#: src/App.vue
+msgid "Dismiss"
+msgstr "हटाएँ"
+
 #: src/components/header/CompactHeader.vue
 msgid "Close settings"
 msgstr "सेटिंग्स बंद करें"

@@ -22,7 +22,7 @@ const appDir = path.resolve(__dirname, "../..");
 const rel = (file) => path.relative(appDir, file);
 
 export const BUTTON_COLOR_ALLOWLIST = {
-  "src/App.vue": 4,
+  "src/App.vue": 2,
   "src/components/common/FCombobox.vue": 5,
   "src/components/common/FCurrencyInput.vue": 2,
   "src/components/common/FRating.vue": 1,

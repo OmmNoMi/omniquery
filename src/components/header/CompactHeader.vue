@@ -56,9 +56,10 @@
           <span class="font-bold text-xs leading-none text-amber-900 dark:text-amber-200">{{ pendingWALCount }}</span>
         </Button>
 
-        <!-- Chip 2: Microphone Recording Button (only for logged-in surveyors) -->
+        <!-- Chip 2: Microphone Recording Button (only for logged-in surveyors filling a survey) -->
         <Button
-          v-if="showBack && !isGuest"
+          v-if="canRecord && !isGuest"
+          ref="micRef"
           @click="$emit('toggle-audio')"
           class="relative w-8 h-8 rounded-full flex items-center justify-center transition active:scale-95 shadow-2xs cursor-pointer"
           :class="[
@@ -256,11 +257,12 @@ const { __, currentLang, setLanguage } = useTranslation();
 
 const showConfigModal = ref(false);
 const avatarRef = ref(null);
+const micRef = ref(null);
 const { theme } = useTheme();
 
 const { email: userEmail, displayName: userDisplayName, userInitial } = useSession();
 
-const { isOnline, pendingWALCount, textSize, progressPercent, isRecording, isAudioPaused } = useOmniqueryContext();
+const { isOnline, pendingWALCount, textSize, progressPercent, isRecording, isAudioPaused, canRecord } = useOmniqueryContext();
 const { isGuest, isManager, isSurveyor, isAdmin } = useUserRoles();
 
 const roleLabel = computed(() => {
@@ -347,10 +349,16 @@ const preferenceRows = computed(() => [
   },
 ]);
 
+// The microphone alert hands focus back here when dismissed, so a keyboard user is where they tapped
+function focusMicrophone() {
+  micRef.value?.rootRef?.focus();
+}
+
 defineExpose({
   roleLabel,
   isGuest,
   isManager,
-  showConfigModal
+  showConfigModal,
+  focusMicrophone,
 });
 </script>

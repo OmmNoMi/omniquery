@@ -7,7 +7,7 @@ import { OMNIQUERY_CONTEXT } from "../../composables/useSurveyApp";
 import { smallTapTargets } from "../../test/tapTargets";
 
 // The header reads roles from the boot data and online/queue state from App's provided context (#46)
-function mountHeader({ roles = [], isOnline = true, pendingWALCount = 0, ...options } = {}) {
+function mountHeader({ roles = [], isOnline = true, pendingWALCount = 0, canRecord = false, ...options } = {}) {
   window.frappe = { ...window.frappe, user_roles: roles };
   const context = {
     isOnline: ref(isOnline),
@@ -16,6 +16,7 @@ function mountHeader({ roles = [], isOnline = true, pendingWALCount = 0, ...opti
     progressPercent: ref(0),
     isRecording: ref(false),
     isAudioPaused: ref(false),
+    canRecord: ref(canRecord),
   };
   return mount(CompactHeader, { ...options, global: { provide: { [OMNIQUERY_CONTEXT]: context } } });
 }
@@ -308,6 +309,29 @@ describe("CompactHeader", () => {
     it("refuses to render without App's provider instead of claiming to be online", () => {
       vi.spyOn(console, "warn").mockImplementation(() => {});
       expect(() => mount(CompactHeader)).toThrow(/provideSurveyApp/);
+    });
+  });
+  describe("microphone (#37)", () => {
+    beforeEach(() => {
+      useTranslation().setLanguage("en");
+    });
+    const micButton = (wrapper) => wrapper.find("button[aria-label*='microphone']");
+
+    it("offers the microphone only while a survey is being filled", () => {
+      const filling = mountHeader({ roles: ["OmniQuery User"], canRecord: true, props: { showBack: true } });
+      expect(micButton(filling).exists(), "filling a survey").toBe(true);
+      filling.unmount();
+
+      // the project page and the success screen also show Back, but nothing there can be recorded
+      const elsewhere = mountHeader({ roles: ["OmniQuery User"], canRecord: false, props: { showBack: true } });
+      expect(micButton(elsewhere).exists(), "project page or success screen").toBe(false);
+      elsewhere.unmount();
+    });
+
+    it("never offers it to a guest", () => {
+      const wrapper = mountHeader({ roles: ["Guest"], canRecord: true });
+      expect(micButton(wrapper).exists()).toBe(false);
+      wrapper.unmount();
     });
   });
 });

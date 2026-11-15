@@ -1,6 +1,6 @@
 import { ref, computed } from "vue";
 import { call } from "frappe-ui";
-import { db } from "../services/db";
+import { db, audioRecordingsFor } from "../services/db";
 
 export function generateSurveyId(templateName) {
   const cleanId = (templateName || "SURVEY").replace(/^OQS-/, "");
@@ -357,15 +357,16 @@ export function useSurvey() {
   async function discardDraft(surveyId, draftId = null) {
     if (!surveyId && !draftId) return;
     try {
-      if (draftId) {
-        await db.responses.delete(draftId);
-      } else {
-        await db.responses
-          .where("template_name")
-          .equals(surveyId)
-          .and((d) => d.status === "Draft")
-          .delete();
-      }
+      const draftIds = draftId
+        ? [draftId]
+        : await db.responses
+            .where("template_name")
+            .equals(surveyId)
+            .and((d) => d.status === "Draft")
+            .primaryKeys();
+      await db.responses.bulkDelete(draftIds);
+      // a draft's recordings go with it, or they would wait to upload for a response that never comes
+      for (const id of draftIds) await audioRecordingsFor(id).delete();
 
       const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name;
       if (tmplName === surveyId || currentDraftId.value === draftId) {

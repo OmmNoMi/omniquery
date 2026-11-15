@@ -426,7 +426,7 @@ import JSZip from "jszip";
 import { useTranslation } from "../../composables/useTranslation";
 import { useWAL } from "../../composables/useWAL";
 import { resolveResponseTitle } from "../../utils/responseTitle";
-import { db, compactLocalStorage } from "../../services/db";
+import { db, audioRecordingsFor, compactLocalStorage } from "../../services/db";
 
 const props = defineProps({
   isOpen: {
@@ -650,6 +650,7 @@ async function confirmDiscardDraft({ close }) {
   if (!responseUid) return;
   try {
     await db.responses.delete(responseUid);
+    await audioRecordingsFor(responseUid).delete(); // its recordings go with it (#37)
     await loadResponses();
     emit("drafts-changed");
   } catch (e) {
@@ -927,8 +928,8 @@ async function exportToZip() {
         for (const rec of audioRecords) {
           if (rec.blob && rec.response_uid) {
             const ext = (rec.mime_type || "").includes("mp4") ? "mp4" : "webm";
-            const audioFileName = `interview_${rec.response_uid}.${ext}`;
-            mediaFolder.file(audioFileName, rec.blob);
+            // file_name names a later part of the same interview apart from the first (#37)
+            mediaFolder.file(rec.file_name || `interview_${rec.response_uid}.${ext}`, rec.blob);
           }
         }
       }
