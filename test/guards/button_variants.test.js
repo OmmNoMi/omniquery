@@ -3,14 +3,16 @@ import fs from "node:fs";
 import path from "node:path";
 import { classTokens, elementClasses, elementProp, getSourceFiles } from "./sourceFiles";
 import { buttonElements, buttonWrappers, forwardsAttrsToButton } from "./frappeButtons";
-import { choiceButtonProps } from "../../src/utils/choiceButton";
+import { choiceButtonProps, CHOICE_SELECTED_CLASS } from "../../src/utils/choiceButton";
+import { contrastRatio, themeColour } from "./contrast";
 
 // Button colours come from variant and theme. frappe-ui Button puts its own colour classes
 // (subtle/gray by default) on the same element as a class prop, and in the built CSS its
 // bg-surface-* and text-ink-* tokens come later and win: a Button styled "bg-emerald-600
 // text-white" renders white text on near-white, about 1.1:1 (focus mode, the section footer and
 // selected answers all did). Pick the look with variant (solid, subtle, outline, ghost) and theme
-// (gray, blue, green, red); for an answer choice use choiceButtonProps in src/utils/choiceButton.js.
+// (gray, blue, green, red); for an answer choice use choiceButtonProps in src/utils/choiceButton.js,
+// whose selected green look is a class in src/styles/main.css (checked at the bottom of this file).
 // Keep theme gray. frappe-ui builds only gray from its light/dark tokens in every variant: green's
 // subtle, outline and ghost text is a fixed text-green-800, which is 1.5:1 on its own dark-mode
 // background, solid green is 3.1:1 in light mode, and blue and red hover with fixed colours too.
@@ -115,5 +117,43 @@ describe("Button colours come from variant and theme", () => {
     expect(coloredButtons(sfc(`<div class="bg-emerald-600 text-white"><Button variant="solid"/></div>`))).toEqual([]);
     // a Button component that is not frappe-ui's is not checked
     expect(coloredButtons(sfc(`<Button class="bg-red-500"/>`, `import Button from "./MyButton.vue";`))).toEqual([]);
+  });
+});
+
+// The rule main.css gives a selected choice, light or dark: { background, color, edge } as hex
+export function selectedChoiceColours(css, dark = false) {
+  const sel = `${dark ? "\\.dark\\s+" : "(?:^|\\n)"}button\\.${CHOICE_SELECTED_CLASS}\\s*,`;
+  const m = css.match(new RegExp(`${sel}[^{]*\\{([^}]*)\\}`));
+  if (!m) return null;
+  const prop = (name) => themeColour(m[1].match(new RegExp(`(?:^|[;\\s])${name}:\\s*([^;]+);`))?.[1]);
+  return { background: prop("background-color"), color: prop("color"), edge: prop("border-color") };
+}
+
+describe("A selected answer choice reads in sunlight", () => {
+  const css = fs.readFileSync(path.join(appDir, "src/styles/main.css"), "utf8");
+  // the cards a choice sits on
+  const CARDS = { light: ["#ffffff", "#f8fafc"], dark: ["#0f172a", "#1e293b"] };
+
+  it("marks only the selected choice, on the outline gray Button", () => {
+    expect(choiceButtonProps(true)).toEqual({ variant: "outline", theme: "gray", class: CHOICE_SELECTED_CLASS });
+    expect(choiceButtonProps(false)).toEqual({ variant: "outline", theme: "gray" });
+  });
+
+  for (const mode of ["light", "dark"]) {
+    it(`gives it 7:1 text and a 3:1 edge in ${mode} mode`, () => {
+      const c = selectedChoiceColours(css, mode === "dark");
+      expect(c, `src/styles/main.css styles ${mode === "dark" ? ".dark " : ""}button.${CHOICE_SELECTED_CLASS}`).toBeTruthy();
+      expect(c.background && c.color && c.edge, `${mode}: background-color, color and border-color as theme() colours`).toBeTruthy();
+      expect(contrastRatio(c.color, c.background)).toBeGreaterThanOrEqual(7);
+      for (const card of CARDS[mode]) expect(contrastRatio(c.edge, card), `${mode} edge on ${card}`).toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  it("reads the light and dark rules apart", () => {
+    const sample = `button.x {}\nbutton.${CHOICE_SELECTED_CLASS},\nbutton.${CHOICE_SELECTED_CLASS}:hover {\n  background-color: theme("colors.emerald.50");\n  border-color: theme("colors.emerald.700");\n  color: theme("colors.emerald.900");\n}\n.dark button.${CHOICE_SELECTED_CLASS},\n.dark button.${CHOICE_SELECTED_CLASS}:hover {\n  background-color: theme("colors.emerald.950");\n  border-color: theme("colors.emerald.400");\n  color: theme("colors.emerald.50");\n}`;
+    expect(selectedChoiceColours(sample).background).toBe(themeColour(`theme("colors.emerald.50")`));
+    expect(selectedChoiceColours(sample).color).toBe(themeColour(`theme("colors.emerald.900")`));
+    expect(selectedChoiceColours(sample, true).color).toBe(themeColour(`theme("colors.emerald.50")`));
+    expect(selectedChoiceColours("button.other { color: red; }")).toBeNull();
   });
 });
