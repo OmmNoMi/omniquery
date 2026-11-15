@@ -1,160 +1,132 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
+// How the queue meets a failing batch_push (#33). frappe-ui's call() throws an Error carrying the
+// HTTP status and Frappe's exc_type, so the server is faked at call().
+let batchPush;
+vi.mock("frappe-ui", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    call: vi.fn(async (method, args) => (method === "omniquery.api.sync.batch_push" ? batchPush(args.submissions) : {})),
+  };
+});
+
+import { createWAL, failureKind } from "../useWAL";
 import { db } from "../../services/db";
-import { useWAL, _resetWALInstance } from "../useWAL";
-import App from "../../App.vue";
 
-describe("useWAL Sync Queue & Invariants (#33)", () => {
+const httpError = (status, exc_type) => Object.assign(new Error(`batch_push ${status}`), { status, exc_type });
+const success = (subs) => ({ results: subs.map((s) => ({ idempotency_key: s.idempotency_key, status: "SUCCESS" })) });
+
+async function queue(wal, count, prefix = "IDEM") {
+  for (let i = 1; i <= count; i++) {
+    await wal.queueWAL("OmniQuery Response", { idempotency_key: `${prefix}-${i}`, items: [{ question_code: "q", value: i }] }, false);
+  }
+}
+const walByKey = async () => Object.fromEntries((await db.wal.toArray()).map((e) => [JSON.parse(e.payload_json).idempotency_key, e]));
+
+describe("failureKind", () => {
+  it("tells a lost session from a refused submission, a failing server and no answer", () => {
+    expect(failureKind(httpError(401))).toBe("auth");
+    expect(failureKind(httpError(403))).toBe("auth");
+    expect(failureKind(httpError(400, "CSRFTokenError"))).toBe("auth");
+    expect(failureKind(httpError(401, "SessionExpired"))).toBe("auth");
+    // Frappe's ValidationError: the submission is refused, the session is fine
+    expect(failureKind(httpError(417, "ValidationError"))).toBe("client");
+    expect(failureKind(httpError(400))).toBe("client");
+    expect(failureKind(httpError(500))).toBe("server");
+    expect(failureKind(httpError(502))).toBe("server");
+    expect(failureKind(new TypeError("Failed to fetch"))).toBe("network");
+  });
+});
+
+describe("useWAL sync queue (#33)", () => {
+  let wal;
   beforeEach(async () => {
-    _resetWALInstance();
-    await db.wal.clear();
-    await db.responses.clear();
-    vi.restoreAllMocks();
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({ message: [] }),
-    });
+    await Promise.all([db.wal.clear(), db.responses.clear(), db.audio_recordings.clear()]);
+    batchPush = vi.fn(async (subs) => success(subs));
+    // createWAL outside a component: no listeners and no 15s loop, only what the test calls
+    wal = createWAL();
   });
 
-  afterEach(() => {
-    _resetWALInstance();
-    vi.useRealTimers();
-  });
-
-  it("starts exactly one sync interval when mounting App and FilledFormsModal", async () => {
-    const setIntervalSpy = vi.spyOn(globalThis, "setInterval");
-
-    const wrapper = mount(App);
-
-    // Filter setInterval calls for the 15-second WAL sync interval
-    const walIntervalCalls = setIntervalSpy.mock.calls.filter(
-      (call) => call[1] === 15000
-    );
-
-    expect(walIntervalCalls.length).toBe(1);
-    wrapper.unmount();
-  });
-
-  it("syncs entries 2-5 and increments entry 1 attempts to 1 when entry 1 returns 4xx", async () => {
-    const { queueWAL, syncWAL, pendingWALCount } = useWAL();
-
-    // Enqueue 5 entries
-    for (let i = 1; i <= 5; i++) {
-      await queueWAL(
-        "OmniQuery Response",
-        {
-          idempotency_key: `IDEM-4XX-${i}`,
-          survey_template: "Test Template",
-          items: [{ question_code: `q_${i}`, value: `Val ${i}` }],
-        },
-        false
-      );
-    }
-
-    expect(pendingWALCount.value).toBe(5);
-
-    // Mock fetch so batch of 5 fails with 400, or entry 1 fails with 400 while 2-5 succeed
-    globalThis.fetch = vi.fn().mockImplementation(async (url, opts) => {
-      const body = JSON.parse(opts.body || "{}");
-      const subs = body.submissions || [];
-      if (subs.length > 1) {
-        // Batch fails because entry 1 has client error (400)
-        return {
-          ok: false,
-          status: 400,
-          text: async () => JSON.stringify({ message: "Invalid payload in batch", _error_message: "Bad request" }),
-        };
-      } else if (subs.length === 1) {
-        if (subs[0].idempotency_key === "IDEM-4XX-1") {
-          return {
-            ok: false,
-            status: 400,
-            text: async () => JSON.stringify({ message: "Invalid field q_1", _error_message: "Invalid field" }),
-          };
-        } else {
-          return {
-            ok: true,
-            status: 200,
-            json: async () => ({
-              message: {
-                results: [
-                  {
-                    idempotency_key: subs[0].idempotency_key,
-                    status: "SUCCESS",
-                  },
-                ],
-              },
-            }),
-          };
-        }
-      }
-      return { ok: true, status: 200, json: async () => ({ message: [] }) };
+  it("sends a batch one by one when one submission is refused, so the others still go", async () => {
+    await queue(wal, 5);
+    batchPush.mockImplementation(async (subs) => {
+      if (subs.some((s) => s.idempotency_key === "IDEM-1")) throw httpError(417, "ValidationError");
+      return success(subs);
     });
 
-    await syncWAL();
+    await wal.syncWAL();
 
-    // Verify entry 1 attempts incremented to 1 and status is still pending (not quarantined yet)
-    const allWal = await db.wal.toArray();
-    const entry1 = allWal.find((e) => JSON.parse(e.payload_json).idempotency_key === "IDEM-4XX-1");
-    expect(entry1).toBeDefined();
-    expect(entry1.attempts).toBe(1);
-    expect(entry1.status).toBe("pending");
-
-    // Verify entries 2 through 5 are pruned upon server acknowledgement
-    for (let i = 2; i <= 5; i++) {
-      const entry = allWal.find((e) => JSON.parse(e.payload_json).idempotency_key === `IDEM-4XX-${i}`);
-      expect(entry).toBeUndefined();
-    }
-
-    // Pending count should now be 1 (only entry 1 remains pending)
-    expect(pendingWALCount.value).toBe(1);
+    const left = await walByKey();
+    expect(Object.keys(left)).toEqual(["IDEM-1"]);
+    expect(left["IDEM-1"]).toMatchObject({ status: "pending", attempts: 1 });
+    expect(wal.pendingWALCount.value).toBe(1);
+    expect(wal.needsLogin.value, "a refused submission is not a lost session").toBe(false);
   });
 
-  it("sets needsLogin and shows 'Sign in again to upload 3 interviews' on 403 response", async () => {
-    const { queueWAL, needsLogin, pendingWALCount, syncWAL } = useWAL();
+  it("leaves an entry the server did not answer pending and untouched, and stops the pass", async () => {
+    await queue(wal, 2);
+    batchPush.mockResolvedValue({ results: [] });
 
-    // Enqueue 3 entries
-    for (let i = 1; i <= 3; i++) {
-      await queueWAL(
-        "OmniQuery Response",
-        {
-          idempotency_key: `IDEM-403-${i}`,
-          survey_template: "Test Template",
-          items: [{ question_code: `q_${i}`, value: `Val ${i}` }],
-        },
-        false
-      );
+    const res = await wal.syncWAL();
+
+    expect(res.syncedCount).toBe(0);
+    expect(batchPush, "each entry is tried once per pass").toHaveBeenCalledTimes(1);
+    const left = await walByKey();
+    expect(left["IDEM-1"]).toMatchObject({ status: "pending", attempts: 0 });
+    expect(left["IDEM-2"]).toMatchObject({ status: "pending", attempts: 0 });
+  });
+
+  it("asks the surveyor to sign in on 403, keeps the queue, and clears the ask once a push gets through", async () => {
+    await queue(wal, 3);
+    batchPush.mockRejectedValue(httpError(403, "PermissionError"));
+
+    await wal.syncWAL();
+
+    expect(wal.needsLogin.value).toBe(true);
+    expect(wal.pendingWALCount.value).toBe(3);
+    expect(Object.values(await walByKey()).every((e) => e.attempts === 0), "no attempt is spent on a lost session").toBe(true);
+
+    batchPush.mockImplementation(async (subs) => success(subs));
+    await wal.syncWAL();
+    expect(wal.needsLogin.value).toBe(false);
+    expect(wal.pendingWALCount.value).toBe(0);
+  });
+
+  it("backs off for 30 seconds after a server error", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      await queue(wal, 1);
+      batchPush.mockRejectedValue(httpError(500));
+      await wal.syncWAL();
+      expect(batchPush).toHaveBeenCalledTimes(1);
+
+      batchPush.mockImplementation(async (subs) => success(subs));
+      await wal.syncWAL();
+      expect(batchPush, "still backing off").toHaveBeenCalledTimes(1);
+
+      vi.setSystemTime(Date.now() + 30001);
+      await wal.syncWAL();
+      expect(batchPush).toHaveBeenCalledTimes(2);
+      expect(wal.pendingWALCount.value).toBe(0);
+    } finally {
+      vi.useRealTimers();
     }
+  });
 
-    expect(pendingWALCount.value).toBe(3);
+  it("leaves a response's audio for the audio upload when its WAL entry is acknowledged", async () => {
+    await queue(wal, 1, "RESP");
+    await db.audio_recordings.put({ response_uid: "RESP-1", blob: new Blob(["a"]), status: "pending", created_at: new Date().toISOString() });
+    // the faked upload_response_audio stores nothing, so the recording must still be on the device
 
-    // Mock fetch to return 403 Forbidden for batch_push, but 200 for bootstrap queries
-    globalThis.fetch = vi.fn().mockImplementation(async (url) => {
-      if (url.includes("batch_push")) {
-        return {
-          ok: false,
-          status: 403,
-          text: async () => JSON.stringify({ message: "Session expired", _error_message: "Forbidden" }),
-        };
-      }
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ message: [] }),
-      };
-    });
+    await wal.syncWAL();
 
-    const wrapper = mount(App);
+    expect(await db.wal.count()).toBe(0);
+    expect(await db.audio_recordings.get("RESP-1")).toMatchObject({ status: "pending" });
+  });
 
-    await syncWAL();
-
-    expect(needsLogin.value).toBe(true);
-
-    await wrapper.vm.$nextTick();
-
-    // Verify UI banner displays exact actionable sentence
-    expect(wrapper.text()).toContain("Sign in again to upload 3 interviews");
-    wrapper.unmount();
+  it("throws when the queue cannot be written, so the submit can say so", async () => {
+    vi.spyOn(db.wal, "add").mockRejectedValueOnce(new Error("QuotaExceededError"));
+    await expect(wal.queueWAL("OmniQuery Response", { idempotency_key: "X" }, false)).rejects.toThrow("QuotaExceededError");
   });
 });

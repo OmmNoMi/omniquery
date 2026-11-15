@@ -1,17 +1,17 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useWAL, _resetWALInstance } from "../useWAL";
+import { createWAL } from "../useWAL";
 import { db } from "../../services/db";
+import { useAudioRecorder } from "../useAudioRecorder";
 
 describe("useWAL", () => {
   beforeEach(async () => {
-    _resetWALInstance();
     await db.wal.clear();
     await db.responses.clear();
     vi.restoreAllMocks();
   });
 
   it("queues an insert payload into Dexie WAL and increments pending count", async () => {
-    const { queueWAL, pendingWALCount } = useWAL();
+    const { queueWAL, pendingWALCount } = createWAL();
 
     const payload = {
       idempotency_key: "SURVEY-TEST-001",
@@ -33,7 +33,7 @@ describe("useWAL", () => {
   });
 
   it("retrieves WAL queue items and extracts response values dictionary", async () => {
-    const { queueWAL, getWalQueueItems } = useWAL();
+    const { queueWAL, getWalQueueItems } = createWAL();
 
     await queueWAL("OmniQuery Response", {
       idempotency_key: "SUB-101",
@@ -74,7 +74,7 @@ describe("useWAL", () => {
       window.fetch = mockFetch;
     }
 
-    const { queueWAL, syncWAL, pendingWALCount } = useWAL();
+    const { queueWAL, syncWAL, pendingWALCount } = createWAL();
 
     await queueWAL("OmniQuery Response", {
       idempotency_key: "TEST-IDEM-001",
@@ -89,12 +89,12 @@ describe("useWAL", () => {
     expect(res.syncedCount).toBe(1);
     expect(pendingWALCount.value).toBe(0);
 
-    const walRecords = await db.wal.toArray();
-    expect(walRecords.length).toBe(0);
+    // an acknowledged entry leaves the WAL: the server holds the submission now
+    expect(await db.wal.toArray()).toEqual([]);
   });
 
   it("handles offline status gracefully without network calls", async () => {
-    const { isOnline, syncWAL } = useWAL();
+    const { isOnline, syncWAL } = createWAL();
     isOnline.value = false;
 
     const fetchSpy = vi.fn();
@@ -106,15 +106,6 @@ describe("useWAL", () => {
     const result = await syncWAL();
     expect(result).toBeNull();
     expect(fetchSpy).not.toHaveBeenCalled();
-  });
-
-  it("rethrows when db.wal.add rejects due to quota exceeded or storage failure", async () => {
-    const { queueWAL } = useWAL();
-    vi.spyOn(db.wal, "add").mockRejectedValue(new Error("QuotaExceededError"));
-
-    await expect(
-      queueWAL("OmniQuery Response", { idempotency_key: "FAIL-001" }, false)
-    ).rejects.toThrow("QuotaExceededError");
   });
 
   it("quarantines a WAL entry when rejected or reaching 5 failed attempts", async () => {
@@ -139,7 +130,7 @@ describe("useWAL", () => {
       window.fetch = mockFetch;
     }
 
-    const { queueWAL, syncWAL, quarantinedWALCount, getQuarantinedWalEntries, retryQuarantinedEntry } = useWAL();
+    const { queueWAL, syncWAL, quarantinedWALCount, getQuarantinedWalEntries, retryQuarantinedEntry } = createWAL();
 
     const entry = await queueWAL("OmniQuery Response", {
       idempotency_key: "TEST-FAIL-001",
@@ -165,8 +156,7 @@ describe("useWAL", () => {
       }),
     });
     await retryQuarantinedEntry(entry.wal_id);
-    const walRecord = await db.wal.get(entry.wal_id);
-    expect(walRecord).toBeUndefined();
+    expect(await db.wal.get(entry.wal_id)).toBeUndefined();
   });
 
   it("syncs pending audio recordings and updates status to synced", async () => {
@@ -199,7 +189,7 @@ describe("useWAL", () => {
       window.fetch = mockFetch;
     }
 
-    const { syncPendingAudio } = useWAL();
+    const { syncPendingAudio } = createWAL();
     const uploaded = await syncPendingAudio(testUid);
 
     expect(uploaded).toBe(1);
@@ -211,5 +201,31 @@ describe("useWAL", () => {
     const updated = await db.audio_recordings.get(testUid);
     expect(updated.status).toBe("synced");
     expect(updated.file_url).toBe(`/private/files/interview_${testUid}.webm`);
+  });
+  it("uploads every part of a response's recording to that response, and only that response's (#37)", async () => {
+    await db.audio_recordings.clear();
+    const uid = "OQS-WATER-AUDIO";
+    const { saveAudioForResponse } = useAudioRecorder();
+    await saveAudioForResponse(uid, new Blob(["before leaving"], { type: "audio/webm" }));
+    await saveAudioForResponse(uid, new Blob(["after resuming"], { type: "audio/webm" }));
+    await saveAudioForResponse(`${uid}2`, new Blob(["another response"], { type: "audio/webm" }));
+
+    const mockFetch = vi.fn().mockImplementation(async (_url, init) => ({
+      ok: true,
+      json: async () => ({ message: { status: "SUCCESS", file_url: `/private/files/${JSON.parse(init.body).filename}` } }),
+    }));
+    globalThis.fetch = mockFetch;
+    if (typeof window !== "undefined") window.fetch = mockFetch;
+
+    const uploaded = await createWAL().syncPendingAudio(uid);
+
+    expect(uploaded).toBe(2);
+    const sent = mockFetch.mock.calls.map(([, init]) => JSON.parse(init.body));
+    expect(sent.map((b) => [b.response_name, b.filename]).sort()).toEqual([
+      [uid, `interview_${uid}.webm`],
+      [uid, `interview_${uid}_part2.webm`],
+    ]);
+    expect((await db.audio_recordings.get(`${uid}~2`)).status).toBe("synced");
+    expect((await db.audio_recordings.get(`${uid}2`)).status, "another response's recording waits its turn").toBe("pending");
   });
 });

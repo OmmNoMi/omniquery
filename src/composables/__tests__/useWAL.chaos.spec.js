@@ -1,17 +1,16 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { useWAL, _resetWALInstance } from "../useWAL";
+import { createWAL } from "../useWAL";
 import { db } from "../../services/db";
 
 describe("useWAL Chaos & Durability Engineering", () => {
   beforeEach(async () => {
-    _resetWALInstance();
     await db.wal.clear();
     await db.responses.clear();
     vi.restoreAllMocks();
   });
 
   it("survives rapid-fire sequential mutations without race conditions or lost writes", async () => {
-    const { queueWAL, pendingWALCount } = useWAL();
+    const { queueWAL, pendingWALCount } = createWAL();
     const mutationCount = 50;
 
     // Simulate rapid field surveyor keystrokes
@@ -46,7 +45,7 @@ describe("useWAL Chaos & Durability Engineering", () => {
   });
 
   it("recovers and quarantines corrupt payload JSON without crashing sync engine", async () => {
-    const { syncWAL, quarantinedWALCount, pendingWALCount } = useWAL();
+    const { syncWAL, quarantinedWALCount, pendingWALCount } = createWAL();
 
     // Directly inject a corrupted entry into Dexie simulating disk corruption
     await db.wal.put({
@@ -84,9 +83,8 @@ describe("useWAL Chaos & Durability Engineering", () => {
     // Run sync - should not throw unhandled syntax error
     await syncWAL();
 
-    // Verify healthy entry was synced and pruned
-    const healthy = await db.wal.get("WAL-HEALTHY-001");
-    expect(healthy).toBeUndefined();
+    // Verify healthy entry was synced, so it left the WAL
+    expect(await db.wal.get("WAL-HEALTHY-001")).toBeUndefined();
 
     // Verify corrupt entry was quarantined
     const corrupt = await db.wal.get("WAL-CORRUPT-999");
@@ -97,7 +95,7 @@ describe("useWAL Chaos & Durability Engineering", () => {
   });
 
   it("handles offline network oscillation without dropping queued submissions", async () => {
-    const { queueWAL, syncWAL, isOnline, pendingWALCount } = useWAL();
+    const { queueWAL, syncWAL, isOnline, pendingWALCount } = createWAL();
 
     // Start offline
     isOnline.value = false;

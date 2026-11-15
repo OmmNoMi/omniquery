@@ -1,6 +1,7 @@
 import { ref, computed } from "vue";
 import { call } from "frappe-ui";
-import { db } from "../services/db";
+import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
+import { responseItems } from "../utils/responsePayload";
 
 export function generateSurveyId(templateName) {
   const cleanId = (templateName || "SURVEY").replace(/^OQS-/, "");
@@ -12,6 +13,8 @@ export function useSurvey() {
   const activeTemplate = ref(null);
   const activeSectionIndex = ref(0);
   const availableTemplates = ref([]);
+  // the server says the user is in no project and holds no site-wide role (#57); unknown offline
+  const isUnassigned = ref(false);
   const responses = ref({});
   const validationErrors = ref({});
   const isSubmitting = ref(false);
@@ -124,8 +127,11 @@ export function useSurvey() {
     // 2. Fetch fresh bootstrap data from server if online
     try {
       const data = await call("omniquery.api.survey.get_bootstrap_data");
-      const templates = (data && data.templates) || (data && data.message && data.message.templates) || [];
-      if (templates.length > 0) {
+      const payload = (data && data.message) || data || {};
+      const templates = payload.templates || [];
+      isUnassigned.value = Boolean(payload.is_unassigned);
+      // an unassigned user's empty list is the server's answer, not a reason to try another endpoint
+      if (templates.length > 0 || isUnassigned.value) {
         const formatted = [];
         for (const t of templates) {
           const schema = t.schema || {};
@@ -208,11 +214,11 @@ export function useSurvey() {
   async function getCachedTemplate(surveyId) {
     try {
       const cached = await db.templates.get(surveyId);
-      if (cached) {
-        return cached.schema || cached;
+      if (cached && cached.schema) {
+        return cached.schema;
       }
       const byTitle = await db.templates.where("title").equals(surveyId).first();
-      return (byTitle && (byTitle.schema || byTitle)) || null;
+      return (byTitle && byTitle.schema) || null;
     } catch (e) {
       return null;
     }
@@ -249,10 +255,8 @@ export function useSurvey() {
 
   async function loadTemplate(surveyId, options = {}) {
     if (!surveyId) return null;
-    const isStartNew =
-      (typeof options === "boolean" && options === true) ||
-      (typeof options === "object" && options !== null && Boolean(options.startNew));
-    const targetDraftId = typeof options === "object" && options !== null ? options.draftId : null;
+    const isStartNew = options === false || (typeof options === "object" && options.startNew);
+    const targetDraftId = typeof options === "object" ? options.draftId : null;
 
     // 1. Instant offline retrieval from IndexedDB
     const cached = await getCachedTemplate(surveyId);
@@ -293,12 +297,7 @@ export function useSurvey() {
             .toArray();
 
           if (matchingDrafts && matchingDrafts.length > 0) {
-            matchingDrafts.sort((a, b) => {
-              const answersA = Object.keys(a.responses || {}).length;
-              const answersB = Object.keys(b.responses || {}).length;
-              if (answersB !== answersA) return answersB - answersA;
-              return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
-            });
+            matchingDrafts.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));
             draft = matchingDrafts[0];
           }
         }
@@ -332,24 +331,17 @@ export function useSurvey() {
     const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
     if (!tmplName) return;
 
-    // Do not save empty drafts when there are no answers
-    const hasAnswers = responses.value && Object.values(responses.value).some((v) => {
-      if (v === undefined || v === null) return false;
-      if (typeof v === "string") return v.trim().length > 0;
-      if (Array.isArray(v)) return v.length > 0;
-      if (typeof v === "object") return Object.keys(v).length > 0;
-      return true;
-    });
-    if (!hasAnswers) return;
-
-    if (!currentDraftId.value) {
-      currentDraftId.value = generateSurveyId(tmplName);
-    }
-
     try {
-      const existing = await db.responses.get(currentDraftId.value);
-      const createdAt = existing?.created_at || new Date().toISOString();
+      // An untouched survey is not saved, so opening one and leaving adds no empty draft. A saved
+      // draft whose answers were all cleared is still written, or the old answers would come back (#34)
+      const hasAnswers = responseItems(responses.value).length > 0;
+      if (!hasAnswers && !(currentDraftId.value && (await db.responses.get(currentDraftId.value)))) return;
 
+      if (!currentDraftId.value) {
+        currentDraftId.value = generateSurveyId(tmplName);
+      }
+
+      // the created_at here applies to a new draft only: db.js keeps an existing draft's own
       await db.responses.put({
         response_uid: currentDraftId.value,
         template_name: tmplName,
@@ -359,9 +351,9 @@ export function useSurvey() {
         active_section_index: activeSectionIndex.value,
         progress_percent: progress,
         status: "Draft",
-        created_at: createdAt,
+        created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        synced: 0,
+        synced: NOT_SYNCED,
       });
       await loadActiveDrafts();
     } catch (e) {
@@ -372,15 +364,16 @@ export function useSurvey() {
   async function discardDraft(surveyId, draftId = null) {
     if (!surveyId && !draftId) return;
     try {
-      if (draftId) {
-        await db.responses.delete(draftId);
-      } else {
-        await db.responses
-          .where("template_name")
-          .equals(surveyId)
-          .and((d) => d.status === "Draft")
-          .delete();
-      }
+      const draftIds = draftId
+        ? [draftId]
+        : await db.responses
+            .where("template_name")
+            .equals(surveyId)
+            .and((d) => d.status === "Draft")
+            .primaryKeys();
+      await db.responses.bulkDelete(draftIds);
+      // a draft's recordings go with it, or they would wait to upload for a response that never comes
+      for (const id of draftIds) await audioRecordingsFor(id).delete();
 
       const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name;
       if (tmplName === surveyId || currentDraftId.value === draftId) {
@@ -568,6 +561,7 @@ export function useSurvey() {
     activeTemplate,
     activeSectionIndex,
     availableTemplates,
+    isUnassigned,
     sections,
     activeSection,
     activeQuestions,

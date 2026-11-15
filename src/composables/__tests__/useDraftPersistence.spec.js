@@ -1,188 +1,109 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import { db, compactLocalStorage } from "../../services/db";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { db, compactLocalStorage, NOT_SYNCED, SYNCED } from "../../services/db";
 import { useSurvey } from "../useSurvey";
-import { useWAL, _resetWALInstance } from "../useWAL";
 
-describe("Draft Persistence & Storage Compaction Invariants (#34)", () => {
+// What a draft keeps on the device (#34): no row for an untouched survey, a cleared draft saved as
+// cleared, its first created_at, and old synced submissions pruned without touching drafts.
+
+const template = { name: "TMPL-DRAFT", title: "Draft Survey", version: 1, sections: [{ section_code: "s1", questions: [] }] };
+const minutesAgo = (m) => new Date(Date.now() - m * 60000).toISOString();
+const daysAgo = (d) => new Date(Date.now() - d * 86400000).toISOString();
+
+function openSurvey(draftId = "DRAFT-1") {
+  const survey = useSurvey();
+  survey.activeTemplate.value = template;
+  survey.currentDraftId.value = draftId;
+  return survey;
+}
+
+describe("draft persistence (#34)", () => {
   beforeEach(async () => {
-    _resetWALInstance();
-    await db.wal.clear();
-    await db.responses.clear();
-    await db.audio_recordings.clear();
-    await db.templates.clear();
+    await Promise.all([db.wal.clear(), db.responses.clear(), db.audio_recordings.clear(), db.templates.clear()]);
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
+  });
+  afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
   });
 
-  it("opening a survey without answering writes no record", async () => {
-    const { loadTemplate, responses, saveDraftLocally } = useSurvey();
-
-    await db.templates.put({
-      template_name: "TMPL-CLEAN",
-      title: "Clean Survey",
-      version: 1,
-      sections: [{ section_code: "s1", questions: [] }],
-    });
-
-    await loadTemplate("TMPL-CLEAN");
-    expect(responses.value).toEqual({});
-
-    // Attempt draft save with empty responses
-    await saveDraftLocally(0);
-
-    const count = await db.responses.count();
-    expect(count).toBe(0);
+  it("writes no record for a survey opened and left without an answer", async () => {
+    const survey = openSurvey();
+    survey.responses.value = { q_blank: "  ", q_none: null };
+    await survey.saveDraftLocally(0);
+    expect(await db.responses.count()).toBe(0);
   });
 
-  it("resume opens the draft with the most answers", async () => {
-    const { loadTemplate, responses, currentDraftId } = useSurvey();
+  it("saves a draft whose answers were all cleared, so the old answers do not come back", async () => {
+    const survey = openSurvey();
+    survey.responses.value = { q1: "Sita" };
+    await survey.saveDraftLocally(20);
 
-    await db.templates.put({
-      template_name: "TMPL-MULTI",
-      title: "Multi Draft Survey",
-      version: 1,
-      sections: [{ section_code: "s1", questions: [] }],
-    });
+    survey.responses.value = {};
+    await survey.saveDraftLocally(0);
 
-    // Draft A: Updated 10 minutes ago, 4 answers
-    await db.responses.put({
-      response_uid: "DRAFT-WITH-ANSWERS",
-      template_name: "TMPL-MULTI",
-      title: "Multi Draft Survey",
-      responses: { q1: "Alpha", q2: "Beta", q3: "Gamma", q4: "Delta" },
-      active_section_index: 0,
-      progress_percent: 50,
-      status: "Draft",
-      created_at: new Date(Date.now() - 3600000).toISOString(),
-      updated_at: new Date(Date.now() - 600000).toISOString(),
-      synced: 0,
-    });
-
-    // Draft B: Updated 1 minute ago, empty (0 answers)
-    await db.responses.put({
-      response_uid: "DRAFT-EMPTY-NEW",
-      template_name: "TMPL-MULTI",
-      title: "Multi Draft Survey",
-      responses: {},
-      active_section_index: 0,
-      progress_percent: 0,
-      status: "Draft",
-      created_at: new Date(Date.now() - 120000).toISOString(),
-      updated_at: new Date(Date.now() - 60000).toISOString(),
-      synced: 0,
-    });
-
-    // Resume survey without explicit draft ID
-    await loadTemplate("TMPL-MULTI", false);
-
-    expect(currentDraftId.value).toBe("DRAFT-WITH-ANSWERS");
-    expect(responses.value.q1).toBe("Alpha");
-    expect(responses.value.q4).toBe("Delta");
+    expect((await db.responses.get("DRAFT-1")).responses).toEqual({});
   });
 
-  it("created_at stays the same across saves", async () => {
-    const { loadTemplate, responses, saveDraftLocally, currentDraftId } = useSurvey();
-
-    await db.templates.put({
-      template_name: "TMPL-TIMESTAMPS",
-      title: "Timestamp Test Survey",
-      version: 1,
-      sections: [{ section_code: "s1", questions: [] }],
-    });
-
-    await loadTemplate("TMPL-TIMESTAMPS");
-    currentDraftId.value = "DRAFT-TS-001";
-    responses.value = { q1: "First Answer" };
-
-    // First save
-    const t1 = "2026-10-26T00:00:00.000Z";
-    vi.setSystemTime(new Date(t1));
-    await saveDraftLocally(20);
-
-    const record1 = await db.responses.get("DRAFT-TS-001");
-    expect(record1).toBeDefined();
-    expect(record1.created_at).toBe(t1);
-
-    // Second save 1 hour later
-    const t2 = "2026-10-26T01:00:00.000Z";
-    vi.setSystemTime(new Date(t2));
-    responses.value.q2 = "Second Answer";
-    await saveDraftLocally(40);
-
-    const record2 = await db.responses.get("DRAFT-TS-001");
-    expect(record2.created_at).toBe(t1); // Invariant: created_at is NEVER overwritten
-    expect(record2.updated_at).toBe(t2);
+  it("stores a saved draft as not synced, in the 0/1 the synced index can find", async () => {
+    const survey = openSurvey();
+    survey.responses.value = { q1: "Sita" };
+    await survey.saveDraftLocally(20);
+    expect((await db.responses.get("DRAFT-1")).synced).toBe(NOT_SYNCED);
+    expect(await db.responses.where("synced").equals(NOT_SYNCED).count()).toBe(1);
   });
 
-  it("after a server acknowledgement, the WAL row and audio blob are gone", async () => {
-    const { queueWAL, syncWAL } = useWAL();
+  it("keeps a draft's first created_at across saves", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const survey = openSurvey();
+    survey.responses.value = { q1: "First" };
+    vi.setSystemTime(new Date("2026-10-26T00:00:00.000Z"));
+    await survey.saveDraftLocally(20);
 
-    const testUid = "RESP-SYNC-PRUNE-001";
-    const testBlob = new Blob(["mock-audio"], { type: "audio/webm" });
+    vi.setSystemTime(new Date("2026-10-26T01:00:00.000Z"));
+    survey.responses.value = { q1: "First", q2: "Second" };
+    await survey.saveDraftLocally(40);
 
-    // Enqueue WAL item
-    const walEntry = await queueWAL(
-      "OmniQuery Response",
-      {
-        idempotency_key: testUid,
-        survey_template: "TMPL-PRUNE",
-        items: [{ question_code: "q1", value: "Answer" }],
-      },
-      false
-    );
+    const row = await db.responses.get("DRAFT-1");
+    expect(row.created_at).toBe("2026-10-26T00:00:00.000Z");
+    expect(row.updated_at).toBe("2026-10-26T01:00:00.000Z");
+  });
 
-    // Save corresponding response and audio recording
-    await db.responses.put({
-      response_uid: testUid,
-      template_name: "TMPL-PRUNE",
-      status: "Submitted",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      synced: 0,
-    });
+  it("resumes the draft saved last", async () => {
+    await db.templates.put({ template_name: "TMPL-DRAFT", ...template });
+    const draft = (uid, responses, updated) =>
+      db.responses.put({ response_uid: uid, template_name: "TMPL-DRAFT", status: "Draft", responses, created_at: minutesAgo(60), updated_at: updated, synced: NOT_SYNCED });
+    await draft("DRAFT-OLD", { q1: "Alpha", q2: "Beta", q3: "Gamma" }, minutesAgo(10));
+    await draft("DRAFT-NEW", { q1: "Latest" }, minutesAgo(1));
 
-    await db.audio_recordings.put({
-      response_uid: testUid,
-      blob: testBlob,
-      mime_type: "audio/webm",
-      file_name: `interview_${testUid}.webm`,
-      status: "pending",
-      created_at: new Date().toISOString(),
-    });
+    const survey = useSurvey();
+    await survey.loadTemplate("TMPL-DRAFT");
 
-    // Mock server acknowledgement
-    globalThis.fetch = vi.fn().mockImplementation(async (url) => {
-      if (url.includes("batch_push")) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({
-            message: {
-              results: [{ idempotency_key: testUid, status: "SUCCESS" }],
-            },
-          }),
-        };
-      }
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
-          message: { status: "SUCCESS", file_url: `/files/${testUid}.webm` },
-        }),
-      };
-    });
+    expect(survey.currentDraftId.value).toBe("DRAFT-NEW");
+    expect(survey.responses.value).toEqual({ q1: "Latest" });
+  });
+});
 
-    await syncWAL();
+describe("compactLocalStorage", () => {
+  beforeEach(async () => {
+    await Promise.all([db.responses.clear(), db.audio_recordings.clear()]);
+  });
 
-    // Invariant: WAL row is pruned after acknowledgement
-    const walRecord = await db.wal.get(walEntry.wal_id);
-    expect(walRecord).toBeUndefined();
+  it("prunes old synced submissions and their uploaded audio, and keeps drafts and unsynced work", async () => {
+    const row = (uid, status, synced, updated) => ({ response_uid: uid, template_name: "T", status, synced, created_at: updated, updated_at: updated });
+    await db.responses.bulkPut([
+      row("OLD-SENT", "Submitted", SYNCED, daysAgo(40)),
+      row("OLD-UNSENT", "Submitted", NOT_SYNCED, daysAgo(40)),
+      row("NEW-SENT", "Submitted", SYNCED, daysAgo(2)),
+      row("OLD-DRAFT-SYNCED", "Draft", SYNCED, daysAgo(40)),
+    ]);
+    await db.audio_recordings.bulkPut([
+      { response_uid: "OLD-SENT", status: "synced", created_at: daysAgo(40) },
+      { response_uid: "OLD-UNSENT", status: "pending", created_at: daysAgo(40) },
+    ]);
 
-    // Invariant: Audio recording blob is pruned after acknowledgement
-    const audioRecord = await db.audio_recordings.get(testUid);
-    expect(audioRecord).toBeUndefined();
+    expect(await compactLocalStorage(30)).toBe(1);
 
-    // Invariant: response synced status is integer 1
-    const responseRecord = await db.responses.get(testUid);
-    expect(responseRecord.synced).toBe(1);
+    expect((await db.responses.toCollection().primaryKeys()).sort()).toEqual(["NEW-SENT", "OLD-DRAFT-SYNCED", "OLD-UNSENT"]);
+    expect(await db.audio_recordings.toCollection().primaryKeys()).toEqual(["OLD-UNSENT"]);
   });
 });
