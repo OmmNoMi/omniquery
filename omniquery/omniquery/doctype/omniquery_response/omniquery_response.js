@@ -97,7 +97,8 @@ function render_gps_preview(frm) {
 	const lng = frm.doc.gps_longitude;
 	const acc = frm.doc.gps_accuracy ? `±${frm.doc.gps_accuracy}m` : '';
 
-	if (!lat || !lng) {
+	// 0,0 is what an empty coordinate reads as; gps_status says whether there is a fix (#27)
+	if (frm.doc.gps_status !== "Captured") {
 		if (frm.get_field("column_break_geo")) {
 			frm.get_field("column_break_geo").set_description("");
 		}

@@ -3,6 +3,7 @@
  * in-flight draft sync, the background draft sync and the submit queue.
  *
  * It carries no surveyor: the server takes who did the survey from the session (#35).
+ * gps is useGPS's gpsReport: { latitude, longitude, accuracy, status }.
  */
 
 const isAnswered = (value) => value !== undefined && value !== null && String(value).trim() !== "";
@@ -24,9 +25,11 @@ export function buildResponsePayload({ template, responses = {}, responseId, gps
     template_version: template.version || 1,
     respondent: responses.respondent_name || responses.entrepreneur_name || "",
     captured_at_local: capturedAt,
-    gps_latitude: gps?.latitude || null,
-    gps_longitude: gps?.longitude || null,
-    gps_accuracy: gps?.accuracy || null,
+    // 0 is a real coordinate; the server decides from gps_status whether these are a fix (#27)
+    gps_latitude: gps?.latitude ?? null,
+    gps_longitude: gps?.longitude ?? null,
+    gps_accuracy: gps?.accuracy ?? null,
+    gps_status: gps?.status ?? null,
     items: responseItems(responses, template.questions || []),
   };
 }

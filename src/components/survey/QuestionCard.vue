@@ -260,6 +260,8 @@
 
       <!-- 7. Geolocation Input -->
       <div v-else-if="isGeolocationControl" class="flex flex-col gap-2">
+        <!-- frappe-ui's Alert is the live region (role="alert"); Retry GPS below asks again -->
+        <Alert v-if="gpsAlert" theme="red" :title="gpsAlert.title" :description="gpsAlert.description" :dismissable="false" />
         <div v-if="modelValue" class="p-3 bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-semibold text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
           <Check class="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <span>{{ __('Location captured') }}: {{ formatCoords(modelValue) }}</span>
@@ -268,7 +270,7 @@
           variant="solid"
           size="lg"
           :iconLeft="MapPin"
-          :label="modelValue ? __('Retry GPS') : __('Capturing GPS...')"
+          :label="modelValue || gpsAlert ? __('Retry GPS') : __('Capturing GPS...')"
           @click="$emit('capture-gps')"
         />
       </div>
@@ -491,7 +493,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
-import { Button, Dialog, TabButtons, TextInput } from "frappe-ui";
+import { Alert, Button, Dialog, TabButtons, TextInput } from "frappe-ui";
 import { DialogDescription } from "reka-ui";
 import {
   ClipboardList,
@@ -531,6 +533,11 @@ const props = defineProps({
   notApplicable: {
     type: Boolean,
     default: false,
+  },
+  // { title, description } when the last location request failed (#27)
+  gpsAlert: {
+    type: Object,
+    default: null,
   },
 });
 

@@ -13,6 +13,7 @@ from frappe.utils import (
 from frappe.utils.data import convert_utc_to_system_timezone
 
 from omniquery.omniquery.doctype.omniquery_surveyor.omniquery_surveyor import ensure_surveyor_for_user
+from omniquery.services.location import apply_location, located
 
 from .survey import resolve_template_name, user_has_template_permission
 
@@ -206,10 +207,12 @@ def telemetry_time_spent(resp_doc, raw_sub):
 
 def telemetry_gps_variance(resp_doc):
 	"""Metres between where the response was captured and where its respondent is recorded."""
-	if not (resp_doc.gps_latitude and resp_doc.gps_longitude and resp_doc.respondent):
+	if not (located(resp_doc) and resp_doc.respondent):
 		return None
-	home = frappe.db.get_value("OmniQuery Respondent", resp_doc.respondent, ["gps_latitude", "gps_longitude"], as_dict=True)
-	if not (home and home.gps_latitude and home.gps_longitude):
+	home = frappe.db.get_value(
+		"OmniQuery Respondent", resp_doc.respondent, ["gps_status", "gps_latitude", "gps_longitude"], as_dict=True
+	)
+	if not located(home):
 		return None
 	return calculate_haversine_distance(resp_doc.gps_latitude, resp_doc.gps_longitude, home.gps_latitude, home.gps_longitude)
 
@@ -290,9 +293,7 @@ def sync_draft(data=None):
 
 	resp_doc.template_version = sub.get("template_version") or 1
 	resp_doc.respondent = resolve_respondent(sub.get("respondent"))
-	resp_doc.gps_latitude = sub.get("gps_latitude")
-	resp_doc.gps_longitude = sub.get("gps_longitude")
-	resp_doc.gps_accuracy = sub.get("gps_accuracy")
+	apply_location(resp_doc, sub)
 	resp_doc.captured_at_local = parse_local_datetime(sub.get("captured_at_local"))
 	resp_doc.synced_at = now_datetime()
 	resp_doc.response_payload = frappe.as_json(sub)
@@ -520,9 +521,7 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 			resp_doc.survey_status = "Submitted"
 			resp_doc.surveyor = surveyor
 			resp_doc.respondent = resolve_respondent(sub.get("respondent"))
-			resp_doc.gps_latitude = sub.get("gps_latitude")
-			resp_doc.gps_longitude = sub.get("gps_longitude")
-			resp_doc.gps_accuracy = sub.get("gps_accuracy")
+			apply_location(resp_doc, sub)
 			resp_doc.captured_at_local = parse_local_datetime(sub.get("captured_at_local"))
 			if resp_doc.captured_at_local is None:
 				log_invalid_captured_at(idempotency_key, sub.get("captured_at_local"))

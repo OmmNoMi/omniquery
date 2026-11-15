@@ -59,7 +59,7 @@ export function useSurveyApp() {
   const { __ } = useTranslation();
   const { textSize, cycleTextSize, setTextSize } = useTextScale();
   const { isOnline, pendingWALCount, needsLogin, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
-  const { gpsCoords, captureGPS } = useGPS();
+  const { gpsStatus, gpsReport, captureGPS } = useGPS();
   const { state: audioState, isRecording, isPaused: isAudioPaused, toggleAudio, stopRecording, discardAudio, saveAudioForResponse } = useAudioRecorder();
 
   const {
@@ -565,7 +565,7 @@ export function useSurveyApp() {
   async function syncDraftToServer(draft = openDraft()) {
     const { template, responses: answers, responseId } = draft;
     if (!isOnline.value || !template || !responseId) return false;
-    const payload = buildResponsePayload({ template, responses: answers, responseId, gps: gpsCoords.value });
+    const payload = buildResponsePayload({ template, responses: answers, responseId, gps: gpsReport.value });
     if (payload.items.length === 0) return false;
 
     try {
@@ -652,7 +652,7 @@ export function useSurveyApp() {
       template: activeTemplate.value,
       responses: responses.value,
       responseId: draftKey,
-      gps: gpsCoords.value,
+      gps: gpsReport.value,
     });
 
     try {
@@ -794,6 +794,18 @@ export function useSurveyApp() {
     return alert ? { title: __(alert[0]), description: __(alert[1]) } : null;
   });
 
+  // Why the location was not recorded; the interview still saves without one (#27)
+  const GPS_ALERTS = {
+    denied: ["Location access is blocked", "Allow location access for this site in your browser settings, then tap Retry GPS."],
+    unavailable: ["Location unavailable", "Turn on location on this device, then tap Retry GPS."],
+    timeout: ["Location timed out", "Move to an open spot or near a window, then tap Retry GPS."],
+    unsupported: ["Location is not supported", "This browser cannot share a location. The interview still saves without one."],
+  };
+  const gpsAlert = computed(() => {
+    const alert = GPS_ALERTS[gpsStatus.value];
+    return alert ? { title: __(alert[0]), description: __(alert[1]) } : null;
+  });
+
   // Queued interviews wait while the session is gone; a guest's queue is not theirs to sign in for (#33)
   const sessionAlert = computed(() => {
     if (!needsLogin.value || isGuest.value) return null;
@@ -849,6 +861,7 @@ export function useSurveyApp() {
     isOnline,
     pendingWALCount,
     captureGPS,
+    gpsAlert,
     isRecording,
     isAudioPaused,
     toggleAudio,

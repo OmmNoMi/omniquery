@@ -51,6 +51,7 @@
           :notApplicable="!s.isQuestionVisible(item.question)"
           @answered="s.onQuestionAnswered(item.question)"
           @next="s.onQuestionAnswered(item.question)"
+          :gpsAlert="s.gpsAlert"
           @capture-gps="s.captureGPS()"
         />
       </template>
@@ -73,6 +74,7 @@
       @update-response="s.setResponse"
       @toggle-auto-advance="s.autoAdvance = !s.autoAdvance"
       @toggle-full-form="s.toggleFullForm()"
+      :gpsAlert="s.gpsAlert"
       @capture-gps="s.captureGPS()"
     />
   </div>

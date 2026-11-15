@@ -5,15 +5,18 @@ import frappe
 from frappe import _
 
 from omniquery.permissions import EXPORT_PROJECT_ROLES, permitted_projects
+from omniquery.services.location import located
 
 RESPONSE_FIELDS = [
 	"name", "survey_template", "template_version", "survey_status", "surveyor", "captured_at_local",
-	"synced_at", "gps_latitude", "gps_longitude", "gps_accuracy", "audio_recording",
+	"synced_at", "gps_latitude", "gps_longitude", "gps_accuracy", "gps_status", "audio_recording",
 ]
 HEADERS = [
 	"Response ID", "Template", "Version", "Status", "Surveyor", "Local Time",
-	"Sync Time", "Latitude", "Longitude", "GPS Accuracy", "Audio Recording",
+	"Sync Time", "Latitude", "Longitude", "GPS Accuracy", "GPS Status", "Audio Recording",
 ]
+# blank unless gps_status is Captured: an empty Float column reads 0, which is a real place (#27)
+GPS_FIELDS = ("gps_latitude", "gps_longitude", "gps_accuracy")
 ITEM_FIELDS = ["parent", "question_code", "question_label", "value_text", "value_numeric", "value_json"]
 
 
@@ -50,8 +53,14 @@ def _flatten(responses):
 
 
 def _row(response, answers, codes):
-	row = ["" if response.get(field) is None else response.get(field) for field in RESPONSE_FIELDS]
+	row = [_value(response, field) for field in RESPONSE_FIELDS]
 	return row + [_answer(answers.get(code)) for code in codes]
+
+
+def _value(response, field):
+	if field in GPS_FIELDS and not located(response):
+		return ""
+	return "" if response.get(field) is None else response.get(field)
 
 
 def _answer(item):

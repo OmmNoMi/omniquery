@@ -5,6 +5,7 @@ from frappe.model.document import Document
 from frappe.model.workflow import apply_workflow
 from frappe.utils import formatdate, now_datetime
 
+from omniquery.services.location import resolve_gps_status
 from omniquery.services.response_title import answers_from_items, resolve_response_title
 
 # written only by sync (with db.set_value), so a form or API save may not change them
@@ -47,6 +48,7 @@ class OmniQueryResponse(Document):
 	def validate(self):
 		# validate runs on insert, save and submit; before_save is skipped when a draft is submitted
 		self.title = self.compute_title()
+		self.gps_status = resolve_gps_status(self.gps_latitude, self.gps_longitude, self.gps_status)
 		if self.is_new():
 			return
 		self._guard_quality_signals()

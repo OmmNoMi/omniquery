@@ -130,7 +130,7 @@ describe("buildResponsePayload", () => {
       template,
       responses: { q_name: "Sunita", q_other: 0, q_none: null, q_space: " " },
       responseId: "OQS-1",
-      gps: { latitude: 26.9, longitude: 75.8, accuracy: 12 },
+      gps: { latitude: 26.9, longitude: 75.8, accuracy: 12, status: "Captured" },
       capturedAt: "2026-11-14T10:00:00Z",
     });
     expect(payload).toEqual({
@@ -142,11 +142,24 @@ describe("buildResponsePayload", () => {
       gps_latitude: 26.9,
       gps_longitude: 75.8,
       gps_accuracy: 12,
+      gps_status: "Captured",
       items: [
         { question_code: "q_name", question_label: "Respondent Name", value: "Sunita" },
         { question_code: "q_other", question_label: "q_other", value: 0 },
       ],
     });
+  });
+
+  it("keeps a 0 coordinate and a 0 accuracy, and says why there is no location (#27)", () => {
+    const build = (gps) => buildResponsePayload({ template, responses: { q_name: "Sunita" }, responseId: "OQS-1", gps });
+    expect(build({ latitude: 0, longitude: 32.5, accuracy: 0, status: "Captured" })).toMatchObject({
+      gps_latitude: 0,
+      gps_longitude: 32.5,
+      gps_accuracy: 0,
+      gps_status: "Captured",
+    });
+    expect(build({ status: "Denied" })).toMatchObject({ gps_latitude: null, gps_longitude: null, gps_accuracy: null, gps_status: "Denied" });
+    expect(build(null), "a background sync knows nothing about the location").toMatchObject({ gps_latitude: null, gps_status: null });
   });
 
   it("counts only SUCCESS as stored", () => {

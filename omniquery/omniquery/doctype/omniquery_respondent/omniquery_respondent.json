@@ -22,6 +22,7 @@
   "state",
   "pincode",
   "column_break_geo",
+  "gps_status",
   "gps_latitude",
   "gps_longitude",
   "section_custom",
@@ -63,10 +64,10 @@
    "label": "Contact Phone Number"
   },
   {
+   "description": "SHA-256 for fast offline lookup",
    "fieldname": "phone_hash",
    "fieldtype": "Data",
    "label": "Phone Search Hash",
-   "description": "SHA-256 for fast offline lookup",
    "search_index": 1
   },
   {
@@ -127,6 +128,16 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "Not captured",
+   "description": "Captured when the respondent has a recorded location; set from the coordinates.",
+   "fieldname": "gps_status",
+   "fieldtype": "Select",
+   "in_standard_filter": 1,
+   "label": "GPS Status",
+   "options": "Captured\nDenied\nUnavailable\nTimed out\nUnsupported\nNot captured",
+   "read_only": 1
+  },
+  {
    "fieldname": "gps_latitude",
    "fieldtype": "Float",
    "label": "Latitude",
@@ -144,11 +155,11 @@
    "label": "Domain Custom Attributes"
   },
   {
+   "description": "Arbitrary key-value pairs for domain-specific context (e.g. SHG, Crop type, Revenue)",
    "fieldname": "custom_attributes_json",
    "fieldtype": "Code",
    "label": "Custom Attributes JSON",
-   "options": "JSON",
-   "description": "Arbitrary key-value pairs for domain-specific context (e.g. SHG, Crop type, Revenue)"
+   "options": "JSON"
   },
   {
    "fieldname": "section_security",
@@ -168,7 +179,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-09-10 01:00:00.000000",
+ "modified": "2026-11-15 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Respondent",

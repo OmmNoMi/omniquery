@@ -87,6 +87,7 @@
           @update:modelValue="onQuestionInput"
           @answered="onQuestionAnswered"
           @next="nextQuestion"
+          :gpsAlert="gpsAlert"
           @capture-gps="$emit('capture-gps')"
         />
       </div>
@@ -189,6 +190,11 @@ const props = defineProps({
   sectionTitle: {
     type: String,
     default: "",
+  },
+  // why the last location request failed, shown on a Geolocation question (#27)
+  gpsAlert: {
+    type: Object,
+    default: null,
   },
 });
 
