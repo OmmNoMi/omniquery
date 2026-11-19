@@ -9,6 +9,7 @@ from frappe.tests.utils import FrappeTestCase
 
 from omniquery.api.analytics import get_project_analytics
 from omniquery.api.survey import get_surveyor_kpis
+from omniquery.services.idempotency import new_key
 from omniquery.tests.utils import delete_test_docs
 
 ANALYST, VIEWER, SURVEYOR, MANAGER, OUTSIDER, NAMESAKE = (
@@ -22,7 +23,6 @@ PROJECTS = {
 	"B": [],
 }
 RESPONSE = "OmniQuery Response"
-KEY = "issue47-"
 
 
 class TestIssue47Analytics(FrappeTestCase):
@@ -131,7 +131,7 @@ def _make_surveyor(name, user):
 def _make_response(template, owner, surveyor, status):
 	frappe.set_user(owner)  # sync inserts as the sender, so the sender owns the row
 	doc = frappe.get_doc({
-		"doctype": RESPONSE, "idempotency_key": f"{KEY}{frappe.generate_hash(length=8)}", "survey_template": template,
+		"doctype": RESPONSE, "idempotency_key": new_key(), "survey_template": template,
 		"template_version": 1, "survey_status": "Submitted", "docstatus": 1, "surveyor": surveyor,
 	}).insert(ignore_permissions=True)
 	frappe.set_user("Administrator")
@@ -140,7 +140,7 @@ def _make_response(template, owner, surveyor, status):
 
 def _cleanup():
 	delete_test_docs([
-		(RESPONSE, {"idempotency_key": ["like", f"{KEY}%"]}),
+		(RESPONSE, {"survey_template": ["in", frappe.get_all("OmniQuery Template", {"title": ["like", "Issue 47 Template %"]}, pluck="name") or [""]]}),
 		("OmniQuery Template", {"title": ["like", "Issue 47 Template %"]}),
 		("OmniQuery Project", {"project_name": ["like", "Test Issue47 Project %"]}),
 		("OmniQuery Surveyor", {"user": ["in", list(USERS)]}),

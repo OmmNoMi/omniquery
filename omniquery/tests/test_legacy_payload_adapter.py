@@ -1,4 +1,5 @@
 import json
+import uuid
 
 import frappe
 from frappe.tests.utils import FrappeTestCase
@@ -7,8 +8,9 @@ from omniquery.api.sync import batch_push, normalize_submission_payload
 from omniquery.tests.utils import delete_test_docs
 
 # batch_push commits mid-request, so the FrappeTestCase rollback cannot undo it: tearDownClass deletes
-# everything these tests create, matched by this prefix.
-PREFIX = f"TEST-LEGACY-{frappe.generate_hash(length=6)}"
+# everything these tests create, matched by this prefix. It is also the start of every key here: a legacy
+# WAL entry carries the OQS- key its build made before #25, which sync still accepts.
+PREFIX = f"OQS-TEST-LEGACY-{frappe.generate_hash(length=6)}"
 
 
 def legacy_payload(key=None, **extra):
@@ -81,10 +83,11 @@ class TestLegacyPayloadAdapter(FrappeTestCase):
 		self.assertEqual((sub["gps_latitude"], sub["gps_longitude"]), (0, 0))
 		self.assertEqual(normalize_submission_payload("not a dict"), {})
 
-	def test_keyless_submission_keeps_template_naming(self):
+	def test_keyless_submission_gets_a_uuidv4(self):
 		result = push_one(legacy_payload())
 		self.assertEqual(result["status"], "SUCCESS", result)
-		self.assertTrue(result["doc_name"].startswith(f"OQS-{self.template.replace('OQS-', '')}-"), result)
+		self.assertEqual(uuid.UUID(result["doc_name"]).version, 4, result)
+		self.assertEqual(result["idempotency_key"], result["doc_name"], "the reply names the key it was filed under")
 
 	def test_invalid_shape_is_terminal_and_retries_add_no_rows(self):
 		for bad in ({"idempotency_key": f"{PREFIX}-BAD"}, {"note": f"{PREFIX} no key, no template"}):

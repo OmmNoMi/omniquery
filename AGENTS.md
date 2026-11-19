@@ -26,6 +26,12 @@ cost real time to learn. Add to it when you learn something new.
   deletes its shipped JSON file. To remove one in a test, use `frappe.db.delete` and delete the
   child rows too.
 - When you change a shipped doctype or fixture JSON, bump its `modified` so migrate syncs it.
+- `batch_push` and `sync_draft` call `frappe.db.commit()`, so the test class's rollback cannot
+  undo what they wrote. A test that calls them deletes its rows in `tearDown`/`tearDownClass` and
+  commits that delete; an uncommitted delete is rolled back with the test and the rows stay.
+- Response names are UUIDv4 keys (#25), so no name prefix finds a test's rows. Give each test
+  class its own template and clean up with `tests/utils.sync_records_of(template)`. Make keys with
+  `services/idempotency.new_key()`; the Response refuses any other key outside `OQS-`/`WAL-`.
 - `yarn test` runs ESLint over `src/` (`test/guards/eslint.test.js`, rules in `eslint.config.js`;
   `yarn lint` runs it alone). `no-undef` finds a name used without an import, and `no-empty` an
   empty block. A catch that means to ignore an error says why in a comment, which `no-empty`

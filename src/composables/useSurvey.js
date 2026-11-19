@@ -2,12 +2,10 @@ import { ref, computed } from "vue";
 import { call } from "frappe-ui";
 import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { responseItems } from "../utils/responsePayload";
+import { uuidv4 } from "../utils/uuid";
 
-export function generateSurveyId(templateName) {
-  const cleanId = (templateName || "SURVEY").replace(/^OQS-/, "");
-  const rand = Math.random().toString(36).substring(2, 8);
-  return `OQS-${cleanId}-${rand}`;
-}
+// a new interview is filed under a UUIDv4 the server also checks (#25)
+export const generateSurveyId = uuidv4;
 
 export function useSurvey() {
   const activeTemplate = ref(null);
@@ -309,18 +307,18 @@ export function useSurvey() {
           responses.value = { ...draft.responses };
           activeSectionIndex.value = draft.active_section_index || 0;
         } else {
-          currentDraftId.value = generateSurveyId(surveyId);
+          currentDraftId.value = generateSurveyId();
           responses.value = {};
           activeSectionIndex.value = 0;
         }
       } catch (e) {
-        currentDraftId.value = generateSurveyId(surveyId);
+        currentDraftId.value = generateSurveyId();
         responses.value = {};
         activeSectionIndex.value = 0;
       }
     } else {
       // Start a fresh, new survey without affecting existing saved drafts
-      currentDraftId.value = generateSurveyId(surveyId);
+      currentDraftId.value = generateSurveyId();
       responses.value = {};
       activeSectionIndex.value = 0;
     }
@@ -340,7 +338,7 @@ export function useSurvey() {
       if (!hasAnswers && !(currentDraftId.value && (await db.responses.get(currentDraftId.value)))) return;
 
       if (!currentDraftId.value) {
-        currentDraftId.value = generateSurveyId(tmplName);
+        currentDraftId.value = generateSurveyId();
       }
 
       // the created_at here applies to a new draft only: db.js keeps an existing draft's own
@@ -381,7 +379,7 @@ export function useSurvey() {
       if (tmplName === surveyId || currentDraftId.value === draftId) {
         responses.value = {};
         activeSectionIndex.value = 0;
-        currentDraftId.value = generateSurveyId(surveyId || "SURVEY");
+        currentDraftId.value = generateSurveyId();
       }
       await loadActiveDrafts();
     } catch (e) {

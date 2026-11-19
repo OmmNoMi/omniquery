@@ -8,11 +8,11 @@ from frappe.utils import cint
 from omniquery.api.sync import batch_push, resolve_surveyor, sync_draft
 from omniquery.install import _response_workflow_payload, ensure_response_workflow
 from omniquery.omniquery.doctype.omniquery_response.omniquery_response import apply_response_workflow
-from omniquery.tests.utils import delete_test_docs
+from omniquery.services.idempotency import new_key
+from omniquery.tests.utils import delete_test_docs, sync_records_of
 
 MANAGER, SURVEYOR = "resp_manager@ommnomi.test", "resp_user@ommnomi.test"
 PROJECT = "Workflow Test Project"
-KEY = {"idempotency_key": ["like", "TEST-WF-%"]}
 # the docstatus sync gives a response in each state it writes (api/sync.py)
 SYNC_DOCSTATUS = {"Draft": 0, "Submitted": 1}
 
@@ -40,7 +40,7 @@ class TestResponseWorkflow(FrappeTestCase):
 	def _response(self, status="Submitted", owner="Administrator"):
 		frappe.set_user(owner)  # the inserting user owns the row, as sync makes the surveyor own it
 		doc = frappe.get_doc({
-			"doctype": "OmniQuery Response", "idempotency_key": f"TEST-WF-{frappe.generate_hash(length=8)}",
+			"doctype": "OmniQuery Response", "idempotency_key": new_key(),
 			"survey_template": self.template, "template_version": 1, "survey_status": status,
 			"surveyor": self.surveyor, "docstatus": SYNC_DOCSTATUS[status],
 		}).insert(ignore_permissions=True)
@@ -88,7 +88,7 @@ class TestResponseWorkflow(FrappeTestCase):
 
 	def test_surveyor_sync_still_submits_a_live_draft(self):
 		"""Regression: a review workflow must never block the field app's own draft and submit."""
-		key = f"TEST-WF-{frappe.generate_hash(length=8)}"
+		key = new_key()
 		sub = {"idempotency_key": key, "survey_template": self.template, "template_version": 1, "items": []}
 		frappe.set_user(SURVEYOR)
 		self.assertEqual(sync_draft(data={"draft": sub})["status"], "SUCCESS")
@@ -97,7 +97,7 @@ class TestResponseWorkflow(FrappeTestCase):
 
 	def test_guest_sync_inserts_a_submitted_response(self):
 		"""A guest holds no workflow role, so only the field-state rule lets this insert through."""
-		key = f"TEST-WF-{frappe.generate_hash(length=8)}"
+		key = new_key()
 		frappe.set_user("Guest")
 		sub = {"idempotency_key": key, "survey_template": self.template, "template_version": 1, "items": []}
 		self.assertEqual(batch_push(submissions=[sub])["results"][0]["status"], "SUCCESS")
@@ -157,7 +157,7 @@ def _ensure_template():
 
 def _cleanup(template):
 	delete_test_docs([
-		("OmniQuery Response", KEY), ("OmniQuery Sync Audit Log", KEY),
+		*sync_records_of(template),
 		("OmniQuery Template", {"name": template}), ("OmniQuery Surveyor", {"user": ["in", [MANAGER, SURVEYOR]]}),
 		("OmniQuery Project", {"project_name": PROJECT}), ("User", {"name": ["in", [MANAGER, SURVEYOR]]}),
 	])

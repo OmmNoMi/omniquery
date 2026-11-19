@@ -23,7 +23,7 @@ describe("useWAL", () => {
     const entry = await queueWAL("OmniQuery Response", payload, false);
 
     expect(entry).toBeDefined();
-    expect(entry.wal_id).toMatch(/^WAL-/);
+    expect(entry.wal_id, "a queue entry is keyed like the interview it carries (#25)").toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     expect(entry.status).toBe("pending");
     expect(pendingWALCount.value).toBe(1);
 

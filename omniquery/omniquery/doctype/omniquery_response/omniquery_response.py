@@ -1,10 +1,10 @@
-import uuid
 import frappe
 from frappe import _
 from frappe.model.document import Document
 from frappe.model.workflow import apply_workflow
 from frappe.utils import formatdate, now_datetime
 
+from omniquery.services.idempotency import require_key
 from omniquery.services.location import resolve_gps_status
 from omniquery.services.response_title import answers_from_items, resolve_response_title
 
@@ -17,17 +17,10 @@ REASON_STATES = ("Audit Flagged", "Rejected")
 
 
 class OmniQueryResponse(Document):
-	def autoname(self):
-		if self.name:
-			return
-		if self.idempotency_key and self.idempotency_key.startswith("OQS-"):
-			self.name = self.idempotency_key
-		else:
-			clean_tmpl = (self.survey_template or "SURVEY").replace("OQS-", "")
-			rand = uuid.uuid4().hex[:6]
-			self.name = f"OQS-{clean_tmpl}-{rand}"
-
 	def before_insert(self):
+		# every way in (sync, Desk, Data Import, the API) files the response under its canonical key
+		self.idempotency_key = require_key(self.idempotency_key)
+		self.name = self.idempotency_key
 		if not self.synced_at:
 			self.synced_at = now_datetime()
 

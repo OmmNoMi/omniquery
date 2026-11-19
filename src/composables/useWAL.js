@@ -3,6 +3,7 @@ import { createSharedComposable } from "@vueuse/core";
 import { call, fileToBase64 } from "frappe-ui";
 import { db, audioRecordingsFor, recordingResponse, SYNCED } from "../services/db";
 import { buildResponsePayload, draftStored } from "../utils/responsePayload";
+import { uuidv4 } from "../utils/uuid";
 
 const SERVER_BACKOFF_MS = 30000;
 const AUTH_EXC_TYPES = ["AuthenticationError", "SessionExpired", "CSRFTokenError"];
@@ -43,7 +44,7 @@ export function createWAL() {
 
   function makeWalEntry(entityType, payload) {
     return {
-      wal_id: `WAL-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      wal_id: uuidv4(),
       entity_type: entityType,
       operation: "INSERT",
       payload_json: JSON.stringify(payload),

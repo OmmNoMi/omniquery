@@ -4,7 +4,8 @@ from frappe.tests.utils import FrappeTestCase
 from omniquery.api.sync import AUDIT_THRESHOLD_DEFAULTS, audit_thresholds, batch_push, gps_reason, speedrun_reason
 from omniquery.omniquery.doctype.omniquery_response.omniquery_response import QUALITY_SIGNAL_FIELDS
 from omniquery.patches.v1_0 import dedupe_surveyor_users, remove_machine_supervisor_audits
-from omniquery.tests.utils import delete_test_docs
+from omniquery.services.idempotency import new_key
+from omniquery.tests.utils import delete_test_docs, sync_records_of
 
 # batch_push commits mid-request, so the FrappeTestCase rollback cannot undo it: tearDownClass deletes
 # everything these tests create, matched by this prefix.
@@ -39,9 +40,7 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 		responses = frappe.get_all("OmniQuery Response", filters={"survey_template": cls.template}, pluck="name")
 		delete_test_docs([
 			(AUDIT, {"survey_response": ["in", responses or [""]]}),
-			("OmniQuery Response", {"name": ["in", responses or [""]]}),
-			("OmniQuery Sync Audit Log", {"idempotency_key": ["like", f"{PREFIX}%"]}),
-			("OmniQuery Field Error Log", {"question_code": ["like", f"{PREFIX}%"]}),
+			*sync_records_of(cls.template),
 			("OmniQuery Template", {"name": cls.template}),
 			("OmniQuery Project", {"project_name": PREFIX}),
 			("OmniQuery Surveyor", {"surveyor_name": ["like", f"{PREFIX}%"]}),
@@ -53,8 +52,8 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 	def tearDown(self):
 		frappe.set_user("Administrator")
 
-	def push(self, key, questions=6, **extra):
-		payload = {"idempotency_key": f"{PREFIX}-{key}", "survey_template": self.template, "template_version": 1,
+	def push(self, questions=6, **extra):
+		payload = {"idempotency_key": new_key(), "survey_template": self.template, "template_version": 1,
 			"surveyor": self.surveyor, **extra,
 			"items": [{"question_code": f"Q_{i}", "question_label": f"Q {i}", "value": f"A {i}"} for i in range(questions)]}
 		result = batch_push(submissions=[payload])["results"][0]
@@ -80,19 +79,19 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 
 	def test_speedrun_is_flagged_on_the_response_and_no_audit_is_made(self):
 		self.with_settings(AUDIT_THRESHOLD_DEFAULTS)
-		doc = self.push("SPEED", time_spent_seconds=5)
+		doc = self.push(time_spent_seconds=5)
 		self.assertFalse(frappe.db.exists(AUDIT, {"survey_response": doc.name}))
 		self.assertEqual((doc.is_outlier_flagged, doc.time_spent_seconds, doc.survey_status), (1, 5, "Audit Flagged"))
 		self.assertIn("Speedrun detected: 5s for 6 questions", doc.outlier_reasons)
 
 	def test_normal_sync_is_not_flagged(self):
 		self.with_settings(AUDIT_THRESHOLD_DEFAULTS)
-		doc = self.push("NORMAL", time_spent_seconds=90)
+		doc = self.push(time_spent_seconds=90)
 		self.assertFalse(frappe.db.exists(AUDIT, {"survey_response": doc.name}))
 		self.assertEqual((doc.is_outlier_flagged, doc.outlier_reasons, doc.survey_status), (0, None, "Submitted"))
 
 	def test_unmeasured_telemetry_is_zero_and_hidden(self):
-		doc = self.push("UNKNOWN")
+		doc = self.push()
 		self.assertEqual((doc.time_spent_seconds, doc.gps_distance_variance_meters, doc.is_outlier_flagged), (0, 0, 0))
 		meta = frappe.get_meta("OmniQuery Response")
 		for field in ("time_spent_seconds", "gps_distance_variance_meters"):
@@ -102,9 +101,9 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 
 	def test_settings_thresholds_drive_the_sync(self):
 		self.with_settings({"speed_threshold_sec_per_question": 20, "min_questions_for_speed_check": 5})
-		self.assertEqual(self.push("STRICT", time_spent_seconds=90).is_outlier_flagged, 1, "90s < 6 x 20s")
+		self.assertEqual(self.push(time_spent_seconds=90).is_outlier_flagged, 1, "90s < 6 x 20s")
 		self.with_settings({"speed_threshold_sec_per_question": 3, "min_questions_for_speed_check": 10})
-		self.assertEqual(self.push("FEW", time_spent_seconds=5).is_outlier_flagged, 0, "6 questions < 10 minimum")
+		self.assertEqual(self.push(time_spent_seconds=5).is_outlier_flagged, 0, "6 questions < 10 minimum")
 
 	def test_zero_thresholds_are_honoured_and_unsaved_ones_default(self):
 		self.with_settings({**AUDIT_THRESHOLD_DEFAULTS, "speed_threshold_sec_per_question": 0, "gps_distance_threshold_m": 0})
@@ -117,20 +116,20 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 	# an audit is signed by the person who records it
 
 	def test_audit_is_signed_by_the_manager_who_records_it(self):
-		response = self.push("SIGN", time_spent_seconds=90).name
+		response = self.push(time_spent_seconds=90).name
 		frappe.set_user(self.manager)
 		audit = frappe.get_doc({"doctype": AUDIT, "survey_response": response, "supervisor": self.other_manager,
 			"audit_verdict": "Verified", "audit_remarks": "Checked by phone."}).insert()
 		self.assertEqual(audit.supervisor, self.manager, "a manager cannot sign an audit as someone else")
 
 	def test_system_manager_may_record_an_audit_for_a_supervisor(self):
-		response = self.push("BEHALF", time_spent_seconds=90).name
+		response = self.push(time_spent_seconds=90).name
 		audit = frappe.get_doc({"doctype": AUDIT, "survey_response": response, "supervisor": self.manager,
 			"audit_verdict": "Verified"}).insert()
 		self.assertEqual(audit.supervisor, self.manager)
 
 	def test_editing_an_audit_does_not_re_sign_it(self):
-		response = self.push("EDIT", time_spent_seconds=90).name
+		response = self.push(time_spent_seconds=90).name
 		frappe.set_user(self.manager)
 		name = frappe.get_doc({"doctype": AUDIT, "survey_response": response, "audit_verdict": "Verified"}).insert().name
 		frappe.set_user(self.other_manager)
@@ -142,7 +141,7 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 		self.assertRaises(frappe.CannotChangeConstantError, audit.save)
 
 	def test_quality_signals_cannot_be_edited_by_a_reviewer(self):
-		name = self.push("GUARD", time_spent_seconds=5).name
+		name = self.push(time_spent_seconds=5).name
 		# a submitted response is locked by Frappe itself; a draft only by the guard, so test the guard on one
 		frappe.db.set_value("OmniQuery Response", name, "docstatus", 0)
 		frappe.set_user(self.manager)
@@ -159,7 +158,7 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 	# migration patches
 
 	def test_cleanup_patch_moves_machine_signals_and_keeps_human_audits(self):
-		machine, human = self.push("OLD-MACHINE").name, self.push("OLD-HUMAN").name
+		machine, human = self.push().name, self.push().name
 		self.insert_audit(machine, "Flagged for Re-Survey", "Speedrun detected: 4s for 6 questions (min threshold: 18s)",
 			time_spent_seconds=4, is_outlier_flagged=1)
 		kept = self.insert_audit(human, "Verified", "Visited the household.")
@@ -172,7 +171,7 @@ class TestSupervisorAuditIntegrity(FrappeTestCase):
 		self.assertTrue(signals.outlier_reasons.startswith("Speedrun detected"))
 
 	def test_cleanup_patch_removes_verified_machine_audits(self):
-		response = self.push("OLD-VERIFIED").name
+		response = self.push().name
 		self.insert_audit(response, "Verified", remove_machine_supervisor_audits.VERIFIED_REMARK, time_spent_seconds=60)
 		remove_machine_supervisor_audits.execute()
 		self.assertFalse(frappe.db.exists(AUDIT, {"survey_response": response}))

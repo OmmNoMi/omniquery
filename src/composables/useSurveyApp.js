@@ -644,7 +644,7 @@ export function useSurveyApp() {
   async function saveOfflineRecord() {
     if (draftSyncTimer) clearTimeout(draftSyncTimer);
     const tmplName = activeTemplate.value.name || activeTemplate.value.template_name;
-    const draftKey = currentDraftId.value || generateSurveyId(tmplName);
+    const draftKey = currentDraftId.value || generateSurveyId();
     submittedResponseId.value = draftKey;
     submittedTimestamp.value = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
@@ -731,8 +731,7 @@ export function useSurveyApp() {
     isSubmitting.value = true;
     submissionError.value = "";
 
-    const tmplName = activeTemplate.value?.name || activeTemplate.value?.template_name || "";
-    const draftKey = currentDraftId.value || generateSurveyId(tmplName);
+    const draftKey = currentDraftId.value || generateSurveyId();
 
     try {
       const recordedBlob = await stopRecording();
@@ -766,7 +765,7 @@ export function useSurveyApp() {
     isSubmissionSynced.value = false;
     submittedResponseId.value = "";
     hasCopiedCode.value = false;
-    currentDraftId.value = generateSurveyId(activeTemplate.value?.name || activeTemplate.value?.template_name || "");
+    currentDraftId.value = generateSurveyId();
   }
 
   // The microphone records for the draft being filled, and only while one is: not on the project

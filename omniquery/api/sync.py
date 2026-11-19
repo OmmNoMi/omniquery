@@ -1,6 +1,5 @@
 import hashlib
 import json
-import uuid
 
 import frappe
 from frappe import _
@@ -13,6 +12,7 @@ from frappe.utils import (
 from frappe.utils.data import convert_utc_to_system_timezone
 
 from omniquery.omniquery.doctype.omniquery_surveyor.omniquery_surveyor import ensure_surveyor_for_user
+from omniquery.services.idempotency import canonical_key, invalid_key_message, new_key
 from omniquery.services.location import apply_location, located
 
 from .survey import resolve_template_name, user_has_template_permission
@@ -235,7 +235,7 @@ def gps_reason(gps_variance, thresholds):
 def sync_draft(data=None):
 	"""
 	Lightweight in-flight live draft save handler.
-	Upserts OmniQuery Response in 'Draft' status with ID OQS-{surveyID}-{randomstring}.
+	Upserts OmniQuery Response in 'Draft' status, named by the device's idempotency key.
 	"""
 	raw_data = None
 	if data is None:
@@ -255,10 +255,9 @@ def sync_draft(data=None):
 		return {"status": "REJECTED", "error": "Invalid draft payload"}
 
 	template_name = resolve_template_name(sub.get("survey_template"))
-	idempotency_key = sub.get("idempotency_key")
+	idempotency_key = canonical_key(sub["idempotency_key"]) if sub.get("idempotency_key") else new_key()
 	if not idempotency_key:
-		clean_tmpl = (template_name or "SURVEY").replace("OQS-", "")
-		idempotency_key = f"OQS-{clean_tmpl}-{uuid.uuid4().hex[:6]}"
+		return {"status": "REJECTED", "error": invalid_key_message()}
 
 	current_user = frappe.session.user
 
@@ -285,7 +284,6 @@ def sync_draft(data=None):
 			return {"status": "ALREADY_SUBMITTED", "doc_name": resp_doc.name}
 	else:
 		resp_doc = frappe.new_doc("OmniQuery Response")
-		resp_doc.name = idempotency_key
 		resp_doc.idempotency_key = idempotency_key
 		resp_doc.survey_template = template_name
 		resp_doc.survey_status = "Draft"
@@ -356,12 +354,13 @@ def first_present(values, *keys):
 
 
 def resolve_idempotency_key(sub, template_name, payload_hash):
-	"""The client's key. Without one, a valid submission gets OQS-{template}-{random} as before, and an
-	invalid one gets a key derived from its payload, so its retries share one audit log and error row."""
+	"""The client's key in canonical form, or None when it is not a UUIDv4 (see services/idempotency).
+	Without one, a valid submission gets a new key, and an invalid one gets a key derived from its
+	payload, so its retries share one audit log and error row."""
 	if sub.get("idempotency_key"):
-		return sub["idempotency_key"]
+		return canonical_key(sub["idempotency_key"])
 	if template_name:
-		return f"OQS-{template_name.replace('OQS-', '')}-{uuid.uuid4().hex[:6]}"
+		return new_key()
 	return f"OQS-INVALID-{payload_hash[:12]}"
 
 
@@ -396,7 +395,7 @@ def log_field_error(idempotency_key, error_message, raw_payload_str, fields):
 def batch_push(submissions=None):
 	"""
 	Lightweight Zero-Loss Sync Handler.
-	Sets document name directly to OQS-{surveyID}-{randomstring}.
+	Files each submission as a Response named by its idempotency key.
 	"""
 	raw_data = None
 	if submissions is None:
@@ -451,6 +450,20 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 		payload_hash = hashlib.sha256(raw_payload_str.encode("utf-8")).hexdigest()
 		template_name = resolve_template_name(sub["survey_template"]) if sub.get("survey_template") else None
 		idempotency_key = resolve_idempotency_key(sub, template_name, payload_hash)
+		# the device matches each result to its queue entry by the key it sent, spelled as it sent it
+		reply_key = sub.get("idempotency_key") or idempotency_key
+
+		# Terminal: a key that is not a UUIDv4 would file the interview under a name another device can pick
+		if not idempotency_key:
+			idempotency_key = str(reply_key)[:140]
+			err_msg = invalid_key_message()
+			upsert_audit_log(idempotency_key, {
+				"surveyor": surveyor, "sync_status": "REJECTED", "client_ip": client_ip,
+				"payload_hash_sha256": payload_hash, "raw_payload": raw_payload_str, "error_message": err_msg,
+			})
+			log_field_error(idempotency_key, err_msg, raw_payload_str, {"surveyor": str(current_user)})
+			results.append({"idempotency_key": reply_key, "status": "REJECTED", "error": err_msg})
+			continue
 
 		# Terminal: a payload with no template cannot become a Response, however often it is retried
 		if not template_name:
@@ -460,7 +473,7 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 				"payload_hash_sha256": payload_hash, "raw_payload": raw_payload_str, "error_message": err_msg,
 			})
 			log_field_error(idempotency_key, err_msg, raw_payload_str, {"surveyor": str(current_user)})
-			results.append({"idempotency_key": idempotency_key, "status": "INVALID_SHAPE", "error": err_msg})
+			results.append({"idempotency_key": reply_key, "status": "INVALID_SHAPE", "error": err_msg})
 			continue
 
 		# Security: Strict template RBAC validation
@@ -470,7 +483,7 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 				"surveyor": surveyor, "sync_status": "REJECTED",
 				"client_ip": client_ip, "raw_payload": raw_payload_str, "error_message": err_msg,
 			})
-			results.append({"idempotency_key": idempotency_key, "status": "REJECTED", "error": err_msg})
+			results.append({"idempotency_key": reply_key, "status": "REJECTED", "error": err_msg})
 			continue
 
 		# Check existing document
@@ -485,13 +498,13 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 			is_admin_or_mgr = "System Manager" in user_roles or "Administrator" in user_roles or current_user == "Administrator"
 			if existing_owner and existing_owner != current_user and not is_admin_or_mgr:
 				err_msg = "Unauthorized attempt to overwrite existing response owned by another user"
-				results.append({"idempotency_key": idempotency_key, "status": "REJECTED", "error": err_msg})
+				results.append({"idempotency_key": reply_key, "status": "REJECTED", "error": err_msg})
 				continue
 
 			# a submitted response is final, Rejected included: a retried payload must not undo a review
 			if frappe.db.get_value("OmniQuery Response", doc_name, "docstatus") == 1:
 				results.append({
-					"idempotency_key": idempotency_key,
+					"idempotency_key": reply_key,
 					"status": "DUPLICATE_SKIPPED",
 					"doc_name": doc_name,
 				})
@@ -513,7 +526,6 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 				resp_doc = frappe.get_doc("OmniQuery Response", doc_name)
 			else:
 				resp_doc = frappe.new_doc("OmniQuery Response")
-				resp_doc.name = idempotency_key
 				resp_doc.idempotency_key = idempotency_key
 				resp_doc.survey_template = template_name
 
@@ -571,7 +583,7 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 				frappe.db.commit()
 
 			results.append({
-				"idempotency_key": idempotency_key,
+				"idempotency_key": reply_key,
 				"status": "SUCCESS",
 				"doc_name": resp_doc.name,
 				"synced_at": str(resp_doc.synced_at),
@@ -602,7 +614,7 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 				"surveyor": current_user, "stack_trace": frappe.get_traceback(),
 			})
 
-			results.append({"idempotency_key": idempotency_key, "status": "FAILED", "error": str(e)})
+			results.append({"idempotency_key": reply_key, "status": "FAILED", "error": str(e)})
 
 	frappe.db.commit()
 	return {"results": results}

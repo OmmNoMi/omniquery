@@ -13,6 +13,7 @@ from omniquery.api.export import export_flattened_responses
 from omniquery.api.sync import resolve_surveyor
 from omniquery.patches.v1_0 import sync_analyst_viewer_roles
 from omniquery.permissions import SCOPED_DOCTYPE, sync_user_project_roles
+from omniquery.services.idempotency import new_key
 from omniquery.tests.utils import delete_test_docs
 
 ANALYST, VIEWER, SURVEYOR, DUAL, OUTSIDER, MANAGER, PROFILED, REVOKED = (
@@ -200,7 +201,7 @@ def _make_template(project):
 def _make_response(template, owner, answer):
 	frappe.set_user(owner)  # sync inserts as the surveyor, so the surveyor owns the row
 	doc = frappe.get_doc({
-		"doctype": RESPONSE, "idempotency_key": f"issue62-{frappe.generate_hash(length=8)}", "survey_template": template,
+		"doctype": RESPONSE, "idempotency_key": new_key(), "survey_template": template,
 		"template_version": 1, "survey_status": "Submitted", "docstatus": 1, "surveyor": resolve_surveyor(owner),
 		"items": [{"question_code": "Q_CHILDREN", "question_label": "Number of children", "value_numeric": answer}],
 	}).insert(ignore_permissions=True)
@@ -214,7 +215,7 @@ def _scoped_projects(user):
 
 def _cleanup():
 	delete_test_docs([
-		(RESPONSE, {"idempotency_key": ["like", "issue62-%"]}),
+		(RESPONSE, {"survey_template": ["in", frappe.get_all("OmniQuery Template", {"title": ["like", "Issue 62 Template %"]}, pluck="name") or [""]]}),
 		("OmniQuery Template", {"title": ["like", "Issue 62 Template %"]}),
 		("OmniQuery Project", {"project_name": ["like", "Test Issue62 Project %"]}),
 		("OmniQuery Surveyor", {"user": ["in", list(USERS)]}),

@@ -2567,3 +2567,7 @@ msgstr "डिवाइस ने लोकेशन दी या नहीं�
 #: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
 msgid "Captured when the respondent has a recorded location; set from the coordinates."
 msgstr "उत्तरदाता की लोकेशन दर्ज होने पर प्राप्त; निर्देशांकों से तय होता है।"
+
+#: omniquery/services/idempotency.py
+msgid "The idempotency key must be a UUIDv4"
+msgstr "आइडेम्पोटेंसी कुंजी UUIDv4 होनी चाहिए"
