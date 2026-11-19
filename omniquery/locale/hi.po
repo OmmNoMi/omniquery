@@ -2619,3 +2619,123 @@ msgstr "प्रश्न {0} {1} के ज़रिए खुद पर न�
 #: omniquery/omniquery/doctype/omniquery_response/omniquery_response.py
 msgid "These answers are not among the choices for the answer they depend on: {0}"
 msgstr "ये उत्तर उन विकल्पों में नहीं हैं जो उनके मूल उत्तर के लिए हैं: {0}"
+
+#: src/components/project/ProjectPage.vue
+msgid "Active Field Project"
+msgstr "सक्रिय फ़ील्ड परियोजना"
+
+#: src/components/project/ProjectPage.vue
+msgid "Back to Dashboard"
+msgstr "डैशबोर्ड पर वापस जाएँ"
+
+#: src/utils/questionLayout.js
+msgid "Breakdown table"
+msgstr "विवरण तालिका"
+
+#: src/components/project/ProjectPage.vue
+msgid "Direct telephone dispatch to field supervisor"
+msgstr "फ़ील्ड पर्यवेक्षक को सीधे फ़ोन करें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Download for Offline"
+msgstr "ऑफ़लाइन के लिए डाउनलोड करें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Email Dispatch"
+msgstr "ईमेल भेजें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Field SOPs & Protocols"
+msgstr "फ़ील्ड SOP और प्रोटोकॉल"
+
+#: src/components/project/ProjectPage.vue
+msgid "Field Support & Supervisor Helpline"
+msgstr "फ़ील्ड सहायता और पर्यवेक्षक हेल्पलाइन"
+
+#: src/components/project/ProjectPage.vue
+msgid "Field data collection instrument for this study."
+msgstr "इस अध्ययन के लिए फ़ील्ड डेटा संग्रह प्रपत्र।"
+
+#: src/components/project/ProjectPage.vue
+msgid "Fill Survey"
+msgstr "सर्वेक्षण भरें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Helpline Phone"
+msgstr "हेल्पलाइन फ़ोन"
+
+#: src/components/project/ProjectPage.vue
+msgid "Loaded survey"
+msgstr "सर्वेक्षण लोड हुआ"
+
+#: src/components/project/ProjectPage.vue
+msgid "No published surveys found for this project"
+msgstr "इस परियोजना के लिए कोई प्रकाशित सर्वेक्षण नहीं मिला"
+
+#: src/components/project/ProjectPage.vue
+msgid "Official escalation & technical queries"
+msgstr "आधिकारिक शिकायत और तकनीकी प्रश्न"
+
+#: src/components/project/ProjectPage.vue
+msgid "Offline Mode"
+msgstr "ऑफ़लाइन मोड"
+
+#: src/components/project/ProjectPage.vue
+msgid "Offline Ready"
+msgstr "ऑफ़लाइन तैयार"
+
+#: src/components/project/ProjectPage.vue
+msgid "Please check with your field supervisor or reload your template list."
+msgstr "कृपया अपने फ़ील्ड पर्यवेक्षक से पूछें या अपनी सर्वेक्षण सूची फिर से लोड करें।"
+
+#: src/components/project/ProjectPage.vue
+msgid "Pre-cache survey questions so you can fill it without internet"
+msgstr "सर्वेक्षण के प्रश्न पहले से सहेजें ताकि आप इसे बिना इंटरनेट के भर सकें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Project Details"
+msgstr "परियोजना विवरण"
+
+#: src/components/project/ProjectPage.vue
+msgid "Q"
+msgstr "प्र"
+
+#: src/components/project/ProjectPage.vue
+msgid "Ready Offline"
+msgstr "ऑफ़लाइन तैयार"
+
+#: src/components/project/ProjectPage.vue
+msgid "Requires Internet to Download"
+msgstr "डाउनलोड के लिए इंटरनेट चाहिए"
+
+#: src/components/project/ProjectPage.vue
+msgid "Select a survey to start collecting field data"
+msgstr "फ़ील्ड डेटा एकत्र करना शुरू करने के लिए एक सर्वेक्षण चुनें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Standard Field Investigator Protocol"
+msgstr "मानक फ़ील्ड अन्वेषक प्रोटोकॉल"
+
+#: src/components/project/ProjectPage.vue
+msgid "Standard Operating Procedures"
+msgstr "मानक संचालन प्रक्रियाएँ"
+
+#: src/components/project/ProjectPage.vue
+msgid "Supervisor Helpline"
+msgstr "पर्यवेक्षक हेल्पलाइन"
+
+#: src/components/project/ProjectPage.vue
+msgid "Survey questions and schema downloaded in device memory"
+msgstr "सर्वेक्षण के प्रश्न और ढाँचा डिवाइस में सहेजे गए"
+
+#: src/components/project/ProjectPage.vue
+msgid "Surveys Assigned"
+msgstr "सौंपे गए सर्वेक्षण"
+
+#: src/components/project/ProjectPage.vue
+msgid "Surveys in this Project"
+msgstr "इस परियोजना के सर्वेक्षण"
+
+#: src/components/project/ProjectPage.vue
+msgid "Target Scope"
+msgstr "लक्षित क्षेत्र"

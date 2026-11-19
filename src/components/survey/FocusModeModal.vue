@@ -142,23 +142,8 @@ import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
 import { parentAnswer } from "../../utils/cascadingOptions";
 import MatrixQuestionCard from "./MatrixQuestionCard.vue";
+import { isMatrixQuestion } from "../../utils/questionLayout";
 import SurveyModeMenu from "./SurveyModeMenu.vue";
-
-function isMatrixQuestion(q) {
-  if (!q) return false;
-  const type = (q.field_type || "").toLowerCase();
-  const code = (q.question_code || "").toLowerCase();
-  return (
-    type === "dynamic grid" ||
-    type === "table" ||
-    type === "matrix" ||
-    code.includes("turnover") ||
-    code.includes("involvement") ||
-    code.includes("capital_sources") ||
-    Boolean(q.columns_schema_json) ||
-    Boolean(q.matrix_schema)
-  );
-}
 
 const props = defineProps({
   isOpen: {
