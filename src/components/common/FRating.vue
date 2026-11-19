@@ -14,8 +14,8 @@
         :tabindex="modelValue === star || (modelValue === 0 && star === 1) ? 0 : -1"
         @click="selectStar(star)"
         @keydown="handleKeydown"
-        class="p-2 text-3xl transition-transform active:scale-125 focus:outline-none focus:ring-2 focus:ring-amber-400 rounded-lg cursor-pointer"
-        :aria-label="`${star} of ${maxStars}`"
+        class="p-2 text-3xl transition-transform active:scale-125 rounded-lg cursor-pointer"
+        :label="__('{0} of {1}', [star, maxStars])"
       >
         <Star
           v-if="star <= (modelValue || 0)"
@@ -66,11 +66,12 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 const { __ } = useTranslation();
 
+// frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
 const starRefs = ref({});
 
 function setStarRef(star, el) {
   if (el) {
-    starRefs.value[star] = el.$el || el.el || el;
+    starRefs.value[star] = el;
   }
 }
 
@@ -90,9 +91,7 @@ const verbalLabel = computed(() => {
 function selectStar(star) {
   emit("update:modelValue", star);
   nextTick(() => {
-    const el = starRefs.value[star];
-    if (el?.focus) el.focus();
-    else if (el?.$el?.focus) el.$el.focus();
+    starRefs.value[star]?.rootRef?.focus();
   });
 }
 
