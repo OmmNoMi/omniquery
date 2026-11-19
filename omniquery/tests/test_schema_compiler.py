@@ -4,12 +4,12 @@ import unittest
 import frappe
 
 from omniquery.services.schema_compiler import calculate_schema_hash, compile_template_schema
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestSchemaCompiler(unittest.TestCase):
 	def setUp(self):
-		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
+		self._cleanup_test_records()
 
 		frappe.get_doc(
 			{
@@ -27,7 +27,7 @@ class TestSchemaCompiler(unittest.TestCase):
 				"title": "Test Women Dairy Assessment 2026",
 				"project": "PROJ-Test Dairy Initiative",
 				"version": 1,
-				"status": "Published",
+				"status": "Draft",
 				"sections": [
 					{
 						"section_code": "SEC_GENERAL",
@@ -185,7 +185,7 @@ class TestSchemaCompiler(unittest.TestCase):
 		q_block = frappe.get_doc({
 			"doctype": "OmniQuery Question",
 			"scope": "Platform",
-			"label_en": "Block",
+			"label_en": "Test Cascading Block",
 			"field_category": "Choice (Single)",
 			"options_set": option_set.name,
 			"depends_on_field": "district",
@@ -249,10 +249,16 @@ class TestSchemaCompiler(unittest.TestCase):
 		}).insert(ignore_permissions=True)
 
 	def tearDown(self):
-		frappe.db.delete("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type", "Block"]]})
-		frappe.db.delete("OmniQuery Option Item", {"parent": ["in", ["Test Animal Species", "Test Rajasthan Blocks"]]})
-		frappe.db.delete("OmniQuery Option Set", {"set_name": ["in", ["Test Animal Species", "Test Rajasthan Blocks"]]})
-		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
+		self._cleanup_test_records()
+
+	def _cleanup_test_records(self):
+		delete_test_docs(
+			[
+				("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type", "Test Cascading Block"]]}),
+				("OmniQuery Option Set", {"set_name": ["in", ["Test Animal Species", "Test Rajasthan Blocks"]]}),
+				("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),
+				("OmniQuery Project", {"project_name": "Test Dairy Initiative"}),
+			]
+		)
 		frappe.db.commit()
 

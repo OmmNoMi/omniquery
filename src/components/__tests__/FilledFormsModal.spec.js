@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import JSZip from "jszip";
+import { toast } from "frappe-ui";
 import FilledFormsModal from "../dashboard/FilledFormsModal.vue";
 import { db } from "../../services/db";
+import { useTranslation } from "../../composables/useTranslation.js";
 
 describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
   let el;
 
   beforeEach(async () => {
+    useTranslation().setLanguage("en");
     el = document.createElement("div");
     el.id = "modal-root";
     document.body.appendChild(el);
@@ -103,11 +106,12 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
     });
 
     // Wait for async loadResponses()
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
-    expect(document.body.textContent).toContain("Saved Responses & Drafts");
-    expect(document.body.textContent).toContain("records stored on this device");
+    expect(document.body.textContent).toContain("On this device");
+    expect(document.body.textContent).toContain("records");
     expect(document.body.textContent).toContain("All (4)");
     expect(document.body.textContent).toContain("Drafts (1)");
     expect(document.body.textContent).toContain("In Queue (1)");
@@ -126,7 +130,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     // Click Drafts filter button
@@ -154,7 +159,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     // Find and click the Resume button
@@ -182,7 +188,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     // Spy on link download click
@@ -216,7 +223,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     const csvContent = wrapper.vm.generateCsvString();
@@ -239,7 +247,8 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // wait for loadResponses() to read the four seeded records, not a fixed sleep that loses under load
+    await vi.waitFor(() => expect(document.body.textContent).toContain("All (4)"));
     await wrapper.vm.$nextTick();
 
     const zipFileSpy = vi.spyOn(JSZip.prototype, "file");
@@ -257,6 +266,29 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
     wrapper.unmount();
   });
 
+  it("copies a response code with a toast, and says so when the browser refuses (#31)", async () => {
+    const success = vi.spyOn(toast, "success");
+    const error = vi.spyOn(toast, "error");
+    const wrapper = mount(FilledFormsModal, { props: { isOpen: true, isOnline: true }, attachTo: el });
+    let codeBtn;
+    await vi.waitFor(() => {
+      codeBtn = Array.from(document.body.querySelectorAll("button")).find((b) => b.textContent.trim() === "RESP-SYNCED-001");
+      expect(codeBtn).toBeDefined();
+    });
+
+    codeBtn.click();
+    await vi.waitFor(() => expect(success).toHaveBeenCalledWith("Response code copied"));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("RESP-SYNCED-001");
+
+    success.mockClear();
+    navigator.clipboard.writeText.mockRejectedValueOnce(new Error("Write permission denied"));
+    codeBtn.click();
+    await vi.waitFor(() => expect(error).toHaveBeenCalledWith("Could not copy: Write permission denied"));
+    expect(success, "no 'copied' for a copy that failed").not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
   it("emits close when back or close button is clicked", async () => {
     const wrapper = mount(FilledFormsModal, {
       props: {
@@ -265,12 +297,11 @@ describe("FilledFormsModal (Disaster Recovery & Forensic Export Specs)", () => {
       attachTo: el,
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 20));
-    await wrapper.vm.$nextTick();
-
-    const buttons = Array.from(document.body.querySelectorAll("button"));
-    const backBtn = buttons.find((b) => b.textContent?.includes("Back"));
-    expect(backBtn).toBeDefined();
+    let backBtn;
+    await vi.waitFor(() => {
+      backBtn = Array.from(document.body.querySelectorAll("button")).find((b) => b.textContent?.includes("Back"));
+      expect(backBtn).toBeDefined();
+    });
 
     backBtn.click();
     expect(wrapper.emitted("close")).toBeTruthy();

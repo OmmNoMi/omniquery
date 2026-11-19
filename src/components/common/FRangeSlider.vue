@@ -32,7 +32,7 @@
           :aria-valuetext="`${displayValue} ${unit ? __(unit) : ''}`.trim()"
           :aria-describedby="ariaDescribedby"
           @update:modelValue="(val) => emit('update:modelValue', Number(val))"
-          class="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-grab active:cursor-grabbing accent-emerald-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/30 transition shadow-inner"
+          class="w-full h-3.5 bg-slate-200 dark:bg-slate-700 rounded-full appearance-none cursor-grab active:cursor-grabbing accent-emerald-600 transition shadow-inner"
         />
       </div>
 
@@ -41,16 +41,11 @@
         <Button
           v-for="val in steps"
           :key="val"
+          :variant="numericValue === val ? 'subtle' : 'ghost'"
+          :label="String(val)"
+          class="font-mono"
           @click="selectValue(val)"
-          :class="[
-            'px-2 py-0.5 rounded-md transition font-mono',
-            numericValue === val
-              ? 'bg-emerald-600 text-white font-black shadow-xs scale-110'
-              : 'hover:text-emerald-700 dark:hover:text-emerald-300'
-          ]"
-        >
-          {{ val }}
-        </Button>
+        />
       </div>
     </div>
 
@@ -69,15 +64,11 @@
         :tabindex="numericValue === val ? 0 : -1"
         @click="selectValue(val)"
         @keydown="handleKeydown"
-        :class="[
-          'py-3 text-center rounded-xl border-2 text-sm sm:text-base font-bold transition active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500',
-          numericValue === val
-            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400 ring-offset-2 dark:ring-offset-slate-900 font-black'
-            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:border-emerald-400'
-        ]"
-      >
-        {{ val }}
-      </Button>
+        v-bind="choiceButtonProps(numericValue === val)"
+        size="xl"
+        :label="String(val)"
+        class="w-full rounded-xl active:scale-95"
+      />
     </div>
   </div>
 </template>
@@ -86,6 +77,7 @@
 import { ref, computed, nextTick } from "vue";
 import { Button, TextInput } from "frappe-ui";
 import { useTranslation } from "../../composables/useTranslation";
+import { choiceButtonProps } from "../../utils/choiceButton";
 
 const props = defineProps({
   modelValue: {
