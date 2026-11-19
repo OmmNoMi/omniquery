@@ -8,6 +8,7 @@ from frappe.utils.fixtures import sync_fixtures
 
 from omniquery.api.survey import get_bootstrap_data, get_schema, list_active_templates
 from omniquery.api.sync import batch_push
+from omniquery.tests.utils import delete_test_docs
 
 RAJIVIKA_TEMPLATE = "OQS-001-001-001"
 RAJIVIKA_PROJECT = "OQP-001-001"
@@ -58,11 +59,17 @@ class TestRajivikaBenchmark(unittest.TestCase):
 		self.assertEqual(q_map["activity_involvements"].field_type, "Dynamic Grid")
 		self.assertEqual(q_map["seasonal_turnovers"].field_type, "Dynamic Grid")
 		self.assertEqual(q_map["loan_usages"].field_type, "Dynamic Grid")
+		self.assertEqual(q_map["block"].depends_on_field, "district")
+		compiled_block = next(q for q in json.loads(tmpl.compiled_schema_json)["questions"] if q["question_code"] == "block")
+		self.assertEqual(compiled_block["depends_on_field"], "district")
+		self.assertIsInstance(compiled_block["options"], dict)
+		self.assertIn("Baran", compiled_block["options"])
+		self.assertIn("Chhipabarod", compiled_block["options"]["Baran"])
 
 	def test_04_schema_compilation_benchmark(self):
 		tmpl = frappe.get_doc("OmniQuery Template", RAJIVIKA_TEMPLATE)
 		start_time = time.perf_counter()
-		tmpl.before_save()
+		tmpl._compile_schema()
 		elapsed_ms = (time.perf_counter() - start_time) * 1000
 
 		self.assertLess(elapsed_ms, 50.0, f"Compilation took {elapsed_ms:.2f}ms (>50ms limit)")
@@ -129,7 +136,10 @@ class TestRajivikaBenchmark(unittest.TestCase):
 			self.assertEqual(resp2["results"][0]["status"], "DUPLICATE_SKIPPED")
 			self.assertEqual(frappe.db.count("OmniQuery Response", {"idempotency_key": test_uuid}), 1)
 		finally:
-			frappe.db.delete("OmniQuery Response Item", {"parent": doc_name})
-			frappe.db.delete("OmniQuery Response", {"name": doc_name})
-			frappe.db.delete("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"})
+			delete_test_docs(
+				[
+					("OmniQuery Response", {"name": doc_name}),
+					("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"}),
+				]
+			)
 			frappe.db.commit()

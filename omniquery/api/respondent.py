@@ -3,6 +3,8 @@ import hashlib
 import frappe
 from frappe import _
 
+from omniquery.services.location import apply_location
+
 
 @frappe.whitelist(allow_guest=False)
 def get_manifest(district=None, block=None, respondent_type=None):
@@ -60,8 +62,7 @@ def register_respondent(payload):
 	doc.district = payload.get("district")
 	doc.state = payload.get("state")
 	doc.pincode = payload.get("pincode")
-	doc.gps_latitude = payload.get("gps_latitude")
-	doc.gps_longitude = payload.get("gps_longitude")
+	apply_location(doc, payload)
 	doc.custom_attributes_json = payload.get("custom_attributes_json")
 	doc.notes = payload.get("notes")
 
