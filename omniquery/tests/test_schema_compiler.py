@@ -82,6 +82,25 @@ class TestSchemaCompiler(unittest.TestCase):
 		self.assertEqual(compiled_q["rating_icon"], "Star")
 		self.assertEqual(compiled_q["rating_max"], 5)
 
+	def test_group_title_and_code_reach_the_compiled_question(self):
+		# the PWA titles a group from these; it once invented titles from question codes (#14)
+		template = frappe.get_doc({
+			"doctype": "OmniQuery Template",
+			"title": "Test Women Dairy Assessment 2026",
+			"project": "PROJ-Test Dairy Initiative",
+			"version": 1,
+			"status": "Draft",
+			"sections": [{"section_code": "SEC_1", "section_title": "Section 1"}],
+			"questions": [
+				{"section_code": "SEC_1", "question_code": "herd_cows", "label_en": "Q3a. Cows", "group_title": "Herd size", "group_code": "herd"},
+				{"section_code": "SEC_1", "question_code": "herd_note", "label_en": "Notes"},
+			],
+		}).insert(ignore_permissions=True)
+
+		grouped, plain = json.loads(template.compiled_schema_json)["questions"]
+		self.assertEqual((grouped["group_title"], grouped["group_code"]), ("Herd size", "herd"))
+		self.assertEqual((plain["group_title"], plain["group_code"]), (None, None))
+
 	def test_response_title_format_compilation(self):
 		template = frappe.get_doc({
 			"doctype": "OmniQuery Template",
@@ -254,6 +273,9 @@ class TestSchemaCompiler(unittest.TestCase):
 	def _cleanup_test_records(self):
 		delete_test_docs(
 			[
+				# test_idempotent_sync files Responses under this project's templates; drop them first, by project
+				# so one whose template is already gone goes too, or the template's cancel fails on the link
+				("OmniQuery Response", {"project": "PROJ-Test Dairy Initiative"}),
 				("OmniQuery Question", {"label_en": ["in", ["Satisfaction Rating", "Species Type", "Test Cascading Block"]]}),
 				("OmniQuery Option Set", {"set_name": ["in", ["Test Animal Species", "Test Rajasthan Blocks"]]}),
 				("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),

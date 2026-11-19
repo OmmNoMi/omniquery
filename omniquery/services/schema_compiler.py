@@ -74,6 +74,9 @@ def format_question_dictionary(question_row):
 		"conditional_logic": parse_json_value(getattr(question_row, "conditional_logic_json", None)),
 		"validation_rules": parse_json_value(getattr(question_row, "validation_rules_json", None)),
 		"audio_prompt": getattr(question_row, "audio_prompt", None),
+		# the PWA titles a group of questions from these, never from a question_code (#14)
+		"group_title": getattr(question_row, "group_title", None) or None,
+		"group_code": getattr(question_row, "group_code", None) or None,
 	}
 	return enrich_question_metadata(question_row, question_dictionary)
 
@@ -108,7 +111,7 @@ def get_master_question_metadata(q_ref):
 	fields = [
 		"field_category", "control_variant", "rating_icon", "rating_max",
 		"rating_step", "temporal_granularity", "geographic_granularity",
-		"options_set", "allow_user_toggle", "depends_on_field"
+		"options_set", "allow_user_toggle", "depends_on_field", "group_title", "group_code"
 	]
 	return frappe.db.get_value("OmniQuery Question", q_ref, fields, as_dict=True) or {}
 

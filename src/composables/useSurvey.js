@@ -3,6 +3,7 @@ import { call } from "frappe-ui";
 import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { responseItems } from "../utils/responsePayload";
 import { uuidv4 } from "../utils/uuid";
+import { projectHelp } from "../utils/projectHelp";
 
 // a new interview is filed under a UUIDv4 the server also checks (#25)
 export const generateSurveyId = uuidv4;
@@ -116,6 +117,7 @@ export function useSurvey() {
           workspace: t.workspace,
           workspace_title: t.workspace_title,
           response_title_format: t.response_title_format,
+          ...projectHelp(t),
         }));
       }
     } catch (e) {
@@ -158,6 +160,8 @@ export function useSurvey() {
             workspace: t.workspace,
             workspace_title: t.workspace_title,
             response_title_format: schema.response_title_format,
+            // the project's helpline and SOPs, so the project page has them offline (#14)
+            ...projectHelp(t),
             schema: schema,
             modified: new Date().toISOString(),
           });
@@ -174,6 +178,7 @@ export function useSurvey() {
             workspace: t.workspace,
             workspace_title: t.workspace_title,
             response_title_format: schema.response_title_format,
+            ...projectHelp(t),
           });
         }
         availableTemplates.value = formatted;
@@ -224,7 +229,10 @@ export function useSurvey() {
 
   async function cacheTemplateLocally(surveyId, schema, payload) {
     try {
+      // get_schema sends no project help, so keep what the bootstrap cached unless the payload has its own
+      const cached = await db.templates.get(surveyId);
       await db.templates.put({
+        ...projectHelp({ ...cached, ...payload }),
         template_name: surveyId,
         title: schema.title,
         project: schema.project || (payload && payload.project),

@@ -19,7 +19,6 @@ export const MISSING_SHADE_ALLOWLIST = {
   "src/components/common/FCombobox.vue": 3,
   "src/components/dashboard/FilledFormsModal.vue": 1,
   "src/components/dashboard/SurveyorDashboard.vue": 2,
-  "src/components/project/ProjectPage.vue": 1,
 };
 
 // The colours tailwind.config.cjs takes whole from Tailwind's palette (`slate: colors.slate`)

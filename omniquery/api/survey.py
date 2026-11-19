@@ -4,6 +4,7 @@ import frappe
 from frappe import _
 from frappe.query_builder import Case
 from frappe.query_builder import functions as fn
+from frappe.utils.html_utils import sanitize_html
 
 from omniquery.permissions import can_view_project, has_template_permission, is_super_user, is_unassigned
 
@@ -90,13 +91,30 @@ def get_current_user_info():
 	}
 
 
+# Set per project; the PWA hides each card until someone sets it (#14, #51).
+PROJECT_HELP_FIELDS = ("support_email", "helpline_phone", "sop_sections")
+
+
+def project_help(proj) -> dict:
+	"""The project's helpline and SOPs as the PWA shows them, with the SOP HTML sanitized.
+
+	Frappe sanitizes a Text Editor on save, but db_set, data import and SQL skip that, and the PWA
+	renders the SOPs as HTML.
+	"""
+	return {
+		"support_email": proj.get("support_email") or "",
+		"helpline_phone": proj.get("helpline_phone") or "",
+		"sop_sections": sanitize_html(proj.get("sop_sections") or "", always_sanitize=True),
+	}
+
+
 def fetch_project_workspace_meta(project_ids):
 	if not project_ids:
 		return {}, {}
 	projs = frappe.get_all(
 		"OmniQuery Project",
 		filters={"name": ["in", list(project_ids)]},
-		fields=["name", "project_name", "workspace", "grantor_organization", "description"],
+		fields=["name", "project_name", "workspace", "grantor_organization", "description", *PROJECT_HELP_FIELDS],
 	)
 	p_map = {p.name: p for p in projs}
 	ws_ids = {p.workspace for p in projs if p.workspace}
@@ -121,6 +139,8 @@ def enrich_template_meta(tmpl, p_map, w_map):
 	tmpl["project_description"] = p_meta.get("description") or ""
 	tmpl["workspace"] = ws_id
 	tmpl["workspace_title"] = w_meta.get("workspace_title") or w_meta.get("workspace_name") or ws_id
+	# cached with the template, so the helpline and SOPs still show offline (#14)
+	tmpl.update(project_help(p_meta))
 	return tmpl
 
 
@@ -292,6 +312,7 @@ def get_bootstrap_data():
 				"project_description": enriched.get("project_description") or "",
 				"workspace": enriched.get("workspace") or "",
 				"workspace_title": enriched.get("workspace_title") or "",
+				**project_help(enriched),
 				"version": t.version,
 				"target_category": t.target_category,
 				"schema_hash_sha256": t.schema_hash_sha256,
@@ -367,7 +388,7 @@ def _kpi_columns(response, today: str, week: str):
 @frappe.whitelist(allow_guest=True)
 def get_project_details(project_id=None):
 	"""
-	Returns comprehensive project metadata, guidelines, SOPs, and training materials.
+	The project's metadata with its helpline and field SOPs (project_help).
 
 	Only for a project the caller may see (permissions.can_view_project); otherwise {} (#57).
 	"""
@@ -375,75 +396,21 @@ def get_project_details(project_id=None):
 	if not proj or not can_view_project(proj.name, frappe.session.user):
 		return {}
 
-	# Training modules & field SOPs for surveyors
-	training_modules = [
-		{
-			"id": "sop-01",
-			"title": "Field Survey Protocol & Ethical Guidelines",
-			"category": "Field SOP",
-			"icon": "scroll",
-			"summary": "Mandatory protocols for introducing the study, voluntary participation, and respondent respect.",
-			"points": [
-				"Always introduce yourself with authorized surveyor credentials and clearly explain the non-commercial research objectives.",
-				"Obtain explicit voluntary oral or written consent before initiating questioning.",
-				"Ensure privacy during interview sessions. Do not discuss personal financial details in public earshot.",
-				"Capture GPS coordinates accurately while physically standing at the enterprise location.",
-			],
-		},
-		{
-			"id": "training-02",
-			"title": "Turnover & Financial Estimation Guide",
-			"category": "Data Accuracy",
-			"icon": "dollar-sign",
-			"summary": "How to assist respondents with multi-year turnover and enterprise cost estimates.",
-			"points": [
-				"If accounts are not maintained on paper, compute annual turnover by averaging typical monthly cash inflows multiplied by operational months.",
-				"For table questions (e.g. Q4 challenges & Q9 turnover distributions), cross-verify percentages with the respondent.",
-				"Record loans and capital sources from SHGs, village organizations, banks, or informal lenders separately.",
-				"Ensure zero or non-applicable values are clearly marked rather than skipping items.",
-			],
-		},
-		{
-			"id": "tech-03",
-			"title": "Offline Data Collection & Recovery Guide",
-			"category": "App & Recovery",
-			"icon": "zap",
-			"summary": "Zero-data-loss workflows for remote field operations without cellular internet.",
-			"points": [
-				"OmniQuery runs 100% offline. Responses, draft progress, and GPS are saved immediately in device storage (IndexedDB).",
-				"Monitor the offline queue badge in the header: it indicates how many completed responses are stored in the queue awaiting sync.",
-				"When returning to network coverage or village Wi-Fi, tap 'Sync Now' to push records to the server.",
-				"Use 'Filled Forms' to inspect completed submissions, review answers, and export emergency backups to JSON/CSV.",
-			],
-		},
-	]
-
-	# Support Helpline
-	helpline = {
-		"supervisor_name": "Field Operations Lead",
-		"email": proj.support_email or "",
-		"phone": "+91 1800-102-OMNI",
-		"hours": "8:00 AM – 7:00 PM IST (Mon–Sat)",
-	}
-
-	return {
-		"project": proj,
-		"training_modules": training_modules,
-		"helpline": helpline,
-	}
+	proj.update(project_help(proj))
+	return {"project": proj}
 
 
 PROJECT_DETAIL_FIELDS = [
 	"name",
 	"project_name",
 	"grantor_organization",
-	"support_email",
 	"workspace",
 	"description",
 	"district_scope",
 	"target_beneficiaries",
 	"start_date",
 	"end_date",
+	*PROJECT_HELP_FIELDS,
 ]
 
 

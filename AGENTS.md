@@ -40,6 +40,12 @@ cost real time to learn. Add to it when you learn something new.
 - `src/test/setup.js` swaps in Node's `Blob` so fake-indexeddb can clone recordings, and a blob
   read back from it is a Node Blob, which happy-dom's `FileReader` refuses. The setup converts it
   for `readAsDataURL`. Without that, an audio test only passes when upload code ignores the error.
+- `frappe.delete_doc(..., force=True)` skips the link check, so a test that deletes a template
+  under a Response leaves an orphan Response behind, and cancelling a submitted template then
+  fails on it. Clean up a test project's Responses by `project`, before its templates.
+- vitest 3.2.7: `mockReset()` or `mockClear()` followed by `mockRejectedValue` (or an async
+  throw) fails the test even when the code catches the rejection. Don't reset such a mock in
+  `beforeEach`; give each test a fresh mock (`vi.stubGlobal("fetch", vi.fn().mockRejectedValue(...))`).
 - Copy to the clipboard with VueUse `useClipboard({ legacy: true })`. Its `copy` rejects when the
   browser refuses, so catch it and show `toast.error`. The PWA has no `frappe.show_alert`; use
   frappe-ui `toast`.
@@ -71,6 +77,13 @@ cost real time to learn. Add to it when you learn something new.
   backoff, no status the network. Reuse it rather than reading `err.status` again.
 - An acknowledged WAL entry is deleted, not kept as "synced"; its audio stays for
   `syncPendingAudio`. An entry the server did not answer stays pending as it was.
+- A project's helpline and SOPs ride on each cached template (`src/utils/projectHelp.js`, from
+  `survey.project_help`). `get_schema` sends no project fields, so `cacheTemplateLocally` merges
+  the cached row under the payload rather than replacing it.
+- Frappe sanitizes a Text Editor field on save only; `db_set`, data import and SQL skip it. Any
+  stored HTML the PWA renders is sanitized on read with `sanitize_html(..., always_sanitize=True)`.
+- Fixture sync force-imports, so a record listed in `hooks.fixtures` comes back on every migrate,
+  even after a site deletes it. Never ship a client's own records as fixtures (#139).
 - Test sync against frappe-ui's `call()`, mocked with
   `vi.mock("frappe-ui", async (importOriginal) => ({ ...(await importOriginal()), call: vi.fn() }))`,
   and `createWAL()` called outside a component, which starts no listeners or interval.

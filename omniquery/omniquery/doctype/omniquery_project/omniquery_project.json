@@ -10,6 +10,7 @@
   "workspace",
   "grantor_organization",
   "support_email",
+  "helpline_phone",
   "status",
   "column_break_dates",
   "start_date",
@@ -19,6 +20,8 @@
   "section_scope",
   "district_scope",
   "description",
+  "section_sops",
+  "sop_sections",
   "members_tab",
   "members"
  ],
@@ -106,6 +109,23 @@
    "label": "Project Description / Objectives"
   },
   {
+   "fieldname": "helpline_phone",
+   "fieldtype": "Phone",
+   "label": "Helpline Phone",
+   "description": "Shown to surveyors on the project's helpline tab. Leave empty to hide the phone card."
+  },
+  {
+   "fieldname": "section_sops",
+   "fieldtype": "Section Break",
+   "label": "Field SOPs"
+  },
+  {
+   "fieldname": "sop_sections",
+   "fieldtype": "Text Editor",
+   "label": "Field SOPs",
+   "description": "Shown to surveyors on the project's SOP tab, also offline. Leave empty to hide the tab."
+  },
+  {
    "fieldname": "members_tab",
    "fieldtype": "Tab Break",
    "label": "Project Team & Roles"
@@ -119,7 +139,7 @@
  ],
  "index_web_pages_for_search": 0,
  "links": [],
- "modified": "2026-11-14 12:00:00.000000",
+ "modified": "2026-11-19 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Project",

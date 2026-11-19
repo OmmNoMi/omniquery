@@ -245,6 +245,26 @@ describe("useSurvey", () => {
     expect(offline.isUnassigned.value).toBe(false);
   });
 
+  it("keeps the project's helpline and SOPs with the cached template, through a download and offline (#14)", async () => {
+    const help = { support_email: "help@example.org", helpline_phone: "+91 1800 000 111", sop_sections: "<p>Introduce yourself.</p>" };
+    const template = { name: "OQS-HELP-01", title: "Help Survey", project: "PROJ-HELP", version: 1, schema: { questions: [] }, ...help };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: { templates: [template] } }) }));
+
+    const survey = useSurvey();
+    const [listed] = await survey.loadAvailableTemplates();
+    expect(listed).toMatchObject(help);
+    expect(await db.templates.get("OQS-HELP-01")).toMatchObject(help);
+
+    // get_schema sends no project help: downloading the survey again must not wipe what the bootstrap cached
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: { template_name: "OQS-HELP-01", schema: { questions: [] } } }) }));
+    expect(await survey.downloadSurveyForOffline("OQS-HELP-01")).toBe(true);
+    expect(await db.templates.get("OQS-HELP-01")).toMatchObject(help);
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Failed to fetch (offline)")));
+    const [offline] = await useSurvey().loadAvailableTemplates();
+    expect(offline).toMatchObject(help);
+  });
+
   it("refreshes cachedTemplatesMap and downloads surveys for offline", async () => {
     const survey = useSurvey();
     await db.templates.clear();
