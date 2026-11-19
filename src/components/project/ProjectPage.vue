@@ -37,7 +37,7 @@
         </div>
 
         <!-- the workspace's title only, never its raw id (#16) -->
-        <span v-if="projectMeta.workspace_title" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
+        <span v-if="showWorkspace" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
           <Building2 class="w-3.5 h-3.5 text-slate-400" />
           <span>{{ projectMeta.workspace_title }}</span>
         </span>
@@ -46,7 +46,7 @@
       <!-- Project Title & Subtitle -->
       <div class="space-y-1 min-w-0">
         <h1 class="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight leading-tight break-words">
-          {{ projectMeta.project_name || projectMeta.name || projectId }}
+          {{ projectTitle }}
         </h1>
         <p v-if="projectMeta.grantor_organization" class="text-xs sm:text-sm text-emerald-700 dark:text-emerald-400 font-semibold flex items-center gap-1.5">
           <Landmark class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -55,7 +55,7 @@
       </div>
 
       <!-- Project Slogan / Description -->
-      <p v-if="projectMeta.description" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
+      <p v-if="showDescription" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed max-w-3xl">
         {{ projectMeta.description }}
       </p>
 
@@ -129,6 +129,7 @@ import ProjectSurveyList from "./ProjectSurveyList.vue";
 import { useTranslation } from "../../composables/useTranslation";
 import { projectHelp } from "../../utils/projectHelp";
 import { templatesOfProject } from "../../utils/projectTemplates";
+import { addsFact } from "../../utils/text";
 
 const props = defineProps({
   projectId: {
@@ -195,6 +196,14 @@ const projectMeta = computed(() => {
   };
 });
 
+const projectTitle = computed(() => projectMeta.value.project_name || projectMeta.value.name || props.projectId);
+
+// each header line shows only when it adds a fact the header does not already show (#18)
+const showWorkspace = computed(() => addsFact(projectMeta.value.workspace_title, projectMeta.value.grantor_organization));
+const showDescription = computed(() =>
+  addsFact(projectMeta.value.description, projectTitle.value, projectMeta.value.grantor_organization)
+);
+
 // set per project on OmniQuery Project; each link hides until someone sets it (#14, #51)
 const projectSupportEmail = computed(() => projectMeta.value.support_email || "");
 const hasHelpline = computed(() => Boolean(projectMeta.value.helpline_phone || projectSupportEmail.value));
@@ -209,7 +218,7 @@ const surveyList = computed(() => ({
   cachedTemplatesMap: props.cachedTemplatesMap,
   isOnline: props.isOnline,
   projectId: props.projectId,
-  projectDescription: projectMeta.value.description || "",
+  shownFacts: [projectTitle.value, projectMeta.value.grantor_organization, projectMeta.value.description],
   onSelectSurvey: (name) => emit("select-survey", name),
   onDownloadSurvey: (name) => emit("download-survey", name),
   onDownloadProjectSurveys: (id) => emit("download-project-surveys", id),

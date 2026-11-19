@@ -1756,7 +1756,16 @@ msgstr ""
 
 #: src/App.vue:109
 msgid "Start Survey"
-msgstr ""
+msgstr "सर्वेक्षण शुरू करें"
+
+#: src/components/dashboard/SurveyorDashboard.vue:84
+#: src/views/Catalog.vue
+msgid "Resume Survey"
+msgstr "सर्वेक्षण जारी रखें"
+
+#: src/views/Catalog.vue
+msgid "Start New"
+msgstr "नया शुरू करें"
 
 #. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
 #. Question'
@@ -2651,14 +2660,6 @@ msgstr "फ़ील्ड SOP और प्रोटोकॉल"
 #: src/components/project/ProjectPage.vue
 msgid "Field Support & Supervisor Helpline"
 msgstr "फ़ील्ड सहायता और पर्यवेक्षक हेल्पलाइन"
-
-#: src/components/project/ProjectPage.vue
-msgid "Field data collection instrument for this study."
-msgstr "इस अध्ययन के लिए फ़ील्ड डेटा संग्रह प्रपत्र।"
-
-#: src/components/project/ProjectPage.vue
-msgid "Fill Survey"
-msgstr "सर्वेक्षण भरें"
 
 #: src/components/project/ProjectPage.vue
 msgid "Helpline Phone"

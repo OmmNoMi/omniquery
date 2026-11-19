@@ -23,7 +23,6 @@
       @open-wal="s.showWALDrawer = true"
       @sync-now="s.triggerSync()"
       @resume-draft="s.selectSurvey"
-      @start-new-survey="s.selectSurvey($event, { startNew: true })"
       @open-filled-forms="s.openFilteredFilledForms('all')"
       @open-filtered-forms="s.openFilteredFilledForms"
     />
@@ -142,21 +141,21 @@
         </div>
         <div class="flex items-center gap-2">
           <Button
-            v-if="s.activeDrafts[tmpl.name]"
+            v-if="s.activeDrafts[tmpl.name] && tmpl.name !== resumedAbove"
             @click.stop="s.selectSurvey(tmpl.name, { startNew: true })"
             class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold transition active:scale-95 cursor-pointer flex items-center gap-1"
             :title="__('Start a fresh blank survey without discarding saved drafts')"
           >
             <Plus class="w-3.5 h-3.5" />
-            <span>{{ __('Start New') }}</span>
+            <span>{{ startNewLabel }}</span>
           </Button>
           <Button
-            @click="s.selectSurvey(tmpl.name)"
+            @click="s.selectSurvey(tmpl.name, { startNew: tmpl.name === resumedAbove })"
             :disabled="s.loadingSurveyId === tmpl.name"
             class="px-4 sm:px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs sm:text-sm font-bold transition shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <span v-if="s.loadingSurveyId === tmpl.name" class="animate-spin inline-block w-3 h-3 border-2 border-white border-t-transparent rounded-full"></span>
-            <span>{{ s.loadingSurveyId === tmpl.name ? __('Loading...') : (s.activeDrafts[tmpl.name] ? __('Resume Survey') : __('Start Survey')) }}</span>
+            <span>{{ s.loadingSurveyId === tmpl.name ? __('Loading...') : startLabel(tmpl.name) }}</span>
             <span v-if="s.loadingSurveyId !== tmpl.name">→</span>
           </Button>
         </div>
@@ -184,6 +183,7 @@ import SurveyorDashboard from "../components/dashboard/SurveyorDashboard.vue";
 import { useTranslation } from "../composables/useTranslation";
 import { useSurveySession } from "../composables/useSurveyApp";
 import { inProject } from "../utils/projectTemplates";
+import { latestDraft } from "../utils/drafts";
 
 const s = useSurveySession();
 const { __ } = useTranslation();
@@ -193,6 +193,17 @@ const searchInput = useTemplateRef("searchInput");
 function clearSearch() {
   s.searchQuery = "";
   searchInput.value?.el?.focus();
+}
+
+// The dashboard's draft card resumes this survey's draft, so its card here offers Start New instead
+// of a second Resume (#18)
+const resumedAbove = computed(() => latestDraft(s.activeDrafts, s.availableTemplates, s.selectedProject)?.template_name);
+
+const startNewLabel = computed(() => __("Start New"));
+
+function startLabel(name) {
+  if (name === resumedAbove.value) return startNewLabel.value;
+  return s.activeDrafts[name] ? __("Resume Survey") : __("Start Survey");
 }
 
 const filteredTemplates = computed(() => {

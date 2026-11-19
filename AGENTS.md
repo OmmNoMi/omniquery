@@ -121,6 +121,10 @@ cost real time to learn. Add to it when you learn something new.
   the cached row under the payload rather than replacing it.
 - Frappe sanitizes a Text Editor field on save only; `db_set`, data import and SQL skip it. Any
   stored HTML the PWA renders is sanitized on read with `sanitize_html(..., always_sanitize=True)`.
+- A Text Editor field the PWA shows as text goes through `frappe.core.utils.html_to_plain_text`
+  on the server (`survey.project_description`). It puts a space either side of an inline tag
+  (`<strong>micro</strong>-enterprises` gives "micro -enterprises"), so compare its output with
+  whitespace collapsed, and keep the field free of mid-word formatting.
 - Fixture sync force-imports, so a record listed in `hooks.fixtures` comes back on every migrate,
   even after a site deletes it. Never ship a client's own records as fixtures (#139).
 - Test sync against frappe-ui's `call()`, mocked with

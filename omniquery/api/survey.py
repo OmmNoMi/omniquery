@@ -2,6 +2,7 @@ import json
 
 import frappe
 from frappe import _
+from frappe.core.utils import html_to_plain_text
 from frappe.query_builder import Case
 from frappe.query_builder import functions as fn
 from frappe.utils.html_utils import sanitize_html
@@ -108,6 +109,15 @@ def project_help(proj) -> dict:
 	}
 
 
+def project_description(proj) -> str:
+	"""The project's description as plain text.
+
+	It is a Text Editor field, so a Desk save stores it as HTML, but the PWA shows it as text and
+	would print the tags (#18).
+	"""
+	return html_to_plain_text((proj or {}).get("description") or "")
+
+
 def fetch_project_workspace_meta(project_ids):
 	if not project_ids:
 		return {}, {}
@@ -145,7 +155,7 @@ def enrich_template_meta(tmpl, p_map, w_map):
 	w_meta = w_map.get(ws_id) or {}
 	tmpl["project_name"] = p_meta.get("project_name") or tmpl.project or ""
 	tmpl["grantor_organization"] = p_meta.get("grantor_organization") or ""
-	tmpl["project_description"] = p_meta.get("description") or ""
+	tmpl["project_description"] = project_description(p_meta)
 	# the project's own status, so the project page header is right before its details load (#16)
 	tmpl["project_status"] = p_meta.get("status") or ""
 	tmpl["workspace"] = ws_id
@@ -409,6 +419,7 @@ def get_project_details(project_id=None):
 		return {}
 
 	proj.update(project_help(proj))
+	proj["description"] = project_description(proj)
 	proj["workspace_title"] = workspace_title(fetch_workspace_meta([proj.workspace]).get(proj.workspace))
 	return {"project": proj}
 

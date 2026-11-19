@@ -51,11 +51,11 @@
       <!-- Survey Title & Configured Dynamic Respondent Title -->
       <div class="space-y-0.5 min-w-0">
         <h4 class="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-snug break-words">
-          {{ resolveResponseTitle(topDraft.responses, topDraft.response_title_format, topDraft.title || topDraft.template_name) }}
+          {{ draftTitle }}
         </h4>
-        <p class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
+        <p v-if="addsFact(topDraft.title, draftTitle)" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
           <ClipboardList class="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          <span class="truncate">{{ topDraft.title || topDraft.template_name }}</span>
+          <span class="truncate">{{ topDraft.title }}</span>
         </p>
       </div>
 
@@ -75,17 +75,8 @@
           </div>
         </div>
 
-        <!-- Start New and Resume: full width side by side at 375px, so neither is clipped -->
+        <!-- Resume only: Start New is the survey's own action, on its catalog card (#18). Full width at 375px. -->
         <div class="flex items-center gap-2 w-full sm:w-auto shrink-0">
-          <Button
-            variant="outline"
-            size="md"
-            :iconLeft="Plus"
-            :label="__('Start New')"
-            class="flex-1 sm:flex-initial"
-            :title="__('Start a fresh blank survey without discarding this draft')"
-            @click="$emit('start-new-survey', topDraft.template_name)"
-          />
           <Button
             variant="solid"
             size="md"
@@ -298,12 +289,14 @@
 <script setup>
 import { computed, ref, onMounted, watch } from "vue";
 import { Button, call } from "frappe-ui";
-import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Plus, Play, UserX } from "lucide-vue-next";
+import { Target, ClipboardList, Zap, FileText, Trophy, Check, Clock, Play, UserX } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useUserRoles } from "../../composables/useUserRoles";
 import { useSession } from "../../composables/useSession";
 import { resolveResponseTitle } from "../../utils/responseTitle";
 import { templatesOfProject } from "../../utils/projectTemplates";
+import { latestDraft } from "../../utils/drafts";
+import { addsFact } from "../../utils/text";
 import { db } from "../../services/db";
 
 const props = defineProps({
@@ -346,7 +339,6 @@ const emit = defineEmits([
   "open-wal",
   "sync-now",
   "resume-draft",
-  "start-new-survey",
   "open-filled-forms",
   "open-filtered-forms",
 ]);
@@ -458,17 +450,8 @@ const remainingTodayText = computed(() => {
 const activeDraftsCount = computed(() => props.drafts.length);
 
 const topDraft = computed(() => {
-  let list = Object.values(props.activeDrafts || {});
-  if (props.selectedProject && props.selectedProject !== "ALL") {
-    const allowedTemplates = projectTemplateNames(props.selectedProject);
-    list = list.filter((d) => allowedTemplates.has(d.template_name));
-  }
-  if (!list.length) return null;
-  // sort by updated_at descending
-  const sorted = [...list].sort((a, b) => {
-    return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
-  });
-  const draft = sorted[0];
+  const draft = latestDraft(props.activeDrafts, props.templates, props.selectedProject);
+  if (!draft) return null;
   const tmpl = props.templates.find((t) => (t.name || t.template_name) === draft.template_name);
   return {
     ...draft,
@@ -476,6 +459,12 @@ const topDraft = computed(() => {
     response_title_format: tmpl?.response_title_format || draft.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
   };
 });
+
+// the draft's own title (its respondent, from the survey's title format), else the survey's title;
+// the survey's title shows under it only when it adds a fact (#18)
+const draftTitle = computed(() =>
+  topDraft.value ? resolveResponseTitle(topDraft.value.responses, topDraft.value.response_title_format, topDraft.value.title) : ""
+);
 
 function formatRelativeTime(isoStr) {
   if (!isoStr) return __("recently");

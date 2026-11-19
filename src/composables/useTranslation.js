@@ -9,8 +9,6 @@ const CORE_HINDI = {
   "Breakdown table": "विवरण तालिका",
   "Download for Offline": "ऑफ़लाइन के लिए डाउनलोड करें",
   "Field SOPs & Protocols": "फ़ील्ड SOP और प्रोटोकॉल",
-  "Field data collection instrument for this study.": "इस अध्ययन के लिए फ़ील्ड डेटा संग्रह प्रपत्र।",
-  "Fill Survey": "सर्वेक्षण भरें",
   "Loaded survey": "सर्वेक्षण लोड हुआ",
   "No published surveys found for this project": "इस परियोजना के लिए कोई प्रकाशित सर्वेक्षण नहीं मिला",
   "Offline Mode": "ऑफ़लाइन मोड",
@@ -36,6 +34,9 @@ const CORE_HINDI = {
   "{0} left for target": "लक्ष्य के लिए {0} शेष",
   "Surveys": "सर्वेक्षण सूची",
   "Start Survey": "सर्वेक्षण शुरू करें",
+  // the draft card resumes, the catalog card starts anew (#18)
+  "Resume Survey": "सर्वेक्षण जारी रखें",
+  "Start New": "नया शुरू करें",
   "Start Survey →": "सर्वेक्षण शुरू करें →",
   "Select an active field survey to begin recording responses.": "प्रतिक्रियाएं दर्ज करने के लिए सक्रिय सर्वेक्षण चुनें।",
   "Workspaces": "कार्यक्षेत्र",

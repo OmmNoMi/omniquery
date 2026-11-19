@@ -65,6 +65,16 @@ class TestProjectAPI(unittest.TestCase):
 			self.assertEqual(template["helpline_phone"], "+91 1800 000 111")
 			self.assertEqual(template["sop_sections"], SOP)
 
+	def test_the_description_reaches_the_pwa_as_plain_text(self):
+		# a Desk save wraps the Text Editor in HTML, and the PWA shows it as text (#18)
+		frappe.db.set_value("OmniQuery Project", self.project, "description", '<div class="ql-editor read-mode"><p>A study of <strong>micro-enterprises</strong> &amp; SHGs.</p></div>')
+		self._submit_template()
+		descriptions = [get_project_details(self.project)["project"]["description"]]
+		descriptions += [t["project_description"] for t in (self._listed_template(), self._bootstrap_template())]
+		for description in descriptions:
+			# Frappe's html_to_plain_text puts a space either side of an inline tag; the PWA collapses it
+			self.assertEqual(" ".join(description.split()), "A study of micro-enterprises & SHGs.")
+
 	def test_unknown_project_gives_nothing_not_a_made_up_one(self):
 		# #57: the endpoint once invented a project and a grantor for any id it did not know
 		self.assertEqual(get_project_details("NON_EXISTENT_PROJECT_XYZ"), {})

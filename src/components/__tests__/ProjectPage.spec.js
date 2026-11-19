@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from "vitest";
+import { describe, it, expect, vi, afterEach, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import ProjectPage from "../project/ProjectPage.vue";
 import { useTranslation } from "../../composables/useTranslation";
@@ -236,5 +236,60 @@ describe("ProjectPage header (#16)", () => {
     resolveDetails({ project: { name: PROJECT, project_name: "Sample Project", status: "Active", workspace: WORKSPACE, workspace_title: "" } });
     await flushPromises();
     expect(wrapper.text()).not.toContain(WORKSPACE);
+  });
+
+  describe("each fact once, one verb (#18)", () => {
+    // asserted in English, whatever language the last test left on
+    const { setLanguage, currentLang } = useTranslation();
+    let lang;
+    beforeEach(() => {
+      lang = currentLang.value;
+      setLanguage("en");
+      // the header from the cached templates, as a surveyor sees it before the details load
+      pendingDetails();
+    });
+    afterEach(() => setLanguage(lang));
+
+    const count = (wrapper, text) => wrapper.text().split(text).length - 1;
+    const RGAVP = "Rajasthan Grameen Aajeevika Vikas Parishad (RGAVP)";
+
+    it("starts a survey with Start Survey, the verb the catalog uses", async () => {
+      const wrapper = await mountPage([template()]);
+      expect(wrapper.text()).toContain("Start Survey");
+      expect(wrapper.text()).not.toContain("Fill Survey");
+    });
+
+    it("does not repeat the title as the description", async () => {
+      const wrapper = await mountPage([template({ project_name: "Rural Health Initiative", project_description: " rural health  initiative " })]);
+      expect(count(wrapper, "Rural Health Initiative")).toBe(1);
+      expect(wrapper.text().toLowerCase().split("rural health").length - 1).toBe(1);
+    });
+
+    it("shows the project's description in the header only, not again on each survey card", async () => {
+      const description = "A study of micro-enterprises.";
+      const second = { ...template({ project_description: description }), name: "T2", title: "Endline" };
+      const wrapper = await mountPage([template({ project_description: description }), second]);
+      expect(count(wrapper, description)).toBe(1);
+      expect(wrapper.text()).not.toContain("Field data collection instrument");
+    });
+
+    it("hides a survey's own description when it repeats the project's, and shows one that adds a fact", async () => {
+      // a survey author often copies the project's description into the survey's own
+      const description = "Study on Performance of SHG-led Women Entrepreneurs in Rajasthan";
+      const copied = { ...template({ project_description: description }), description };
+      const own = { ...template({ project_description: description }), name: "T2", title: "Endline", description: "Asked a year after the baseline." };
+      const wrapper = await mountPage([copied, own]);
+      expect(count(wrapper, description)).toBe(1);
+      expect(wrapper.text()).toContain("Asked a year after the baseline.");
+    });
+
+    it("hides the workspace when the grantor already names it, and shows it when it adds a fact", async () => {
+      const repeat = await mountPage([template({ workspace_title: RGAVP, grantor_organization: `${RGAVP} / SVEP` })]);
+      expect(count(repeat, RGAVP)).toBe(1);
+      repeat.unmount();
+
+      const differs = await mountPage([template({ workspace_title: "Udaipur Cluster", grantor_organization: `${RGAVP} / SVEP` })]);
+      expect(differs.text()).toContain("Udaipur Cluster");
+    });
   });
 });

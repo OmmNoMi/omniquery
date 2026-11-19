@@ -45,8 +45,9 @@
             {{ s.title || s.name }}
           </h3>
 
-          <p class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
-            {{ s.description || projectDescription || __('Field data collection instrument for this study.') }}
+          <!-- only a description of the survey's own: the project's is in the page header (#18) -->
+          <p v-if="addsFact(s.description, s.title || s.name, ...shownFacts)" class="text-xs text-slate-500 dark:text-slate-400 line-clamp-2">
+            {{ s.description }}
           </p>
         </div>
 
@@ -82,7 +83,7 @@
             @click="$emit('select-survey', s.name)"
             class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-extrabold text-xs transition shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
-            <span>{{ __('Fill Survey') }}</span>
+            <span>{{ __('Start Survey') }}</span>
             <span>→</span>
           </Button>
         </div>
@@ -96,6 +97,7 @@ import { computed } from "vue";
 import { Button } from "frappe-ui";
 import { Download, Inbox, AlertTriangle } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { addsFact } from "../../utils/text";
 
 // A project's surveys, each ready to fill or download for offline use
 const props = defineProps({
@@ -103,8 +105,9 @@ const props = defineProps({
   cachedTemplatesMap: { type: Object, default: () => ({}) },
   isOnline: { type: Boolean, default: true },
   projectId: { type: String, required: true },
-  // shown on a survey that has no description of its own
-  projectDescription: { type: String, default: "" },
+  // what the page already shows above the list (the project's title, grantor and description),
+  // so a survey description that only repeats one of them is not shown again
+  shownFacts: { type: Array, default: () => [] },
 });
 
 defineEmits(["select-survey", "download-survey", "download-project-surveys"]);

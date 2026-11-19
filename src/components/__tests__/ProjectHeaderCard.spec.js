@@ -143,4 +143,51 @@ describe("ProjectHeaderCard", () => {
       });
     }
   });
+
+  describe("each fact once (#18)", () => {
+    const RGAVP = "Rajasthan Grameen Aajeevika Vikas Parishad (RGAVP)";
+    const card = (template) =>
+      mount(ProjectHeaderCard, { props: { templates: [{ project: "PROJ-1", project_name: "SVEP Baseline", name: "T1", ...template }], selectedProject: "ALL" } });
+    const count = (wrapper, text) => wrapper.text().split(text).length - 1;
+
+    it("does not repeat the title as the description, whatever its case or spacing", () => {
+      const wrapper = card({ project_description: "  svep   baseline " });
+      expect(wrapper.text().toLowerCase().split("svep").length - 1).toBe(1);
+    });
+
+    it("shows a description that says something new", () => {
+      expect(card({ project_description: "A study of micro-enterprises." }).text()).toContain("A study of micro-enterprises.");
+    });
+
+    it("hides the workspace when the grantor already names it", () => {
+      expect(count(card({ workspace_title: RGAVP, grantor_organization: `${RGAVP} / SVEP` }), RGAVP)).toBe(1);
+    });
+
+    it("shows the workspace when it is not the grantor", () => {
+      expect(card({ workspace_title: "Udaipur Cluster", grantor_organization: `${RGAVP} / SVEP` }).text()).toContain("Udaipur Cluster");
+    });
+  });
+
+  it("does not duplicate project title when description is identical to title (Issue #18)", () => {
+    const templates = [
+      {
+        project: "PROJ-DUPE",
+        project_name: "Clean Water Mission",
+        description: "Clean Water Mission",
+        grantor_organization: "State Health Dept",
+        template_name: "T1",
+      },
+    ];
+
+    const wrapper = mount(ProjectHeaderCard, {
+      props: {
+        templates,
+        selectedProject: "ALL",
+      },
+    });
+
+    const matches = wrapper.text().match(/Clean Water Mission/g) || [];
+    // Title must occur only once in the card, NOT repeated as description
+    expect(matches.length).toBe(1);
+  });
 });

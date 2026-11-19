@@ -85,7 +85,7 @@ describe("SurveyorDashboard", () => {
     expect(wrapper.emitted("open-filtered-forms")).toEqual(opened);
   });
 
-  it("renders active in-progress draft card and handles resume and start-new events", async () => {
+  it("renders active in-progress draft card and resumes it", async () => {
     const draft = {
       response_uid: "DRAFT-001",
       template_name: "TMPL-SHG",
@@ -116,22 +116,31 @@ describe("SurveyorDashboard", () => {
     });
 
     expect(wrapper.text()).toContain("Sunita Devi - Rampur");
+    // the respondent is the title, so the survey's name under it is a fact of its own
+    expect(wrapper.text()).toContain("SHG Enterprise Study");
     expect(wrapper.text()).toContain("65%");
 
     const buttons = wrapper.findAll("button");
     const resumeBtn = buttons.find((b) => b.text().includes("Resume"));
-    const startNewBtn = buttons.find((b) => b.text().includes("Start New"));
-
     expect(resumeBtn).toBeDefined();
-    expect(startNewBtn).toBeDefined();
+    // Start New belongs to the survey, on its catalog card, so the page offers each action once (#18)
+    expect(buttons.some((b) => b.text().includes("Start New"))).toBe(false);
 
     await resumeBtn.trigger("click");
     expect(wrapper.emitted("resume-draft")).toBeTruthy();
     expect(wrapper.emitted("resume-draft")[0]).toEqual(["TMPL-SHG"]);
+  });
 
-    await startNewBtn.trigger("click");
-    expect(wrapper.emitted("start-new-survey")).toBeTruthy();
-    expect(wrapper.emitted("start-new-survey")[0]).toEqual(["TMPL-SHG"]);
+  it("names a draft with no answers yet by its survey once, not twice (#18)", () => {
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        isOnline: true,
+        activeDrafts: { "TMPL-SHG": { response_uid: "DRAFT-2", template_name: "TMPL-SHG", updated_at: new Date().toISOString(), responses: {} } },
+        templates: [{ template_name: "TMPL-SHG", title: "SHG Enterprise Study" }],
+      },
+    });
+    expect(wrapper.find("h4").text()).toBe("SHG Enterprise Study");
+    expect(wrapper.text().split("SHG Enterprise Study").length - 1).toBe(1);
   });
 
   describe("at 375px (#41)", () => {
@@ -164,14 +173,12 @@ describe("SurveyorDashboard", () => {
       expect(isBefore(draftCard, firstKpi), "draft before the KPI tiles").toBe(true);
     });
 
-    it("sizes Start New and Resume at 32px and shares the row between them", async () => {
+    it("sizes Resume at 32px and gives it the row", async () => {
       const wrapper = await mountSurveyorWithDraft();
-      for (const label of ["Start New", "Resume Survey"]) {
-        const button = wrapper.findAll("button").find((b) => b.text() === label);
-        expect(button, label).toBeDefined();
-        expect(classTargetSize(button.attributes("class")).height, label).toBeGreaterThanOrEqual(32);
-        expect(button.classes(), label).toContain("flex-1");
-      }
+      const button = wrapper.findAll("button").find((b) => b.text() === "Resume Survey");
+      expect(button).toBeDefined();
+      expect(classTargetSize(button.attributes("class")).height).toBeGreaterThanOrEqual(32);
+      expect(button.classes()).toContain("flex-1");
     });
   });
 
