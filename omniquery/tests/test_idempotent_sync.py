@@ -5,6 +5,7 @@ import uuid
 import frappe
 
 from omniquery.api.sync import batch_push
+from omniquery.tests.utils import delete_test_docs
 
 
 class TestIdempotentSync(unittest.TestCase):
@@ -20,23 +21,32 @@ class TestIdempotentSync(unittest.TestCase):
 			).insert(ignore_permissions=True)
 
 		if not frappe.db.exists("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}):
-			frappe.get_doc(
+			t = frappe.get_doc(
 				{
 					"doctype": "OmniQuery Template",
 					"title": "Test Women Dairy Assessment 2026",
 					"project": "PROJ-Test Dairy Initiative",
 					"version": 1,
-					"status": "Published",
 				}
 			).insert(ignore_permissions=True)
+			t.submit()
 
 		# Setup dummy surveyor
 		if not frappe.db.exists("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"}):
+			test_user = "test_surveyor_nomesh@example.com"
+			if not frappe.db.exists("User", test_user):
+				frappe.get_doc({
+					"doctype": "User",
+					"email": test_user,
+					"first_name": "Test Surveyor Nomesh",
+					"roles": [{"role": "OmniQuery User"}],
+				}).insert(ignore_permissions=True)
 			frappe.get_doc(
 				{
 					"doctype": "OmniQuery Surveyor",
+					"name": "SURV-Test Surveyor Nomesh",
 					"surveyor_name": "Test Surveyor Nomesh",
-					"user": "Administrator",
+					"user": test_user,
 					"status": "Active",
 				}
 			).insert(ignore_permissions=True)
@@ -92,10 +102,16 @@ class TestIdempotentSync(unittest.TestCase):
 		count = frappe.db.count("OmniQuery Response", {"idempotency_key": test_uuid})
 		self.assertEqual(count, 1)
 
-		# Teardown test records
-		frappe.db.delete("OmniQuery Response", {"idempotency_key": test_uuid})
-		frappe.db.delete("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"})
-		frappe.db.delete("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"})
-		frappe.db.delete("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"})
-		frappe.db.delete("OmniQuery Project", {"project_name": "Test Dairy Initiative"})
+		# Teardown test records, with any Response an earlier, crashed run left on the test template:
+		# one would otherwise block deleting the template on every later run
+		templates = frappe.get_all("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}, pluck="name")
+		delete_test_docs(
+			[
+				("OmniQuery Response", {"survey_template": ["in", templates]}),
+				("OmniQuery Sync Audit Log", {"name": f"SYNC-{test_uuid}"}),
+				("OmniQuery Surveyor", {"surveyor_name": "Test Surveyor Nomesh"}),
+				("OmniQuery Template", {"title": "Test Women Dairy Assessment 2026"}),
+				("OmniQuery Project", {"project_name": "Test Dairy Initiative"}),
+			]
+		)
 		frappe.db.commit()
