@@ -82,7 +82,7 @@
     </div>
 
     <!-- 3. Tabbed Content Navigation -->
-    <div v-if="projectMeta.sop_sections || projectMeta.helpline_phone || projectMeta.helpline_email" class="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md pt-1 pb-1">
+    <div v-if="projectMeta.sop_sections || hasHelpline" class="sticky top-0 z-20 bg-slate-100/95 dark:bg-slate-950/95 backdrop-blur-md pt-1 pb-1">
       <div class="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto no-scrollbar">
         <Button
           @click="activeTab = 'surveys'"
@@ -104,7 +104,7 @@
         </Button>
 
         <Button
-          v-if="projectMeta.helpline_phone || projectMeta.helpline_email"
+          v-if="hasHelpline"
           @click="activeTab = 'helpline'"
           class="py-3 px-3 text-xs sm:text-sm font-bold border-b-2 transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
           :class="activeTab === 'helpline' ? 'border-emerald-600 text-emerald-700 dark:text-emerald-400' : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800'"
@@ -135,7 +135,7 @@
             class="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 font-bold text-xs transition active:scale-95 cursor-pointer flex items-center gap-1.5 shadow-2xs"
           >
             <Download class="w-3.5 h-3.5" />
-            <span>{{ __('Download All for Offline') }}</span>
+            <span>{{ __('Download all for offline') }}</span>
           </Button>
         </div>
 
@@ -217,25 +217,21 @@
             <Scroll class="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span>{{ __('Standard Operating Procedures') }}</span>
           </div>
+          <!-- sanitized on the server by survey.project_help, as are the copies cached with the templates -->
           <div class="prose dark:prose-invert max-w-none text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed" v-html="projectMeta.sop_sections" />
         </div>
       </div>
 
       <!-- Tab 3: Supervisor Helpline -->
-      <div v-if="activeTab === 'helpline' && (projectMeta.helpline_phone || projectMeta.helpline_email)" class="space-y-4">
+      <div v-if="activeTab === 'helpline' && hasHelpline" class="space-y-4">
         <div class="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
           <div class="flex items-center gap-3.5">
             <div class="w-14 h-14 rounded-2xl bg-emerald-600 text-white font-bold text-2xl flex items-center justify-center shrink-0 shadow-xs">
               <Phone class="w-7 h-7" />
             </div>
-            <div>
-              <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
-                {{ __('Field Support & Supervisor Helpline') }}
-              </h3>
-              <p v-if="projectMeta.helpline_hours" class="text-xs text-slate-500 dark:text-slate-400">
-                {{ projectMeta.helpline_hours }}
-              </p>
-            </div>
+            <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+              {{ __('Field Support & Supervisor Helpline') }}
+            </h3>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
@@ -256,15 +252,15 @@
             </a>
 
             <a
-              v-if="projectMeta.helpline_email"
-              :href="'mailto:' + projectMeta.helpline_email"
+              v-if="projectSupportEmail"
+              :href="'mailto:' + projectSupportEmail"
               class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 transition block text-left group cursor-pointer"
             >
               <div class="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 {{ __('Email Dispatch') }}
               </div>
               <div class="text-sm sm:text-base font-mono font-black text-emerald-600 dark:text-emerald-400 mt-1 group-hover:underline break-all">
-                {{ projectMeta.helpline_email }}
+                {{ projectSupportEmail }}
               </div>
               <div class="text-[11px] text-slate-500 mt-0.5">
                 {{ __('Official escalation & technical queries') }}
@@ -299,6 +295,7 @@ import {
   AlertTriangle,
 } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { projectHelp } from "../../utils/projectHelp";
 
 const props = defineProps({
   projectId: {
@@ -327,6 +324,7 @@ const emit = defineEmits([
 ]);
 
 const { __ } = useTranslation();
+
 const activeTab = ref("surveys");
 const remoteProjectMeta = ref(null);
 
@@ -357,10 +355,7 @@ const projectMeta = computed(() => {
       workspace: match.workspace || "",
       workspace_title: match.workspace_title || "",
       status: match.project_status || match.status || "Active",
-      helpline_phone: match.helpline_phone || "",
-      helpline_email: match.helpline_email || "",
-      sop_sections: match.sop_sections || "",
-      training_materials: match.training_materials || "",
+      ...projectHelp(match),
     };
   }
   return {
@@ -371,12 +366,13 @@ const projectMeta = computed(() => {
     workspace: "",
     workspace_title: "",
     status: "Active",
-    helpline_phone: "",
-    helpline_email: "",
-    sop_sections: "",
-    training_materials: "",
+    ...projectHelp({}),
   };
 });
+
+// set per project on OmniQuery Project; each card hides until someone sets it (#14, #51)
+const projectSupportEmail = computed(() => projectMeta.value.support_email || "");
+const hasHelpline = computed(() => Boolean(projectMeta.value.helpline_phone || projectSupportEmail.value));
 
 // Filter templates that belong to this project
 const projectSurveys = computed(() => {
@@ -396,14 +392,10 @@ async function fetchProjectMeta() {
     const data = await call("omniquery.api.survey.get_project_details", {
       project_id: props.projectId,
     });
-    const proj = data?.project || data?.message?.project || data?.message || data;
-    if (proj && (proj.name || proj.project_name)) {
-      remoteProjectMeta.value = {
-        ...proj,
-        helpline_phone: proj.helpline_phone || data?.helpline?.phone || "",
-        helpline_email: proj.helpline_email || data?.helpline?.email || "",
-        sop_sections: proj.sop_sections || "",
-      };
+    // { project } for a project this user can see, {} for any other
+    const proj = data?.project;
+    if (proj?.name) {
+      remoteProjectMeta.value = { ...proj, ...projectHelp(proj) };
     }
   } catch (e) {
     console.warn("Could not fetch remote project details:", e);

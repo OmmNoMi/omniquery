@@ -31,7 +31,7 @@ export function resolveResponseTitle(responses = {}, formatString = "", fallback
 
   let hasReplacedAny = false;
 
-  let resolved = pattern.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, field) => {
+  let resolved = pattern.replace(/\{([a-zA-Z0-9_\u0900-\u097F]+)\}/g, (_, field) => {
     let val = "";
     const lowerField = field.toLowerCase().trim();
 

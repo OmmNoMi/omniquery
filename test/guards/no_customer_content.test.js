@@ -2,66 +2,64 @@ import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { getSourceFiles } from "./sourceFiles";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const appRoot = path.resolve(__dirname, "../..");
-const srcDir = path.resolve(appRoot, "src");
+// No customer's name, number, survey or question codes in the app's code (#14). That content
+// belongs in each site's own records: the project's help fields, the template's questions.
+const appRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+const files = getSourceFiles(
+  [path.join(appRoot, "src"), path.join(appRoot, "omniquery")],
+  [".vue", ".js", ".py", ".html"],
+).filter((file) => !file.includes(`${path.sep}node_modules${path.sep}`));
 
-const FORBIDDEN_CUSTOMER_PATTERNS = [
+const CUSTOMER_TEXT = [
   "RGAVP",
   "Rajasthan",
+  "Rajivika",
   "18001026664",
+  "1800-102-OMNI",
+  "Field Operations Lead",
+  "Household & Member Demographics",
   "OQW-0",
 ];
+// layout picked by one client's question codes, as in code.includes("turnover")
+const CODE_KEYWORD = /\bcode\b[^;\n]*\.(?:includes|startsWith)\(\s*["'](?:turnover|season|involvement|activity|capital|loan|usage|metric)/;
 
-function scanDirectory(dir) {
-  const violations = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
+// Known and tracked, each with its issue. Once a file is clean the test fails until it is taken
+// off this list, so the list only shrinks.
+const ALLOWED = {
+  "omniquery/hooks.py": "#139 the client's workspace, project and survey ship as fixtures",
+  "omniquery/seed_shg_survey.py": "#139 the client's project and survey are seeded from code",
+  "src/components/survey/MatrixQuestionCard.vue": "#119 matrix rows and columns come from question codes",
+};
 
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      if (entry.name !== "node_modules" && entry.name !== "dist" && entry.name !== ".git") {
-        violations.push(...scanDirectory(fullPath));
-      }
-    } else if (entry.isFile()) {
-      const ext = path.extname(entry.name);
-      if ([".vue", ".js", ".ts", ".html"].includes(ext)) {
-        const content = fs.readFileSync(fullPath, "utf-8");
-        const lines = content.split("\n");
-        lines.forEach((line, idx) => {
-          for (const pattern of FORBIDDEN_CUSTOMER_PATTERNS) {
-            if (line.includes(pattern)) {
-              violations.push({
-                file: path.relative(appRoot, fullPath),
-                line: idx + 1,
-                pattern,
-                text: line.trim(),
-              });
-            }
-          }
-        });
-      }
-    }
-  }
-  return violations;
+function findings(file) {
+  const found = [];
+  fs.readFileSync(file, "utf-8")
+    .split("\n")
+    .forEach((line, i) => {
+      const hit = CUSTOMER_TEXT.find((text) => line.includes(text)) || (CODE_KEYWORD.test(line) && "code keyword");
+      if (hit) found.push(`${path.relative(appRoot, file)}:${i + 1} [${hit}] ${line.trim()}`);
+    });
+  return found;
 }
 
-describe("Static Architectural Guard: Zero Customer-Specific Content (Issue #14)", () => {
-  it("enforces zero occurrences of customer-specific content (RGAVP, Rajasthan, 18001026664, OQW-0) in src/", () => {
-    const violations = scanDirectory(srcDir);
-    if (violations.length > 0) {
-      console.error(
-        `Found ${violations.length} forbidden customer content violations:\n` +
-          violations
-            .map((v) => `  ${v.file}:${v.line} [${v.pattern}] -> ${v.text}`)
-            .join("\n")
-      );
+describe("no customer-specific content in the code (#14)", () => {
+  const byFile = new Map(files.map((file) => [path.relative(appRoot, file).split(path.sep).join("/"), findings(file)]));
+
+  it("scans the PWA, the API and the server code", () => {
+    for (const file of ["src/components/project/ProjectPage.vue", "src/utils/questionLayout.js", "omniquery/api/survey.py"]) {
+      expect(byFile.has(file), file).toBe(true);
     }
-    expect(
-      violations,
-      `Forbidden customer-specific content found in src/:\n` +
-        violations.map((v) => `${v.file}:${v.line} (${v.pattern})`).join("\n")
-    ).toEqual([]);
+  });
+
+  it("finds no customer name, number, survey or question-code layout outside the tracked files", () => {
+    const offending = [...byFile].filter(([file]) => !ALLOWED[file]).flatMap(([, found]) => found);
+    expect(offending).toEqual([]);
+  });
+
+  it("keeps the allowlist to files that still need their issue fixed", () => {
+    const stale = Object.keys(ALLOWED).filter((file) => !byFile.get(file)?.length);
+    expect(stale, "these are clean now: take them off ALLOWED").toEqual([]);
   });
 });
