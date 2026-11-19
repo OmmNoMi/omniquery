@@ -18,6 +18,7 @@ add_to_apps_screen = [
 		"logo": "/assets/omniquery/icons/desktop_icons/solid/omniquery.svg?v=oq_v1",
 		"title": "OmniQuery",
 		"route": "/desk/omniquery",
+		"has_permission": "omniquery.permissions.can_open_desk_app",
 	}
 ]
 
