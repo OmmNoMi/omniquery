@@ -1,6 +1,6 @@
-import { ref, computed, watch, onMounted, onBeforeUnmount, provide, inject, reactive } from "vue";
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, provide, inject, reactive } from "vue";
 import { call, toast } from "frappe-ui";
-import { useClipboard, watchDebounced } from "@vueuse/core";
+import { useClipboard, usePreferredReducedMotion, watchDebounced } from "@vueuse/core";
 import { db, SYNCED, NOT_SYNCED } from "../services/db";
 import { useSurvey } from "./useSurvey";
 import { useWAL } from "./useWAL";
@@ -8,7 +8,7 @@ import { useGPS } from "./useGPS";
 import { useTextScale } from "./useTextScale";
 import { useTranslation } from "./useTranslation";
 import { useAudioRecorder } from "./useAudioRecorder";
-import { buildResponsePayload, draftStored } from "../utils/responsePayload";
+import { buildResponsePayload, draftStored, responseItems } from "../utils/responsePayload";
 import { staleDependentAnswers } from "../utils/cascadingOptions";
 import { layoutQuestions } from "../utils/questionLayout";
 import { bootRoute, catalogRoute, projectRoute, pushRoute, replaceRoute, routeFromPath, routeFromState, surveyRoute } from "../utils/route";
@@ -296,6 +296,8 @@ export function useSurveyApp() {
     replaceRoute(route); // so Back to this first entry shows it, with the survey name the server resolved
     if (route.type !== "catalog") await showRoute(route);
     isLoading.value = false;
+    // after the spinner goes: the survey is not on the page while it shows
+    if (route.type === "survey") showSurveyStart();
   }
 
   watch(activeTemplate, (tmpl) => {
@@ -358,11 +360,13 @@ export function useSurveyApp() {
     }
   }
 
+  const reducedMotion = usePreferredReducedMotion();
+
   function scrollAndHighlightQuestion(code) {
     setTimeout(() => {
       const el = document.getElementById("qc_" + code);
       if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.scrollIntoView({ behavior: reducedMotion.value === "reduce" ? "auto" : "smooth", block: "start" });
       const searchInput = el.querySelector("input[data-search-input]");
       const target = searchInput || el.querySelector("input:not([type=hidden]):not([disabled]), select, textarea, button[role='radio'][aria-checked='true'], button[role='checkbox'][aria-checked='true'], button[role='radio'], button[role='checkbox'], [role='combobox'], [tabindex='0']");
       if (target && typeof target.focus === "function") {
@@ -503,6 +507,22 @@ export function useSurveyApp() {
       return;
     }
     pushRoute(surveyRoute(surveyName));
+    showSurveyStart();
+  }
+
+  // Where a surveyor lands on a survey they open, by Start, Resume, a link or Back/Forward (#20):
+  // at the top of the page, not the catalog's scroll position. A resumed draft puts focus on its
+  // first required question still unanswered; a new survey, or a draft with nothing left to
+  // answer here, on the section heading. A one-by-one survey's focus-mode dialog keeps focus in
+  // itself. Call it straight after the survey loads: the answers are then only the draft's,
+  // before any question card fills in its own.
+  async function showSurveyStart() {
+    const resumed = responseItems(responses.value).length > 0;
+    await nextTick();
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    const pendingCode = resumed && firstPendingCardCode();
+    if (pendingCode) scrollAndHighlightQuestion(pendingCode);
+    else document.getElementById("section_heading")?.focus({ preventScroll: true });
   }
 
   async function saveOfflineRecord() {
@@ -557,20 +577,25 @@ export function useSurveyApp() {
     }
   }
 
-  function scrollToFirstPendingQuestion() {
+  // The card of the section's first question that still needs the surveyor: one with a
+  // validation error, or a required one with no answer. A grouped question's card is its group's.
+  function firstPendingCardCode() {
     const firstPending = activeQuestions.value.find((q) => {
       if (validationErrors.value[q.question_code]) return true;
       if (!q.is_mandatory) return false;
       const val = responses.value[q.question_code];
       return val === undefined || val === null || String(val).trim() === "";
     });
-    if (firstPending) {
-      const groupItem = displayQuestionItems.value.find(
-        (item) => item.type === "group" && item.questions.some((q) => q.question_code === firstPending.question_code)
-      );
-      const targetCode = groupItem ? groupItem.group_code : firstPending.question_code;
-      scrollAndHighlightQuestion(targetCode);
-    }
+    if (!firstPending) return null;
+    const groupItem = displayQuestionItems.value.find(
+      (item) => item.type === "group" && item.questions.some((q) => q.question_code === firstPending.question_code)
+    );
+    return groupItem ? groupItem.group_code : firstPending.question_code;
+  }
+
+  function scrollToFirstPendingQuestion() {
+    const code = firstPendingCardCode();
+    if (code) scrollAndHighlightQuestion(code);
   }
 
   function handlePrevSection() {
@@ -685,7 +710,11 @@ export function useSurveyApp() {
   }
 
   // The entry's own route; one with none (a link from outside the app) is read from its path
-  const onPopState = (event) => showRoute(routeFromState(event.state) || routeFromPath(window.location.pathname));
+  const onPopState = async (event) => {
+    const route = routeFromState(event.state) || routeFromPath(window.location.pathname);
+    await showRoute(route);
+    if (route.type === "survey") showSurveyStart();
+  };
 
   onMounted(() => {
     init();

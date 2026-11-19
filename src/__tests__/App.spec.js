@@ -16,6 +16,26 @@ let bootstrap = assigned;
 // get_schema by template name, as the server answers it; a slug is resolved only by the page (omniquery.py)
 const schemas = {
   "OQS-WATER": { template_name: "OQS-WATER", title: "Water Access Survey", project: "P-1", sections: [{ section_title: "Water source", questions: [] }] },
+  // a required question, an optional one and another required one, for where a survey opens (#20)
+  "OQS-INTAKE": {
+    template_name: "OQS-INTAKE",
+    title: "Enterprise Intake",
+    project: "P-1",
+    sections: [{ section_code: "s1", section_title: "Enterprise" }],
+    questions: [
+      { question_code: "q_name", section_code: "s1", field_type: "Data", label_en: "Enterprise name", is_mandatory: 1 },
+      { question_code: "q_note", section_code: "s1", field_type: "Data", label_en: "Notes" },
+      { question_code: "q_village", section_code: "s1", field_type: "Data", label_en: "Village", is_mandatory: 1 },
+    ],
+  },
+  "OQS-ONE-BY-ONE": {
+    template_name: "OQS-ONE-BY-ONE",
+    title: "Household Roster",
+    project: "P-1",
+    presentation_mode: "One-by-One Focus Popup",
+    sections: [{ section_code: "s1", section_title: "Household" }],
+    questions: [{ question_code: "q_head", section_code: "s1", field_type: "Data", label_en: "Head of household", is_mandatory: 1 }],
+  },
 };
 
 vi.mock("frappe-ui", async (importOriginal) => {
@@ -327,5 +347,123 @@ describe("the microphone records for the draft being filled (#37)", () => {
     expect(micButton(), "nothing left to record").toBeNull();
     expect(await db.audio_recordings.get(draftId)).toMatchObject({ response_name: draftId });
     expect(await db.audio_recordings.count(), "saved once, not again by the exit watcher").toBe(1);
+  });
+});
+
+describe("an opened survey starts at the top, with focus where the work is (#20)", () => {
+  let wrapper;
+  const heading = () => document.getElementById("section_heading");
+  const cardHasFocus = (code) => document.getElementById("qc_" + code)?.contains(document.activeElement);
+  // a draft of OQS-INTAKE with these answers, as the device keeps one
+  const saveDraft = (responses) =>
+    db.responses.put({ response_uid: "OQS-DRAFT-1", template_name: "OQS-INTAKE", status: "Draft", responses, active_section_index: 0, updated_at: new Date().toISOString() });
+
+  beforeEach(async () => {
+    bootstrap = assigned;
+    useTranslation().setLanguage("en");
+    await db.templates.clear();
+    await db.responses.clear();
+    window.scrollTo = vi.fn();
+    recordHistory();
+  });
+  afterEach(() => {
+    wrapper?.unmount();
+    document.body.innerHTML = "";
+    delete window.frappe;
+    vi.restoreAllMocks();
+  });
+
+  async function openCatalog() {
+    openLink("/omniquery");
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    window.scrollTo.mockClear();
+  }
+  const scrolledToTop = () => expect(window.scrollTo).toHaveBeenCalledWith({ top: 0, left: 0, behavior: "instant" });
+
+  it("puts a new survey's surveyor on the section heading, at the top of the page", async () => {
+    await openCatalog();
+    await wrapper.vm.s.selectSurvey("OQS-INTAKE", { startNew: true });
+    await vi.waitFor(() => expect(document.activeElement).toBe(heading()));
+    expect(heading().getAttribute("tabindex"), "focusable, not a tab stop").toBe("-1");
+    scrolledToTop();
+  });
+
+  it("resumes a draft on its first required question left, past an optional one skipped", async () => {
+    await saveDraft({ q_name: "Sunita Dairy" });
+    await openCatalog();
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView");
+    await wrapper.vm.s.selectSurvey("OQS-INTAKE", { draftId: "OQS-DRAFT-1" });
+    await vi.waitFor(() => expect(cardHasFocus("q_village"), "focus in the Village card").toBe(true));
+    expect(cardHasFocus("q_note"), "not the optional question the surveyor skipped").toBe(false);
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    scrolledToTop();
+  });
+
+  it("puts a draft with every required answer given on the heading", async () => {
+    await saveDraft({ q_name: "Sunita Dairy", q_village: "Rampur" });
+    await openCatalog();
+    await wrapper.vm.s.selectSurvey("OQS-INTAKE", { draftId: "OQS-DRAFT-1" });
+    await vi.waitFor(() => expect(document.activeElement).toBe(heading()));
+  });
+
+  it("focuses a survey opened by a link once the loading screen has gone", async () => {
+    await saveDraft({ q_name: "Sunita Dairy" });
+    openLink("/omniquery/OQS-INTAKE", { initial_survey_id: "OQS-INTAKE" });
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    await vi.waitFor(() => expect(cardHasFocus("q_village")).toBe(true));
+    scrolledToTop();
+  });
+
+  // the heading is focused straight away, so this fails if it is tried while the spinner shows
+  it("focuses the heading of a new survey opened by a link", async () => {
+    openLink("/omniquery/OQS-INTAKE", { initial_survey_id: "OQS-INTAKE" });
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+    await vi.waitFor(() => expect(document.activeElement).toBe(heading()));
+    scrolledToTop();
+  });
+
+  it("resets scroll and focus when Back returns to a survey", async () => {
+    await openCatalog();
+    // a survey with no questions, so no draft an earlier test's debounced save left can resume
+    await wrapper.vm.s.selectSurvey("OQS-WATER");
+    await settle();
+    await wrapper.vm.s.goHome();
+    await settle();
+    document.body.querySelector("input[placeholder='Search surveys...']").focus();
+    window.scrollTo.mockClear();
+    window.frappe.initial_survey_id = "";
+
+    await goBack();
+    await vi.waitFor(() => expect(document.activeElement).toBe(heading()));
+    scrolledToTop();
+  });
+
+  it("leaves focus in the focus-mode dialog of a one-by-one survey", async () => {
+    await openCatalog();
+    await wrapper.vm.s.selectSurvey("OQS-ONE-BY-ONE", { startNew: true });
+    await vi.waitFor(() => expect(document.activeElement.closest("[role=dialog]"), "focus in the dialog").toBeTruthy());
+    await new Promise((resolve) => setTimeout(resolve, 150)); // past any late focus move
+    expect(document.activeElement.closest("[role=dialog]"), "not pulled back to the page beneath").toBeTruthy();
+    expect(document.activeElement).not.toBe(heading());
+  });
+
+  it("jumps instead of gliding when the surveyor asks for reduced motion", async () => {
+    vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
+      matches: query.includes("prefers-reduced-motion: reduce"),
+      media: query,
+      addEventListener() {},
+      removeEventListener() {},
+      addListener() {},
+      removeListener() {},
+    }));
+    await saveDraft({ q_name: "Sunita Dairy" });
+    await openCatalog();
+    const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView");
+    await wrapper.vm.s.selectSurvey("OQS-INTAKE", { draftId: "OQS-DRAFT-1" });
+    await vi.waitFor(() => expect(cardHasFocus("q_village")).toBe(true));
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "auto", block: "start" });
   });
 });

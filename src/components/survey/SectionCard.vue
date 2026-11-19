@@ -14,7 +14,12 @@
           <span>{{ __('Completed') }}</span>
         </span>
       </div>
-      <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-snug">
+      <!-- tabindex="-1": a survey that opens puts focus here, not in the tab order (#20) -->
+      <h2
+        id="section_heading"
+        tabindex="-1"
+        class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white leading-snug rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3"
+      >
         {{ sectionTitle }}
       </h2>
       <p v-if="sectionDescription" class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 mt-1">
