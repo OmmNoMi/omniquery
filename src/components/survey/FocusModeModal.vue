@@ -83,6 +83,7 @@
           :key="currentQuestion?.question_code || currentIndex"
           :question="currentQuestion"
           :modelValue="responses[currentQuestion.question_code]"
+          :parentValue="parentAnswer(currentQuestion, responses)"
           :errorMessage="validationErrors[currentQuestion.question_code]"
           @update:modelValue="onQuestionInput"
           @answered="onQuestionAnswered"
@@ -139,6 +140,7 @@ import { DialogDescription, DialogTitle } from "reka-ui";
 import { ArrowLeft, ArrowRight, ClipboardList, X } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
+import { parentAnswer } from "../../utils/cascadingOptions";
 import MatrixQuestionCard from "./MatrixQuestionCard.vue";
 import SurveyModeMenu from "./SurveyModeMenu.vue";
 

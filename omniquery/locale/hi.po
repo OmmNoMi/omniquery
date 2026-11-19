@@ -2571,3 +2571,43 @@ msgstr "उत्तरदाता की लोकेशन दर्ज ह�
 #: omniquery/services/idempotency.py
 msgid "The idempotency key must be a UUIDv4"
 msgstr "आइडेम्पोटेंसी कुंजी UUIDv4 होनी चाहिए"
+
+#: omniquery/omniquery/doctype/omniquery_option_item/omniquery_option_item.json
+msgid "Parent Option"
+msgstr "मूल विकल्प"
+
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Depends On Field"
+msgstr "निर्भर फ़ील्ड"
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Depends On Field (Parent Question Code)"
+msgstr "निर्भर फ़ील्ड (मूल प्रश्न कोड)"
+
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.py
+msgid "Give every option a Parent Option, or none of them."
+msgstr "हर विकल्प को मूल विकल्प दें, या किसी को नहीं।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} groups its options by a parent answer, so it needs Depends On Field."
+msgstr "प्रश्न {0} के विकल्प मूल उत्तर के अनुसार बँटे हैं, इसलिए इसे निर्भर फ़ील्ड चाहिए।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} depends on {1}, which is not another question in this template."
+msgstr "प्रश्न {0} {1} पर निर्भर है, जो इस टेम्पलेट का कोई दूसरा प्रश्न नहीं है।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} depends on {1}, so its options must be grouped by {1}'s answers."
+msgstr "प्रश्न {0} {1} पर निर्भर है, इसलिए इसके विकल्प {1} के उत्तरों के अनुसार बँटे होने चाहिए।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} has options for {1}, which {2} does not offer."
+msgstr "प्रश्न {0} में {1} के लिए विकल्प हैं, जो {2} में नहीं हैं।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} depends on itself through {1}."
+msgstr "प्रश्न {0} {1} के ज़रिए खुद पर निर्भर है।"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.py
+msgid "These answers are not among the choices for the answer they depend on: {0}"
+msgstr "ये उत्तर उन विकल्पों में नहीं हैं जो उनके मूल उत्तर के लिए हैं: {0}"

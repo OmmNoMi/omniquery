@@ -9,6 +9,7 @@ import { useTextScale } from "./useTextScale";
 import { useTranslation } from "./useTranslation";
 import { useAudioRecorder } from "./useAudioRecorder";
 import { buildResponsePayload, draftStored } from "../utils/responsePayload";
+import { staleDependentAnswers } from "../utils/cascadingOptions";
 import { bootRoute, catalogRoute, projectRoute, pushRoute, replaceRoute, routeFromPath, routeFromState, surveyRoute } from "../utils/route";
 
 const LOGIN_URL = "/login?redirect-to=/omniquery";
@@ -460,9 +461,16 @@ export function useSurveyApp() {
     return items;
   });
 
-  // the one write path for answers, from plain, grouped, matrix and focus-mode questions alike
+  // the one write path for answers, from plain, grouped, matrix and focus-mode questions alike. It
+  // also clears an answer the change made invalid, such as a Block that is not in the new District,
+  // whether or not that question is on screen (#24); restoring a draft does not come through here.
   function setResponse(code, value) {
     responses.value[code] = value;
+    const questions = (activeTemplate.value && activeTemplate.value.questions) || [];
+    for (const [child, answer] of Object.entries(staleDependentAnswers(questions, responses.value, code))) {
+      if (answer === undefined) delete responses.value[child];
+      else responses.value[child] = answer;
+    }
   }
 
   function toggleFocusMode() {

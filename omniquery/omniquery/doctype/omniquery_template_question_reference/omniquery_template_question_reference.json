@@ -17,6 +17,7 @@
   "label_en",
   "field_type",
   "options_json",
+  "depends_on_field",
   "conditional_logic_json",
   "validation_rules_json",
   "audio_prompt"
@@ -120,6 +121,12 @@
    "fieldname": "allow_user_toggle",
    "fieldtype": "Check",
    "label": "Allow Surveyor UI Toggle"
+  },
+  {
+   "columns": 2,
+   "fieldname": "depends_on_field",
+   "fieldtype": "Data",
+   "label": "Depends On Field"
   }
  ],
  "index_web_pages_for_search": 0,

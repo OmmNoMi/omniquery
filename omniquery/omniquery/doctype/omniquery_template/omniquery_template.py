@@ -2,6 +2,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
+from omniquery.services.cascading_options import validate_cascading_questions
 from omniquery.services.schema_compiler import compile_template_schema
 
 
@@ -35,7 +36,9 @@ class OmniQueryTemplate(Document):
 	def before_submit(self):
 		self.status = "Published"
 		self.published_at = self.published_at or now_datetime()
-		self._compile_schema()
+		schema = self._compile_schema()
+		# a draft may be saved half-built; what goes to the field must offer every dependent choice
+		validate_cascading_questions(schema["questions"])
 
 	def before_cancel(self):
 		self.status = "Deprecated"
@@ -56,4 +59,4 @@ class OmniQueryTemplate(Document):
 			frappe.throw(frappe._("Cannot modify published template. Create a new version via Amend."))
 
 	def _compile_schema(self):
-		compile_template_schema(self)
+		return compile_template_schema(self)

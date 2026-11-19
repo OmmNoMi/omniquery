@@ -445,13 +445,13 @@
               {{ formatFieldType() }}
             </span>
           </div>
-          <div v-if="question.options && question.options.length" class="flex items-center justify-between px-3.5 py-2.5">
+          <div v-if="normalizedOptions.length" class="flex items-center justify-between px-3.5 py-2.5">
             <span class="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1.5">
               <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
               {{ __('Options Count') }}
             </span>
             <span class="font-bold text-slate-900 dark:text-white">
-              {{ question.options.length }} {{ __('choices') }}
+              {{ normalizedOptions.length }} {{ __('choices') }}
             </span>
           </div>
           <div v-if="validationRuleSummary" class="flex items-center justify-between px-3.5 py-2.5">
@@ -516,6 +516,7 @@ import FCurrencyInput from "../common/FCurrencyInput.vue";
 import FCombobox from "../common/FCombobox.vue";
 import FRangeSlider from "../common/FRangeSlider.vue";
 import { choiceButtonProps } from "../../utils/choiceButton";
+import { choiceOptions, hasOptions } from "../../utils/cascadingOptions";
 
 const props = defineProps({
   question: {
@@ -533,6 +534,11 @@ const props = defineProps({
   notApplicable: {
     type: Boolean,
     default: false,
+  },
+  // the answer to the question named by depends_on_field, which picks this question's choices (#24)
+  parentValue: {
+    type: [String, Number, Boolean, Array],
+    default: undefined,
   },
   // { title, description } when the last location request failed (#27)
   gpsAlert: {
@@ -847,24 +853,13 @@ const isChoiceControl = computed(() => {
     return false;
   }
   const type = props.question.field_type || "";
-  return type === "Select" || Boolean(props.question.options && props.question.options.length);
+  return type === "Select" || hasOptions(props.question.options);
 });
 
-const rawOptions = computed(() => {
-  if (props.question.options_translated && props.question.options_translated.length) {
-    return props.question.options_translated;
-  }
-  return props.question.options || [];
-});
-
-const normalizedOptions = computed(() => {
-  return rawOptions.value.map((opt) => {
-    if (typeof opt === "object" && opt !== null) {
-      return { value: opt.value || opt.label, label: __(opt.label || opt.value) };
-    }
-    return { value: opt, label: __(String(opt)) };
-  });
-});
+// a dependent question (Block under District) offers only the parent answer's choices (#24)
+const normalizedOptions = computed(() =>
+  choiceOptions(props.question, props.parentValue).map((opt) => ({ value: opt.value, label: __(opt.label) }))
+);
 
 const displayedGridOptions = computed(() => {
   if (!gridSearchQuery.value) return normalizedOptions.value;

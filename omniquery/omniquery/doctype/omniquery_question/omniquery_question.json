@@ -38,6 +38,7 @@
   "options_tab",
   "options_set",
   "options_json",
+  "depends_on_field",
   "audio_prompt",
   "behaviour_tab",
   "behaviour_script",
@@ -286,6 +287,11 @@
    "fieldname": "allow_user_toggle",
    "fieldtype": "Check",
    "label": "Allow Surveyor UI Toggle (Grid vs Dropdown)"
+  },
+  {
+   "fieldname": "depends_on_field",
+   "fieldtype": "Data",
+   "label": "Depends On Field (Parent Question Code)"
   }
  ],
  "index_web_pages_for_search": 0,

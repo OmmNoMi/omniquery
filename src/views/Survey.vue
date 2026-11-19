@@ -27,7 +27,7 @@
           :responses="s.responses"
           :validationErrors="s.validationErrors"
           :notApplicable="item.questions && item.questions.every(q => !s.isQuestionVisible(q))"
-          @update-response="s.setResponse"
+          @update-response="({ code, value }) => s.setResponse(code, value)"
           @answered="s.onQuestionAnswered($event)"
         />
         <MatrixQuestionCard
@@ -46,6 +46,7 @@
           :id="'qc_' + item.question.question_code"
           :question="item.question"
           :modelValue="s.responses[item.question.question_code]"
+          :parentValue="parentAnswer(item.question, s.responses)"
           @update:modelValue="s.setResponse(item.question.question_code, $event)"
           :errorMessage="s.validationErrors[item.question.question_code]"
           :notApplicable="!s.isQuestionVisible(item.question)"
@@ -71,7 +72,7 @@
       @prev-question="s.focusQuestionIndex = Math.max(0, s.focusQuestionIndex - 1)"
       @next-question="s.focusQuestionIndex = Math.min(s.activeQuestions.length - 1, s.focusQuestionIndex + 1)"
       @finish-section="s.onFocusModeFinishSection()"
-      @update-response="s.setResponse"
+      @update-response="({ code, value }) => s.setResponse(code, value)"
       @toggle-auto-advance="s.autoAdvance = !s.autoAdvance"
       @toggle-full-form="s.toggleFullForm()"
       :gpsAlert="s.gpsAlert"
@@ -87,6 +88,7 @@ import GroupedQuestionCard from "../components/survey/GroupedQuestionCard.vue";
 import MatrixQuestionCard from "../components/survey/MatrixQuestionCard.vue";
 import FocusModeModal from "../components/survey/FocusModeModal.vue";
 import { useSurveySession } from "../composables/useSurveyApp";
+import { parentAnswer } from "../utils/cascadingOptions";
 
 // every answer goes through s.setResponse, so the session owns the one write path (#46)
 const s = useSurveySession();

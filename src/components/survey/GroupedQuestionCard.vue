@@ -109,7 +109,7 @@
                   : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600 focus:border-emerald-500'
               ]"
             >
-              {{ opt.label }}
+              {{ __(opt.label) }}
             </Button>
           </div>
 
@@ -189,6 +189,7 @@ import { computed, ref } from "vue";
 import { Button, TextInput } from "frappe-ui";
 import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { choiceOptions, hasOptions, parentAnswer } from "../../utils/cascadingOptions";
 
 const props = defineProps({
   group: {
@@ -272,15 +273,12 @@ function isNumericQuestion(q) {
 
 function isChoiceQuestion(q) {
   const type = (q.field_type || "").toLowerCase();
-  return (type.includes("choice") || type.includes("radio") || type.includes("select")) && Array.isArray(q.options) && q.options.length > 0;
+  return (type.includes("choice") || type.includes("radio") || type.includes("select")) && hasOptions(q.options);
 }
 
+// a dependent question (Block under District) offers only the parent answer's choices (#24)
 function getQuestionOptions(q) {
-  const raw = q.options_translated || q.options || [];
-  return raw.map((opt) => ({
-    value: typeof opt === "object" && opt ? opt.value : opt,
-    label: typeof opt === "object" && opt ? opt.label : String(opt),
-  }));
+  return choiceOptions(q, parentAnswer(q, props.responses));
 }
 
 const optionRefsMap = ref({});
