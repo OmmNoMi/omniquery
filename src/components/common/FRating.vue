@@ -3,6 +3,7 @@
     <div
       role="radiogroup"
       :aria-label="ariaLabel || __('Rating')"
+      :aria-required="ariaRequired"
       class="flex items-center gap-2"
     >
       <Button
@@ -60,6 +61,10 @@ const props = defineProps({
   ariaLabel: {
     type: String,
     default: "",
+  },
+  ariaRequired: {
+    type: Boolean,
+    default: false,
   },
 });
 

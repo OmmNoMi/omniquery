@@ -74,12 +74,15 @@
             >
               {{ getSubLetter(q) }}
             </span>
-            <label class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug">
+            <label
+              :id="'sub_label_' + q.question_code"
+              class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug"
+            >
               {{ getCleanSubLabel(q) }}
-              <span v-if="q.is_mandatory" class="text-rose-500 font-bold">*</span>
+              <span v-if="q.is_mandatory" class="text-rose-500 font-bold" aria-hidden="true">*</span>
             </label>
           </div>
-          <p v-if="validationErrors[q.question_code]" class="text-[11px] text-rose-600 font-semibold mt-1">
+          <p v-if="validationErrors[q.question_code]" :id="'sub_err_' + q.question_code" class="text-[11px] text-rose-600 font-semibold mt-1">
             {{ validationErrors[q.question_code] }}
           </p>
         </div>
@@ -90,7 +93,8 @@
           <div
             v-if="isChoiceQuestion(q)"
             role="radiogroup"
-            :aria-label="getCleanSubLabel(q)"
+            :aria-labelledby="'sub_label_' + q.question_code"
+            v-bind="choiceGroupState({ required: q.is_mandatory, errorId: validationErrors[q.question_code] ? 'sub_err_' + q.question_code : undefined })"
             class="flex flex-wrap items-center gap-1.5 py-1"
           >
             <Button
@@ -190,6 +194,7 @@ import { Button, TextInput } from "frappe-ui";
 import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { choiceOptions, hasOptions, parentAnswer } from "../../utils/cascadingOptions";
+import { choiceGroupState } from "../../utils/choiceGroup";
 
 const props = defineProps({
   group: {

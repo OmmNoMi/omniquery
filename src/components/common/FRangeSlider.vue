@@ -53,6 +53,9 @@
     <div
       v-else
       role="radiogroup"
+      :aria-label="ariaLabel || __('Range value')"
+      :aria-describedby="ariaDescribedby"
+      :aria-required="ariaRequired"
       class="grid grid-flow-col auto-cols-fr gap-1.5 sm:gap-2 pt-1"
     >
       <Button
@@ -115,6 +118,11 @@ const props = defineProps({
   ariaDescribedby: {
     type: String,
     default: undefined,
+  },
+  // on the tap pills' radiogroup; a slider (range input) does not take aria-required
+  ariaRequired: {
+    type: Boolean,
+    default: false,
   },
 });
 
