@@ -9,7 +9,7 @@
       <Button
         v-for="(increment, idx) in increments"
         :key="increment"
-        :ref="(el) => { if (el) chipRefs[idx] = el.$el || el; }"
+        :ref="(el) => { if (el) chipRefs[idx] = el; }"
         tabindex="-1"
         :label="__('Add') + ' ₹' + increment.toLocaleString()"
         :aria-label="__('Add') + ' ₹' + increment.toLocaleString()"
@@ -22,7 +22,7 @@
 
       <Button
         v-if="Number(modelValue) > 0"
-        :ref="(el) => { if (el) clearChipRef = el.$el || el; }"
+        :ref="(el) => { if (el) clearChipRef = el; }"
         tabindex="-1"
         @keydown="handleClearKeydown"
         @click="reset"
@@ -86,6 +86,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "enter", "esc"]);
 const { __ } = useTranslation();
 
+// frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
 const chipRefs = ref([]);
 const clearChipRef = ref(null);
 const inputRef = ref(null);
@@ -94,11 +95,11 @@ const activeChipIndex = ref(0);
 function getAllChipButtons() {
   const list = [];
   for (let i = 0; i < props.increments.length; i++) {
-    if (chipRefs.value[i]) list.push(chipRefs.value[i]);
+    const chip = chipRefs.value[i]?.rootRef;
+    if (chip) list.push(chip);
   }
-  if (clearChipRef.value && Number(props.modelValue) > 0) {
-    list.push(clearChipRef.value);
-  }
+  const clear = clearChipRef.value?.rootRef;
+  if (clear && Number(props.modelValue) > 0) list.push(clear);
   return list;
 }
 
@@ -110,9 +111,9 @@ function onInput(event) {
   emit("update:modelValue", event.target.value);
 }
 
+// frappe-ui TextInput exposes its input element as `el`
 function focusInput() {
-  const target = inputRef.value?.el || inputRef.value?.$el?.querySelector("input") || inputRef.value;
-  target?.focus?.({ preventScroll: true });
+  inputRef.value?.el?.focus({ preventScroll: true });
 }
 
 function handleChipKeydown(e, idx) {
@@ -208,6 +209,6 @@ function reset() {
 }
 
 defineExpose({
-  focus: () => inputRef.value?.focus({ preventScroll: true }),
+  focus: focusInput,
 });
 </script>

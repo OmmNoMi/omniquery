@@ -19,7 +19,6 @@ export const TEXT_INPUT_STYLE_ALLOWLIST = {
   "src/components/common/FRangeSlider.vue": 1,
   "src/components/survey/GroupedQuestionCard.vue": 2,
   "src/components/survey/MatrixQuestionCard.vue": 6,
-  "src/components/survey/QuestionCard.vue": 1,
 };
 
 // layout classes, under any responsive prefix (sm:, md:)
@@ -36,6 +35,38 @@ export function styledTextInputs(source) {
     .map((node) => ({ line: node.loc.start.line, classes: styleClasses(elementClasses(node)) }))
     .filter((hit) => hit.classes.length);
 }
+
+// TextInput picks its padding for a prefix or suffix once, from useSlots() in a computed, and slots are
+// not reactive. A slot passed only once text is typed (`<template v-if="query" #suffix>`) gets no room,
+// so the typed text runs under the clear button. Pass the slot always and put the v-if inside it.
+const CONDITIONAL = new Set(["if", "else-if", "else"]);
+
+// slots of a frappe-ui TextInput that are only sometimes passed: [{ line, slot }]
+export function conditionalTextInputSlots(source) {
+  const tags = [...namedImports(source, "frappe-ui")].filter(([, exported]) => exported === "TextInput").map(([local]) => local);
+  if (!tags.length) return [];
+  return templateElements(source)
+    .filter((node) => tags.includes(node.tag))
+    .flatMap((input) => input.children.filter((child) => child.type === 1 && child.tag === "template"))
+    .filter((slot) => slot.props.some((p) => p.type === 7 && CONDITIONAL.has(p.name)))
+    .map((slot) => ({ line: slot.loc.start.line, slot: slot.props.find((p) => p.type === 7 && p.name === "slot")?.arg?.content }));
+}
+
+describe("TextInput slots are passed on first render", () => {
+  it("passes a TextInput's prefix and suffix always, with any v-if inside", () => {
+    const hits = getSourceFiles(path.join(appDir, "src"), [".vue"])
+      .flatMap((file) => conditionalTextInputSlots(fs.readFileSync(file, "utf8")).map((h) => `${rel(file)}:${h.line} #${h.slot}`));
+    expect(hits, "move the v-if from the slot to what it holds").toEqual([]);
+  });
+
+  it("finds a v-if on the slot under any local name, and lets a v-if inside it through", () => {
+    const sfc = (template, script = `import { TextInput } from "frappe-ui";`) => `<template>${template}</template><script setup>${script}</script>`;
+    expect(conditionalTextInputSlots(sfc(`<TextInput><template v-if="q" #suffix><b/></template></TextInput>`))).toEqual([{ line: 1, slot: "suffix" }]);
+    expect(conditionalTextInputSlots(sfc(`<TI><template v-else #prefix><b/></template></TI>`, `import { TextInput as TI } from "frappe-ui";`))).toEqual([{ line: 1, slot: "prefix" }]);
+    expect(conditionalTextInputSlots(sfc(`<TextInput><template #suffix><b v-if="q"/></template></TextInput>`))).toEqual([]);
+    expect(conditionalTextInputSlots(sfc(`<TextInput><template v-if="q" #suffix><b/></template></TextInput>`, `import TextInput from "./Mine.vue";`))).toEqual([]);
+  });
+});
 
 describe("TextInput looks come from variant and size", () => {
   const files = getSourceFiles(path.join(appDir, "src"), [".vue"]);

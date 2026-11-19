@@ -111,9 +111,11 @@ describe("Focus mode Escape and focus (#42)", () => {
     const modal = mountFocusMode({ questions: [matrix] });
     await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
     const matrixCard = document.querySelector("[data-matrix-question-card]");
-    const input = matrixCard.querySelector("input");
-    expect(input, "the matrix renders a cell input").toBeTruthy();
-    input.focus();
+    // focus mode opens in a cell of the matrix, and focuses it again 60ms later
+    await vi.waitFor(() => expect(document.activeElement.matches("[data-matrix-question-card] input")).toBe(true));
+    const input = document.activeElement;
+    await new Promise((r) => setTimeout(r, 80));
+    expect(document.activeElement).toBe(input);
 
     press("Escape");
     expect(document.activeElement).toBe(matrixCard);

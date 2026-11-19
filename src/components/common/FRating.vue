@@ -66,11 +66,12 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue"]);
 const { __ } = useTranslation();
 
+// frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
 const starRefs = ref({});
 
 function setStarRef(star, el) {
   if (el) {
-    starRefs.value[star] = el.$el || el.el || el;
+    starRefs.value[star] = el;
   }
 }
 
@@ -90,9 +91,7 @@ const verbalLabel = computed(() => {
 function selectStar(star) {
   emit("update:modelValue", star);
   nextTick(() => {
-    const el = starRefs.value[star];
-    if (el?.focus) el.focus();
-    else if (el?.$el?.focus) el.$el.focus();
+    starRefs.value[star]?.rootRef?.focus();
   });
 }
 

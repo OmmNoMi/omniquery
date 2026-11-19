@@ -281,14 +281,16 @@ function getQuestionOptions(q) {
   return choiceOptions(q, parentAnswer(q, props.responses));
 }
 
+// frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
 const optionRefsMap = ref({});
+const optionButton = (qCode, idx) => optionRefsMap.value[qCode]?.[idx]?.rootRef;
 
 function setOptionRef(qCode, optIdx, el) {
   if (!optionRefsMap.value[qCode]) {
     optionRefsMap.value[qCode] = [];
   }
   if (el) {
-    optionRefsMap.value[qCode][optIdx] = el.$el || el;
+    optionRefsMap.value[qCode][optIdx] = el;
   }
 }
 
@@ -308,14 +310,14 @@ function onChoiceKeydown(e, q, optIdx, options) {
     e.stopPropagation();
     const nextIdx = (optIdx + 1) % options.length;
     const nextOpt = options[nextIdx];
-    optionRefsMap.value[q.question_code]?.[nextIdx]?.focus({ preventScroll: true });
+    optionButton(q.question_code, nextIdx)?.focus({ preventScroll: true });
     onUpdateValue(q.question_code, nextOpt.value);
   } else if (e.key === "ArrowLeft") {
     e.preventDefault();
     e.stopPropagation();
     const prevIdx = (optIdx - 1 + options.length) % options.length;
     const prevOpt = options[prevIdx];
-    optionRefsMap.value[q.question_code]?.[prevIdx]?.focus({ preventScroll: true });
+    optionButton(q.question_code, prevIdx)?.focus({ preventScroll: true });
     onUpdateValue(q.question_code, prevOpt.value);
   } else if (["ArrowDown", "ArrowUp"].includes(e.key)) {
     const qList = props.group.questions || [];
@@ -331,7 +333,7 @@ function onChoiceKeydown(e, q, optIdx, options) {
         const targetOpts = getQuestionOptions(nextQ);
         const selIdx = targetOpts.findIndex((o) => o.value === props.responses[nextQ.question_code]);
         const focusIdx = selIdx >= 0 ? selIdx : 0;
-        const targetBtn = optionRefsMap.value[nextQ.question_code]?.[focusIdx];
+        const targetBtn = optionButton(nextQ.question_code, focusIdx);
         if (targetBtn) {
           targetBtn.focus({ preventScroll: true });
           ensureVisibleAboveFooter(targetBtn);

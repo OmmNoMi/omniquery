@@ -51,8 +51,9 @@
           <template #prefix>
             <Search class="w-4 h-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
           </template>
-          <template v-if="s.searchQuery" #suffix>
-            <Button variant="ghost" :label="__('Clear search')" :title="__('Clear search')" @click="clearSearch">
+          <!-- always passed: TextInput pads for a suffix only if the slot is there on first render -->
+          <template #suffix>
+            <Button v-if="s.searchQuery" variant="ghost" :label="__('Clear search')" :title="__('Clear search')" @click="clearSearch">
               <template #icon><X class="w-4 h-4" aria-hidden="true" /></template>
             </Button>
           </template>
