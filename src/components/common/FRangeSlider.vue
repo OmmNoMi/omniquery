@@ -121,11 +121,12 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "esc"]);
 const { __ } = useTranslation();
 
+// frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
 const btnRefs = ref({});
 
 function setBtnRef(val, el) {
   if (el) {
-    btnRefs.value[val] = el.$el || el.el || el;
+    btnRefs.value[val] = el;
   }
 }
 
@@ -158,9 +159,7 @@ function onSliderInput(e) {
 function selectValue(val) {
   emit("update:modelValue", val);
   nextTick(() => {
-    const el = btnRefs.value[val];
-    if (el?.focus) el.focus();
-    else if (el?.$el?.focus) el.$el.focus();
+    btnRefs.value[val]?.rootRef?.focus();
   });
 }
 

@@ -2336,6 +2336,14 @@ msgstr "सर्वेक्षण खोजें..."
 msgid "Search surveys"
 msgstr "सर्वेक्षण खोजें"
 
+#: src/components/survey/QuestionCard.vue
+msgid "Search options..."
+msgstr "विकल्प खोजें..."
+
+#: src/components/survey/QuestionCard.vue
+msgid "Search options"
+msgstr "विकल्प खोजें"
+
 #: src/views/Catalog.vue
 msgid "Clear search"
 msgstr "खोज साफ़ करें"

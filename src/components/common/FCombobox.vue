@@ -124,7 +124,7 @@
           <Button
             v-for="(option, index) in filteredOptions"
             :key="option.value"
-            :ref="(el) => { if (el) optionRefs[index] = el.$el || el; }"
+            :ref="(el) => { if (el) optionRefs[index] = el; }"
             role="option"
             :aria-selected="isOptionSelected(option.value) ? 'true' : 'false'"
             @click="selectOption(option)"
@@ -239,6 +239,7 @@ const searchInput = ref(null);
 const triggerBtn = ref(null);
 const rootContainer = ref(null);
 const highlightedIndex = ref(0);
+// frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
 const optionRefs = ref([]);
 
 const normalizedOptions = computed(() => {
@@ -290,14 +291,13 @@ function openCombobox() {
   highlightedIndex.value = 0;
 }
 
+// frappe-ui Button exposes its element as rootRef, and TextInput its input element as el
 function focusTrigger() {
-  const el = triggerBtn.value?.$el || triggerBtn.value?.el || triggerBtn.value;
-  el?.focus?.();
+  triggerBtn.value?.rootRef?.focus();
 }
 
 function focusSearch() {
-  const el = searchInput.value?.$el?.querySelector("input") || searchInput.value?.el || searchInput.value;
-  el?.focus?.({ preventScroll: true });
+  searchInput.value?.el?.focus({ preventScroll: true });
 }
 
 function closeCombobox() {
@@ -350,7 +350,7 @@ function selectHighlighted() {
 
 function scrollToHighlighted() {
   nextTick(() => {
-    const el = optionRefs.value[highlightedIndex.value];
+    const el = optionRefs.value[highlightedIndex.value]?.rootRef;
     if (el && typeof el.scrollIntoView === "function") {
       el.scrollIntoView({ block: "nearest" });
     }

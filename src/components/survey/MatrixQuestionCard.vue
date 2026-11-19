@@ -84,7 +84,7 @@
     </div>
 
     <!-- 3D / 4D Matrix Content: Desktop Table Grid (sm:block) -->
-    <div class="hidden sm:block rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
+    <div data-matrix-layout="table" class="hidden sm:block rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-700 text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">
@@ -130,7 +130,7 @@
                   -
                 </Button>
                 <TextInput
-                  :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                  :data-cell="`${rIdx}_${cIdx}`"
                   type="number"
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -153,7 +153,7 @@
                   ₹
                 </span>
                 <TextInput
-                  :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                  :data-cell="`${rIdx}_${cIdx}`"
                   type="number"
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -166,7 +166,7 @@
               <!-- Select Dropdown -->
               <Select
                 v-else-if="col.type === 'select'"
-                :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                :data-cell="`${rIdx}_${cIdx}`"
                 :options="col.options || []"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -178,7 +178,7 @@
               <!-- Standard Text Input -->
               <TextInput
                 v-else
-                :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                :data-cell="`${rIdx}_${cIdx}`"
                 type="text"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -210,7 +210,7 @@
     </div>
 
     <!-- 3D / 4D Matrix Content: Mobile Card-Per-Row Layout (block sm:hidden - ZERO Horizontal Scroll) -->
-    <div class="block sm:hidden space-y-3">
+    <div data-matrix-layout="cards" class="block sm:hidden space-y-3">
       <div
         v-for="(row, rIdx) in matrixRows"
         :key="row.id"
@@ -252,7 +252,7 @@
                 -
               </Button>
               <TextInput
-                :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                :data-cell="`${rIdx}_${cIdx}`"
                 type="number"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -275,7 +275,7 @@
                 ₹
               </span>
               <TextInput
-                :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                :data-cell="`${rIdx}_${cIdx}`"
                 type="number"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -288,7 +288,7 @@
             <!-- Select Dropdown -->
             <Select
               v-else-if="col.type === 'select'"
-              :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+              :data-cell="`${rIdx}_${cIdx}`"
               :options="col.options || []"
               :modelValue="getCellValue(row.id, col.key)"
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -300,7 +300,7 @@
             <!-- Standard Text Input -->
             <TextInput
               v-else
-              :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+              :data-cell="`${rIdx}_${cIdx}`"
               type="text"
               :modelValue="getCellValue(row.id, col.key)"
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -366,6 +366,7 @@ import { Button, TextInput, Select } from "frappe-ui";
 import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useCardEscape } from "../../composables/useCardEscape";
+import { useMediaQuery } from "@vueuse/core";
 
 const props = defineProps({
   question: {
@@ -393,7 +394,15 @@ const cardRef = ref(null);
 const onCardEscape = useCardEscape(cardRef);
 const isFocused = ref(false);
 const isInputFocused = ref(false);
-const cellInputRefs = ref({});
+// Both layouts are rendered and CSS hides one, so a cell is looked up in the one on screen: a cell of
+// the hidden layout cannot take focus. The table shows from Tailwind's sm breakpoint up. data-cell
+// lands on the element that takes focus, since frappe-ui TextInput passes attrs to its input element and
+// Select to its trigger button; a ref would hold the component, which has no focus().
+const showsTable = useMediaQuery("(min-width: 640px)");
+const cellAt = (rIdx, cIdx) =>
+  cardRef.value?.querySelector(
+    `[data-matrix-layout="${showsTable.value ? "table" : "cards"}"] [data-cell="${rIdx}_${cIdx}"]`,
+  );
 
 // Parse question title & number
 const parsedMeta = computed(() => {
@@ -590,13 +599,6 @@ const isCompleted = computed(() => {
 });
 
 // Keyboard Matrix Navigation
-function setCellInputRef(rIdx, cIdx, el) {
-  if (el) {
-    const target = el?.el || el?.$el?.querySelector?.("input, select, button") || el?.$el || el;
-    cellInputRefs.value[`${rIdx}_${cIdx}`] = target;
-  }
-}
-
 function onCellKeydown(e, rIdx, cIdx) {
   const numRows = matrixRows.value.length;
   const numCols = matrixColumns.value.length;
@@ -604,11 +606,11 @@ function onCellKeydown(e, rIdx, cIdx) {
   if (e.key === "ArrowDown") {
     e.preventDefault();
     const nextRow = (rIdx + 1) % numRows;
-    cellInputRefs.value[`${nextRow}_${cIdx}`]?.focus({ preventScroll: true });
+    cellAt(nextRow, cIdx)?.focus({ preventScroll: true });
   } else if (e.key === "ArrowUp") {
     e.preventDefault();
     const prevRow = (rIdx - 1 + numRows) % numRows;
-    cellInputRefs.value[`${prevRow}_${cIdx}`]?.focus({ preventScroll: true });
+    cellAt(prevRow, cIdx)?.focus({ preventScroll: true });
   } else if (e.key === "Enter") {
     e.preventDefault();
     if (rIdx === numRows - 1 && cIdx === numCols - 1) {
@@ -621,7 +623,7 @@ function onCellKeydown(e, rIdx, cIdx) {
         nextC = 0;
         nextR = (rIdx + 1) % numRows;
       }
-      cellInputRefs.value[`${nextR}_${nextC}`]?.focus({ preventScroll: true });
+      cellAt(nextR, nextC)?.focus({ preventScroll: true });
     }
   }
 }
@@ -642,8 +644,7 @@ function onFocusOut(e) {
 }
 
 defineExpose({
-  focus: () => {
-    cellInputRefs.value["0_0"]?.focus({ preventScroll: true }) || cardRef.value?.focus();
-  },
+  // the first cell, or the card when the matrix has none (focus() returns nothing, so no `||`)
+  focus: () => (cellAt(0, 0) || cardRef.value)?.focus({ preventScroll: true }),
 });
 </script>

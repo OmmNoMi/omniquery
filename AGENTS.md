@@ -17,6 +17,26 @@ cost real time to learn. Add to it when you learn something new.
 - The Desktop Icon `link_to` is a Dynamic Link to the Workspace Sidebar archive. A fresh site has
   no archive row, so save it with `flags.ignore_links`, as Frappe does for its own icons.
 
+## frappe-ui components and the browser
+
+- A ref on a frappe-ui component holds the component, not its element. `TextInput` exposes its
+  input element as `el` and `Button` its button as `rootRef`; neither has a `focus()` of its own.
+  `src/components/__tests__/FocusThroughFrappeUI.spec.js` covers every place we focus one.
+- `Button` renders a fragment, so its `$el` is the text node Vue anchors it with, not the button,
+  and `rootRef` is still unset when the parent's `:ref` callback runs. Store the component
+  (`refs[i] = el`) and read `refs[i]?.rootRef` where you focus, compare or scroll.
+  `test/guards/component_element_refs.test.js` bans `$el` and a `rootRef` read in a ref callback.
+- `TextInput` decides its prefix/suffix padding once from `useSlots()`, which is not reactive. A
+  `<template v-if #suffix>` that appears later gets no padding and the text runs under it. Always
+  pass the slot and put the `v-if` on its content (upstream frappe-ui candidate);
+  `test/guards/text_inputs.test.js` enforces it.
+- `TextInput` sets `inheritAttrs: false`: `class` and `style` land on its wrapper div, every other
+  attribute on the input. Style it through `size`, `variant` and the `#prefix`/`#suffix` slots
+  (as Catalog.vue's search does), not a class string.
+- Chrome blurs a focused element when it is removed from the DOM (a `focusout` with no
+  `relatedTarget`); jsdom does not. Move focus somewhere that stays before filtering out the
+  element that holds it, and assert that order in the test, since jsdom will not catch it.
+
 ## Tests
 
 - After `frappe.set_user` inside a test, also call `frappe.local.request_cache.clear()`. Frappe

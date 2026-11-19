@@ -139,33 +139,30 @@
         <div v-else>
           <!-- Quick Search Bar above button cards (when options > 7) -->
           <div v-if="normalizedOptions.length > 7" class="relative mb-3">
-            <div class="relative flex items-center">
-              <svg class="absolute left-3.5 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <TextInput
-                ref="searchInputRef"
-                data-search-input
-                :modelValue="gridSearchQuery"
-                @update:modelValue="(val) => (gridSearchQuery = val)"
-                type="text"
-                :placeholder="__('Search options...')"
-                @keydown.esc.prevent.stop="onSearchInputEsc"
-                @keydown.enter.prevent="onSearchInputEnter"
-                @keydown.down.prevent="focusFirstOption"
-                class="w-full text-xs sm:text-sm pl-9 pr-8 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 text-slate-900 dark:text-white placeholder-slate-400 transition shadow-2xs"
-              />
-              <Button
-                v-if="gridSearchQuery"
-                variant="ghost"
-                :icon="X"
-                :label="__('Clear search')"
-                class="absolute right-1.5"
-                @mousedown.prevent
-                @click="onClearSearch"
-              />
-            </div>
+            <!-- the same search box as the survey catalog's -->
+            <TextInput
+              ref="searchInputRef"
+              data-search-input
+              type="text"
+              size="lg"
+              variant="outline"
+              v-model="gridSearchQuery"
+              :placeholder="__('Search options...')"
+              :aria-label="__('Search options')"
+              @keydown.esc.prevent.stop="onSearchInputEsc"
+              @keydown.enter.prevent="onSearchInputEnter"
+              @keydown.down.prevent="focusFirstOption"
+            >
+              <template #prefix>
+                <Search class="w-4 h-4 text-slate-500 dark:text-slate-400" aria-hidden="true" />
+              </template>
+              <!-- always passed: TextInput pads for a suffix only if the slot is there on first render -->
+              <template #suffix>
+                <Button v-if="gridSearchQuery" variant="ghost" :label="__('Clear search')" :title="__('Clear search')" @mousedown.prevent @click="onClearSearch">
+                  <template #icon><X class="w-4 h-4" aria-hidden="true" /></template>
+                </Button>
+              </template>
+            </TextInput>
             <!-- Filter summary if search is active -->
             <div v-if="gridSearchQuery" class="mt-1 px-1 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 font-medium">
               <span>{{ __('Showing') }} {{ displayedGridOptions.length }} {{ __('of') }} {{ normalizedOptions.length }}</span>
@@ -181,7 +178,7 @@
             <Button
               v-for="(option, index) in displayedGridOptions"
               :key="option.value"
-              :ref="(el) => { if (el) optionButtonRefs[index] = el.$el || el; }"
+              :ref="(el) => { if (el) optionButtonRefs[index] = el; }"
               :role="isMultiSelect ? 'checkbox' : 'radio'"
               :aria-checked="isOptionSelected(option.value)"
               :tabindex="getOptionTabindex(index)"
@@ -500,6 +497,7 @@ import {
   X,
   Check,
   MapPin,
+  Search,
   Ban,
   Info,
   Smartphone,
@@ -557,15 +555,25 @@ const isInputFocused = ref(false);
 const showConfigModal = ref(false);
 
 const localMode = ref(null);
+// frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
 const optionButtonRefs = ref([]);
+const optionButton = (index) => optionButtonRefs.value[index]?.rootRef;
 const gridSearchQuery = ref("");
 const searchInputRef = ref(null);
 
+// Focuses the quick search box, with the caret after what is typed. frappe-ui TextInput exposes its
+// input element as `el`; the component itself has no focus(). Returns whether there was a box to focus.
+function focusSearch() {
+  const input = searchInputRef.value?.el;
+  if (!input) return false;
+  input.focus({ preventScroll: true });
+  input.setSelectionRange(input.value.length, input.value.length);
+  return true;
+}
+
 function onClearSearch() {
   gridSearchQuery.value = "";
-  nextTick(() => {
-    searchInputRef.value?.focus({ preventScroll: true });
-  });
+  nextTick(focusSearch);
 }
 
 const isCompleted = computed(() => {
@@ -915,9 +923,10 @@ const activeOptionIndex = ref(0);
 
 watch(
   () => [props.question?.question_code, displayedGridOptions.value.length],
-  () => {
+  ([code], [prevCode] = []) => {
     optionButtonRefs.value = [];
-    gridSearchQuery.value = "";
+    // only a new question clears the search; the search itself changes how many options show
+    if (code !== prevCode) gridSearchQuery.value = "";
     const firstSelected = displayedGridOptions.value.findIndex((opt) => isOptionSelected(opt.value));
     activeOptionIndex.value = firstSelected >= 0 ? firstSelected : 0;
   },
@@ -980,12 +989,7 @@ function onOptionEnter(e) {
 }
 
 function focusFirstOption() {
-  if (optionButtonRefs.value[0]) {
-    optionButtonRefs.value[0].focus({ preventScroll: true });
-  } else if (cardRef.value) {
-    const btn = cardRef.value.querySelector("button[role=radio], button[role=checkbox]");
-    if (btn) btn.focus({ preventScroll: true });
-  }
+  optionButton(0)?.focus({ preventScroll: true });
 }
 
 function onSearchInputEsc() {
@@ -1029,7 +1033,7 @@ function handleOptionArrowNav(e, curIdx) {
   if (e.key === "ArrowUp" && curIdx === 0 && searchInputRef.value) {
     e.preventDefault();
     e.stopPropagation();
-    searchInputRef.value.focus({ preventScroll: true });
+    focusSearch();
     return;
   }
 
@@ -1040,11 +1044,7 @@ function handleOptionArrowNav(e, curIdx) {
     nextIdx = (curIdx - 1 + len) % len;
   }
   activeOptionIndex.value = nextIdx;
-  let targetBtn = optionButtonRefs.value[nextIdx];
-  if (!targetBtn && cardRef.value) {
-    const allBtns = cardRef.value.querySelectorAll("button[role=radio], button[role=checkbox]");
-    targetBtn = allBtns[nextIdx];
-  }
+  const targetBtn = optionButton(nextIdx);
   if (targetBtn) {
     targetBtn.focus({ preventScroll: true });
     ensureVisibleAboveFooter(targetBtn);
@@ -1065,13 +1065,7 @@ function handleTypeaheadSearch(e) {
       e.preventDefault();
       e.stopPropagation();
       gridSearchQuery.value = gridSearchQuery.value.slice(0, -1);
-      nextTick(() => {
-        if (searchInputRef.value) {
-          searchInputRef.value.focus({ preventScroll: true });
-          const len = gridSearchQuery.value.length;
-          searchInputRef.value.setSelectionRange?.(len, len);
-        }
-      });
+      nextTick(focusSearch);
       return true;
     }
     return false;
@@ -1094,14 +1088,11 @@ function handleTypeaheadSearch(e) {
   if (e.key.length === 1) {
     e.preventDefault();
     e.stopPropagation();
+    // Into the box before the options narrow: the browser blurs a focused option as it is filtered
+    // out, and focus leaving the card clears the search
+    focusSearch();
     gridSearchQuery.value += e.key;
-    nextTick(() => {
-      if (searchInputRef.value) {
-        searchInputRef.value.focus({ preventScroll: true });
-        const len = gridSearchQuery.value.length;
-        searchInputRef.value.setSelectionRange?.(len, len);
-      }
-    });
+    nextTick(focusSearch);
     return true;
   }
 
@@ -1125,7 +1116,7 @@ function onGridKeydown(e) {
   if (["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp"].includes(e.key)) {
     e.preventDefault();
     e.stopPropagation();
-    let curIdx = optionButtonRefs.value.findIndex((btn) => btn === document.activeElement);
+    let curIdx = optionButtonRefs.value.findIndex((btn) => btn?.rootRef === document.activeElement);
     if (curIdx === -1) {
       curIdx = displayedGridOptions.value.findIndex((opt) => isOptionSelected(opt.value));
     }
@@ -1145,7 +1136,7 @@ function onGridKeydown(e) {
       e.preventDefault();
       e.stopPropagation();
       const targetIdx = num - 1;
-      optionButtonRefs.value[targetIdx]?.focus({ preventScroll: true });
+      optionButton(targetIdx)?.focus({ preventScroll: true });
       onOptionClick(displayedGridOptions.value[targetIdx].value);
     }
   }
@@ -1204,10 +1195,7 @@ function focusPrimaryInput() {
   nextTick(() => {
     if (!cardRef.value) return;
     // 0. Quick search bar at top of options
-    if (searchInputRef.value) {
-      searchInputRef.value.focus({ preventScroll: true });
-      return;
-    }
+    if (focusSearch()) return;
     // 1. Standard text / number / date input or textarea (exclude quick search inputs)
     const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]):not([data-search-input]), textarea:not([disabled])");
     if (input) {
