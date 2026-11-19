@@ -1,0 +1,4 @@
+{
+  "//": "CommonJS, so the specs resolve @playwright/test through NODE_PATH like Frappe's (see playwright.config.cjs)",
+  "type": "commonjs"
+}

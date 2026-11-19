@@ -92,6 +92,15 @@ describe("Focus rings (#43)", () => {
     expect(weak, `focus ring ${colour} is under 3:1 on:\n${weak.join("\n")}`).toEqual([]);
   });
 
+  // frappe-ui Tabs draws no focus ring of its own (#17), so main.css gives its tabs and panel one
+  it("rings frappe-ui Tabs' tabs and panel in the shared token", () => {
+    const css = fs.readFileSync(path.join(appDir, "src/styles/main.css"), "utf8");
+    for (const role of ["tab", "tabpanel"]) {
+      const rule = css.match(new RegExp(`\\[role="${role}"\\]:focus-visible\\s*\\{([^}]*)\\}`));
+      expect(rule?.[1], `main.css rings [role="${role}"]:focus-visible`).toMatch(/outline:\s*2px solid var\(--outline-gray-3\)/);
+    }
+  });
+
   it("measures contrast the WCAG way and reads the token from CSS", () => {
     expect(contrastRatio("#000000", "#ffffff")).toBeCloseTo(21, 5);
     expect(contrastRatio("#c7c7c7", "#ffffff")).toBeLessThan(3); // frappe-ui's own ring colour

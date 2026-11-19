@@ -16,7 +16,6 @@ export const SHADE_400_ALLOWLIST = {
   "src/components/common/FCurrencyInput.vue": 1,
   "src/components/dashboard/FilledFormsModal.vue": 3,
   "src/components/dashboard/ProjectHeaderCard.vue": 1,
-  "src/components/project/ProjectPage.vue": 1,
   "src/components/survey/MatrixQuestionCard.vue": 4,
   "src/components/survey/QuestionCard.vue": 6,
   "src/views/Catalog.vue": 2,

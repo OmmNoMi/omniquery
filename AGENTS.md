@@ -36,6 +36,17 @@ cost real time to learn. Add to it when you learn something new.
 - Chrome blurs a focused element when it is removed from the DOM (a `focusout` with no
   `relatedTarget`); jsdom does not. Move focus somewhere that stays before filtering out the
   element that holds it, and assert that order in the test, since jsdom will not catch it.
+- frappe-ui `Tabs` (reka-ui) brings the tablist, roving tabindex and arrow/Home/End keys, so
+  never hand-roll a tablist. A left click selects on `mousedown`, not `click`. The tablist itself is
+  the one tab stop and hands focus to the selected tab, so every tab starts at `tabindex="-1"`.
+  Inactive panels stay in the DOM with `hidden`, so query `[role=tabpanel]:not([hidden])`. Its
+  root is `overflow-hidden`, which clips a sticky strip; override it with `!overflow-visible`. It
+  takes no `aria-label` for the tablist and draws no focus ring on its tabs or panel (both are
+  upstream frappe-ui candidates); `src/styles/main.css` rings `[role=tab]` and `[role=tabpanel]`,
+  and `test/guards/focus_rings.test.js` checks it.
+- `overflow-x: hidden` on `#app` and the App.vue shell makes them scroll containers (computed
+  `overflow-y: auto`), so `position: sticky` never sticks anywhere in the PWA (#141). Use
+  `overflow-x: clip`; never put overflow on html (`test/guards/scroll_lock.test.js`).
 
 ## Tests
 
@@ -69,6 +80,14 @@ cost real time to learn. Add to it when you learn something new.
 - Copy to the clipboard with VueUse `useClipboard({ legacy: true })`. Its `copy` rejects when the
   browser refuses, so catch it and show `toast.error`. The PWA has no `frappe.show_alert`; use
   frappe-ui `toast`.
+- Browser tests are Playwright, run by `bench --site <site> run-ui-tests omniquery --headless`.
+  Frappe 16 picks Playwright for an app that has a `playwright.config.*` (Cypress is deprecated
+  there) and runs `frappe/node_modules/.bin/playwright test` in the app with `BASE_URL`,
+  `ADMIN_PASSWORD` and `NODE_PATH=frappe/node_modules`. ESM imports ignore `NODE_PATH` and this
+  app's package.json is `"type": "module"`, so the config is `playwright.config.cjs` and
+  `playwright/package.json` sets `"type": "commonjs"`. Specs import `test`/`expect` from
+  `../../../frappe/playwright/support/index.js`, which logs in `TEST_USER` (default
+  `frappe@example.com`) with `ADMIN_PASSWORD`, so that user must exist on the site.
 
 ## frappe-ui answer choices and TextInput
 

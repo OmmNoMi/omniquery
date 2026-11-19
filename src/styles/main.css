@@ -42,6 +42,19 @@ body {
   --outline-gray-3: theme("colors.emerald.600");
 }
 
+/* frappe-ui Tabs (reka-ui) draws no focus ring on its tabs or its panel, so they fell back to the
+   browser's outline (#17). Give them the same ring token as every other ring. The tab's ring sits
+   inside it, because the tab strip scrolls sideways and would clip an outer ring. */
+[role="tab"]:focus-visible {
+  outline: 2px solid var(--outline-gray-3);
+  outline-offset: -2px;
+}
+[role="tabpanel"]:focus-visible {
+  outline: 2px solid var(--outline-gray-3);
+  outline-offset: 4px;
+  border-radius: 1.5rem;
+}
+
 /* A selected answer choice (choiceButtonProps in src/utils/choiceButton.js): a pale green card with
    dark green text and a 2.5px green edge, readable in sunlight (text about 13:1, edge about 5:1).
    frappe-ui's outline Button has no green that survives dark mode, so the look is set here on top
