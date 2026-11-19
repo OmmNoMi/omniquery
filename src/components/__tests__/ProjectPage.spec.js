@@ -74,3 +74,35 @@ describe("ProjectPage help (#14, #51)", () => {
     expect(wrapper.find("a[href^='mailto:']").exists()).toBe(false);
   });
 });
+
+describe("ProjectPage surveys (#15)", () => {
+  const otherProjects = [
+    { name: "T-OTHER-1", title: "Other Project Survey", project: "PROJ-OTHER", project_name: "Other Enterprise Study" },
+    { name: "T-OTHER-2", title: "Second Other Survey", project: "PROJ-OTHER-2", project_name: "Second Other Study" },
+  ];
+
+  it("lists none of another project's surveys when the project has none of its own", async () => {
+    call.mockResolvedValue({});
+    const wrapper = await mountPage(otherProjects);
+
+    expect(wrapper.text()).not.toContain("Other Project Survey");
+    expect(wrapper.text()).not.toContain("Second Other Survey");
+    expect(wrapper.text()).toContain(`0 ${__("Surveys Assigned")}`);
+    expect(wrapper.text()).toContain(__("No published surveys found for this project"));
+    // nothing to pick or download, so no header bar over the empty state
+    expect(wrapper.text()).not.toContain(__("Select a survey to start collecting field data"));
+    expect(wrapper.text()).not.toContain(__("Download all for offline"));
+  });
+
+  it("lists only the project's own surveys, under the header bar", async () => {
+    call.mockResolvedValue({});
+    const wrapper = await mountPage([template(), ...otherProjects]);
+
+    expect(wrapper.text()).toContain("Baseline");
+    expect(wrapper.text()).not.toContain("Other Project Survey");
+    expect(wrapper.text()).toContain(`1 ${__("Surveys Assigned")}`);
+    expect(wrapper.text()).toContain(__("Select a survey to start collecting field data"));
+    expect(wrapper.text()).toContain(__("Download all for offline"));
+    expect(wrapper.text()).not.toContain(__("No published surveys found for this project"));
+  });
+});

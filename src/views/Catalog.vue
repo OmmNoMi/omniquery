@@ -183,6 +183,7 @@ import ProjectHeaderCard from "../components/dashboard/ProjectHeaderCard.vue";
 import SurveyorDashboard from "../components/dashboard/SurveyorDashboard.vue";
 import { useTranslation } from "../composables/useTranslation";
 import { useSurveySession } from "../composables/useSurveyApp";
+import { inProject } from "../utils/projectTemplates";
 
 const s = useSurveySession();
 const { __ } = useTranslation();
@@ -197,7 +198,7 @@ function clearSearch() {
 const filteredTemplates = computed(() => {
   const q = s.searchQuery.trim().toLowerCase();
   return s.availableTemplates.filter((t) => {
-    if (s.selectedProject !== "ALL" && t.project !== s.selectedProject && t.project_name !== s.selectedProject) return false;
+    if (!inProject(t, s.selectedProject)) return false;
     if (!q) return true;
     const title = (t.title || "").toLowerCase();
     const name = (t.name || "").toLowerCase();

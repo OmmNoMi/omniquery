@@ -3,42 +3,56 @@ import { mount } from "@vue/test-utils";
 import ProjectHeaderCard from "../dashboard/ProjectHeaderCard.vue";
 import { useTranslation } from "../../composables/useTranslation";
 
+const { __ } = useTranslation();
+
 describe("ProjectHeaderCard", () => {
   // the app starts in Hindi; these tests read English labels unless they set a language
   beforeEach(() => useTranslation().setLanguage("en"));
 
-  it("deduplicates projects with matching normalized names", () => {
+  it("collapses one project's templates into a single card", () => {
     const templates = [
-      {
-        project: "PROJ-SHG",
-        project_name: "Rural Women Entrepreneurs Study",
-        template_name: "T1",
-      },
-      {
-        project: "OQP-001-001",
-        project_name: "Rural Women Entrepreneurs Study",
-        template_name: "T2",
-      },
-      {
-        project: "PROJ-SHG",
-        project_name: "Rural Women Entrepreneurs Study",
-        template_name: "T3",
-      },
+      { project: "PROJ-SHG", project_name: "Rural Women Entrepreneurs Study", template_name: "T1" },
+      { project: "PROJ-SHG", project_name: "Rural Women Entrepreneurs Study", template_name: "T3" },
     ];
 
-    const wrapper = mount(ProjectHeaderCard, {
-      props: {
-        templates,
-        selectedProject: "ALL",
-      },
-    });
+    const wrapper = mount(ProjectHeaderCard, { props: { templates, selectedProject: "ALL" } });
 
-    // Even though 3 templates and 2 different project IDs exist,
-    // they share the exact normalized project_name so only 1 card is rendered
     expect(wrapper.vm.projectList.length).toBe(1);
-    expect(wrapper.vm.projectList[0].project_name).toBe("Rural Women Entrepreneurs Study");
+    expect(wrapper.find("h1").text()).toBe("Rural Women Entrepreneurs Study");
+    expect(wrapper.text()).toContain(`2 ${__("Surveys")}`);
     // Pagination controls should NOT be visible when length === 1
     expect(wrapper.find("button[title='Next project']").exists()).toBe(false);
+  });
+
+  it("keeps two projects that share a title apart, each with its id and its own surveys (#15)", () => {
+    const templates = [
+      { project: "PROJ-SHG", project_name: "Rural Women Entrepreneurs Study", template_name: "T1" },
+      { project: "OQP-001-001", project_name: "Rural Women Entrepreneurs Study", template_name: "T2" },
+      { project: "PROJ-SHG", project_name: "Rural Women Entrepreneurs Study", template_name: "T3" },
+    ];
+
+    const wrapper = mount(ProjectHeaderCard, { props: { templates, selectedProject: "ALL" } });
+
+    expect(wrapper.vm.projectList.map((p) => p.id)).toEqual(["PROJ-SHG", "OQP-001-001"]);
+    const titles = wrapper.findAll("h1").map((h) => h.text());
+    expect(titles).toEqual([
+      "Rural Women Entrepreneurs Study PROJ-SHG",
+      "Rural Women Entrepreneurs Study OQP-001-001",
+    ]);
+    const counts = wrapper.findAll("[data-project-index]").map((card) => card.text());
+    expect(counts[0]).toContain(`2 ${__("Surveys")}`);
+    expect(counts[1]).toContain(`1 ${__("Surveys")}`);
+  });
+
+  it("shows no id beside a title only one project uses", () => {
+    const templates = [
+      { project: "PROJ-A", project_name: "Dairy Project", template_name: "T1" },
+      { project: "PROJ-B", project_name: "Solar Energy Survey", template_name: "T2" },
+    ];
+
+    const wrapper = mount(ProjectHeaderCard, { props: { templates, selectedProject: "ALL" } });
+
+    expect(wrapper.findAll("h1").map((h) => h.text())).toEqual(["Dairy Project", "Solar Energy Survey"]);
   });
 
   it("renders multiple unique projects and emits select-project on change", async () => {

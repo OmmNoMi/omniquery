@@ -1,8 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import SurveyorDashboard from "../dashboard/SurveyorDashboard.vue";
 import { useTranslation } from "../../composables/useTranslation.js";
 import { classTargetSize } from "../../test/tapTargets";
+import { db } from "../../services/db";
 
 describe("SurveyorDashboard", () => {
   beforeEach(() => {
@@ -281,6 +282,36 @@ describe("SurveyorDashboard", () => {
     } finally {
       window.frappe = original;
     }
+  });
+
+  describe("counts for the selected project (#15)", () => {
+    const templates = [{ name: "T-OTHER", template_name: "T-OTHER", title: "Other Survey", project: "PROJ-OTHER" }];
+    const now = new Date().toISOString();
+    const submitted = (uid) => ({ response_uid: uid, template_name: "T-OTHER", status: "Submitted", created_at: now, updated_at: now });
+    const draft = { response_uid: "DRAFT-OTHER", template_name: "T-OTHER", title: "Other Survey", updated_at: now, responses: {} };
+    const mountFor = (selectedProject) =>
+      mount(SurveyorDashboard, {
+        props: { isOnline: false, userRoles: ["OmniQuery User"], templates, selectedProject, activeDrafts: { "T-OTHER": draft } },
+      });
+
+    beforeEach(async () => {
+      await db.responses.clear();
+      await db.responses.bulkPut([submitted("R1"), submitted("R2")]);
+    });
+
+    it("counts another project's submissions and draft under that project", async () => {
+      const wrapper = mountFor("PROJ-OTHER");
+      await vi.waitFor(() => expect(wrapper.vm.totalCompleted).toBe(2));
+      expect(wrapper.findAll("button").some((b) => b.text().includes("Resume"))).toBe(true);
+    });
+
+    it("counts none of them for a project with no templates of its own", async () => {
+      const wrapper = mountFor("PROJ-EMPTY");
+      await flushPromises();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(wrapper.vm.totalCompleted).toBe(0);
+      expect(wrapper.findAll("button").some((b) => b.text().includes("Resume"))).toBe(false);
+    });
   });
 });
 

@@ -4,6 +4,7 @@ import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { responseItems } from "../utils/responsePayload";
 import { uuidv4 } from "../utils/uuid";
 import { projectHelp } from "../utils/projectHelp";
+import { templatesOfProject } from "../utils/projectTemplates";
 
 // a new interview is filed under a UUIDv4 the server also checks (#25)
 export const generateSurveyId = uuidv4;
@@ -66,9 +67,7 @@ export function useSurvey() {
   }
 
   async function downloadProjectSurveysForOffline(projectId) {
-    const list = availableTemplates.value.filter(
-      (t) => (t.project || "default") === projectId || t.project_name === projectId || projectId === "ALL"
-    );
+    const list = templatesOfProject(availableTemplates.value, projectId);
     if (!list.length) return 0;
     let count = 0;
     for (const t of list) {

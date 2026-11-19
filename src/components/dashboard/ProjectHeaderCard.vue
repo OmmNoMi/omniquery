@@ -89,6 +89,7 @@
           <div class="space-y-1 min-w-0">
             <h1 class="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight leading-snug break-words">
               {{ proj.project_name }}
+              <span v-if="proj.showId" class="text-xs font-mono font-medium text-slate-500 dark:text-slate-400">{{ proj.id }}</span>
             </h1>
             <p v-if="proj.grantor_organization" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
               {{ proj.grantor_organization }}
@@ -189,6 +190,7 @@ import { computed, ref, onMounted, nextTick } from "vue";
 import { Button } from "frappe-ui";
 import { Landmark, ClipboardList, Download, BookOpen, ArrowRight } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { templatesOfProject } from "../../utils/projectTemplates";
 
 const props = defineProps({
   templates: {
@@ -218,8 +220,7 @@ const emit = defineEmits([
 const { __ } = useTranslation();
 
 function getProjectSurveys(projId) {
-  if (projId === "ALL") return props.templates;
-  return props.templates.filter((t) => (t.project || "default") === projId || t.project_name === projId);
+  return templatesOfProject(props.templates, projId);
 }
 
 function getProjectCachedCount(projId) {
@@ -236,27 +237,33 @@ function isProjectFullyCached(projId) {
 const scrollContainerRef = ref(null);
 const activeIndex = ref(0);
 
-// Deduplicate projects strictly by canonical project_name so aliases or duplicate records collapse into 1
+// One card per project, keyed by the project itself: two projects can share a title, and keying by
+// the title would hide the second one and its surveys (#15). Cards whose titles collide show the
+// project's id, so the surveyor can tell them apart.
+const titleKey = (title) => title.toLowerCase().trim();
+
 const projectList = computed(() => {
   const map = new Map();
 
   for (const t of props.templates) {
-    const rawName = t.project_name || t.project || "";
-    if (!rawName) continue;
-    const normKey = rawName.toLowerCase().trim();
-
-    if (!map.has(normKey)) {
-      map.set(normKey, {
-        id: t.project || t.name,
-        project_name: rawName,
-        grantor_organization: t.grantor_organization || "",
-        workspace_title: t.workspace_title || t.workspace || "",
-        description: t.project_description || t.description || "",
-      });
-    }
+    const id = t.project || t.project_name;
+    if (!id || map.has(id)) continue;
+    map.set(id, {
+      id,
+      project_name: t.project_name || t.project,
+      grantor_organization: t.grantor_organization || "",
+      workspace_title: t.workspace_title || t.workspace || "",
+      description: t.project_description || t.description || "",
+    });
   }
 
-  return Array.from(map.values());
+  const cards = Array.from(map.values());
+  const titleCounts = new Map();
+  for (const card of cards) {
+    const key = titleKey(card.project_name);
+    titleCounts.set(key, (titleCounts.get(key) || 0) + 1);
+  }
+  return cards.map((card) => ({ ...card, showId: titleCounts.get(titleKey(card.project_name)) > 1 }));
 });
 
 let scrollTimer = null;

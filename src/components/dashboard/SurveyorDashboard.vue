@@ -303,6 +303,7 @@ import { useTranslation } from "../../composables/useTranslation";
 import { useUserRoles } from "../../composables/useUserRoles";
 import { useSession } from "../../composables/useSession";
 import { resolveResponseTitle } from "../../utils/responseTitle";
+import { templatesOfProject } from "../../utils/projectTemplates";
 import { db } from "../../services/db";
 
 const props = defineProps({
@@ -373,6 +374,10 @@ const formattedToday = computed(() => {
   });
 });
 
+function projectTemplateNames(projectId) {
+  return new Set(templatesOfProject(props.templates, projectId).map((t) => t.name || t.template_name));
+}
+
 async function refreshLocalMetrics() {
   try {
     let allSubmitted = await db.responses
@@ -381,16 +386,11 @@ async function refreshLocalMetrics() {
       .toArray();
 
     if (props.selectedProject && props.selectedProject !== "ALL") {
-      const allowedTemplates = new Set(
-        props.templates
-          .filter((t) => (t.project || "default") === props.selectedProject)
-          .map((t) => t.name || t.template_name)
+      // A project with no templates has no submissions here, never every project's (#15)
+      const allowedTemplates = projectTemplateNames(props.selectedProject);
+      allSubmitted = allSubmitted.filter((r) =>
+        allowedTemplates.has(r.survey_template || r.template_name)
       );
-      if (allowedTemplates.size > 0) {
-        allSubmitted = allSubmitted.filter((r) =>
-          allowedTemplates.has(r.survey_template || r.template_name)
-        );
-      }
     }
 
     localTotalCount.value = allSubmitted.length;
@@ -460,11 +460,7 @@ const activeDraftsCount = computed(() => props.drafts.length);
 const topDraft = computed(() => {
   let list = Object.values(props.activeDrafts || {});
   if (props.selectedProject && props.selectedProject !== "ALL") {
-    const allowedTemplates = new Set(
-      props.templates
-        .filter((t) => (t.project || "default") === props.selectedProject)
-        .map((t) => t.name || t.template_name)
-    );
+    const allowedTemplates = projectTemplateNames(props.selectedProject);
     list = list.filter((d) => allowedTemplates.has(d.template_name));
   }
   if (!list.length) return null;
