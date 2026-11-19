@@ -5,6 +5,8 @@ import FCurrencyInput from "../common/FCurrencyInput.vue";
 import FRangeSlider from "../common/FRangeSlider.vue";
 import QuestionCard from "../survey/QuestionCard.vue";
 import GroupedQuestionCard from "../survey/GroupedQuestionCard.vue";
+import MatrixQuestionCard from "../survey/MatrixQuestionCard.vue";
+import { useTranslation } from "../../composables/useTranslation";
 
 describe("Gate 2: Accessibility Invariants (WCAG 2.2 AA)", () => {
   describe("FSwitch", () => {
@@ -113,84 +115,104 @@ describe("Gate 2: Accessibility Invariants (WCAG 2.2 AA)", () => {
     });
   });
 
-  describe("Survey Choice / Radio Group Accessibility (Issue #19)", () => {
-    it("renders choice questions with role radiogroup, aria-labelledby, and aria-required", () => {
-      const question = {
-        question_code: "q_district",
-        label_en: "District",
-        field_type: "Select",
-        options: ["Jaipur", "Jodhpur", "Kota"],
-        is_mandatory: 1,
-      };
+  // Each choice group is named by its question and says whether it is required (#19)
+  describe("Survey choice groups (#19)", () => {
+    const district = { question_code: "q_district", label_en: "District", field_type: "Select", options: ["Jaipur", "Jodhpur", "Kota"], is_mandatory: 1 };
+    const sectors = { question_code: "q_sectors", label_en: "Business Sectors", field_type: "MultiSelect", options: ["Retail", "Manufacturing", "Services"], is_mandatory: 1 };
+    const mountCard = (question, props = {}) => mount(QuestionCard, { props: { question, modelValue: "", ...props } });
 
-      const wrapper = mount(QuestionCard, {
-        props: {
-          question,
-          modelValue: "",
-        },
-      });
-
+    it("names a single choice by its question and marks it required", () => {
+      const wrapper = mountCard(district);
       const label = wrapper.find("#q_label_q_district");
-      expect(label.exists()).toBe(true);
       expect(label.text()).toContain("District");
-
+      // the label's asterisk is not read out as part of the name
+      expect(label.find("span").attributes("aria-hidden")).toBe("true");
       const radiogroup = wrapper.find('[role="radiogroup"]');
-      expect(radiogroup.exists()).toBe(true);
       expect(radiogroup.attributes("aria-labelledby")).toBe("q_label_q_district");
+      expect(radiogroup.attributes("aria-label")).toBeUndefined();
       expect(radiogroup.attributes("aria-required")).toBe("true");
+      expect(radiogroup.attributes("aria-invalid")).toBe("false");
     });
 
-    it("renders group role with aria-labelledby and aria-required when multi-select is enabled", () => {
-      const question = {
-        question_code: "q_sectors",
-        label_en: "Business Sectors",
-        field_type: "MultiSelect",
-        options: ["Retail", "Manufacturing", "Services"],
-        is_mandatory: 1,
-      };
+    it("does not mark an optional choice required", () => {
+      const radiogroup = mountCard({ ...district, is_mandatory: 0 }).find('[role="radiogroup"]');
+      expect(radiogroup.attributes("aria-required")).toBe("false");
+    });
 
-      const wrapper = mount(QuestionCard, {
-        props: {
-          question,
-          modelValue: [],
-        },
-      });
+    it("ties a single choice's help text and validation error to the group", () => {
+      const wrapper = mountCard({ ...district, description: "Where the enterprise is registered" }, { errorMessage: "This field is required" });
+      const radiogroup = wrapper.find('[role="radiogroup"]');
+      expect(radiogroup.attributes("aria-describedby")).toBe("q_desc_q_district");
+      expect(radiogroup.attributes("aria-invalid")).toBe("true");
+      expect(radiogroup.attributes("aria-errormessage")).toBe("q_err_q_district");
+      expect(wrapper.find("#q_err_q_district").exists()).toBe(true);
+    });
 
-      const label = wrapper.find("#q_label_q_sectors");
-      expect(label.exists()).toBe(true);
-
+    it("says a multi-select is required and invalid through its description, as a group allows", () => {
+      const wrapper = mountCard(sectors, { modelValue: [], errorMessage: "This field is required" });
       const group = wrapper.find('[role="group"]');
-      expect(group.exists()).toBe(true);
       expect(group.attributes("aria-labelledby")).toBe("q_label_q_sectors");
-      expect(group.attributes("aria-required")).toBe("true");
+      // ARIA 1.2 gives a group neither aria-required nor aria-invalid
+      expect(group.attributes("aria-required")).toBeUndefined();
+      expect(group.attributes("aria-invalid")).toBeUndefined();
+      expect(group.attributes("aria-describedby")).toBe("q_req_q_sectors q_err_q_sectors");
+      const required = wrapper.find("#q_req_q_sectors");
+      expect(required.text()).toBe(useTranslation().__("Required"));
+      expect(required.classes()).toContain("sr-only");
     });
 
-    it("renders grouped sub-question choice radiogroup with aria-required and aria-labelledby", () => {
+    it("does not describe an optional multi-select as required", () => {
+      const wrapper = mountCard({ ...sectors, is_mandatory: 0 }, { modelValue: [] });
+      expect(wrapper.find('[role="group"]').attributes("aria-describedby")).toBeUndefined();
+      expect(wrapper.find("#q_req_q_sectors").exists()).toBe(false);
+    });
+
+    it("names a sub-question's choices by its label, without the asterisk, and ties its error", () => {
       const group = {
         group_code: "g_operations",
         label_en: "Operations Group",
-        questions: [
-          {
-            question_code: "q_sub_1",
-            label_en: "Operating Status",
-            field_type: "Select",
-            options: ["Active", "Inactive"],
-            is_mandatory: 1,
-          },
-        ],
+        questions: [{ question_code: "q_sub_1", label_en: "Operating Status", field_type: "Select", options: ["Active", "Inactive"], is_mandatory: 1 }],
       };
-
-      const wrapper = mount(GroupedQuestionCard, {
-        props: {
-          group,
-          responses: {},
-        },
-      });
-
+      const wrapper = mount(GroupedQuestionCard, { props: { group, responses: {}, validationErrors: { q_sub_1: "This field is required" } } });
       const radiogroup = wrapper.find('[role="radiogroup"]');
-      expect(radiogroup.exists()).toBe(true);
       expect(radiogroup.attributes("aria-labelledby")).toBe("sub_label_q_sub_1");
+      expect(radiogroup.attributes("aria-label")).toBeUndefined();
       expect(radiogroup.attributes("aria-required")).toBe("true");
+      expect(radiogroup.attributes("aria-errormessage")).toBe("sub_err_q_sub_1");
+      expect(wrapper.find("#sub_err_q_sub_1").text()).toBe("This field is required");
+      expect(wrapper.find("#sub_label_q_sub_1 span").attributes("aria-hidden")).toBe("true");
+    });
+
+    it("names a scale's tap pills and a rating by the question, and marks them required", () => {
+      const scale = mountCard({ question_code: "q_confidence", label_en: "Confidence in bookkeeping", field_type: "Range", is_mandatory: 1 });
+      const pills = scale.find('[role="radiogroup"]');
+      expect(pills.attributes("aria-label")).toBe("Confidence in bookkeeping");
+      expect(pills.attributes("aria-required")).toBe("true");
+
+      const rating = mountCard({ question_code: "q_meeting", label_en: "SHG meeting quality", field_type: "Rating", is_mandatory: 1 });
+      const stars = rating.find('[role="radiogroup"]');
+      expect(stars.attributes("aria-label")).toBe("SHG meeting quality");
+      expect(stars.attributes("aria-required")).toBe("true");
+    });
+
+    it("names every matrix cell by its row and column, in both layouts", () => {
+      const matrix = {
+        question_code: "q_herd",
+        label_en: "Herd by season",
+        field_type: "Matrix",
+        columns: [
+          { key: "count", label: "Count", type: "number" },
+          { key: "value", label: "Value", type: "currency" },
+          { key: "breed", label: "Breed", type: "select", options: ["Gir", "Sahiwal"] },
+          { key: "notes", label: "Notes", type: "text" },
+        ],
+        rows: [{ id: "summer", label: "Summer" }],
+      };
+      const wrapper = mount(MatrixQuestionCard, { props: { question: matrix, modelValue: {} } });
+      for (const layout of ["table", "cards"]) {
+        const names = wrapper.findAll(`[data-matrix-layout=${layout}] [data-cell]`).map((c) => c.attributes("aria-label"));
+        expect(names, layout).toEqual(["Summer, Count", "Summer, Value", "Summer, Breed", "Summer, Notes"]);
+      }
     });
   });
 });

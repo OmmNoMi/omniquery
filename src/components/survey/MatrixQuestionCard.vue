@@ -131,6 +131,7 @@
                 </Button>
                 <TextInput
                   :data-cell="`${rIdx}_${cIdx}`"
+                  :aria-label="cellLabel(row, col)"
                   type="number"
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -154,6 +155,7 @@
                 </span>
                 <TextInput
                   :data-cell="`${rIdx}_${cIdx}`"
+                  :aria-label="cellLabel(row, col)"
                   type="number"
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -167,6 +169,7 @@
               <Select
                 v-else-if="col.type === 'select'"
                 :data-cell="`${rIdx}_${cIdx}`"
+                :aria-label="cellLabel(row, col)"
                 :options="col.options || []"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -179,6 +182,7 @@
               <TextInput
                 v-else
                 :data-cell="`${rIdx}_${cIdx}`"
+                :aria-label="cellLabel(row, col)"
                 type="text"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -253,6 +257,7 @@
               </Button>
               <TextInput
                 :data-cell="`${rIdx}_${cIdx}`"
+                :aria-label="cellLabel(row, col)"
                 type="number"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -276,6 +281,7 @@
               </span>
               <TextInput
                 :data-cell="`${rIdx}_${cIdx}`"
+                :aria-label="cellLabel(row, col)"
                 type="number"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -289,6 +295,7 @@
             <Select
               v-else-if="col.type === 'select'"
               :data-cell="`${rIdx}_${cIdx}`"
+              :aria-label="cellLabel(row, col)"
               :options="col.options || []"
               :modelValue="getCellValue(row.id, col.key)"
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -301,6 +308,7 @@
             <TextInput
               v-else
               :data-cell="`${rIdx}_${cIdx}`"
+              :aria-label="cellLabel(row, col)"
               type="text"
               :modelValue="getCellValue(row.id, col.key)"
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
@@ -539,6 +547,12 @@ function getColumnTotal(colKey) {
     }
   }
   return total;
+}
+
+// a cell's accessible name: its row and its column, which the table shows only as headers
+// and the phone layout as a row title and an unlinked label (#19)
+function cellLabel(row, col) {
+  return `${row.label}, ${col.label}`;
 }
 
 function getCellKey(rowId, colKey) {

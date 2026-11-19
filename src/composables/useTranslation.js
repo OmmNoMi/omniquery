@@ -37,6 +37,7 @@ const CORE_HINDI = {
   // the draft card resumes, the catalog card starts anew (#18)
   "Resume Survey": "सर्वेक्षण जारी रखें",
   "Start New": "नया शुरू करें",
+  "Required": "आवश्यक",
   "Start Survey →": "सर्वेक्षण शुरू करें →",
   "Select an active field survey to begin recording responses.": "प्रतिक्रियाएं दर्ज करने के लिए सक्रिय सर्वेक्षण चुनें।",
   "Workspaces": "कार्यक्षेत्र",

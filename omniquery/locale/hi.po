@@ -1767,6 +1767,10 @@ msgstr "सर्वेक्षण जारी रखें"
 msgid "Start New"
 msgstr "नया शुरू करें"
 
+#: src/components/survey/QuestionCard.vue
+msgid "Required"
+msgstr "आवश्यक"
+
 #. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
 #. Question'
 #. Label of the state (Data) field in DocType 'OmniQuery Respondent'

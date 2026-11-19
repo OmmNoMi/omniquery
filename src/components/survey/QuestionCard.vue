@@ -100,6 +100,7 @@
         :unit="rangeUnit"
         :format="rangeFormat"
         :ariaLabel="questionLabel"
+        :ariaRequired="Boolean(question.is_mandatory)"
         :ariaDescribedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
         @update:modelValue="onControlInput"
       />
@@ -110,6 +111,8 @@
         :id="'q_input_' + question.question_code"
         :modelValue="Number(modelValue) || 0"
         :maxStars="question.rating_max || 5"
+        :ariaLabel="questionLabel"
+        :ariaRequired="Boolean(question.is_mandatory)"
         @update:modelValue="onControlInput"
       />
 
@@ -170,13 +173,14 @@
             </div>
           </div>
 
+          <!-- a group (multi-select) cannot take aria-required, so it is described as Required (#19) -->
+          <span v-if="isMultiSelect && question.is_mandatory" :id="'q_req_' + question.question_code" class="sr-only">{{ __('Required') }}</span>
           <div
             class="grid gap-2.5"
             :class="displayedGridOptions.length === 2 ? 'grid-cols-2' : 'grid-cols-1 sm:grid-cols-2'"
             :role="isMultiSelect ? 'group' : 'radiogroup'"
             :aria-labelledby="'q_label_' + question.question_code"
-            :aria-label="parsedQuestionMeta.text"
-            :aria-required="Boolean(question.is_mandatory || question.reqd)"
+            v-bind="choiceGroupAttrs"
             @keydown="onGridKeydown"
           >
             <Button
@@ -518,6 +522,7 @@ import FCurrencyInput from "../common/FCurrencyInput.vue";
 import FCombobox from "../common/FCombobox.vue";
 import FRangeSlider from "../common/FRangeSlider.vue";
 import { choiceButtonProps } from "../../utils/choiceButton";
+import { choiceGroupState } from "../../utils/choiceGroup";
 import { choiceOptions, hasOptions } from "../../utils/cascadingOptions";
 
 const props = defineProps({
@@ -843,6 +848,18 @@ function setRangeFormat(fmt) {
     localStorage.setItem(`omniquery_range_format_${qId}`, fmt);
   }
 }
+
+// the choice grid's required state, help text and validation error (#19)
+const choiceGroupAttrs = computed(() => {
+  const code = props.question.question_code;
+  return choiceGroupState({
+    multi: isMultiSelect.value,
+    required: props.question.is_mandatory,
+    requiredId: `q_req_${code}`,
+    descriptionId: questionDescription.value ? `q_desc_${code}` : undefined,
+    errorId: props.errorMessage ? `q_err_${code}` : undefined,
+  });
+});
 
 const isMultiSelect = computed(() => {
   const category = (props.question.field_category || "").toLowerCase();

@@ -104,6 +104,14 @@ cost real time to learn. Add to it when you learn something new.
   box around frappe-ui's own input. Use its `size`/`variant` props (a survey answer is
   `size="lg" variant="outline"`), and keep `class` to layout (width, margin, flex).
   `test/guards/text_inputs.test.js` enforces it, with a shrinking per-file count.
+- A group of answer choices names itself with `aria-labelledby` pointing at the question's label,
+  not a second `aria-label` (`aria-labelledby` wins, so the other is dead text that drifts), and
+  marks the label's `*` `aria-hidden`. ARIA 1.2 allows `aria-required`, `aria-invalid` and
+  `aria-errormessage` on a `radiogroup` but not on a `group` (a multi-select), so a group says
+  "Required" and its error through `aria-describedby`. `choiceGroupState()` in
+  `src/utils/choiceGroup.js` returns the right set for either; `test/guards/choice_group_names.test.js`
+  checks every group is named once. In Vue 3 an aria attribute bound to `false` renders as
+  `"false"`, not removed, which is what `aria-required` and `aria-invalid` want.
 
 ## Offline queue and IndexedDB
 
