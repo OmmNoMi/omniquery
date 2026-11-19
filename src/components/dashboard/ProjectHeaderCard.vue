@@ -252,7 +252,7 @@ const projectList = computed(() => {
       id,
       project_name: t.project_name || t.project,
       grantor_organization: t.grantor_organization || "",
-      workspace_title: t.workspace_title || t.workspace || "",
+      workspace_title: t.workspace_title || "",
       description: t.project_description || t.description || "",
     });
   }

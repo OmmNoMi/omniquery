@@ -1,7 +1,10 @@
 import { ref, computed, watch } from "vue";
 
 const CORE_HINDI = {
-  "Active Field Project": "सक्रिय फ़ील्ड परियोजना",
+  // an OmniQuery Project's status, as the project page badge shows it (#16); "Completed" is below
+  "Draft": "प्रारूप",
+  "Active": "सक्रिय",
+  "Archived": "संग्रहीत",
   "Back to Dashboard": "डैशबोर्ड पर वापस जाएँ",
   "Breakdown table": "विवरण तालिका",
   "Direct telephone dispatch to field supervisor": "फ़ील्ड पर्यवेक्षक को सीधे फ़ोन करें",

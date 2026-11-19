@@ -106,3 +106,46 @@ describe("ProjectPage surveys (#15)", () => {
     expect(wrapper.text()).not.toContain(__("No published surveys found for this project"));
   });
 });
+
+describe("ProjectPage header (#16)", () => {
+  const WORKSPACE = "WS-SAMPLE";
+  const headerCard = (wrapper) => wrapper.find(".rounded-3xl").text();
+  // get_project_details still on its way, so the header shows what the cached templates know
+  function pendingDetails() {
+    let resolve;
+    call.mockReturnValue(new Promise((r) => (resolve = r)));
+    return (value) => resolve(value);
+  }
+
+  it("shows the project's own status from its templates, and does not change when the details load", async () => {
+    const resolveDetails = pendingDetails();
+    const wrapper = await mountPage([template({ project_status: "Completed", workspace: WORKSPACE, workspace_title: "Sample Workspace" })]);
+    const before = headerCard(wrapper);
+    expect(before).toContain(__("Completed"));
+    expect(before).toContain("Sample Workspace");
+
+    resolveDetails({ project: { name: PROJECT, project_name: "Sample Project", status: "Completed", workspace: WORKSPACE, workspace_title: "Sample Workspace" } });
+    await flushPromises();
+    expect(headerCard(wrapper)).toBe(before);
+  });
+
+  it("shows no made-up status before the project's status is known", async () => {
+    const resolveDetails = pendingDetails();
+    const wrapper = await mountPage([]);
+    expect(headerCard(wrapper)).not.toContain(__("Active"));
+
+    resolveDetails({ project: { name: PROJECT, project_name: "Sample Project", status: "Archived" } });
+    await flushPromises();
+    expect(headerCard(wrapper)).toContain(__("Archived"));
+  });
+
+  it("never shows the workspace's raw id, cached or loaded", async () => {
+    const resolveDetails = pendingDetails();
+    const wrapper = await mountPage([template({ project_status: "Active", workspace: WORKSPACE, workspace_title: "" })]);
+    expect(wrapper.text()).not.toContain(WORKSPACE);
+
+    resolveDetails({ project: { name: PROJECT, project_name: "Sample Project", status: "Active", workspace: WORKSPACE, workspace_title: "" } });
+    await flushPromises();
+    expect(wrapper.text()).not.toContain(WORKSPACE);
+  });
+});

@@ -111,6 +111,7 @@ export function useSurvey() {
           project_name: t.project_name || t.project,
           grantor_organization: t.grantor_organization || "",
           project_description: t.description || "",
+          project_status: t.project_status || "",
           version: t.version || 1,
           target_category: t.target_category || "Survey",
           workspace: t.workspace,
@@ -144,6 +145,7 @@ export function useSurvey() {
           schema.workspace_title = t.workspace_title;
           schema.grantor_organization = t.grantor_organization;
           schema.project_description = t.project_description;
+          schema.project_status = t.project_status;
           schema.response_title_format = t.response_title_format || schema.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})";
 
           // Persist full schema to IndexedDB
@@ -154,6 +156,7 @@ export function useSurvey() {
             project_name: t.project_name || t.project,
             grantor_organization: t.grantor_organization || "",
             description: t.project_description || "",
+            project_status: t.project_status || "",
             version: t.version || 1,
             target_category: t.target_category || "Survey",
             workspace: t.workspace,
@@ -172,6 +175,7 @@ export function useSurvey() {
             project_name: t.project_name || t.project,
             grantor_organization: t.grantor_organization || "",
             project_description: t.project_description || "",
+            project_status: t.project_status || "",
             version: t.version || 1,
             target_category: t.target_category || "Survey",
             workspace: t.workspace,
@@ -238,6 +242,8 @@ export function useSurvey() {
         project_name: schema.project_name || (payload && payload.project_name) || schema.project,
         grantor_organization: schema.grantor_organization || (payload && payload.grantor_organization) || "",
         description: schema.description || (payload && payload.description) || "",
+        // get_schema sends no project status either; the header shows the cached one offline (#16)
+        project_status: schema.project_status || (payload && payload.project_status) || (cached && cached.project_status) || "",
         version: schema.version || (payload && payload.version) || 1,
         target_category: schema.target_category || (payload && payload.target_category) || "Survey",
         workspace: schema.workspace || (payload && payload.workspace) || "",

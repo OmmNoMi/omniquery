@@ -245,8 +245,8 @@ describe("useSurvey", () => {
     expect(offline.isUnassigned.value).toBe(false);
   });
 
-  it("keeps the project's helpline and SOPs with the cached template, through a download and offline (#14)", async () => {
-    const help = { support_email: "help@example.org", helpline_phone: "+91 1800 000 111", sop_sections: "<p>Introduce yourself.</p>" };
+  it("keeps the project's helpline, SOPs and status with the cached template, through a download and offline (#14, #16)", async () => {
+    const help = { support_email: "help@example.org", helpline_phone: "+91 1800 000 111", sop_sections: "<p>Introduce yourself.</p>", project_status: "Completed" };
     const template = { name: "OQS-HELP-01", title: "Help Survey", project: "PROJ-HELP", version: 1, schema: { questions: [] }, ...help };
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: { templates: [template] } }) }));
 

@@ -55,6 +55,19 @@ describe("ProjectHeaderCard", () => {
     expect(wrapper.findAll("h1").map((h) => h.text())).toEqual(["Dairy Project", "Solar Energy Survey"]);
   });
 
+  it("names a workspace by its title, and never by its raw id (#16)", () => {
+    const templates = [
+      { project: "PROJ-A", project_name: "Dairy Project", workspace: "WS-A", workspace_title: "Dairy Cooperative", template_name: "T1" },
+      { project: "PROJ-B", project_name: "Solar Energy Survey", workspace: "WS-B", workspace_title: "", template_name: "T2" },
+    ];
+
+    const wrapper = mount(ProjectHeaderCard, { props: { templates, selectedProject: "ALL" } });
+
+    expect(wrapper.text()).toContain("Dairy Cooperative");
+    expect(wrapper.text()).not.toContain("WS-A");
+    expect(wrapper.text()).not.toContain("WS-B");
+  });
+
   it("renders multiple unique projects and emits select-project on change", async () => {
     const templates = [
       {

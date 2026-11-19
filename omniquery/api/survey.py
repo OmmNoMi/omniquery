@@ -114,20 +114,29 @@ def fetch_project_workspace_meta(project_ids):
 	projs = frappe.get_all(
 		"OmniQuery Project",
 		filters={"name": ["in", list(project_ids)]},
-		fields=["name", "project_name", "workspace", "grantor_organization", "description", *PROJECT_HELP_FIELDS],
+		fields=["name", "project_name", "status", "workspace", "grantor_organization", "description", *PROJECT_HELP_FIELDS],
 	)
 	p_map = {p.name: p for p in projs}
-	ws_ids = {p.workspace for p in projs if p.workspace}
-	workspaces = (
-		frappe.get_all(
-			"OmniQuery Workspace",
-			filters={"name": ["in", list(ws_ids)]},
-			fields=["name", "workspace_name", "workspace_title"],
-		)
-		if ws_ids
-		else []
+	return p_map, fetch_workspace_meta({p.workspace for p in projs})
+
+
+def fetch_workspace_meta(ws_ids) -> dict:
+	"""The workspaces' names and titles, by workspace id. Empty ids are skipped."""
+	ws_ids = [ws for ws in ws_ids if ws]
+	if not ws_ids:
+		return {}
+	workspaces = frappe.get_all(
+		"OmniQuery Workspace",
+		filters={"name": ["in", ws_ids]},
+		fields=["name", "workspace_name", "workspace_title"],
 	)
-	return p_map, {w.name: w for w in workspaces}
+	return {w.name: w for w in workspaces}
+
+
+def workspace_title(w_meta) -> str:
+	"""The workspace as the PWA names it: its title, else its name, never its raw id (#16)."""
+	w_meta = w_meta or {}
+	return w_meta.get("workspace_title") or w_meta.get("workspace_name") or ""
 
 
 def enrich_template_meta(tmpl, p_map, w_map):
@@ -137,8 +146,10 @@ def enrich_template_meta(tmpl, p_map, w_map):
 	tmpl["project_name"] = p_meta.get("project_name") or tmpl.project or ""
 	tmpl["grantor_organization"] = p_meta.get("grantor_organization") or ""
 	tmpl["project_description"] = p_meta.get("description") or ""
+	# the project's own status, so the project page header is right before its details load (#16)
+	tmpl["project_status"] = p_meta.get("status") or ""
 	tmpl["workspace"] = ws_id
-	tmpl["workspace_title"] = w_meta.get("workspace_title") or w_meta.get("workspace_name") or ws_id
+	tmpl["workspace_title"] = workspace_title(w_meta)
 	# cached with the template, so the helpline and SOPs still show offline (#14)
 	tmpl.update(project_help(p_meta))
 	return tmpl
@@ -310,6 +321,7 @@ def get_bootstrap_data():
 				"project_name": enriched.get("project_name") or t.project,
 				"grantor_organization": enriched.get("grantor_organization") or "",
 				"project_description": enriched.get("project_description") or "",
+				"project_status": enriched.get("project_status") or "",
 				"workspace": enriched.get("workspace") or "",
 				"workspace_title": enriched.get("workspace_title") or "",
 				**project_help(enriched),
@@ -397,12 +409,14 @@ def get_project_details(project_id=None):
 		return {}
 
 	proj.update(project_help(proj))
+	proj["workspace_title"] = workspace_title(fetch_workspace_meta([proj.workspace]).get(proj.workspace))
 	return {"project": proj}
 
 
 PROJECT_DETAIL_FIELDS = [
 	"name",
 	"project_name",
+	"status",
 	"grantor_organization",
 	"workspace",
 	"description",

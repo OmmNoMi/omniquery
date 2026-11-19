@@ -30,14 +30,16 @@
             <Landmark class="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" />
             <span>{{ projectMeta.name || projectId }}</span>
           </span>
-          <span class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 shrink-0">
-            {{ projectMeta.status || __('Active Field Project') }}
+          <!-- the project's own status, sent with its templates, so the badge does not change on load (#16) -->
+          <span v-if="projectMeta.status" class="px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold border border-slate-200 dark:border-slate-700 shrink-0">
+            {{ __(projectMeta.status) }}
           </span>
         </div>
 
-        <span v-if="projectMeta.workspace" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
+        <!-- the workspace's title only, never its raw id (#16) -->
+        <span v-if="projectMeta.workspace_title" class="text-xs text-slate-500 dark:text-slate-400 font-medium truncate flex items-center gap-1">
           <Building2 class="w-3.5 h-3.5 text-slate-400" />
-          <span>{{ projectMeta.workspace_title || projectMeta.workspace }}</span>
+          <span>{{ projectMeta.workspace_title }}</span>
         </span>
       </div>
 
@@ -355,7 +357,7 @@ const projectMeta = computed(() => {
       description: match.project_description || match.description || "",
       workspace: match.workspace || "",
       workspace_title: match.workspace_title || "",
-      status: match.project_status || match.status || "Active",
+      status: match.project_status || "",
       ...projectHelp(match),
     };
   }
@@ -366,7 +368,7 @@ const projectMeta = computed(() => {
     description: "",
     workspace: "",
     workspace_title: "",
-    status: "Active",
+    status: "",
     ...projectHelp({}),
   };
 });

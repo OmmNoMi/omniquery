@@ -2,11 +2,12 @@ import unittest
 
 import frappe
 
-from omniquery.api.survey import get_bootstrap_data, get_project_details, list_active_templates
+from omniquery.api.survey import get_bootstrap_data, get_project_details, list_active_templates, workspace_title
 from omniquery.tests.utils import delete_test_docs
 
 PROJECT = "Sample Enterprise Project"
 TEMPLATE = "Sample Test Survey Unit"
+WORKSPACE = "Sample Workspace Unit"
 SOP = "<p>Introduce yourself before the first question.</p>"
 
 
@@ -69,6 +70,37 @@ class TestProjectAPI(unittest.TestCase):
 		self.assertEqual(get_project_details("NON_EXISTENT_PROJECT_XYZ"), {})
 		self.assertEqual(get_project_details(), {})
 
+	def test_details_and_templates_carry_the_projects_own_status(self):
+		# the project page header shows this before its details load, so both must agree (#16)
+		frappe.db.set_value("OmniQuery Project", self.project, "status", "Completed")
+		self._submit_template()
+		self.assertEqual(get_project_details(self.project)["project"]["status"], "Completed")
+		for template in (self._listed_template(), self._bootstrap_template()):
+			self.assertEqual(template["project_status"], "Completed")
+
+	def test_the_workspace_is_named_by_its_title_or_name_never_its_id(self):
+		# #16: a workspace with no title showed its raw id in the project header
+		workspace = frappe.get_doc(
+			{"doctype": "OmniQuery Workspace", "workspace_name": WORKSPACE, "workspace_admin": "Administrator"}
+		).insert(ignore_permissions=True)
+		frappe.db.set_value("OmniQuery Project", self.project, "workspace", workspace.name)
+		self._submit_template()
+		for project_or_template in self._project_and_templates():
+			self.assertEqual(project_or_template["workspace_title"], WORKSPACE)
+
+		workspace.db_set("workspace_title", "Sample Workspace Title")
+		for project_or_template in self._project_and_templates():
+			self.assertEqual(project_or_template["workspace_title"], "Sample Workspace Title")
+
+		# with neither, nothing to show rather than the id
+		self.assertEqual(workspace_title({"name": workspace.name, "workspace_name": "", "workspace_title": ""}), "")
+		self.assertEqual(workspace_title(None), "")
+
+	def test_a_project_without_a_workspace_has_no_workspace_title(self):
+		self._submit_template()
+		for project_or_template in self._project_and_templates():
+			self.assertEqual(project_or_template["workspace_title"], "")
+
 	def tearDown(self):
 		self._cleanup_test_records()
 
@@ -90,11 +122,15 @@ class TestProjectAPI(unittest.TestCase):
 	def _bootstrap_template(self):
 		return next(t for t in get_bootstrap_data()["templates"] if t["title"] == TEMPLATE)
 
+	def _project_and_templates(self):
+		return get_project_details(self.project)["project"], self._listed_template(), self._bootstrap_template()
+
 	def _cleanup_test_records(self):
 		delete_test_docs(
 			[
 				("OmniQuery Template", {"title": TEMPLATE}),
 				("OmniQuery Project", {"project_name": PROJECT}),
+				("OmniQuery Workspace", {"workspace_name": WORKSPACE}),
 			]
 		)
 		frappe.db.commit()
