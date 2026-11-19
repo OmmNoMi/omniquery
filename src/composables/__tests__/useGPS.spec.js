@@ -1,69 +1,72 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { useGPS } from "../useGPS";
+import { fakeGeolocation, positionError } from "../../test/geolocation";
 
+// What a response records about its location: the fix, or why there is none (#27)
 describe("useGPS", () => {
-  beforeEach(() => {
+  let restore;
+  afterEach(() => {
+    restore?.();
     vi.restoreAllMocks();
   });
 
-  it("handles unsupported environment gracefully", () => {
-    const originalGeo = navigator.geolocation;
-    Object.defineProperty(navigator, "geolocation", {
-      value: undefined,
-      configurable: true,
-    });
-
-    const { gpsStatus, captureGPS } = useGPS();
+  it("reports a browser without geolocation as Unsupported", () => {
+    restore = fakeGeolocation(undefined);
+    const { gpsStatus, gpsReport, captureGPS } = useGPS();
     captureGPS();
     expect(gpsStatus.value).toBe("unsupported");
-
-    Object.defineProperty(navigator, "geolocation", {
-      value: originalGeo,
-      configurable: true,
-    });
+    expect(gpsReport.value).toEqual({ status: "Unsupported" });
   });
 
-  it("captures high accuracy latitude and longitude successfully", () => {
-    const mockGeolocation = {
-      getCurrentPosition: vi.fn((success) => {
-        success({
-          coords: {
-            latitude: 26.9124,
-            longitude: 75.7873,
-            accuracy: 8.4,
-          },
-        });
-      }),
-    };
+  it("reports Not captured before the surveyor asks for a location", () => {
+    expect(useGPS().gpsReport.value).toEqual({ status: "Not captured" });
+  });
 
-    Object.defineProperty(navigator, "geolocation", {
-      value: mockGeolocation,
-      configurable: true,
-    });
-
-    const { gpsStatus, gpsCoords, gpsAccuracy, captureGPS } = useGPS();
+  it("records the fix with its accuracy, rounded to the metre", () => {
+    restore = fakeGeolocation({ latitude: 26.9124, longitude: 75.7873, accuracy: 8.4 });
+    const { gpsStatus, gpsReport, captureGPS } = useGPS();
     captureGPS();
-
     expect(gpsStatus.value).toBe("success");
-    expect(gpsCoords.value).toEqual({ latitude: 26.9124, longitude: 75.7873 });
-    expect(gpsAccuracy.value).toBe(8);
+    expect(gpsReport.value).toEqual({ latitude: 26.9124, longitude: 75.7873, accuracy: 8, status: "Captured" });
   });
 
-  it("sets error status on geolocation rejection or timeout", () => {
-    const mockGeolocation = {
-      getCurrentPosition: vi.fn((_, error) => {
-        error({ code: 1, message: "User denied Geolocation" });
-      }),
-    };
+  it("keeps a coordinate of 0 and an accuracy of 0", () => {
+    restore = fakeGeolocation({ latitude: 0, longitude: 32.5, accuracy: 0 });
+    const { gpsReport, captureGPS } = useGPS();
+    captureGPS();
+    expect(gpsReport.value).toEqual({ latitude: 0, longitude: 32.5, accuracy: 0, status: "Captured" });
+  });
 
-    Object.defineProperty(navigator, "geolocation", {
-      value: mockGeolocation,
-      configurable: true,
-    });
+  it.each([
+    [1, "denied", "Denied"],
+    [2, "unavailable", "Unavailable"],
+    [3, "timeout", "Timed out"],
+  ])("names error code %i as %s and reports it as %s", (code, state, status) => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    restore = fakeGeolocation(positionError(code));
+    const { gpsStatus, gpsReport, captureGPS } = useGPS();
+    captureGPS();
+    expect(gpsStatus.value).toBe(state);
+    expect(gpsReport.value).toEqual({ status });
+  });
 
+  it("reads the error code, not the browser's wording", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    restore = fakeGeolocation(positionError(2, "User denied access to the GPS chip"));
     const { gpsStatus, captureGPS } = useGPS();
     captureGPS();
+    expect(gpsStatus.value).toBe("unavailable");
+  });
 
-    expect(gpsStatus.value).toBe("error");
+  it("keeps the last fix when a retry fails", () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    restore = fakeGeolocation({ latitude: 26.9, longitude: 75.8, accuracy: 5 });
+    const { gpsStatus, gpsReport, captureGPS } = useGPS();
+    captureGPS();
+    restore();
+    restore = fakeGeolocation(positionError(3));
+    captureGPS();
+    expect(gpsStatus.value).toBe("timeout");
+    expect(gpsReport.value).toEqual({ latitude: 26.9, longitude: 75.8, accuracy: 5, status: "Captured" });
   });
 });

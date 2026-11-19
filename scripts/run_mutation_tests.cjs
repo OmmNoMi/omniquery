@@ -1,128 +1,1951 @@
 #!/usr/bin/env node
-const fs = require('node:fs');
-const path = require('node:path');
-const { execSync } = require('node:child_process');
+// Each mutant breaks one rule in the real source, runs the test that guards it, and restores the file.
+// A test that still passes has stopped guarding its rule. Backend mutants need the bench and site up.
+const fs = require("node:fs");
+const path = require("node:path");
+const { spawnSync } = require("node:child_process");
 
-console.log('===========================================================');
-console.log('   OmniQuery Automated Mutation Testing Framework (TDD++) ');
-console.log('===========================================================\n');
+const appDir = path.resolve(__dirname, "..");
+const benchDir = path.resolve(appDir, "..", "..");
+const site = process.env.SITE || "ommnomi.local";
+const src = (...parts) => path.join(appDir, ...parts);
 
-const omniqueryDir = path.resolve(__dirname, '..');
-const benchDir = path.resolve(omniqueryDir, '..', '..');
-const sitesDir = path.resolve(benchDir, 'sites');
+const vitest = (file) => ({
+  cmd: "npx",
+  args: ["vitest", "run", file],
+  cwd: appDir,
+});
+const benchTest = (module) => ({
+  cmd: "bench",
+  args: ["--site", site, "run-tests", "--app", "omniquery", "--module", module],
+  cwd: benchDir,
+});
 
-const syncPyPath = path.resolve(omniqueryDir, 'omniquery', 'api', 'sync.py');
-const fSwitchPath = path.resolve(omniqueryDir, 'src', 'components', 'common', 'FSwitch.vue');
-const questionCardPath = path.resolve(omniqueryDir, 'src', 'components', 'survey', 'QuestionCard.vue');
-const useWalPath = path.resolve(omniqueryDir, 'src', 'composables', 'useWAL.js');
-
-let totalMutants = 0;
-let killedMutants = 0;
-let survivingMutants = 0;
-
-function runMutationTest(name, fileToMutate, mutator, testCmd, cwd = omniqueryDir) {
-  totalMutants++;
-  console.log(`[Mutant #${totalMutants}] Testing: ${name}`);
-  const originalContent = fs.readFileSync(fileToMutate, 'utf8');
-
-  try {
-    // 1. Inoculate / apply mutation
-    const mutatedContent = mutator(originalContent);
-    if (mutatedContent === originalContent) {
-      throw new Error(`Mutator failed to change content for: ${name}`);
-    }
-    fs.writeFileSync(fileToMutate, mutatedContent, 'utf8');
-
-    // 2. Run the test command
-    let testPassed = false;
-    let testOutput = '';
-    try {
-      testOutput = execSync(testCmd, { cwd, stdio: 'pipe' }).toString();
-      testPassed = true;
-    } catch (err) {
-      testPassed = false;
-      testOutput = (err.stdout ? err.stdout.toString() : '') + (err.stderr ? err.stderr.toString() : '');
-    }
-
-    // 3. Evaluate mutation result
-    if (testPassed) {
-      console.error(`  ❌ SURVIVED: The test suite passed despite the intentional mutation!`);
-      survivingMutants++;
-    } else {
-      console.log(`  🎯 KILLED: Test turned RED as expected and caught the regression.`);
-      killedMutants++;
-    }
-  } finally {
-    // 4. Always restore original content cleanly
-    fs.writeFileSync(fileToMutate, originalContent, 'utf8');
-  }
+// [find, replace] that moves the block from marker `a` up to `b` down to just before `c`: a mutant
+// that changes the order of sections without editing either one
+function moveBlockBelow(file, a, b, c) {
+  const text = fs.readFileSync(file, "utf8");
+  const [start, middle, end] = [a, b, c].map((marker) => text.indexOf(marker));
+  if (!(start >= 0 && start < middle && middle < end)) return [`${a} missing or out of order`, ""];
+  return [text.slice(start, end), text.slice(middle, end) + text.slice(start, middle)];
 }
 
-// Mutant 1: Invert duplicate skip logic in batch_push (Backend Idempotency Gate)
-runMutationTest(
-  'Duplicate submission check inverted in batch_push (Gate 1 Security / Idempotency)',
-  syncPyPath,
-  (code) => code.replace(
-    'if existing_status in ["Submitted", "Supervisor Verified", "Audit Flagged", "Approved"]:',
-    'if False and existing_status in ["Submitted", "Supervisor Verified", "Audit Flagged", "Approved"]:'
-  ),
-  'bench --site ommnomi.local run-tests --module omniquery.tests.test_idempotent_sync',
-  sitesDir
-);
-
-// Mutant 2: Bypass Guest authorization in upload_response_audio (Gate 1 Security IDOR)
-runMutationTest(
-  'Guest permission check bypassed in upload_response_audio (Gate 1 Security IDOR)',
-  syncPyPath,
-  (code) => code.replace(
+// [guard, description, file, find, replace, test]
+const MUTANTS = [
+  [
+    "no-glyph",
+    "glyph in FSwitch.vue",
+    src("src/components/common/FSwitch.vue"),
+    "cursor-pointer",
+    "cursor-pointer ⚡",
+    vitest("test/guards/no_glyphs.test.js"),
+  ],
+  [
+    "no-raw-control",
+    "raw <button> in FSwitch.vue",
+    src("src/components/common/FSwitch.vue"),
+    "<template>",
+    "<template>\n  <button>Raw</button>",
+    vitest("test/guards/no_raw_controls.test.js"),
+  ],
+  [
+    "thin-shell",
+    "inline <style> in omniquery.html",
+    src("omniquery/www/omniquery.html"),
+    "</head>",
+    "<style>body{}</style>\n</head>",
+    vitest("test/guards/thin_shell.test.js"),
+  ],
+  [
+    "thin-shell",
+    "app markup in the #app mount",
+    src("omniquery/www/omniquery.html"),
+    '<div id="app">',
+    '<div id="app">\n    <header>OmniQuery</header>',
+    vitest("test/guards/thin_shell.test.js"),
+  ],
+  [
+    "shared-useWAL",
+    "useWAL no longer shared",
+    src("src/composables/useWAL.js"),
+    "createSharedComposable(createWAL)",
+    "createWAL",
+    vitest("src/composables/__tests__/useWAL.shared.spec.js"),
+  ],
+  [
+    "escape-one-layer",
+    "a window Escape listener closes the sync queue",
+    src("src/App.vue"),
+    "const s = provideSurveyApp();",
+    'const s = provideSurveyApp();\nwindow.addEventListener("keydown", (e) => { if (e.key === "Escape") s.showWALDrawer = false; });',
+    vitest("src/__tests__/App.spec.js"),
+  ],
+  [
+    "contrast",
+    "text-slate-300 on a light surface",
+    src("src/components/common/FSwitch.vue"),
+    "text-slate-800",
+    "text-slate-300",
+    vitest("test/guards/contrast.test.js"),
+  ],
+  [
+    "contrast",
+    "light-mode hover:text-slate-200",
+    src("src/components/common/FSwitch.vue"),
+    "text-slate-800",
+    "text-slate-800 hover:text-slate-200",
+    vitest("test/guards/contrast.test.js"),
+  ],
+  [
+    "accessibility",
+    'role="switch" removed from FSwitch.vue',
+    src("src/components/common/FSwitch.vue"),
+    'role="switch"',
+    'role="generic-button"',
+    vitest("src/components/__tests__/AccessibilityGates.spec.js"),
+  ],
+  [
+    "accessibility",
+    "label :for stripped in QuestionCard.vue",
+    src("src/components/survey/QuestionCard.vue"),
+    `:for="'q_input_' + question.question_code"`,
+    "",
+    vitest("src/components/__tests__/AccessibilityGates.spec.js"),
+  ],
+  [
+    "offline-wal",
+    "db.wal.add omitted in queueWAL",
+    src("src/composables/useWAL.js"),
+    "await db.wal.add(walEntry);",
+    "/* omitted */",
+    vitest("src/composables/__tests__/useWAL.spec.js"),
+  ],
+  [
+    "copy-dialogs",
+    "native window.confirm in FilledFormsModal.vue",
+    src("src/components/dashboard/FilledFormsModal.vue"),
+    "draftToDiscard.value = responseUid;",
+    'if (!window.confirm("Discard?")) return;\n  draftToDiscard.value = responseUid;',
+    vitest("test/guards/copy_and_dialogs.test.js"),
+  ],
+  [
+    "copy-dialogs",
+    "Title Case label in FilledFormsModal.vue",
+    src("src/components/dashboard/FilledFormsModal.vue"),
+    'title: __("Discard saved draft?"),',
+    'title: __("Discard Saved Draft?"),',
+    vitest("test/guards/copy_and_dialogs.test.js"),
+  ],
+  [
+    "copy-dialogs",
+    "WAL jargon back in CompactHeader.vue",
+    src("src/components/header/CompactHeader.vue"),
+    "{{ __('Waiting to upload') }}",
+    "{{ __('WAL Queue') }}",
+    vitest("test/guards/copy_and_dialogs.test.js"),
+  ],
+  [
+    "copy-dialogs",
+    "__() fallback in CompactHeader.vue",
+    src("src/components/header/CompactHeader.vue"),
+    "{{ __('Waiting to upload') }}",
+    "{{ __('Waiting to upload') || 'Waiting to upload' }}",
+    vitest("test/guards/copy_and_dialogs.test.js"),
+  ],
+  [
+    "copy-dialogs",
+    "not-downloaded toast dropped in useSurveyApp.js",
+    src("src/composables/useSurveyApp.js"),
+    'toast.warning(__("This survey is not yet downloaded',
+    'void (__("This survey is not yet downloaded',
+    vitest("src/__tests__/App.spec.js"),
+  ],
+  [
+    "copy-dialogs",
+    "FrappeUIProvider not registered in App.vue (no toast viewport)",
+    src("src/App.vue"),
+    'import { Alert, Button, Dialog, FrappeUIProvider } from "frappe-ui";',
+    'import { Alert, Button, Dialog } from "frappe-ui";',
+    vitest("src/__tests__/App.spec.js"),
+  ],
+  [
+    "copy-dialogs",
+    "draft discarded without asking",
+    src("src/components/dashboard/FilledFormsModal.vue"),
+    "draftToDiscard.value = responseUid;",
+    "db.responses.delete(responseUid).then(loadResponses).then(() => emit(\"drafts-changed\"));",
+    vitest("src/components/__tests__/FilledFormsDraftSync.spec.js"),
+  ],
+  [
+    "idempotency",
+    "batch_push re-saves a submitted response",
+    src("omniquery/api/sync.py"),
+    'if frappe.db.get_value("OmniQuery Response", doc_name, "docstatus") == 1:',
+    "if False:",
+    benchTest("omniquery.tests.test_idempotent_sync"),
+  ],
+  [
+    "security",
+    "Guest check bypassed in upload_response_audio",
+    src("omniquery/api/sync.py"),
     'if current_user == "Guest":',
-    'if False and current_user == "Guest":'
-  ),
-  'bench --site ommnomi.local run-tests --module omniquery.tests.test_security_gates',
-  sitesDir
-);
+    "if False:",
+    benchTest("omniquery.tests.test_security_gates"),
+  ],
+  [
+    "focus-rings",
+    "frappe-ui ring token left at a colour under 3:1",
+    src("src/styles/main.css"),
+    '--outline-gray-3: theme("colors.emerald.600");',
+    '--outline-gray-3: theme("colors.slate.300");',
+    vitest("test/guards/focus_rings.test.js"),
+  ],
+  [
+    "focus-rings",
+    "question card focus ring thinned to 1px",
+    src("src/components/survey/QuestionCard.vue"),
+    "focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default",
+    "focus-visible:ring-1 focus-visible:ring-outline-gray-3 cursor-default",
+    vitest("test/guards/focus_rings.test.js"),
+  ],
+  [
+    "focus-rings",
+    "question card ring in its own colour, not the shared token",
+    src("src/components/survey/QuestionCard.vue"),
+    "focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default",
+    "focus-visible:ring-2 focus-visible:ring-emerald-500 cursor-default",
+    vitest("test/guards/focus_rings.test.js"),
+  ],
+  [
+    "focus-rings",
+    "dead focus class on a frappe-ui TextInput",
+    src("src/views/Catalog.vue"),
+    'class="flex-1"',
+    'class="flex-1 focus:border-emerald-500"',
+    vitest("test/guards/focus_rings.test.js"),
+  ],
+  [
+    "button-variants",
+    "colour classes back on a frappe-ui Button (white on near-white)",
+    src("src/components/survey/SectionCard.vue"),
+    ':iconRight="ArrowRight"\n            class="shrink-0"',
+    ':iconRight="ArrowRight"\n            class="shrink-0 bg-emerald-600 text-white"',
+    vitest("test/guards/button_variants.test.js"),
+  ],
+  [
+    "button-variants",
+    "a Button themed green, which is 1.5:1 in dark mode",
+    src("src/components/survey/SectionCard.vue"),
+    ":variant=\"autoAdvance || isFullForm ? 'subtle' : 'outline'\"",
+    ":variant=\"autoAdvance || isFullForm ? 'subtle' : 'outline'\"\n          :theme=\"autoAdvance || isFullForm ? 'green' : 'gray'\"",
+    vitest("test/guards/button_variants.test.js"),
+  ],
+  [
+    "button-variants",
+    "a selected answer drawn in solid green (3.1:1)",
+    src("src/utils/choiceButton.js"),
+    '{ variant: "outline", theme: "gray", class: CHOICE_SELECTED_CLASS }',
+    '{ variant: "outline", theme: "green", class: CHOICE_SELECTED_CLASS }',
+    vitest("test/guards/button_variants.test.js"),
+  ],
+  [
+    "button-variants",
+    "the allowlist raised instead of fixing the Buttons",
+    src("test/guards/button_variants.test.js"),
+    '"src/App.vue": 2,',
+    '"src/App.vue": 3,',
+    vitest("test/guards/button_variants.test.js"),
+  ],
+  [
+    "button-variants",
+    "a selected answer choice loses its green look",
+    src("src/utils/choiceButton.js"),
+    '{ variant: "outline", theme: "gray", class: CHOICE_SELECTED_CLASS }\n    :',
+    '{ variant: "outline", theme: "gray" }\n    :',
+    vitest("test/guards/button_variants.test.js"),
+  ],
+  [
+    "button-variants",
+    "every answer choice drawn as selected",
+    src("src/utils/choiceButton.js"),
+    ': { variant: "outline", theme: "gray" };',
+    ': { variant: "outline", theme: "gray", class: CHOICE_SELECTED_CLASS };',
+    vitest("test/guards/button_variants.test.js"),
+  ],
+  [
+    "button-variants",
+    "selected choice text too faint to read in sunlight (emerald-500 on emerald-50)",
+    src("src/styles/main.css"),
+    'color: theme("colors.emerald.900");',
+    'color: theme("colors.emerald.500");',
+    vitest("test/guards/button_variants.test.js"),
+  ],
+  [
+    "button-variants",
+    "selected choice edge lost on a dark card (emerald-800)",
+    src("src/styles/main.css"),
+    'border-color: theme("colors.emerald.400");',
+    'border-color: theme("colors.emerald.800");',
+    vitest("test/guards/button_variants.test.js"),
+  ],
+  [
+    "text-inputs",
+    "a survey text answer styled as a box around frappe-ui's input again",
+    src("src/components/survey/QuestionCard.vue"),
+    'variant="outline"\n        class="w-full"\n      />\n    </div>',
+    'variant="outline"\n        class="w-full rounded-xl border border-slate-300 bg-white px-4"\n      />\n    </div>',
+    vitest("test/guards/text_inputs.test.js"),
+  ],
+  [
+    "text-inputs",
+    "the guard reads padding and height as layout",
+    src("test/guards/text_inputs.test.js"),
+    "block|inline-block|hidden|flex|contents)$/;",
+    "block|inline-block|hidden|flex|contents|min-h-.+|p[xy]?-.+)$/;",
+    vitest("test/guards/text_inputs.test.js"),
+  ],
+  [
+    "text-inputs",
+    "the TextInput allowlist raised instead of fixing the input",
+    src("test/guards/text_inputs.test.js"),
+    '"src/components/common/FRangeSlider.vue": 1,',
+    '"src/components/common/FRangeSlider.vue": 2,',
+    vitest("test/guards/text_inputs.test.js"),
+  ],
+  [
+    "button-names",
+    "Close settings named with aria-label, which frappe-ui Button drops",
+    src("src/components/header/CompactHeader.vue"),
+    ":label=\"__('Close settings')\"",
+    "aria-label=\"Close settings\"",
+    vitest("test/guards/button_names.test.js"),
+  ],
+  [
+    "button-names",
+    "the guard ignores a Button imported under another name",
+    src("test/guards/frappeButtons.js"),
+    '.filter(([, exported]) => exported === "Button").map(([local]) => local)',
+    '.filter(([local, exported]) => exported === "Button" && local === "Button").map(([local]) => local)',
+    vitest("test/guards/button_names.test.js"),
+  ],
+  [
+    "button-names",
+    "the guard lets an icon-only Button with no name through",
+    src("test/guards/button_names.test.js"),
+    "(buttons.has(node) ? !isNamed(node) : setsAriaLabel(node) && !hasProp(node, \"label\"))",
+    "(buttons.has(node) ? !isNamed(node) && setsAriaLabel(node) : setsAriaLabel(node) && !hasProp(node, \"label\"))",
+    vitest("test/guards/button_names.test.js"),
+  ],
+  [
+    "button-names",
+    "the guard counts aria-hidden text as a name",
+    src("test/guards/button_names.test.js"),
+    "if (node.type !== NODE.ELEMENT || isHidden(node)) return false;",
+    "if (node.type !== NODE.ELEMENT) return false;",
+    vitest("test/guards/button_names.test.js"),
+  ],
+  [
+    "button-names",
+    "the project arrows lose their Hindi name",
+    src("src/composables/useTranslation.js"),
+    '  "Next project": "अगला प्रोजेक्ट",\n',
+    "",
+    vitest("src/components/__tests__/ProjectHeaderCard.spec.js"),
+  ],
+  [
+    "button-variants",
+    "the Download button gets its emerald colour classes back",
+    src("src/components/dashboard/ProjectHeaderCard.vue"),
+    ':iconLeft="Download"\n',
+    ':iconLeft="Download"\n              class="bg-emerald-50 text-emerald-800"\n',
+    vitest("test/guards/button_variants.test.js"),
+  ],
+  [
+    "text-size",
+    "new text under 12px",
+    src("src/views/Catalog.vue"),
+    '<p class="text-xs text-slate-600 dark:text-slate-400">',
+    '<p class="text-[10px] text-slate-600 dark:text-slate-400">',
+    vitest("test/guards/text_size.test.js"),
+  ],
+  [
+    "contrast",
+    "Survey options header back to slate-400",
+    src("src/components/survey/SurveyModeMenu.vue"),
+    "text-sm font-medium text-ink-gray-5",
+    "text-sm font-medium text-slate-400",
+    vitest("test/guards/contrast.test.js"),
+  ],
+  [
+    "catalog-search",
+    "search field loses its accessible name",
+    src("src/views/Catalog.vue"),
+    ":aria-label=\"__('Search surveys')\"",
+    "",
+    vitest("src/components/__tests__/SearchContrastDark.spec.js"),
+  ],
+  [
+    "catalog-search",
+    "Clear search leaves focus on the page",
+    src("src/views/Catalog.vue"),
+    "searchInput.value?.el?.focus();",
+    "",
+    vitest("src/components/__tests__/SearchContrastDark.spec.js"),
+  ],
+  [
+    "catalog-search",
+    "empty state loses its dark-mode surface",
+    src("src/views/Catalog.vue"),
+    " data-empty-templates class=\"p-8 text-center bg-white dark:bg-slate-900",
+    " data-empty-templates class=\"p-8 text-center bg-white",
+    vitest("src/components/__tests__/SearchContrastDark.spec.js"),
+  ],
+  [
+    "card-escape",
+    "a field's Escape bubbles past its card and closes focus mode",
+    src("src/composables/useCardEscape.js"),
+    "    event.stopPropagation();\n",
+    "",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "card-escape",
+    "Escape on the card itself is swallowed, so focus mode never closes",
+    src("src/composables/useCardEscape.js"),
+    "if (!cardRef.value || event.target === cardRef.value) return;",
+    "if (!cardRef.value) return;",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "card-escape",
+    "QuestionCard stops every Escape at its root",
+    src("src/components/survey/QuestionCard.vue"),
+    '@keydown.esc="onCardEscape"',
+    '@keydown.esc.stop="onCardEscape"',
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "card-escape",
+    "MatrixQuestionCard no longer hands a cell's Escape to its card",
+    src("src/components/survey/MatrixQuestionCard.vue"),
+    '@keydown.esc="onCardEscape"',
+    "",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "mode-menu",
+    "a settings toggle closes the Survey Mode menu",
+    src("src/components/survey/SurveyModeMenu.vue"),
+    "  event.preventDefault();\n  emit(`toggle-${toggle.key}`);",
+    "  emit(`toggle-${toggle.key}`);",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "mode-menu",
+    "a toggle no longer tells screen readers whether it is on",
+    src("src/components/survey/SurveyModeMenu.vue"),
+    ':modelValue="toggle.checked"',
+    ':modelValue="false"',
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "mode-menu",
+    "Focus form emits before the menu returns focus, so focus mode closes to <body>",
+    src("src/components/survey/SurveyModeMenu.vue"),
+    "    pendingToggle = toggle.key;\n    return;",
+    "    emit(`toggle-${toggle.key}`);\n    return;",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "mode-menu",
+    "the Focus form item no longer exits focus mode",
+    src("src/components/survey/FocusModeModal.vue"),
+    "@toggle-focus-mode=\"emit('close')\"",
+    "",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the logo link swallows cmd/ctrl-click, so it cannot open a new tab",
+    src("src/components/header/CompactHeader.vue"),
+    '@click.left.exact.prevent="$emit(\'home\')"',
+    '@click.prevent="$emit(\'home\')"',
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the logo icon is announced as well as the wordmark",
+    src("src/components/header/CompactHeader.vue"),
+    'alt=""\n            class="w-7 h-7 rounded-lg shadow-xs"',
+    'alt="OmniQuery"\n            class="w-7 h-7 rounded-lg shadow-xs"',
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the My Account link is shorter than 24px",
+    src("src/components/header/CompactHeader.vue"),
+    'href="/me" class="font-bold text-ink-gray-8 underline underline-offset-2 flex items-center gap-1 min-h-6',
+    'href="/me" class="font-bold text-ink-gray-8 underline underline-offset-2 flex items-center gap-1',
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the settings close button shrinks to 16px",
+    src("src/components/header/CompactHeader.vue"),
+    '<Button variant="ghost" size="md" :icon="X"',
+    '<Button variant="ghost" size="md" class="!h-4" :icon="X"',
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the draft card goes back below the Daily Target strip and KPI tiles",
+    src("src/components/dashboard/SurveyorDashboard.vue"),
+    ...moveBlockBelow(
+      src("src/components/dashboard/SurveyorDashboard.vue"),
+      "    <!-- Active draft quick-resume card",
+      "    <!-- Not in any project yet",
+      "    <!-- Quick Access to Filled Forms",
+    ),
+    vitest("src/components/__tests__/SurveyorDashboard.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "Resume drops to a small 28px button",
+    src("src/components/dashboard/SurveyorDashboard.vue"),
+    'size="md"\n            :iconLeft="Play"',
+    'size="sm"\n            :iconLeft="Play"',
+    vitest("src/components/__tests__/SurveyorDashboard.spec.js"),
+  ],
+  [
+    "mobile-375",
+    "the short details label is split into two translated pieces again",
+    src("src/components/dashboard/ProjectHeaderCard.vue"),
+    "<span class=\"sm:hidden\">{{ __('Project details') }}</span>",
+    "<span class=\"sm:hidden\">{{ __('Project') }} {{ __('details') }}</span>",
+    vitest("src/components/__tests__/ProjectHeaderCard.spec.js"),
+  ],
+  [
+    "settings-dialog",
+    "the settings sheet is a hand-rolled overlay again, so Escape and focus return are gone",
+    src("src/components/header/CompactHeader.vue"),
+    "<Dialog v-model=\"showConfigModal\" :options=\"{ size: 'md' }\">\n      <template #body>",
+    "<Teleport to=\"body\"><div v-if=\"showConfigModal\" role=\"dialog\">\n      <template v-if=\"true\">",
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "settings-dialog",
+    "closing settings never gives focus back to the avatar",
+    src("src/components/header/CompactHeader.vue"),
+    "          ref=\"avatarRef\"\n",
+    "          ref=\"avatarRef\"\n          @focus=\"$event.target.blur()\"\n",
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "settings-dialog",
+    "Sync Now opens the queue before settings lets go of focus",
+    src("src/components/header/CompactHeader.vue"),
+    "  showConfigModal.value = false;\n  await nextTick();\n  avatarRef.value?.rootRef?.focus(); // frappe-ui Button exposes its DOM element as rootRef\n  emit(\"open-wal\");",
+    "  emit(\"open-wal\");\n  showConfigModal.value = false;",
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "settings-dialog",
+    "a preference row is a radio group with no name",
+    src("src/components/header/CompactHeader.vue"),
+    "<TabButtons :aria-labelledby=\"row.id\"",
+    "<TabButtons",
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "settings-dialog",
+    "the account row says Credentials again",
+    src("src/components/header/CompactHeader.vue"),
+    "{{ __('Your account') }}",
+    "{{ __('Manage Profile & Credentials') }}",
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "theme",
+    "the default theme becomes System",
+    src("src/utils/theme.js"),
+    "export const DEFAULT_THEME = \"light\";",
+    "export const DEFAULT_THEME = \"auto\";",
+    vitest("src/utils/__tests__/theme.spec.js"),
+  ],
+  [
+    "theme",
+    "System stops following the device",
+    src("src/utils/theme.js"),
+    "    onChanged: (resolved) => applyTheme(resolved),",
+    "    onChanged: () => applyTheme(localStorage.getItem(THEME_KEY)),",
+    vitest("src/utils/__tests__/theme.spec.js"),
+  ],
+  [
+    "theme",
+    "a stale saved theme is used as is",
+    src("src/utils/theme.js"),
+    "(THEMES.includes(mode.store.value) ? mode.store.value : DEFAULT_THEME)",
+    "mode.store.value",
+    vitest("src/utils/__tests__/theme.spec.js"),
+  ],
+  [
+    "theme",
+    "the browser bar stays green in dark mode",
+    src("src/utils/theme.js"),
+    "dark ? THEME_COLORS.dark : THEME_COLORS.light);\n}",
+    "THEME_COLORS.light);\n}",
+    vitest("src/utils/__tests__/theme.spec.js"),
+  ],
+  [
+    "theme",
+    "the boot script ignores System",
+    src("omniquery/www/omniquery.html"),
+    "(saved === \"auto\" && !!window.matchMedia && window.matchMedia(\"(prefers-color-scheme: dark)\").matches)",
+    "false",
+    vitest("test/guards/thin_shell_boot.test.js"),
+  ],
+  [
+    "theme",
+    "the boot script leaves the browser bar green",
+    src("omniquery/www/omniquery.html"),
+    ".setAttribute(\"content\", dark ? \"#020617\" : \"#15803d\");",
+    ".setAttribute(\"content\", \"#15803d\");",
+    vitest("test/guards/thin_shell_boot.test.js"),
+  ],
+  [
+    "theme",
+    "the theme-color meta comes after the boot script",
+    src("omniquery/www/omniquery.html"),
+    "  <meta name=\"theme-color\" content=\"#15803d\"><!-- before the script below, which sets it for the saved theme -->\n",
+    "",
+    vitest("test/guards/thin_shell_boot.test.js"),
+  ],
+  [
+    "theme",
+    "Settings drops the System option",
+    src("src/components/header/CompactHeader.vue"),
+    "      { label: __(\"System\"), value: \"auto\", icon: Monitor },\n",
+    "",
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "scroll-lock",
+    "html scrolls on its own again, behind every dialog",
+    src("src/styles/main.css"),
+    "  max-width: 100vw;\n}\n\nbody {",
+    "  max-width: 100vw;\n  overflow-x: hidden;\n}\n\nbody {",
+    vitest("test/guards/scroll_lock.test.js"),
+  ],
+  [
+    "palette-shades",
+    "a blue-950 class comes back",
+    src("src/components/survey/QuestionCard.vue"),
+    "bg-surface-blue-1 border",
+    "bg-surface-blue-1 dark:bg-blue-950/40 border",
+    vitest("test/guards/palette_shades.test.js"),
+  ],
+  [
+    "dialog-layer",
+    "the app's z-indexes climb over an open dialog again",
+    src("src/App.vue"),
+    '<div class="isolate min-h-screen',
+    '<div class="min-h-screen',
+    vitest("test/guards/dialog_layer.test.js"),
+  ],
+  [
+    "dialog-layer",
+    "#app is isolated instead, so toasts hide under an open dialog",
+    src("src/styles/main.css"),
+    "#app {\n",
+    "#app {\n  isolation: isolate;\n",
+    vitest("test/guards/dialog_layer.test.js"),
+  ],
+  [
+    "boot-escaping",
+    "a deep-link ID is hand-quoted into the page's script again",
+    src("omniquery/www/omniquery.html"),
+    "{{ initial_project_id | tojson }}",
+    '"{{ initial_project_id }}"',
+    vitest("test/guards/shell_script_escaping.test.js"),
+  ],
+  [
+    "boot-escaping",
+    "a survey link can end the page's script again",
+    src("omniquery/www/omniquery.html"),
+    "{{ initial_survey_id | tojson }}",
+    '"{{ initial_survey_id }}"',
+    benchTest("omniquery.tests.test_portal_page_boot"),
+  ],
+  [
+    "boot-escaping",
+    "a project link's title is written into <title> raw again",
+    src("omniquery/www/omniquery.html"),
+    "<title>{{ title | e }}</title>",
+    "<title>{{ title }}</title>",
+    benchTest("omniquery.tests.test_portal_page_boot"),
+  ],
+  [
+    "routing",
+    "the first page ignores the survey name the server resolved from a slug",
+    src("src/utils/route.js"),
+    "  if (boot.initial_survey_id) return surveyRoute(boot.initial_survey_id);\n",
+    "",
+    vitest("src/__tests__/App.spec.js"),
+  ],
+  [
+    "routing",
+    "the first entry records no route, so Back to it re-reads the slug",
+    src("src/composables/useSurveyApp.js"),
+    "    replaceRoute(route);",
+    "",
+    vitest("src/__tests__/App.spec.js"),
+  ],
+  [
+    "routing",
+    "Back reads the path and not the entry's state",
+    src("src/composables/useSurveyApp.js"),
+    "showRoute(routeFromState(event.state) || ",
+    "showRoute(",
+    vitest("src/__tests__/App.spec.js"),
+  ],
+  [
+    "audio",
+    "the recorder's late stop event is not detached, so it refills the blob",
+    src("src/composables/useAudioRecorder.js"),
+    "    mediaRecorder.onstop = null;\n",
+    "",
+    vitest("src/composables/__tests__/useAudioRecorder.spec.js"),
+  ],
+  [
+    "audio",
+    "stopping with nothing recorded hands back the last recording",
+    src("src/composables/useAudioRecorder.js"),
+    "      release();\n      return null;",
+    "      release();\n      return audioBlob.value;",
+    vitest("src/composables/__tests__/useAudioRecorder.spec.js"),
+  ],
+  [
+    "audio",
+    "a permission answered after leaving still starts recording",
+    src("src/composables/useAudioRecorder.js"),
+    "    if (mine !== session) {",
+    "    if (false) {",
+    vitest("src/composables/__tests__/useAudioRecorder.spec.js"),
+  ],
+  [
+    "audio",
+    "a stop interrupted by leaving is never settled",
+    src("src/composables/useAudioRecorder.js"),
+    "  finish?.(null);\n",
+    "",
+    vitest("src/composables/__tests__/useAudioRecorder.spec.js"),
+  ],
+  [
+    "audio",
+    "a missing microphone reads as a generic error",
+    src("src/composables/useAudioRecorder.js"),
+    "  if (error?.name === \"NotFoundError\" || error?.name === \"DevicesNotFoundError\") return \"no-device\";\n",
+    "",
+    vitest("src/composables/__tests__/useAudioRecorder.spec.js"),
+  ],
+  [
+    "audio",
+    "a second recording overwrites the first part",
+    src("src/composables/useAudioRecorder.js"),
+    "(await audioRecordingsFor(responseUid).count()) + 1",
+    "1",
+    vitest("src/composables/__tests__/useAudioRecorder.spec.js"),
+  ],
+  [
+    "audio",
+    "a response's recordings include another response sharing its prefix",
+    src("src/services/db.js"),
+    "\n    .filter((rec) => recordingResponse(rec) === responseUid);",
+    ";",
+    vitest("src/composables/__tests__/useWAL.spec.js"),
+  ],
+  [
+    "audio",
+    "leaving a draft mid-recording keeps nothing",
+    src("src/composables/useSurveyApp.js"),
+    "    if (blob && leftDraftId) await saveAudioForResponse(leftDraftId, blob);\n",
+    "",
+    vitest("src/__tests__/App.spec.js"),
+  ],
+  [
+    "audio",
+    "the microphone stays after submitting",
+    src("src/composables/useSurveyApp.js"),
+    "Boolean(activeTemplate.value) && !isSubmitted.value",
+    "Boolean(activeTemplate.value)",
+    vitest("src/__tests__/App.spec.js"),
+  ],
+  [
+    "audio",
+    "discarding a draft leaves its recordings behind",
+    src("src/composables/useSurvey.js"),
+    "      for (const id of draftIds) await audioRecordingsFor(id).delete();\n",
+    "",
+    vitest("src/composables/__tests__/useSurvey.spec.js"),
+  ],
+  [
+    "audio",
+    "dismissing the microphone alert drops focus",
+    src("src/components/header/CompactHeader.vue"),
+    "  micRef.value?.rootRef?.focus();\n",
+    "",
+    vitest("src/__tests__/App.spec.js"),
+  ],
+  [
+    "audio",
+    "the microphone shows on the project page",
+    src("src/components/header/CompactHeader.vue"),
+    "v-if=\"canRecord && !isGuest\"",
+    "v-if=\"!isGuest\"",
+    vitest("src/components/__tests__/CompactHeader.spec.js"),
+  ],
+  [
+    "audio",
+    "a recording part uploads under its part key, not its response",
+    src("src/composables/useWAL.js"),
+    "            response_name: recordingResponse(rec),",
+    "            response_name: rec.response_uid,",
+    vitest("src/composables/__tests__/useWAL.spec.js"),
+  ],
+  [
+    "attribution",
+    "batch_push credits the surveyor the client names (#35)",
+    src("omniquery/api/sync.py"),
+    "resp_doc.surveyor = surveyor",
+    'resp_doc.surveyor = sub.get("surveyor") or surveyor',
+    benchTest("omniquery.tests.test_in_flight_and_submit"),
+  ],
+  [
+    "attribution",
+    "sync_draft credits the surveyor the client names (#35)",
+    src("omniquery/api/sync.py"),
+    "resp_doc.surveyor = resolve_surveyor()",
+    'resp_doc.surveyor = sub.get("surveyor") or resolve_surveyor()',
+    benchTest("omniquery.tests.test_in_flight_and_submit"),
+  ],
+  [
+    "attribution",
+    "a Surveyor whose name is the user's email is matched (#35)",
+    src("omniquery/api/sync.py"),
+    "return ensure_surveyor_for_user(user)",
+    'return frappe.db.get_value("OmniQuery Surveyor", {"surveyor_name": user}) or ensure_surveyor_for_user(user)',
+    benchTest("omniquery.tests.test_in_flight_and_submit"),
+  ],
+  [
+    "attribution",
+    "a replayed log is credited to whoever replays it",
+    src("omniquery/omniquery/doctype/omniquery_sync_audit_log/omniquery_sync_audit_log.py"),
+    "push_submissions([self.replay_payload()], surveyor=self.surveyor)",
+    "push_submissions([self.replay_payload()])",
+    benchTest("omniquery.tests.test_legacy_payload_adapter"),
+  ],
+  [
+    "draft-sync",
+    "a REJECTED draft is marked synced (#35)",
+    src("src/utils/responsePayload.js"),
+    'res?.status === "SUCCESS"',
+    "!!res",
+    vitest("src/composables/__tests__/draftSyncOnExit.spec.js"),
+  ],
+  [
+    "draft-sync",
+    "the payload names a surveyor (#35)",
+    src("src/utils/responsePayload.js"),
+    "    respondent: responses.respondent_name",
+    '    surveyor: "SURV-Administrator",\n    respondent: responses.respondent_name',
+    vitest("src/composables/__tests__/draftSyncOnExit.spec.js"),
+  ],
+  [
+    "draft-sync",
+    "leaving a survey does not send its draft (#35)",
+    src("src/composables/useSurveyApp.js"),
+    "leavingSync = syncDraftToServer({ ...leaving, responseId: currentDraftId.value });",
+    "",
+    vitest("src/composables/__tests__/draftSyncOnExit.spec.js"),
+  ],
+  [
+    "draft-sync",
+    "coming back online does not resend unsynced drafts (#35)",
+    src("src/composables/useWAL.js"),
+    "left the survey offline (#35)\n    syncAllDrafts();",
+    "left the survey offline (#35)",
+    vitest("src/composables/__tests__/draftSyncOnExit.spec.js"),
+  ],
+  [
+    "draft-sync",
+    "overlapping draft syncs each send every draft",
+    src("src/composables/useWAL.js"),
+    "draftSyncRun ||= sendUnsyncedDrafts()",
+    "draftSyncRun = sendUnsyncedDrafts()",
+    vitest("src/composables/__tests__/draftSyncOnExit.spec.js"),
+  ],
+  [
+    "sync-queue",
+    "417 treated as a lost session",
+    src("src/composables/useWAL.js"),
+    "if (err?.status >= 400) return \"client\";",
+    "if (err?.status >= 400) return \"auth\";",
+    vitest("src/composables/__tests__/useWALSyncQueue.spec.js"),
+  ],
+  [
+    "sync-queue",
+    "a refused batch is not split one by one",
+    src("src/composables/useWAL.js"),
+    "if (chunk.size === 1) {",
+    "if (true) {",
+    vitest("src/composables/__tests__/useWALSyncQueue.spec.js"),
+  ],
+  [
+    "sync-queue",
+    "no backoff after a server error",
+    src("src/composables/useWAL.js"),
+    "serverBackoffUntil = Date.now() + SERVER_BACKOFF_MS;",
+    "serverBackoffUntil = 0;",
+    vitest("src/composables/__tests__/useWALSyncQueue.spec.js"),
+  ],
+  [
+    "sync-queue",
+    "an entry is retried within the same pass",
+    src("src/composables/useWAL.js"),
+    ".filter((e) => !tried.has(e.wal_id))",
+    ".filter(() => true)",
+    vitest("src/composables/__tests__/useWALSyncQueue.spec.js"),
+  ],
+  [
+    "sync-queue",
+    "an unanswered entry counts as a failed attempt",
+    src("src/composables/useWAL.js"),
+    "for (const r of results) {\n      const c",
+    "for (const r of [...results, ...[...chunk.keys()].filter((k) => !results.some((x) => x.idempotency_key === k)).map((k) => ({ idempotency_key: k, status: \"FAILED_ATTEMPT\" }))]) {\n      const c",
+    vitest("src/composables/__tests__/useWALSyncQueue.spec.js"),
+  ],
+  [
+    "sync-queue",
+    "an ack deletes the response's audio too",
+    src("src/composables/useWAL.js"),
+    "await db.wal.delete(c.entry.wal_id);",
+    "await db.wal.delete(c.entry.wal_id);\n          await db.audio_recordings.delete(r.idempotency_key);",
+    vitest("src/composables/__tests__/useWALSyncQueue.spec.js"),
+  ],
+  [
+    "sync-queue",
+    "a successful push leaves the sign-in ask up",
+    src("src/composables/useWAL.js"),
+    "needsLogin.value = false;\n      return",
+    "return",
+    vitest("src/composables/__tests__/useWALSyncQueue.spec.js"),
+  ],
+  [
+    "sync-queue",
+    "queueWAL swallows a failed write",
+    src("src/composables/useWAL.js"),
+    "await db.wal.add(walEntry);",
+    "await db.wal.add(walEntry).catch(() => {});",
+    vitest("src/composables/__tests__/useWALSyncQueue.spec.js"),
+  ],
+  [
+    "draft-persistence",
+    "a draft cleared to no answers is not saved",
+    src("src/composables/useSurvey.js"),
+    "if (!hasAnswers && !(currentDraftId.value && (await db.responses.get(currentDraftId.value)))) return;",
+    "if (!hasAnswers) return;",
+    vitest("src/composables/__tests__/useDraftPersistence.spec.js"),
+  ],
+  [
+    "draft-persistence",
+    "an untouched survey writes a row",
+    src("src/composables/useSurvey.js"),
+    "if (!hasAnswers && !(currentDraftId.value && (await db.responses.get(currentDraftId.value)))) return;",
+    "",
+    vitest("src/composables/__tests__/useDraftPersistence.spec.js"),
+  ],
+  [
+    "draft-persistence",
+    "resume picks the most-answered draft",
+    src("src/composables/useSurvey.js"),
+    "matchingDrafts.sort((a, b) => new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0));",
+    "matchingDrafts.sort((a, b) => Object.keys(b.responses || {}).length - Object.keys(a.responses || {}).length);",
+    vitest("src/composables/__tests__/useDraftPersistence.spec.js"),
+  ],
+  [
+    "draft-persistence",
+    "a later save overwrites created_at",
+    src("src/services/db.js"),
+    "if (\"created_at\" in mods && row.created_at) return { created_at: row.created_at };",
+    "",
+    vitest("src/composables/__tests__/useDraftPersistence.spec.js"),
+  ],
+  [
+    "draft-persistence",
+    "compaction prunes synced drafts too",
+    src("src/services/db.js"),
+    ".equals(\"Submitted\")",
+    ".notEqual(\"\")",
+    vitest("src/composables/__tests__/useDraftPersistence.spec.js"),
+  ],
+  [
+    "draft-persistence",
+    "a draft is saved with a boolean synced",
+    src("src/composables/useSurvey.js"),
+    "synced: NOT_SYNCED,",
+    "synced: false,",
+    vitest("src/composables/__tests__/useDraftPersistence.spec.js"),
+  ],
+  [
+    "synced-encoding",
+    "an ack writes synced: true",
+    src("src/composables/useWAL.js"),
+    ".modify({ synced: SYNCED })",
+    ".modify({ synced: true })",
+    vitest("test/guards/synced_encoding.test.js"),
+  ],
+  [
+    "submit-failure",
+    "a failed store shows the success screen",
+    src("src/composables/useSurveyApp.js"),
+    "await saveOfflineRecord();\n      isSubmitted.value = true;\n    } catch (err) {",
+    "await saveOfflineRecord().catch(() => {});\n      isSubmitted.value = true;\n    } catch (err) {",
+    vitest("src/components/__tests__/AppSubmitFailure.spec.js"),
+  ],
+  [
+    "submit-failure",
+    "the session alert ignores a lost session",
+    src("src/composables/useSurveyApp.js"),
+    "if (!needsLogin.value || isGuest.value) return null;",
+    "return null;",
+    vitest("src/components/__tests__/AppSubmitFailure.spec.js"),
+  ],
+  [
+    "lint-gate",
+    "no-empty is switched off",
+    src("eslint.config.js"),
+    "\"no-empty\": [\"error\", { allowEmptyCatch: false }],",
+    "\"no-empty\": \"off\",",
+    vitest("test/guards/eslint.test.js"),
+  ],
+  [
+    "lint-gate",
+    "no-undef is switched off",
+    src("eslint.config.js"),
+    "\"no-undef\": \"error\",",
+    "\"no-undef\": \"off\",",
+    vitest("test/guards/eslint.test.js"),
+  ],
+  [
+    "lint-gate",
+    "a catch in src/ goes empty",
+    src("src/composables/useWAL.js"),
+    "console.warn(`Could not quarantine the corrupt queue entry ${entry.wal_id}:`, e);",
+    "",
+    vitest("test/guards/eslint.test.js"),
+  ],
+  [
+    "lint-gate",
+    "useSurveyApp uses db without importing it",
+    src("src/composables/useSurveyApp.js"),
+    "import { db, SYNCED, NOT_SYNCED } from \"../services/db\";",
+    "import { SYNCED, NOT_SYNCED } from \"../services/db\";",
+    vitest("test/guards/eslint.test.js"),
+  ],
+  [
+    "submit-synced",
+    "the submitted row stays a Draft",
+    src("src/composables/useSurveyApp.js"),
+    "progress_percent: 100,\n        status: \"Submitted\",",
+    "progress_percent: 100,\n        status: \"Draft\",",
+    vitest("src/components/__tests__/AppSubmitFailure.spec.js"),
+  ],
+  [
+    "submit-synced",
+    "the submitted row write fails silently",
+    src("src/composables/useSurveyApp.js"),
+    "await db.responses.put({\n        response_uid: draftKey,",
+    "await Promise.reject(new Error(\"lost\")) && db.responses.put({\n        response_uid: draftKey,",
+    vitest("src/components/__tests__/AppSubmitFailure.spec.js"),
+  ],
+  [
+    "submit-synced",
+    "an acknowledged submission is not marked synced",
+    src("src/composables/useWAL.js"),
+    "await db.responses.where(\"response_uid\").equals(r.idempotency_key).modify({ synced: SYNCED });",
+    "",
+    vitest("src/components/__tests__/AppSubmitFailure.spec.js"),
+  ],
+  [
+    "submit-synced",
+    "Sync now ignores a row another pass sent",
+    src("src/composables/useSurveyApp.js"),
+    "if (res?.syncedCount > 0 || row?.synced === SYNCED) {",
+    "if (res?.syncedCount > 0) {",
+    vitest("src/components/__tests__/AppSubmitFailure.spec.js"),
+  ],
+  [
+    "submit-synced",
+    "Sync now claims success for a failed upload",
+    src("src/composables/useSurveyApp.js"),
+    "if (res?.syncedCount > 0 || row?.synced === SYNCED) {",
+    "if (res?.syncedCount >= 0 || row?.synced === SYNCED) {",
+    vitest("src/components/__tests__/AppSubmitFailure.spec.js"),
+  ],
+  [
+    "submit-synced",
+    "Sync now says nothing when the upload fails",
+    src("src/composables/useSurveyApp.js"),
+    "toast.warning(__(\"Not uploaded yet. The interview is kept on this device and will be sent later.\"));",
+    "",
+    vitest("src/components/__tests__/AppSubmitFailure.spec.js"),
+  ],
+  [
+    "audio-unreadable",
+    "an unreadable recording is uploaded empty",
+    src("src/composables/useWAL.js"),
+    "const b64 = await fileToBase64(rec.blob);",
+    "let b64 = \"\";\n          try {\n            b64 = await fileToBase64(rec.blob);\n          } catch (e) {\n            // ignored\n          }",
+    vitest("src/composables/__tests__/useWAL.spec.js"),
+  ],
+  [
+    "copy-feedback",
+    "a refused copy shows no error",
+    src("src/components/dashboard/FilledFormsModal.vue"),
+    "toast.error(__(\"Could not copy: {0}\", [e.message || e]));\n    return false;",
+    "return false;",
+    vitest("src/components/__tests__/FilledFormsModal.spec.js"),
+  ],
+  [
+    "copy-feedback",
+    "a refused copy counts as copied",
+    src("src/components/dashboard/FilledFormsModal.vue"),
+    "toast.error(__(\"Could not copy: {0}\", [e.message || e]));\n    return false;",
+    "toast.error(__(\"Could not copy: {0}\", [e.message || e]));\n    return true;",
+    vitest("src/components/__tests__/FilledFormsModal.spec.js"),
+  ],
+  [
+    "copy-feedback",
+    "a copied code is not announced",
+    src("src/components/dashboard/FilledFormsModal.vue"),
+    "if (await copyAndMark(code, copiedCode, code)) toast.success(__(\"Response code copied\"));",
+    "await copyAndMark(code, copiedCode, code);",
+    vitest("src/components/__tests__/FilledFormsModal.spec.js"),
+  ],
+  [
+    "gps-zero",
+    "a 0 coordinate sent as null",
+    src("src/utils/responsePayload.js"),
+    "gps_latitude: gps?.latitude ?? null,",
+    "gps_latitude: gps?.latitude || null,",
+    vitest("src/composables/__tests__/draftSyncOnExit.spec.js"),
+  ],
+  [
+    "gps-error-kind",
+    "permission denied read as unavailable",
+    src("src/composables/useGPS.js"),
+    "{ 1: \"denied\", 2: \"unavailable\", 3: \"timeout\" }",
+    "{ 1: \"unavailable\", 2: \"denied\", 3: \"timeout\" }",
+    vitest("src/composables/__tests__/useGPS.spec.js"),
+  ],
+  [
+    "gps-keep-fix",
+    "a failed retry drops the last fix",
+    src("src/composables/useGPS.js"),
+    "console.warn(\"[GPS Warning]\", err);",
+    "console.warn(\"[GPS Warning]\", err);\n        gpsCoords.value = null;",
+    vitest("src/composables/__tests__/useGPS.spec.js"),
+  ],
+  [
+    "gps-alert",
+    "a timeout told as blocked access",
+    src("src/composables/useSurveyApp.js"),
+    "timeout: [\"Location timed out\",",
+    "timeout: [\"Location access is blocked\",",
+    vitest("src/components/__tests__/AppLocation.spec.js"),
+  ],
+  [
+    "gps-alert",
+    "the location alert is not shown on the question",
+    src("src/components/survey/QuestionCard.vue"),
+    "<Alert v-if=\"gpsAlert\"",
+    "<Alert v-if=\"false\"",
+    vitest("src/components/__tests__/AppLocation.spec.js"),
+  ],
+  [
+    "gps-alert",
+    "Survey.vue does not pass the location alert",
+    src("src/views/Survey.vue"),
+    "@next=\"s.onQuestionAnswered(item.question)\"\n          :gpsAlert=\"s.gpsAlert\"",
+    "@next=\"s.onQuestionAnswered(item.question)\"",
+    vitest("src/components/__tests__/AppLocation.spec.js"),
+  ],
+  [
+    "gps-status",
+    "0,0 counted as a fix",
+    src("omniquery/services/location.py"),
+    "return not (flt(latitude) == 0 and flt(longitude) == 0)",
+    "return True",
+    benchTest("omniquery.tests.test_gps_status"),
+  ],
+  [
+    "gps-status",
+    "any reported word stored as the status",
+    src("omniquery/services/location.py"),
+    "return reported if reported in NO_FIX_STATUSES else NOT_CAPTURED",
+    "return reported or NOT_CAPTURED",
+    benchTest("omniquery.tests.test_gps_status"),
+  ],
+  [
+    "gps-keep-fix",
+    "a sync without a fix wipes the stored one",
+    src("omniquery/services/location.py"),
+    "if located(doc) and not has_fix(latitude, longitude):",
+    "if False:",
+    benchTest("omniquery.tests.test_gps_status"),
+  ],
+  [
+    "gps-status",
+    "a desk-entered respondent keeps the default status",
+    src("omniquery/omniquery/doctype/omniquery_respondent/omniquery_respondent.py"),
+    "self.gps_status = resolve_gps_status(self.gps_latitude, self.gps_longitude, self.gps_status)",
+    "pass",
+    benchTest("omniquery.tests.test_gps_status"),
+  ],
+  [
+    "gps-variance",
+    "variance measured from a response with no fix",
+    src("omniquery/api/sync.py"),
+    "if not (located(resp_doc) and resp_doc.respondent):",
+    "if not resp_doc.respondent:",
+    benchTest("omniquery.tests.test_gps_status"),
+  ],
+  [
+    "gps-export",
+    "export writes 0 for a missing location",
+    src("omniquery/api/export.py"),
+    "if field in GPS_FIELDS and not located(response):",
+    "if False:",
+    benchTest("omniquery.tests.test_gps_status"),
+  ],
+  [
+    "gps-backfill",
+    "the backfill overwrites a reported reason",
+    src("omniquery/patches/v1_0/backfill_gps_status.py"),
+    ".where(no_fix & status.isin([\"\", CAPTURED]))",
+    ".where(no_fix)",
+    benchTest("omniquery.tests.test_gps_status"),
+  ],
+  [
+    "idempotency-key",
+    "a UUID of any version is accepted as a key",
+    src("omniquery/services/idempotency.py"),
+    "if value.version != 4:",
+    "if value.version is None:",
+    benchTest("omniquery.tests.test_idempotency_key"),
+  ],
+  [
+    "idempotency-key",
+    "a key is kept as it was spelled",
+    src("omniquery/services/idempotency.py"),
+    "return str(value)",
+    "return key",
+    benchTest("omniquery.tests.test_idempotency_key"),
+  ],
+  [
+    "idempotency-key",
+    "a key from a build before #25 is refused",
+    src("omniquery/services/idempotency.py"),
+    "if key.startswith(LEGACY_KEY_PREFIXES):",
+    "if False:",
+    benchTest("omniquery.tests.test_idempotency_key"),
+  ],
+  [
+    "idempotency-key",
+    "Desk and the API file a Response under any name",
+    src("omniquery/omniquery/doctype/omniquery_response/omniquery_response.py"),
+    "self.idempotency_key = require_key(self.idempotency_key)",
+    "self.idempotency_key = self.idempotency_key or require_key(None)",
+    benchTest("omniquery.tests.test_idempotency_key"),
+  ],
+  [
+    "idempotency-key",
+    "a rejected key leaves no audit log",
+    src("omniquery/api/sync.py"),
+    "err_msg = invalid_key_message()\n\t\t\tupsert_audit_log(",
+    "err_msg = invalid_key_message()\n\t\t\tif False: upsert_audit_log(",
+    benchTest("omniquery.tests.test_idempotency_key"),
+  ],
+  [
+    "idempotency-key",
+    "the reply carries the canonical key, not the one the device sent",
+    src("omniquery/api/sync.py"),
+    "reply_key = sub.get(\"idempotency_key\") or idempotency_key",
+    "reply_key = idempotency_key",
+    benchTest("omniquery.tests.test_idempotency_key"),
+  ],
+  [
+    "idempotency-key",
+    "sync_draft takes any key",
+    src("omniquery/api/sync.py"),
+    "idempotency_key = canonical_key(sub[\"idempotency_key\"]) if sub.get(\"idempotency_key\") else new_key()",
+    "idempotency_key = sub.get(\"idempotency_key\") or new_key()",
+    benchTest("omniquery.tests.test_idempotency_key"),
+  ],
+  [
+    "idempotency-key",
+    "the fallback UUID does not set its version",
+    src("src/utils/uuid.js"),
+    "(bytes[6] & 0x0f) | 0x40",
+    "bytes[6]",
+    vitest("src/utils/__tests__/uuid.spec.js"),
+  ],
+  [
+    "idempotency-key",
+    "the fallback UUID does not set its variant",
+    src("src/utils/uuid.js"),
+    "(bytes[8] & 0x3f) | 0x80",
+    "bytes[8]",
+    vitest("src/utils/__tests__/uuid.spec.js"),
+  ],
+  [
+    "idempotency-key",
+    "a secure context does not use crypto.randomUUID",
+    src("src/utils/uuid.js"),
+    "if (typeof crypto.randomUUID === \"function\")",
+    "if (false)",
+    vitest("src/utils/__tests__/uuid.spec.js"),
+  ],
+  [
+    "idempotency-key",
+    "a new interview gets a time-based key",
+    src("src/composables/useSurvey.js"),
+    "export const generateSurveyId = uuidv4;",
+    "export const generateSurveyId = () => `OQS-${Date.now()}`;",
+    vitest("src/composables/__tests__/useSurvey.spec.js"),
+  ],
+  [
+    "idempotency-key",
+    "a queue entry gets a time-based key",
+    src("src/composables/useWAL.js"),
+    "wal_id: uuidv4(),",
+    "wal_id: `WAL-${Date.now()}`,",
+    vitest("src/composables/__tests__/useWAL.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "an unanswered parent offers every group's choices",
+    src("src/utils/cascadingOptions.js"),
+    "if (isBlank(parentValue)) return [];",
+    "if (isBlank(parentValue)) return Object.values(options).flat();",
+    vitest("src/utils/__tests__/cascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "an empty group counts as options",
+    src("src/utils/cascadingOptions.js"),
+    "return isGroupedOptions(options) && Object.keys(options).length > 0;",
+    "return isGroupedOptions(options);",
+    vitest("src/utils/__tests__/cascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "a stored answer is the translated label",
+    src("src/utils/cascadingOptions.js"),
+    "return { value, label: typeof label",
+    "return { value: label || value, label: typeof label",
+    vitest("src/utils/__tests__/cascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "a multiple answer keeps choices no longer offered",
+    src("src/utils/cascadingOptions.js"),
+    "const kept = answer.filter((value) => allowed.has(String(value)));",
+    "const kept = answer;",
+    vitest("src/utils/__tests__/cascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "clearing a block leaves the village under it",
+    src("src/utils/cascadingOptions.js"),
+    "changed.push(child);",
+    "",
+    vitest("src/utils/__tests__/cascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "setResponse keeps a block from another district",
+    src("src/composables/useSurveyApp.js"),
+    "if (answer === undefined) delete responses.value[child];",
+    "if (answer === undefined) continue;",
+    vitest("src/components/__tests__/CascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "setResponse keeps every choice of a multiple answer",
+    src("src/composables/useSurveyApp.js"),
+    "else responses.value[child] = answer;",
+    "else continue;",
+    vitest("src/components/__tests__/CascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "a grouped card's answer is passed whole to setResponse",
+    src("src/views/Survey.vue"),
+    "@update-response=\"({ code, value }) => s.setResponse(code, value)\"\n          @answered",
+    "@update-response=\"s.setResponse\"\n          @answered",
+    vitest("src/components/__tests__/CascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "a focus-mode answer is passed whole to setResponse",
+    src("src/views/Survey.vue"),
+    "@update-response=\"({ code, value }) => s.setResponse(code, value)\"\n      @toggle-auto-advance",
+    "@update-response=\"s.setResponse\"\n      @toggle-auto-advance",
+    vitest("src/components/__tests__/CascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "the survey does not tell a question card its parent's answer",
+    src("src/views/Survey.vue"),
+    ":parentValue=\"parentAnswer(item.question, s.responses)\"",
+    ":parentValue=\"undefined\"",
+    vitest("src/components/__tests__/CascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "focus mode does not tell its card the parent's answer",
+    src("src/components/survey/FocusModeModal.vue"),
+    ":parentValue=\"parentAnswer(currentQuestion, responses)\"",
+    ":parentValue=\"undefined\"",
+    vitest("src/components/__tests__/CascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "a question card ignores its parent's answer",
+    src("src/components/survey/QuestionCard.vue"),
+    "choiceOptions(props.question, props.parentValue).map(",
+    "choiceOptions(props.question, undefined).map(",
+    vitest("src/components/__tests__/CascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "a grouped card ignores the parent's answer",
+    src("src/components/survey/GroupedQuestionCard.vue"),
+    "return choiceOptions(q, parentAnswer(q, props.responses));",
+    "return choiceOptions(q, undefined);",
+    vitest("src/components/__tests__/CascadingOptions.spec.js"),
+  ],
+  [
+    "cascading-options",
+    "publishing allows grouped options with no parent",
+    src("omniquery/services/cascading_options.py"),
+    "\t\t\tif is_grouped(options):\n",
+    "\t\t\tif False:\n",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "publishing allows a parent that is not in the template",
+    src("omniquery/services/cascading_options.py"),
+    "if parent_code == code or parent_code not in by_code:",
+    "if False:",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "publishing allows flat options on a dependent question",
+    src("omniquery/services/cascading_options.py"),
+    "if not is_grouped(options) or not options:",
+    "if not options:",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "publishing allows a dependency loop",
+    src("omniquery/services/cascading_options.py"),
+    "\t\t_refuse_a_cycle(by_code, code)\n",
+    "",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "publishing allows a block for a district the parent does not offer",
+    src("omniquery/services/cascading_options.py"),
+    "unknown = [key for key in options if parent_choices and key not in parent_choices]",
+    "unknown = []",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "one good choice lets a multiple answer through",
+    src("omniquery/services/cascading_options.py"),
+    "if any(str(value) not in allowed for value in values):",
+    "if all(str(value) not in allowed for value in values):",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "a multiple answer is read as text",
+    src("omniquery/services/cascading_options.py"),
+    "answers[item.question_code] = frappe.parse_json(item.value_json)",
+    "pass",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "a submitted response is not checked",
+    src("omniquery/omniquery/doctype/omniquery_response/omniquery_response.py"),
+    "\t\tif invalid:\n\t\t\tfrappe.throw(_(\"These answers",
+    "\t\tif False:\n\t\t\tfrappe.throw(_(\"These answers",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "a draft is held to the dependent choices",
+    src("omniquery/omniquery/doctype/omniquery_response/omniquery_response.py"),
+    "if self.docstatus == 0 and self.survey_status in (None, \"\", \"Draft\"):",
+    "if False:",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "a template is published without its dependencies checked",
+    src("omniquery/omniquery/doctype/omniquery_template/omniquery_template.py"),
+    "\t\tvalidate_cascading_questions(schema[\"questions\"])",
+    "\t\tpass",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "cascading-options",
+    "an option set mixes grouped and ungrouped options",
+    src("omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.py"),
+    "if any(with_parent) and not all(with_parent):",
+    "if False:",
+    benchTest("omniquery.tests.test_cascading_options"),
+  ],
+  [
+    "focus",
+    "the question card focuses the TextInput component, not its <input>",
+    src("src/components/survey/QuestionCard.vue"),
+    "const input = searchInputRef.value?.el;",
+    "const input = searchInputRef.value;",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "narrowing the options clears the search being typed",
+    src("src/components/survey/QuestionCard.vue"),
+    "    if (code !== prevCode) gridSearchQuery.value = \"\";",
+    "    gridSearchQuery.value = \"\";",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "a new question keeps the last question's search",
+    src("src/components/survey/QuestionCard.vue"),
+    "    if (code !== prevCode) gridSearchQuery.value = \"\";\n",
+    "",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "typing from an option leaves the caret before what was typed",
+    src("src/components/survey/QuestionCard.vue"),
+    "input.setSelectionRange(input.value.length, input.value.length);",
+    "input.setSelectionRange(0, 0);",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "the matrix moves focus on to its card after focusing the first cell",
+    src("src/components/survey/MatrixQuestionCard.vue"),
+    "(cellAt(0, 0) || cardRef.value)?.focus({ preventScroll: true })",
+    "cellAt(0, 0)?.focus({ preventScroll: true }) || cardRef.value?.focus({ preventScroll: true })",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "the combobox returns focus to the Button component, not its <button>",
+    src("src/components/common/FCombobox.vue"),
+    "triggerBtn.value?.rootRef?.focus();",
+    "triggerBtn.value?.focus?.();",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "the combobox focuses the TextInput component, not its <input>",
+    src("src/components/common/FCombobox.vue"),
+    "searchInput.value?.el?.focus(",
+    "searchInput.value?.focus?.(",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "the currency field focuses the TextInput component, not its <input>",
+    src("src/components/common/FCurrencyInput.vue"),
+    "inputRef.value?.el?.focus(",
+    "inputRef.value?.focus?.(",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "typing on an option narrows the options before focus reaches the search box",
+    src("src/components/survey/QuestionCard.vue"),
+    "    focusSearch();\n    gridSearchQuery.value += e.key;\n",
+    "    gridSearchQuery.value += e.key;\n",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "a question card keeps rootRef from its ref callback, before Button has set it",
+    src("src/components/survey/QuestionCard.vue"),
+    "optionButtonRefs[index] = el;",
+    "optionButtonRefs[index] = el.rootRef;",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "a question card focuses the Button component, not its button element",
+    src("src/components/survey/QuestionCard.vue"),
+    "const optionButton = (index) => optionButtonRefs.value[index]?.rootRef;",
+    "const optionButton = (index) => optionButtonRefs.value[index];",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "a number key focuses the Button component, not its button element",
+    src("src/components/survey/QuestionCard.vue"),
+    "optionButton(targetIdx)?.focus({ preventScroll: true });",
+    "optionButtonRefs.value[targetIdx]?.focus?.({ preventScroll: true });",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "the combobox scrolls the Button component, not its button element",
+    src("src/components/common/FCombobox.vue"),
+    "const el = optionRefs.value[highlightedIndex.value]?.rootRef;",
+    "const el = optionRefs.value[highlightedIndex.value];",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "the currency field arrows between Button components, not their button elements",
+    src("src/components/common/FCurrencyInput.vue"),
+    "const chip = chipRefs.value[i]?.rootRef;",
+    "const chip = chipRefs.value[i];",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "a rating focuses the Button component, not its button element",
+    src("src/components/common/FRating.vue"),
+    "starRefs.value[star]?.rootRef?.focus();",
+    "starRefs.value[star]?.focus?.();",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "a range focuses the Button component, not its button element",
+    src("src/components/common/FRangeSlider.vue"),
+    "btnRefs.value[val]?.rootRef?.focus();",
+    "btnRefs.value[val]?.focus?.();",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "a grouped card focuses the Button component, not its button element",
+    src("src/components/survey/GroupedQuestionCard.vue"),
+    "const optionButton = (qCode, idx) => optionRefsMap.value[qCode]?.[idx]?.rootRef;",
+    "const optionButton = (qCode, idx) => optionRefsMap.value[qCode]?.[idx];",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "a matrix always looks for its cell in the table, even on a phone",
+    src("src/components/survey/MatrixQuestionCard.vue"),
+    "showsTable.value ? \"table\" : \"cards\"",
+    "\"table\"",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "focus",
+    "a matrix always looks for its cell in the cards, even on a wide screen",
+    src("src/components/survey/MatrixQuestionCard.vue"),
+    "showsTable.value ? \"table\" : \"cards\"",
+    "\"cards\"",
+    vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
+  ],
+  [
+    "element-refs",
+    "a ref callback stores a Button's $el again",
+    src("src/components/common/FRating.vue"),
+    "starRefs.value[star] = el;",
+    "starRefs.value[star] = el.$el || el;",
+    vitest("test/guards/component_element_refs.test.js"),
+  ],
+  [
+    "element-refs",
+    "a ref callback reads rootRef before Button has set it",
+    src("src/components/common/FRangeSlider.vue"),
+    "btnRefs.value[val] = el;",
+    "btnRefs.value[val] = el.rootRef;",
+    vitest("test/guards/component_element_refs.test.js"),
+  ],
+  [
+    "text-input-slots",
+    "the question card passes its clear button's slot only once text is typed",
+    src("src/components/survey/QuestionCard.vue"),
+    "<template #suffix>\n                <Button v-if=\"gridSearchQuery\" variant=\"ghost\"",
+    "<template v-if=\"gridSearchQuery\" #suffix>\n                <Button variant=\"ghost\"",
+    vitest("test/guards/text_inputs.test.js"),
+  ],
+  [
+    "text-input-slots",
+    "the catalog passes its clear button's slot only once text is typed",
+    src("src/views/Catalog.vue"),
+    "<template #suffix>\n            <Button v-if=\"s.searchQuery\" variant=\"ghost\"",
+    "<template v-if=\"s.searchQuery\" #suffix>\n            <Button variant=\"ghost\"",
+    vitest("test/guards/text_inputs.test.js"),
+  ],
+  [
+    "project-help",
+    "a project's SOPs reach the PWA unsanitized",
+    src("omniquery/api/survey.py"),
+    '"sop_sections": sanitize_html(proj.get("sop_sections") or "", always_sanitize=True),',
+    '"sop_sections": proj.get("sop_sections") or "",',
+    benchTest("omniquery.tests.test_project_api"),
+  ],
+  [
+    "project-help",
+    "the bootstrap template list drops the project's help",
+    src("omniquery/api/survey.py"),
+    "\t\t\t\t**project_help(enriched),\n",
+    "",
+    benchTest("omniquery.tests.test_project_api"),
+  ],
+  [
+    "project-help",
+    "a listed template drops the project's help",
+    src("omniquery/api/survey.py"),
+    "\ttmpl.update(project_help(p_meta))\n",
+    "",
+    benchTest("omniquery.tests.test_project_api"),
+  ],
+  [
+    "project-help",
+    "downloading a survey wipes the help the bootstrap cached",
+    src("src/composables/useSurvey.js"),
+    "...projectHelp({ ...cached, ...payload }),",
+    "...projectHelp(payload),",
+    vitest("src/composables/__tests__/useSurvey.spec.js"),
+  ],
+  [
+    "project-help",
+    "the cached template row has no help, so it is gone offline",
+    src("src/composables/useSurvey.js"),
+    "            // the project's helpline and SOPs, so the project page has them offline (#14)\n            ...projectHelp(t),\n",
+    "",
+    vitest("src/composables/__tests__/useSurvey.spec.js"),
+  ],
+  [
+    "project-help",
+    "the project page ignores the help get_project_details sends",
+    src("src/components/project/ProjectPage.vue"),
+    "remoteProjectMeta.value = { ...proj, ...projectHelp(proj) };",
+    "remoteProjectMeta.value = { ...proj, ...projectHelp({}) };",
+    vitest("src/components/__tests__/ProjectPage.spec.js"),
+  ],
+  [
+    "project-help",
+    "the helpline tab shows for a project with no phone or email",
+    src("src/components/project/ProjectPage.vue"),
+    "const hasHelpline = computed(() => Boolean(projectMeta.value.helpline_phone || projectSupportEmail.value));",
+    "const hasHelpline = computed(() => true);",
+    vitest("src/components/__tests__/ProjectPage.spec.js"),
+  ],
+  [
+    "question-layout",
+    "a group ignores the title the template sets",
+    src("src/utils/questionLayout.js"),
+    "title: first.group_title || fallbackTitle,",
+    "title: fallbackTitle,",
+    vitest("src/utils/__tests__/questionLayout.spec.js"),
+  ],
+  [
+    "question-layout",
+    "a group ignores the code the template sets",
+    src("src/utils/questionLayout.js"),
+    "group_code: first.group_code || fallbackCode,",
+    "group_code: fallbackCode,",
+    vitest("src/utils/__tests__/questionLayout.spec.js"),
+  ],
+  [
+    "question-layout",
+    "one client's question codes make a question a matrix",
+    src("src/utils/questionLayout.js"),
+    '|| q.control_variant === "Matrix";',
+    '|| q.control_variant === "Matrix" || /turnover|involvement|capital|loan/.test(q.question_code || "");',
+    vitest("src/utils/__tests__/questionLayout.spec.js"),
+  ],
+  [
+    "no-customer",
+    "layout keyed off a client's question code gets past the guard",
+    src("src/utils/questionLayout.js"),
+    "export function isMatrixQuestion(q) {\n  if (!q) return false;\n",
+    'export function isMatrixQuestion(q) {\n  if (!q) return false;\n  const code = q.question_code || "";\n  if (code.includes("turnover")) return true;\n',
+    vitest("test/guards/no_customer_content.test.js"),
+  ],
+  [
+    "no-customer",
+    "a client's helpline number in the project page gets past the guard",
+    src("src/components/project/ProjectPage.vue"),
+    "...projectHelp({}),",
+    '...projectHelp({ helpline_phone: "18001026664" }),',
+    vitest("test/guards/no_customer_content.test.js"),
+  ],
+  [
+    "project-templates",
+    "a link that passes the project's title finds no templates",
+    src("src/utils/projectTemplates.js"),
+    "template.project === id || template.project_name === id",
+    "template.project === id",
+    vitest("src/utils/__tests__/projectTemplates.spec.js"),
+  ],
+  [
+    "project-templates",
+    "All projects selects no template",
+    src("src/utils/projectTemplates.js"),
+    "id === ALL_PROJECTS || ",
+    "",
+    vitest("src/utils/__tests__/projectTemplates.spec.js"),
+  ],
+  [
+    "project-templates",
+    "an empty project id takes in every template with no project",
+    src("src/utils/projectTemplates.js"),
+    "(id) => Boolean(id) && (",
+    "(id) => (!template.project && !id) || (",
+    vitest("src/utils/__tests__/projectTemplates.spec.js"),
+  ],
+  [
+    "project-templates",
+    "the project page lists every template when the project has none",
+    src("src/components/project/ProjectPage.vue"),
+    "templatesOfProject(props.templates, props.projectId, projectMeta.value.name)",
+    "templatesOfProject(props.templates, props.projectId, projectMeta.value.name).length ? templatesOfProject(props.templates, props.projectId, projectMeta.value.name) : props.templates",
+    vitest("src/components/__tests__/ProjectPage.spec.js"),
+  ],
+  [
+    "project-templates",
+    "the survey header bar shows over an empty project",
+    src("src/components/project/ProjectPage.vue"),
+    "<div v-if=\"projectSurveys.length > 0\" class=\"flex items-center justify-between",
+    "<div class=\"flex items-center justify-between",
+    vitest("src/components/__tests__/ProjectPage.spec.js"),
+  ],
+  [
+    "project-templates",
+    "two projects with one title collapse into a single card",
+    src("src/components/dashboard/ProjectHeaderCard.vue"),
+    "const id = t.project || t.project_name;\n    if (!id || map.has(id)) continue;",
+    "const id = t.project || t.project_name;\n    if (!id || [...map.values()].some((c) => titleKey(c.project_name) === titleKey(t.project_name || t.project))) continue;",
+    vitest("src/components/__tests__/ProjectHeaderCard.spec.js"),
+  ],
+  [
+    "project-templates",
+    "cards that share a title do not show which project is which",
+    src("src/components/dashboard/ProjectHeaderCard.vue"),
+    "<span v-if=\"proj.showId\"",
+    "<span v-if=\"false\"",
+    vitest("src/components/__tests__/ProjectHeaderCard.spec.js"),
+  ],
+  [
+    "project-templates",
+    "the dashboard counts every project's submissions for a project with no templates",
+    src("src/components/dashboard/SurveyorDashboard.vue"),
+    "      allSubmitted = allSubmitted.filter((r) =>\n        allowedTemplates.has(",
+    "      if (allowedTemplates.size > 0) allSubmitted = allSubmitted.filter((r) =>\n        allowedTemplates.has(",
+    vitest("src/components/__tests__/SurveyorDashboard.spec.js"),
+  ],
+  [
+    "project-templates",
+    "the dashboard resumes another project's draft",
+    src("src/components/dashboard/SurveyorDashboard.vue"),
+    "    list = list.filter((d) => allowedTemplates.has(d.template_name));",
+    "",
+    vitest("src/components/__tests__/SurveyorDashboard.spec.js"),
+  ],
+];
 
-// Mutant 3: Remove role="switch" from FSwitch (Gate 2 Accessibility WCAG 2.2 AA)
-runMutationTest(
-  'role="switch" removed from FSwitch.vue (Gate 2 Accessibility)',
-  fSwitchPath,
-  (code) => code.replace('role="switch"', 'role="generic-button"'),
-  'npx vitest run src/components/__tests__/AccessibilityGates.spec.js',
-  omniqueryDir
-);
+// Ctrl-C reaches the test child too; keep this process alive so the finally below restores the file.
+// spawnSync blocks the event loop, so main() yields after each mutant to let a pending signal handler run.
+let interrupted = false;
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"])
+  process.on(sig, () => {
+    interrupted = true;
+  });
 
-// Mutant 4: Remove :for binding from QuestionCard label (Gate 2 Accessibility WCAG 2.2 AA)
-runMutationTest(
-  ':for programmatic label association stripped in QuestionCard.vue (Gate 2 Accessibility)',
-  questionCardPath,
-  (code) => code.replace(":for=\"'q_input_' + question.question_code\"", ""),
-  'npx vitest run src/components/__tests__/AccessibilityGates.spec.js',
-  omniqueryDir
-);
+const scores = {};
+let total = 0;
+let killed = 0;
 
-// Mutant 5: Invert Dexie WAL persistence in queueWAL (Gate 3 Offline Reliability)
-runMutationTest(
-  'IndexedDB WAL write omitted in queueWAL (Offline WAL Gate)',
-  useWalPath,
-  (code) => code.replace('await db.wal.add(walEntry);', '/* omitted */'),
-  'npx vitest run src/composables/__tests__/useWAL.spec.js',
-  omniqueryDir
-);
+async function main() {
+  for (const [guard, description, file, find, replace, test] of MUTANTS) {
+    if (interrupted) break;
+    total++;
+    scores[guard] = scores[guard] || { total: 0, killed: 0 };
+    scores[guard].total++;
+    console.log(`[${guard}] #${total}: ${description}`);
 
-// Summary Report
-console.log('\n===========================================================');
-console.log(` Mutation Testing Summary:`);
-console.log(`   Total Mutants Tested: ${totalMutants}`);
-console.log(`   Killed Mutants (Caught): ${killedMutants}`);
-console.log(`   Surviving Mutants (Missed): ${survivingMutants}`);
-const mutationScore = Math.round((killedMutants / totalMutants) * 100);
-console.log(`   Mutation Detection Score: ${mutationScore}%`);
-console.log('===========================================================\n');
+    const original = fs.readFileSync(file, "utf8");
+    const hits = original.split(find).length - 1;
+    if (hits !== 1) {
+      // a stale anchor would otherwise pass as "survived" or mutate the wrong line
+      console.error(
+        `  ANCHOR: expected 1 match in ${path.relative(appDir, file)}, found ${hits}`,
+      );
+      process.exitCode = 1;
+      continue;
+    }
+    try {
+      fs.writeFileSync(file, original.replace(find, replace), "utf8");
+      const run = spawnSync(test.cmd, test.args, {
+        cwd: test.cwd,
+        stdio: "pipe",
+      });
+      if (run.signal || interrupted) {
+        interrupted = true;
+      } else if (run.status === 0) {
+        console.error("  SURVIVED: the test passed with the rule broken");
+      } else {
+        console.log("  KILLED");
+        killed++;
+        scores[guard].killed++;
+      }
+    } finally {
+      fs.writeFileSync(file, original, "utf8");
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+  }
 
-if (survivingMutants > 0) {
-  console.error(`FAIL: ${survivingMutants} mutant(s) survived! Harden the test suite.\n`);
-  process.exit(1);
-} else {
-  console.log(`SUCCESS: 100% Mutation Score achieved! All critical quality gates are active.\n`);
-  process.exit(0);
+  if (interrupted) {
+    console.error("\nInterrupted; the mutated file was restored.");
+    process.exit(130);
+  }
+
+  console.log("\nMutation score by guard:");
+  for (const [guard, s] of Object.entries(scores))
+    console.log(`  ${guard.padEnd(18)} ${s.killed}/${s.total}`);
+  console.log(`Overall: ${killed}/${total} killed`);
+
+  if (killed < total || process.exitCode) {
+    console.error(
+      `FAIL: ${total - killed} mutant(s) not killed. Harden the tests.`,
+    );
+    process.exit(1);
+  }
+  console.log("SUCCESS: every mutant was killed.");
 }
+
+main();
