@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { defineComponent, h, ref } from "vue";
 import { mount } from "@vue/test-utils";
 import FocusModeModal from "../survey/FocusModeModal.vue";
+import QuestionCard from "../survey/QuestionCard.vue";
 import SectionCard from "../survey/SectionCard.vue";
 import { useTranslation } from "../../composables/useTranslation.js";
 
@@ -13,6 +14,14 @@ const QUESTIONS = [
   { question_code: "q_name", label: "Farmer name", field_type: "Data" },
   { question_code: "q_herd", label: "Herd size", field_type: "Int" },
 ];
+
+const matrixQuestion = (question_code) => ({
+  question_code,
+  label: "Herd by season",
+  field_type: "Matrix",
+  columns_schema_json: JSON.stringify([{ code: "c1", label: "Count", type: "Int" }]),
+  rows_schema_json: JSON.stringify([{ code: "r1", label: "Summer" }]),
+});
 
 let wrappers = [];
 function mountAttached(component, props) {
@@ -101,21 +110,11 @@ describe("Focus mode Escape and focus (#42)", () => {
   });
 
   it("closes the matrix card's field the same way: card first, then focus mode", async () => {
-    const matrix = {
-      question_code: "q_grid",
-      label: "Herd by season",
-      field_type: "Matrix",
-      columns_schema_json: JSON.stringify([{ code: "c1", label: "Count", type: "Int" }]),
-      rows_schema_json: JSON.stringify([{ code: "r1", label: "Summer" }]),
-    };
-    const modal = mountFocusMode({ questions: [matrix] });
+    const modal = mountFocusMode({ questions: [matrixQuestion("q_grid")] });
     await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
     const matrixCard = document.querySelector("[data-matrix-question-card]");
-    // focus mode opens in a cell of the matrix, and focuses it again 60ms later
+    // focus mode opens in a cell of the matrix
     await vi.waitFor(() => expect(document.activeElement.matches("[data-matrix-question-card] input")).toBe(true));
-    const input = document.activeElement;
-    await new Promise((r) => setTimeout(r, 80));
-    expect(document.activeElement).toBe(input);
 
     press("Escape");
     expect(document.activeElement).toBe(matrixCard);
@@ -204,6 +203,107 @@ describe("Focus mode Escape and focus (#42)", () => {
 
     await modal.setProps({ isOpen: false });
     await vi.waitFor(() => expect(document.activeElement).toBe(opener));
+  });
+});
+
+describe("Focus mode focuses the question once (#120)", () => {
+  // Fake timers that still move with real time, so reka and vi.waitFor work as usual, and settle()
+  // can run every timer due in the next 5 seconds: a refocus on any delay fires inside it.
+  beforeEach(() => {
+    useTranslation().setLanguage("en");
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+  afterEach(() => {
+    wrappers.forEach((w) => w.unmount());
+    wrappers = [];
+    document.body.innerHTML = "";
+    vi.useRealTimers();
+  });
+
+  const exitButton = () => document.querySelector("button[aria-label='Exit Focus Mode']");
+  const matrixInput = () => document.querySelector("[data-matrix-question-card] input");
+  const settle = () => vi.advanceTimersByTimeAsync(5000);
+
+  // Survey.vue keeps focus mode mounted and opens it by isOpen; a test can also mount it open
+  for (const [opening, open] of [
+    ["opened on a mounted focus mode", async () => {
+      const modal = mountFocusMode({ isOpen: false });
+      await modal.setProps({ isOpen: true });
+      return modal;
+    }],
+    ["mounted open", async () => mountFocusMode()],
+  ]) {
+    it(`leaves focus where the user moves it right after it is ${opening}`, async () => {
+      await open();
+      await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+      exitButton().focus();
+      await settle();
+      expect(document.activeElement, "nothing takes focus back to the question").toBe(exitButton());
+    });
+  }
+
+  it("focuses the question again each time focus mode is opened", async () => {
+    const modal = mountFocusMode();
+    await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+    await modal.setProps({ isOpen: false });
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(0));
+    document.body.focus();
+
+    await modal.setProps({ isOpen: true });
+    await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+  });
+
+  it("focuses the next question when the user moves to it, and only then", async () => {
+    const modal = mountFocusMode();
+    await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+    await modal.setProps({ currentIndex: 1 });
+    const herd = document.getElementById("q_input_q_herd");
+    await vi.waitFor(() => expect(document.activeElement).toBe(herd));
+
+    exitButton().focus();
+    await settle();
+    expect(document.activeElement).toBe(exitButton());
+  });
+
+  it("focuses the next matrix when one matrix follows another", async () => {
+    const modal = mountFocusMode({ questions: [matrixQuestion("q_grid"), matrixQuestion("q_grid2")] });
+    await vi.waitFor(() => expect(document.activeElement).toBe(matrixInput()));
+    const first = matrixInput();
+
+    // the user has gone to the footer, as Next does, so only a focus on the new card brings it back
+    exitButton().focus();
+    await modal.setProps({ currentIndex: 1 });
+    await vi.waitFor(() => expect(document.activeElement).toBe(matrixInput()));
+    expect(first.isConnected, "the second matrix has a card of its own").toBe(false);
+  });
+
+  describe("an answer's auto-advance", () => {
+    const answer = (modal) => modal.findComponent(QuestionCard).vm.$emit("answered");
+
+    it("is dropped when the user moves focus out of the question, which keeps it", async () => {
+      const modal = mountFocusMode({ autoAdvance: true });
+      await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+      answer(modal);
+      exitButton().focus();
+      await settle();
+      expect(modal.emitted("next-question"), "no move to the next question").toBeFalsy();
+      expect(document.activeElement).toBe(exitButton());
+    });
+
+    it("still moves on when focus stays in the question or is only dropped", async () => {
+      const modal = mountFocusMode({ autoAdvance: true });
+      await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+      answer(modal);
+      card().focus(); // a move inside the question
+      card().blur(); // no relatedTarget, as when Chrome blurs a removed element
+      await settle();
+      expect(modal.emitted("next-question")).toHaveLength(1);
+    });
   });
 });
 

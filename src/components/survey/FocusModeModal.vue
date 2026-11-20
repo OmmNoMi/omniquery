@@ -48,7 +48,7 @@
       </div>
 
       <!-- Top-Aligned Question Area: Mobile Keyboard-Friendly (no jumping/squishing) -->
-      <div ref="scrollAreaRef" class="w-full flex-1 min-h-0 py-1 overflow-y-auto">
+      <div ref="scrollAreaRef" class="w-full flex-1 min-h-0 py-1 overflow-y-auto" @focusout="onQuestionFocusOut">
         <!-- Pinned Parent Question Card (Sticky inside Focus Mode scroll area) -->
         <div
           v-if="currentQuestion?._parentTitle || currentQuestion?.parent_title"
@@ -134,7 +134,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, nextTick } from "vue";
+import { computed, ref, watch } from "vue";
 import { Button, Dialog } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
 import { ArrowLeft, ArrowRight, ClipboardList, X } from "lucide-vue-next";
@@ -201,15 +201,11 @@ const { __ } = useTranslation();
 const questionCardRef = ref(null);
 const scrollAreaRef = ref(null);
 
-function focusCurrentQuestion() {
-  if (!props.isOpen) return;
-  nextTick(() => {
-    questionCardRef.value?.focus?.();
-    setTimeout(() => {
-      questionCardRef.value?.focus?.();
-    }, 60);
-  });
-}
+// Focus goes to the question once, when its card is mounted: on opening, once the dialog's content is,
+// and on each move to another question, since each question gets a card of its own (:key). Vue sets the
+// ref only after the card has mounted. No timer focuses it again, so whatever the user moves focus to
+// after that keeps it (#120).
+watch(questionCardRef, (card) => card?.focus?.());
 
 const currentQuestion = computed(() => {
   return props.questions[props.currentIndex] || null;
@@ -228,9 +224,14 @@ function onQuestionInput(val) {
 let advanceTimer = null;
 let isAdvancing = false;
 
+function cancelAdvance() {
+  clearTimeout(advanceTimer);
+  advanceTimer = null;
+}
+
 function onQuestionAnswered() {
   if (!props.autoAdvance) return;
-  if (advanceTimer) clearTimeout(advanceTimer);
+  cancelAdvance();
   advanceTimer = setTimeout(() => {
     advanceToNext();
     advanceTimer = null;
@@ -240,10 +241,7 @@ function onQuestionAnswered() {
 function advanceToNext() {
   if (isAdvancing) return;
   isAdvancing = true;
-  if (advanceTimer) {
-    clearTimeout(advanceTimer);
-    advanceTimer = null;
-  }
+  cancelAdvance();
   if (props.currentIndex < props.questions.length - 1) {
     emit("next-question");
   } else {
@@ -255,13 +253,18 @@ function advanceToNext() {
 }
 
 function prevQuestion() {
-  if (advanceTimer) {
-    clearTimeout(advanceTimer);
-    advanceTimer = null;
-  }
+  cancelAdvance();
   if (props.currentIndex > 0) {
     emit("prev-question");
   }
+}
+
+// A user who moves focus out of the question after answering it (to the mode menu, Previous, Exit) has
+// moved on, so the answer's pending auto-advance is dropped; it would take focus from there to the next
+// question (#120). A focusout with no relatedTarget (a click on nothing, or the browser blurring an
+// element that was removed) keeps it.
+function onQuestionFocusOut(event) {
+  if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) cancelAdvance();
 }
 
 function nextQuestion() {
@@ -274,17 +277,6 @@ watch(
     if (scrollAreaRef.value) {
       scrollAreaRef.value.scrollTop = 0;
     }
-    focusCurrentQuestion();
   }
-);
-
-watch(
-  () => props.isOpen,
-  (open) => {
-    if (open) {
-      focusCurrentQuestion();
-    }
-  },
-  { immediate: true }
 );
 </script>
