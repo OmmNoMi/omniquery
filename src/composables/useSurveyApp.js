@@ -321,8 +321,11 @@ export function useSurveyApp() {
   // the one write path for answers, from plain, grouped, matrix and focus-mode questions alike. It
   // also clears an answer the change made invalid, such as a Block that is not in the new District,
   // whether or not that question is on screen (#24); restoring a draft does not come through here.
+  // A changed answer drops its own section error, so a card never shows an error beside a new
+  // answer; Next checks the section again (#23).
   function setResponse(code, value) {
     responses.value[code] = value;
+    delete validationErrors.value[code];
     const questions = (activeTemplate.value && activeTemplate.value.questions) || [];
     for (const [child, answer] of Object.entries(staleDependentAnswers(questions, responses.value, code))) {
       if (answer === undefined) delete responses.value[child];

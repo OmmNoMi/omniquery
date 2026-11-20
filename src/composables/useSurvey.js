@@ -3,6 +3,7 @@ import { call } from "frappe-ui";
 import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { isAnswered, responseItems } from "../utils/responsePayload";
 import { PHONE_ERROR, isPhoneQuestion, isValidMobile } from "../utils/phone";
+import { REQUIRED_ERROR } from "../utils/requiredMessage";
 import { uuidv4 } from "../utils/uuid";
 import { projectHelp } from "../utils/projectHelp";
 import { templatesOfProject } from "../utils/projectTemplates";
@@ -538,7 +539,7 @@ export function useSurvey() {
       const val = responses.value[q.question_code];
       if (!isAnswered(val)) {
         if (q.is_mandatory) {
-          validationErrors.value[q.question_code] = "This field is required";
+          validationErrors.value[q.question_code] = REQUIRED_ERROR;
           isValid = false;
         }
       } else if (isPhoneQuestion(q) && !isValidMobile(val)) {

@@ -85,6 +85,12 @@ const CORE_HINDI = {
   "Phone": "फ़ोन नंबर",
   "Enter a 10-digit mobile number": "10 अंकों का मोबाइल नंबर दर्ज करें",
   "Enter 10-digit mobile number": "10 अंकों का मोबाइल नंबर दर्ज करें",
+  // what an empty required question asks for (#23)
+  "Choose {0}": "{0} चुनें",
+  "Enter {0}": "{0} दर्ज करें",
+  "Choose an answer": "एक उत्तर चुनें",
+  "Enter an answer": "उत्तर दर्ज करें",
+  "Capture the location": "लोकेशन दर्ज करें",
   "Saved offline": "ऑफ़लाइन सुरक्षित किया गया",
   "No active surveys available.": "कोई सक्रिय सर्वेक्षण उपलब्ध नहीं है।",
   "Check your network connection or permissions.": "अपना नेटवर्क कनेक्शन या अनुमतियां जांचें।",

@@ -343,16 +343,16 @@
       role="alert"
       class="mt-2 text-xs font-semibold text-rose-600"
     >
-      {{ __(errorMessage) }}
+      {{ shownError }}
     </p>
 
     <!-- Card Footer: Status Badge (Right) -->
-    <div v-if="notApplicable || (isCompleted && !isInputFocused)" class="flex items-center justify-end mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+    <div v-if="cardStatus === 'not-applicable' || (cardStatus === 'answered' && !isInputFocused)" class="flex items-center justify-end mt-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
       <!-- Status Badge (Bottom-Right) -->
       <div class="min-h-[22px] flex items-center">
         <!-- Not Applicable Badge -->
         <span
-          v-if="notApplicable"
+          v-if="cardStatus === 'not-applicable'"
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 border border-slate-200/90 dark:border-slate-700 px-2.5 py-0.5 rounded-full"
           :title="__('Skipped due to condition on another question')"
         >
@@ -362,7 +362,7 @@
 
         <!-- Answered Badge -->
         <span
-          v-else-if="isCompleted && !isInputFocused"
+          v-else
           class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 px-2.5 py-0.5 rounded-full"
         >
           <Check class="w-3.5 h-3.5" />
@@ -527,6 +527,7 @@ import { choiceButtonProps } from "../../utils/choiceButton";
 import { choiceGroupState } from "../../utils/choiceGroup";
 import { choiceOptions, hasOptions } from "../../utils/cascadingOptions";
 import { isPhoneQuestion } from "../../utils/phone";
+import { errorText } from "../../utils/requiredMessage";
 
 const props = defineProps({
   question: {
@@ -1203,6 +1204,27 @@ const isDateControl = computed(() => {
 });
 
 const isPhoneControl = computed(() => isPhoneQuestion(props.question));
+
+// what the control in this card asks for, in the order the template picks the control (#23)
+const answerAction = computed(() => {
+  if (isSwitchControl.value || isRangeControl.value || isRatingControl.value) return "choose";
+  if (isCurrencyControl.value) return "enter";
+  if (isChoiceControl.value || isYearControl.value) return "choose";
+  if (isGeolocationControl.value) return "location";
+  if (isNumberControl.value) return "enter";
+  if (isDateControl.value) return "choose";
+  return isPhoneControl.value ? "phone" : "enter";
+});
+
+// a required question left empty says what to do: "Choose District", "Enter Entrepreneur Name"
+const shownError = computed(() => errorText(__, props.errorMessage, answerAction.value, parsedQuestionMeta.value.text));
+
+// one state at a time (#23): an error wins over Answered, so a wrong phone number is not "Answered"
+const cardStatus = computed(() => {
+  if (props.notApplicable) return "not-applicable";
+  if (props.errorMessage) return "invalid";
+  return isCompleted.value ? "answered" : "empty";
+});
 
 function formatCoords(coords) {
   if (typeof coords === "object" && coords.latitude) {

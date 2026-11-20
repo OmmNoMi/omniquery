@@ -83,7 +83,7 @@
             </label>
           </div>
           <p v-if="validationErrors[q.question_code]" :id="'sub_err_' + q.question_code" class="text-[11px] text-rose-600 font-semibold mt-1">
-            {{ __(validationErrors[q.question_code]) }}
+            {{ subError(q) }}
           </p>
         </div>
 
@@ -201,6 +201,7 @@ import { choiceOptions, hasOptions, parentAnswer } from "../../utils/cascadingOp
 import { choiceGroupState } from "../../utils/choiceGroup";
 import { isAnswered } from "../../utils/responsePayload";
 import { isPhoneQuestion } from "../../utils/phone";
+import { errorText } from "../../utils/requiredMessage";
 
 const props = defineProps({
   group: {
@@ -259,6 +260,12 @@ function getSubLetter(q) {
   const label = q.label_en || q.label || "";
   const match = label.match(/^(Q\d+)?([a-z])\.\s*/i);
   return match ? match[2].toLowerCase() : null;
+}
+
+// a sub-question's error; an empty required one says what to do, as a single card does (#23)
+function subError(q) {
+  const action = isPhoneQuestion(q) ? "phone" : isChoiceQuestion(q) ? "choose" : "enter";
+  return errorText(__, props.validationErrors[q.question_code], action, getCleanSubLabel(q));
 }
 
 function getCleanSubLabel(q) {

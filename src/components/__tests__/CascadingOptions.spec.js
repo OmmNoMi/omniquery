@@ -144,6 +144,13 @@ describe("setResponse (#24)", () => {
     expect(app.responses.value).toEqual({ district: "Churu" });
   });
 
+  it("drops the changed question's own error, and only that one (#23)", async () => {
+    const app = await session({ district: "Baran" });
+    app.validationErrors.value = { block: "This field is required", district: "This field is required" };
+    app.setResponse("block", "Chhipabarod");
+    expect(app.validationErrors.value).toEqual({ district: "This field is required" });
+  });
+
   it("keeps the blocks of a multiple answer still offered", async () => {
     const app = await session({ district: "Baran", blocks: ["Baran"] });
     app.activeTemplate.value.questions[1].options = { ...BLOCKS, Churu: ["Baran", "Ratangarh"] };
