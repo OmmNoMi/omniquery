@@ -8,7 +8,6 @@ __pycache__/
 
 # Distribution / packaging
 /dist/
-!omniquery/public/dist/
 build/
 *.egg-info/
 .eggs/
@@ -24,8 +23,13 @@ nosetests.xml
 coverage.xml
 *.cover
 *.py,cover
+# Playwright (bench run-ui-tests omniquery)
+test-results/
+playwright-report/
 
 # Node / Frontend
+# Built by `bench build` (runs `yarn build`), same as Frappe CRM / Helpdesk.
+omniquery/public/dist/
 node_modules/
 node_modules
 *.d.ts

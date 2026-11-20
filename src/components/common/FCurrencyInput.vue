@@ -9,24 +9,24 @@
       <Button
         v-for="(increment, idx) in increments"
         :key="increment"
-        :ref="(el) => { if (el) chipRefs[idx] = el.$el || el; }"
+        :ref="(el) => { if (el) chipRefs[idx] = el; }"
         tabindex="-1"
         :label="__('Add') + ' ₹' + increment.toLocaleString()"
         :aria-label="__('Add') + ' ₹' + increment.toLocaleString()"
         @keydown="handleChipKeydown($event, idx)"
         @click="addAmount(increment, idx)"
-        class="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-black text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 active:scale-95 transition focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer select-none"
+        class="px-3.5 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-xs font-black text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 active:scale-95 transition focus-visible:border-emerald-500 cursor-pointer select-none"
       >
         +₹{{ increment.toLocaleString() }}
       </Button>
 
       <Button
         v-if="Number(modelValue) > 0"
-        :ref="(el) => { if (el) clearChipRef = el.$el || el; }"
+        :ref="(el) => { if (el) clearChipRef = el; }"
         tabindex="-1"
         @keydown="handleClearKeydown"
         @click="reset"
-        class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 active:scale-95 transition focus:outline-none focus:ring-2 focus:ring-slate-400 cursor-pointer select-none"
+        class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-200 active:scale-95 transition cursor-pointer select-none"
       >
         {{ __('Clear') }}
       </Button>
@@ -49,7 +49,7 @@
         @keydown.enter="$emit('enter')"
         @keydown.esc.stop="$emit('esc')"
         :placeholder="__('Enter amount...')"
-        class="block w-full min-h-[56px] rounded-2xl border-2 border-slate-300 dark:border-slate-700 py-3.5 pl-9 pr-4 text-xl sm:text-2xl font-black text-slate-900 dark:text-white focus:border-emerald-500 focus:bg-white dark:focus:bg-slate-900 bg-slate-50 dark:bg-slate-800 transition"
+        class="block w-full min-h-[56px] rounded-2xl border-2 border-slate-300 dark:border-slate-700 py-3.5 pl-9 pr-4 text-xl sm:text-2xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 transition"
       />
     </div>
   </div>
@@ -86,6 +86,7 @@ const props = defineProps({
 const emit = defineEmits(["update:modelValue", "enter", "esc"]);
 const { __ } = useTranslation();
 
+// frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
 const chipRefs = ref([]);
 const clearChipRef = ref(null);
 const inputRef = ref(null);
@@ -94,11 +95,11 @@ const activeChipIndex = ref(0);
 function getAllChipButtons() {
   const list = [];
   for (let i = 0; i < props.increments.length; i++) {
-    if (chipRefs.value[i]) list.push(chipRefs.value[i]);
+    const chip = chipRefs.value[i]?.rootRef;
+    if (chip) list.push(chip);
   }
-  if (clearChipRef.value && Number(props.modelValue) > 0) {
-    list.push(clearChipRef.value);
-  }
+  const clear = clearChipRef.value?.rootRef;
+  if (clear && Number(props.modelValue) > 0) list.push(clear);
   return list;
 }
 
@@ -110,9 +111,9 @@ function onInput(event) {
   emit("update:modelValue", event.target.value);
 }
 
+// frappe-ui TextInput exposes its input element as `el`
 function focusInput() {
-  const target = inputRef.value?.el || inputRef.value?.$el?.querySelector("input") || inputRef.value;
-  target?.focus?.({ preventScroll: true });
+  inputRef.value?.el?.focus({ preventScroll: true });
 }
 
 function handleChipKeydown(e, idx) {
@@ -208,6 +209,6 @@ function reset() {
 }
 
 defineExpose({
-  focus: () => inputRef.value?.focus({ preventScroll: true }),
+  focus: focusInput,
 });
 </script>

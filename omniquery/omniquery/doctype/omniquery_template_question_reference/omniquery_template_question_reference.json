@@ -19,6 +19,7 @@
   "group_title",
   "group_code",
   "options_json",
+  "depends_on_field",
   "conditional_logic_json",
   "validation_rules_json",
   "audio_prompt"
@@ -83,7 +84,7 @@
    "fieldname": "field_type",
    "fieldtype": "Select",
    "label": "Field Type",
-   "options": "Text\nLong Text\nInteger\nDecimal\nCurrency (INR)\nRange (Slider)\nSingle Choice (Radio)\nSingle Choice (Dropdown)\nMultiple Choice (Checkbox)\nDate\nTime\nGPS Location\nPhoto Upload\nDigital Signature\nDynamic Grid\nMatrix\nRating (1-5)"
+   "options": "Text\nLong Text\nPhone\nInteger\nDecimal\nCurrency (INR)\nRange (Slider)\nSingle Choice (Radio)\nSingle Choice (Dropdown)\nMultiple Choice (Checkbox)\nDate\nTime\nGPS Location\nPhoto Upload\nDigital Signature\nDynamic Grid\nMatrix\nRating (1-5)"
   },
   {
    "fieldname": "group_title",
@@ -132,12 +133,18 @@
    "fieldname": "allow_user_toggle",
    "fieldtype": "Check",
    "label": "Allow Surveyor UI Toggle"
+  },
+  {
+   "columns": 2,
+   "fieldname": "depends_on_field",
+   "fieldtype": "Data",
+   "label": "Depends On Field"
   }
  ],
  "index_web_pages_for_search": 0,
  "istable": 1,
  "links": [],
- "modified": "2026-09-29 13:50:00.000000",
+ "modified": "2026-11-20 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Template Question Reference",

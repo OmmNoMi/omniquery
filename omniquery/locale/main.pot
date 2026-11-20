@@ -2230,3 +2230,20 @@ msgstr ""
 msgid "🚀 Elevate Scope"
 msgstr ""
 
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+#: src/components/survey/QuestionCard.vue
+msgid "Phone"
+msgstr ""
+
+#: src/utils/phone.js
+msgid "Enter a 10-digit mobile number"
+msgstr ""
+
+#: src/components/survey/QuestionCard.vue
+#: src/components/survey/GroupedQuestionCard.vue
+msgid "Enter 10-digit mobile number"
+msgstr ""
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.py
+msgid "These answers are not 10-digit mobile numbers: {0}"
+msgstr ""

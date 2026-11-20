@@ -85,7 +85,7 @@ msgid "All"
 msgstr ""
 
 #: src/App.vue:44
-msgid "All Surveys"
+msgid "All surveys"
 msgstr ""
 
 #. Label of the allow_manual_override (Check) field in DocType 'OmniQuery
@@ -978,7 +978,7 @@ msgid "National ID / Registration No (Encrypted)"
 msgstr ""
 
 #: src/App.vue:37
-msgid "New Response"
+msgid "New response"
 msgstr ""
 
 #: src/components/survey/SectionCard.vue:56
@@ -1756,7 +1756,20 @@ msgstr ""
 
 #: src/App.vue:109
 msgid "Start Survey"
-msgstr ""
+msgstr "सर्वेक्षण शुरू करें"
+
+#: src/components/dashboard/SurveyorDashboard.vue:84
+#: src/views/Catalog.vue
+msgid "Resume Survey"
+msgstr "सर्वेक्षण जारी रखें"
+
+#: src/views/Catalog.vue
+msgid "Start New"
+msgstr "नया शुरू करें"
+
+#: src/components/survey/QuestionCard.vue
+msgid "Required"
+msgstr "आवश्यक"
 
 #. Option for the 'Geographic Granularity' (Select) field in DocType 'OmniQuery
 #. Question'
@@ -1852,7 +1865,7 @@ msgid "Survey Sections / Pages"
 msgstr ""
 
 #: src/App.vue:29
-msgid "Survey Submitted"
+msgid "Survey submitted"
 msgstr "सर्वेक्षण सबमिट हुआ"
 
 #. Label of the survey_template (Link) field in DocType 'OmniQuery Field Error
@@ -2050,7 +2063,7 @@ msgid "Text Input"
 msgstr ""
 
 #: src/components/header/CompactHeader.vue:63
-msgid "Text Size"
+msgid "Text size"
 msgstr "अक्षर का आकार"
 
 #. Option for the 'Rating Icon' (Select) field in DocType 'OmniQuery Question'
@@ -2124,8 +2137,8 @@ msgid "Village / Town / City"
 msgstr ""
 
 #: src/App.vue:123
-msgid "WAL Queue"
-msgstr "कतार (ऑफलाइन)"
+msgid "Waiting to upload"
+msgstr "अपलोड के लिए प्रतीक्षारत"
 
 #. Option for the 'Scope' (Select) field in DocType 'OmniQuery Option Set'
 #. Label of the workspace (Link) field in DocType 'OmniQuery Option Set'
@@ -2229,3 +2242,527 @@ msgstr ""
 msgid "🚀 Elevate Scope"
 msgstr ""
 
+
+#: omniquery/www/omniquery.html:35
+msgid "Loading OmniQuery..."
+msgstr "ओमनीक्वेरी खुल रहा है..."
+
+#: omniquery/www/omniquery.html:37
+msgid "OmniQuery needs JavaScript to run."
+msgstr "ओमनीक्वेरी चलाने के लिए JavaScript चालू करें।"
+
+#: src/App.vue:55
+msgid "Offline sync queue"
+msgstr "ऑफ़लाइन सिंक कतार"
+
+#: src/App.vue:60
+msgid "{0} pending submissions saved on this device"
+msgstr "इस डिवाइस पर {0} प्रविष्टियाँ अपलोड के लिए सहेजी गई हैं"
+
+#: src/App.vue:63
+msgid "These records are saved safely on this device. When you are online, tap Sync all records now to upload them."
+msgstr "ये रिकॉर्ड इस डिवाइस पर सुरक्षित हैं। ऑनलाइन होने पर इन्हें अपलोड करने के लिए सभी रिकॉर्ड अभी सिंक करें दबाएँ।"
+
+#: src/App.vue:68
+msgid "Sync all records now"
+msgstr "सभी रिकॉर्ड अभी सिंक करें"
+
+#: src/components/header/CompactHeader.vue:340
+msgid "{0} pending responses"
+msgstr "{0} प्रतिक्रियाएँ बाकी"
+
+#: src/components/header/CompactHeader.vue:305
+msgid "Choice layout"
+msgstr "विकल्प लेआउट"
+
+#: src/views/Success.vue:77
+msgid "Fill again"
+msgstr "फिर से भरें"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Discard saved draft?"
+msgstr "सहेजा गया ड्राफ़्ट हटाएँ?"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "This draft will be removed from this device. This cannot be undone."
+msgstr "यह ड्राफ़्ट इस डिवाइस से हटा दिया जाएगा। इसे वापस नहीं लाया जा सकता।"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Discard draft"
+msgstr "ड्राफ़्ट हटाएँ"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Keep draft"
+msgstr "ड्राफ़्ट रखें"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Could not discard the draft: {0}"
+msgstr "ड्राफ़्ट नहीं हटाया जा सका: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Sync failed: {0}"
+msgstr "सिंक विफल: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+#: src/composables/useSurveyApp.js
+msgid "Could not copy: {0}"
+msgstr "कॉपी नहीं हो सका: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+#: src/composables/useSurveyApp.js
+msgid "Response code copied"
+msgstr "प्रतिक्रिया कोड कॉपी हो गया"
+
+#: src/composables/useSurveyApp.js
+msgid "Not uploaded yet. The interview is kept on this device and will be sent later."
+msgstr "अभी अपलोड नहीं हुआ। साक्षात्कार इस डिवाइस पर सुरक्षित है और बाद में भेजा जाएगा।"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Export failed: {0}"
+msgstr "निर्यात विफल: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "CSV export failed: {0}"
+msgstr "CSV निर्यात विफल: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "ZIP export failed: {0}"
+msgstr "ZIP निर्यात विफल: {0}"
+
+#: src/components/dashboard/FilledFormsModal.vue
+msgid "Cleaned up {0} old synced responses to free local storage"
+msgstr "स्थानीय स्टोरेज खाली करने के लिए {0} पुरानी सिंक की गई प्रतिक्रियाएँ हटाई गईं"
+
+#: src/composables/useSurveyApp.js
+msgid "This survey is not yet downloaded on your device. Please connect to the internet once to download it."
+msgstr "यह सर्वेक्षण अभी आपके डिवाइस पर डाउनलोड नहीं हुआ है। इसे डाउनलोड करने के लिए एक बार इंटरनेट से जुड़ें।"
+
+#: src/composables/useSurveyApp.js
+msgid "Survey synced to server successfully!"
+msgstr "सर्वेक्षण सर्वर पर सिंक हो गया!"
+
+#: src/views/Catalog.vue
+msgid "Search surveys..."
+msgstr "सर्वेक्षण खोजें..."
+
+#: src/views/Catalog.vue
+msgid "Search surveys"
+msgstr "सर्वेक्षण खोजें"
+
+#: src/components/survey/QuestionCard.vue
+msgid "Search options..."
+msgstr "विकल्प खोजें..."
+
+#: src/components/survey/QuestionCard.vue
+msgid "Search options"
+msgstr "विकल्प खोजें"
+
+#: src/views/Catalog.vue
+msgid "Clear search"
+msgstr "खोज साफ़ करें"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Project details"
+msgstr "प्रोजेक्ट विवरण"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Project details and training materials"
+msgstr "प्रोजेक्ट विवरण और प्रशिक्षण सामग्री"
+
+#: src/components/header/CompactHeader.vue
+msgid "Return to Home"
+msgstr "होम पर लौटें"
+
+#: src/components/header/CompactHeader.vue
+msgid "Pending Offline Responses"
+msgstr "लंबित ऑफ़लाइन उत्तर"
+
+#: src/components/header/CompactHeader.vue
+msgid "Mute microphone"
+msgstr "माइक्रोफ़ोन म्यूट करें"
+
+#: src/components/header/CompactHeader.vue
+msgid "Unmute / record microphone"
+msgstr "माइक्रोफ़ोन चालू करें / रिकॉर्ड करें"
+
+#: src/composables/useSurveyApp.js
+msgid "Microphone access is blocked"
+msgstr "माइक्रोफ़ोन की अनुमति बंद है"
+
+#: src/composables/useSurveyApp.js
+msgid "Allow microphone access for this site in your browser settings, then tap the microphone again."
+msgstr "ब्राउज़र की सेटिंग में इस साइट को माइक्रोफ़ोन की अनुमति दें, फिर माइक्रोफ़ोन दोबारा दबाएँ।"
+
+#: src/composables/useSurveyApp.js
+msgid "Recording is not available"
+msgstr "रिकॉर्डिंग उपलब्ध नहीं है"
+
+#: src/composables/useSurveyApp.js
+msgid "This browser cannot record audio. The survey still saves without a recording."
+msgstr "यह ब्राउज़र ऑडियो रिकॉर्ड नहीं कर सकता। सर्वेक्षण बिना रिकॉर्डिंग के भी सहेजा जाएगा।"
+
+#: src/composables/useSurveyApp.js
+msgid "No microphone found"
+msgstr "कोई माइक्रोफ़ोन नहीं मिला"
+
+#: src/composables/useSurveyApp.js
+msgid "Connect a microphone, then tap the microphone again."
+msgstr "माइक्रोफ़ोन जोड़ें, फिर माइक्रोफ़ोन दोबारा दबाएँ।"
+
+#: src/composables/useSurveyApp.js
+msgid "Could not start the microphone"
+msgstr "माइक्रोफ़ोन चालू नहीं हो सका"
+
+#: src/composables/useSurveyApp.js
+msgid "Another app may be using it. Close that app, then tap the microphone again."
+msgstr "शायद कोई दूसरा ऐप इसका उपयोग कर रहा है। उस ऐप को बंद करें, फिर माइक्रोफ़ोन दोबारा दबाएँ।"
+
+#: src/App.vue
+msgid "Dismiss"
+msgstr "हटाएँ"
+
+#: src/components/header/CompactHeader.vue
+msgid "Close settings"
+msgstr "सेटिंग्स बंद करें"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Previous project"
+msgstr "पिछला प्रोजेक्ट"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Next project"
+msgstr "अगला प्रोजेक्ट"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Download all for offline"
+msgstr "ऑफ़लाइन के लिए सभी डाउनलोड करें"
+
+#: src/components/common/FCombobox.vue
+msgid "Select options"
+msgstr "विकल्प चुनें"
+
+#: src/components/common/FCombobox.vue
+msgid "Clear selection"
+msgstr "चयन साफ़ करें"
+
+#: src/components/survey/GroupedQuestionCard.vue
+msgid "Decrease"
+msgstr "घटाएँ"
+
+#: src/components/survey/GroupedQuestionCard.vue
+msgid "Increase"
+msgstr "बढ़ाएँ"
+
+#: src/components/common/FRating.vue
+msgid "{0} of {1}"
+msgstr "{1} में से {0}"
+
+#: src/components/dashboard/ProjectHeaderCard.vue
+msgid "Download all survey templates for this project so they can be filled offline"
+msgstr "इस प्रोजेक्ट के सभी सर्वे टेम्पलेट डाउनलोड करें ताकि उन्हें ऑफ़लाइन भरा जा सके"
+
+#: src/components/header/CompactHeader.vue
+msgid "Your account"
+msgstr "आपका खाता"
+
+#: src/components/header/CompactHeader.vue
+msgid "Language"
+msgstr "भाषा"
+
+#: src/components/header/CompactHeader.vue
+msgid "Theme"
+msgstr "थीम"
+
+#: src/components/header/CompactHeader.vue
+msgid "Light"
+msgstr "हल्की"
+
+#: src/components/header/CompactHeader.vue
+msgid "Dark"
+msgstr "गहरी"
+
+#: src/components/header/CompactHeader.vue
+msgid "System"
+msgstr "सिस्टम"
+
+#: src/components/header/CompactHeader.vue
+msgid "Done"
+msgstr "हो गया"
+
+#: src/components/header/CompactHeader.vue
+msgid "Dropdown"
+msgstr "ड्रॉपडाउन"
+
+#: src/App.vue
+msgid "Session expired"
+msgstr "सत्र समाप्त हो गया"
+
+#: src/App.vue
+msgid "Sign in again to upload 1 interview"
+msgstr "1 साक्षात्कार अपलोड करने के लिए फिर से साइन इन करें"
+
+#: src/App.vue
+msgid "Sign in again to upload {0} interviews"
+msgstr "{0} साक्षात्कार अपलोड करने के लिए फिर से साइन इन करें"
+
+#: src/App.vue
+msgid "Sign in"
+msgstr "साइन इन करें"
+
+#: src/App.vue
+msgid "Interview not saved"
+msgstr "साक्षात्कार सहेजा नहीं गया"
+
+#: src/App.vue
+msgid "The interview could not be saved on this device. Storage may be full. Please try again."
+msgstr "साक्षात्कार इस डिवाइस पर सहेजा नहीं जा सका। स्टोरेज भर गया हो सकता है। कृपया फिर से प्रयास करें।"
+
+#: src/App.vue
+msgid "Try again"
+msgstr "फिर से प्रयास करें"
+
+#: src/composables/useSurveyApp.js
+msgid "Location access is blocked"
+msgstr "लोकेशन की अनुमति बंद है"
+
+#: src/composables/useSurveyApp.js
+msgid "Allow location access for this site in your browser settings, then tap Retry GPS."
+msgstr "ब्राउज़र की सेटिंग में इस साइट को लोकेशन की अनुमति दें, फिर जीपीएस पुनः प्रयास दबाएँ।"
+
+#: src/composables/useSurveyApp.js
+msgid "Location unavailable"
+msgstr "लोकेशन उपलब्ध नहीं है"
+
+#: src/composables/useSurveyApp.js
+msgid "Turn on location on this device, then tap Retry GPS."
+msgstr "इस डिवाइस पर लोकेशन चालू करें, फिर जीपीएस पुनः प्रयास दबाएँ।"
+
+#: src/composables/useSurveyApp.js
+msgid "Location timed out"
+msgstr "लोकेशन मिलने में समय समाप्त हो गया"
+
+#: src/composables/useSurveyApp.js
+msgid "Move to an open spot or near a window, then tap Retry GPS."
+msgstr "खुली जगह या खिड़की के पास जाएँ, फिर जीपीएस पुनः प्रयास दबाएँ।"
+
+#: src/composables/useSurveyApp.js
+msgid "Location is not supported"
+msgstr "लोकेशन समर्थित नहीं है"
+
+#: src/composables/useSurveyApp.js
+msgid "This browser cannot share a location. The interview still saves without one."
+msgstr "यह ब्राउज़र लोकेशन साझा नहीं कर सकता। साक्षात्कार बिना लोकेशन के भी सहेजा जाएगा।"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "GPS Status"
+msgstr "जीपीएस स्थिति"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Captured"
+msgstr "प्राप्त"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Denied"
+msgstr "अस्वीकृत"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Unavailable"
+msgstr "अनुपलब्ध"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Timed out"
+msgstr "समय समाप्त"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Unsupported"
+msgstr "असमर्थित"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Not captured"
+msgstr "प्राप्त नहीं"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Whether the device gave a location. When it did not, the coordinates are empty and this says why."
+msgstr "डिवाइस ने लोकेशन दी या नहीं। न देने पर निर्देशांक खाली रहते हैं और यहाँ कारण दिखता है।"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.json
+msgid "Captured when the respondent has a recorded location; set from the coordinates."
+msgstr "उत्तरदाता की लोकेशन दर्ज होने पर प्राप्त; निर्देशांकों से तय होता है।"
+
+#: omniquery/services/idempotency.py
+msgid "The idempotency key must be a UUIDv4"
+msgstr "आइडेम्पोटेंसी कुंजी UUIDv4 होनी चाहिए"
+
+#: omniquery/omniquery/doctype/omniquery_option_item/omniquery_option_item.json
+msgid "Parent Option"
+msgstr "मूल विकल्प"
+
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+msgid "Depends On Field"
+msgstr "निर्भर फ़ील्ड"
+
+#: omniquery/omniquery/doctype/omniquery_question/omniquery_question.json
+msgid "Depends On Field (Parent Question Code)"
+msgstr "निर्भर फ़ील्ड (मूल प्रश्न कोड)"
+
+#: omniquery/omniquery/doctype/omniquery_option_set/omniquery_option_set.py
+msgid "Give every option a Parent Option, or none of them."
+msgstr "हर विकल्प को मूल विकल्प दें, या किसी को नहीं।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} groups its options by a parent answer, so it needs Depends On Field."
+msgstr "प्रश्न {0} के विकल्प मूल उत्तर के अनुसार बँटे हैं, इसलिए इसे निर्भर फ़ील्ड चाहिए।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} depends on {1}, which is not another question in this template."
+msgstr "प्रश्न {0} {1} पर निर्भर है, जो इस टेम्पलेट का कोई दूसरा प्रश्न नहीं है।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} depends on {1}, so its options must be grouped by {1}'s answers."
+msgstr "प्रश्न {0} {1} पर निर्भर है, इसलिए इसके विकल्प {1} के उत्तरों के अनुसार बँटे होने चाहिए।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} has options for {1}, which {2} does not offer."
+msgstr "प्रश्न {0} में {1} के लिए विकल्प हैं, जो {2} में नहीं हैं।"
+
+#: omniquery/services/cascading_options.py
+msgid "Question {0} depends on itself through {1}."
+msgstr "प्रश्न {0} {1} के ज़रिए खुद पर निर्भर है।"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.py
+msgid "These answers are not among the choices for the answer they depend on: {0}"
+msgstr "ये उत्तर उन विकल्पों में नहीं हैं जो उनके मूल उत्तर के लिए हैं: {0}"
+
+#: src/components/project/ProjectPage.vue
+msgid "Active Field Project"
+msgstr "सक्रिय फ़ील्ड परियोजना"
+
+#: src/components/project/ProjectPage.vue
+msgid "Back to Dashboard"
+msgstr "डैशबोर्ड पर वापस जाएँ"
+
+#: src/utils/questionLayout.js
+msgid "Breakdown table"
+msgstr "विवरण तालिका"
+
+#: src/components/project/ProjectPage.vue
+msgid "Direct telephone dispatch to field supervisor"
+msgstr "फ़ील्ड पर्यवेक्षक को सीधे फ़ोन करें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Download for Offline"
+msgstr "ऑफ़लाइन के लिए डाउनलोड करें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Email Dispatch"
+msgstr "ईमेल भेजें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Field SOPs & Protocols"
+msgstr "फ़ील्ड SOP और प्रोटोकॉल"
+
+#: src/components/project/ProjectPage.vue
+msgid "Field Support & Supervisor Helpline"
+msgstr "फ़ील्ड सहायता और पर्यवेक्षक हेल्पलाइन"
+
+#: src/components/project/ProjectPage.vue
+msgid "Helpline Phone"
+msgstr "हेल्पलाइन फ़ोन"
+
+#: src/components/project/ProjectPage.vue
+msgid "Loaded survey"
+msgstr "सर्वेक्षण लोड हुआ"
+
+#: src/components/project/ProjectPage.vue
+msgid "No published surveys found for this project"
+msgstr "इस परियोजना के लिए कोई प्रकाशित सर्वेक्षण नहीं मिला"
+
+#: src/components/project/ProjectPage.vue
+msgid "Official escalation & technical queries"
+msgstr "आधिकारिक शिकायत और तकनीकी प्रश्न"
+
+#: src/components/project/ProjectPage.vue
+msgid "Offline Mode"
+msgstr "ऑफ़लाइन मोड"
+
+#: src/components/project/ProjectPage.vue
+msgid "Offline Ready"
+msgstr "ऑफ़लाइन तैयार"
+
+#: src/components/project/ProjectPage.vue
+msgid "Please check with your field supervisor or reload your template list."
+msgstr "कृपया अपने फ़ील्ड पर्यवेक्षक से पूछें या अपनी सर्वेक्षण सूची फिर से लोड करें।"
+
+#: src/components/project/ProjectPage.vue
+msgid "Pre-cache survey questions so you can fill it without internet"
+msgstr "सर्वेक्षण के प्रश्न पहले से सहेजें ताकि आप इसे बिना इंटरनेट के भर सकें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Project Details"
+msgstr "परियोजना विवरण"
+
+#: src/components/project/ProjectPage.vue
+msgid "Q"
+msgstr "प्र"
+
+#: src/components/project/ProjectPage.vue
+msgid "Ready Offline"
+msgstr "ऑफ़लाइन तैयार"
+
+#: src/components/project/ProjectPage.vue
+msgid "Requires Internet to Download"
+msgstr "डाउनलोड के लिए इंटरनेट चाहिए"
+
+#: src/components/project/ProjectPage.vue
+msgid "Select a survey to start collecting field data"
+msgstr "फ़ील्ड डेटा एकत्र करना शुरू करने के लिए एक सर्वेक्षण चुनें"
+
+#: src/components/project/ProjectPage.vue
+msgid "Standard Field Investigator Protocol"
+msgstr "मानक फ़ील्ड अन्वेषक प्रोटोकॉल"
+
+#: src/components/project/ProjectPage.vue
+msgid "Standard Operating Procedures"
+msgstr "मानक संचालन प्रक्रियाएँ"
+
+#: src/components/project/ProjectPage.vue
+msgid "Supervisor Helpline"
+msgstr "पर्यवेक्षक हेल्पलाइन"
+
+#: src/components/project/ProjectPage.vue
+msgid "Survey questions and schema downloaded in device memory"
+msgstr "सर्वेक्षण के प्रश्न और ढाँचा डिवाइस में सहेजे गए"
+
+#: src/components/project/ProjectPage.vue
+msgid "Surveys Assigned"
+msgstr "सौंपे गए सर्वेक्षण"
+
+#: src/components/project/ProjectPage.vue
+msgid "Surveys in this Project"
+msgstr "इस परियोजना के सर्वेक्षण"
+
+#: src/components/project/ProjectPage.vue
+msgid "Target Scope"
+msgstr "लक्षित क्षेत्र"
+
+#: src/components/common/FRangeSlider.vue
+msgid "Not answered"
+msgstr "उत्तर नहीं दिया गया"
+
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+#: src/components/survey/QuestionCard.vue
+msgid "Phone"
+msgstr "फ़ोन नंबर"
+
+#: src/utils/phone.js
+msgid "Enter a 10-digit mobile number"
+msgstr "10 अंकों का मोबाइल नंबर दर्ज करें"
+
+#: src/components/survey/QuestionCard.vue
+#: src/components/survey/GroupedQuestionCard.vue
+msgid "Enter 10-digit mobile number"
+msgstr "10 अंकों का मोबाइल नंबर दर्ज करें"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.py
+msgid "These answers are not 10-digit mobile numbers: {0}"
+msgstr "ये उत्तर 10 अंकों के मोबाइल नंबर नहीं हैं: {0}"
