@@ -1921,7 +1921,7 @@ const MUTANTS = [
     "a matrix reads the focused cell after the old layout is gone, so focus drops to the page",
     src("src/components/survey/MatrixQuestionCard.vue"),
     "  moveTo(rIdx, cIdx);\n});",
-    "  moveTo(rIdx, cIdx);\n});",
+    "  moveTo(rIdx, cIdx);\n}, { flush: \"post\" });",
     vitest("src/components/__tests__/FocusThroughFrappeUI.spec.js"),
   ],
   [
@@ -2010,6 +2010,46 @@ const MUTANTS = [
     src("src/components/survey/FocusModeModal.vue"),
     ":key=\"currentQuestion?.question_code || currentIndex\"",
     "",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "focus",
+    "focus mode focuses the question again 200ms later, after a short wait would have ended",
+    src("src/components/survey/FocusModeModal.vue"),
+    "watch(questionCardRef, (card) => card?.focus?.());",
+    "watch(questionCardRef, (card) => { card?.focus?.(); setTimeout(() => card?.focus?.(), 200); });",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "focus",
+    "one matrix's card is reused for the next matrix",
+    src("src/components/survey/FocusModeModal.vue"),
+    ":key=\"'matrix_' + (currentQuestion?.question_code || currentIndex)\"",
+    "",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "focus",
+    "an answer's auto-advance takes focus from wherever the user has moved it",
+    src("src/components/survey/FocusModeModal.vue"),
+    " @focusout=\"onQuestionFocusOut\"",
+    "",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "focus",
+    "auto-advance is dropped when the browser only blurs the question",
+    src("src/components/survey/FocusModeModal.vue"),
+    "event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)",
+    "!event.currentTarget.contains(event.relatedTarget)",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "focus",
+    "auto-advance is dropped when focus moves inside the question",
+    src("src/components/survey/FocusModeModal.vue"),
+    "event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)",
+    "event.relatedTarget",
     vitest("src/components/__tests__/FocusModeEscape.spec.js"),
   ],
   [
@@ -2889,6 +2929,12 @@ async function main() {
       console.error(
         `  ANCHOR: expected 1 match in ${path.relative(appDir, file)}, found ${hits}`,
       );
+      process.exitCode = 1;
+      continue;
+    }
+    if (replace === find) {
+      // a mutant that changes nothing passes every test and would read as a gap in them
+      console.error("  NO-OP: the replacement is the same as the anchor");
       process.exitCode = 1;
       continue;
     }

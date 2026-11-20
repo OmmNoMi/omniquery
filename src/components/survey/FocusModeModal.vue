@@ -48,7 +48,7 @@
       </div>
 
       <!-- Top-Aligned Question Area: Mobile Keyboard-Friendly (no jumping/squishing) -->
-      <div ref="scrollAreaRef" class="w-full flex-1 min-h-0 py-1 overflow-y-auto">
+      <div ref="scrollAreaRef" class="w-full flex-1 min-h-0 py-1 overflow-y-auto" @focusout="onQuestionFocusOut">
         <!-- Pinned Parent Question Card (Sticky inside Focus Mode scroll area) -->
         <div
           v-if="currentQuestion?._parentTitle || currentQuestion?.parent_title"
@@ -224,9 +224,14 @@ function onQuestionInput(val) {
 let advanceTimer = null;
 let isAdvancing = false;
 
+function cancelAdvance() {
+  clearTimeout(advanceTimer);
+  advanceTimer = null;
+}
+
 function onQuestionAnswered() {
   if (!props.autoAdvance) return;
-  if (advanceTimer) clearTimeout(advanceTimer);
+  cancelAdvance();
   advanceTimer = setTimeout(() => {
     advanceToNext();
     advanceTimer = null;
@@ -236,10 +241,7 @@ function onQuestionAnswered() {
 function advanceToNext() {
   if (isAdvancing) return;
   isAdvancing = true;
-  if (advanceTimer) {
-    clearTimeout(advanceTimer);
-    advanceTimer = null;
-  }
+  cancelAdvance();
   if (props.currentIndex < props.questions.length - 1) {
     emit("next-question");
   } else {
@@ -251,13 +253,18 @@ function advanceToNext() {
 }
 
 function prevQuestion() {
-  if (advanceTimer) {
-    clearTimeout(advanceTimer);
-    advanceTimer = null;
-  }
+  cancelAdvance();
   if (props.currentIndex > 0) {
     emit("prev-question");
   }
+}
+
+// A user who moves focus out of the question after answering it (to the mode menu, Previous, Exit) has
+// moved on, so the answer's pending auto-advance is dropped; it would take focus from there to the next
+// question (#120). A focusout with no relatedTarget (a click on nothing, or the browser blurring an
+// element that was removed) keeps it.
+function onQuestionFocusOut(event) {
+  if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) cancelAdvance();
 }
 
 function nextQuestion() {
