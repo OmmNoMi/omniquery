@@ -120,6 +120,7 @@
             <td
               v-for="(col, cIdx) in matrixColumns"
               :key="col.key"
+              :data-cell-area="`${rIdx}_${cIdx}`"
               class="py-2 px-3 align-middle"
             >
               <!-- Number input / Stepper -->
@@ -242,6 +243,7 @@
           <div
             v-for="(col, cIdx) in matrixColumns"
             :key="col.key"
+            :data-cell-area="`${rIdx}_${cIdx}`"
             class="flex items-center justify-between gap-2"
           >
             <label class="text-[11px] font-bold text-slate-600 dark:text-slate-300 flex-1 leading-tight">
@@ -377,7 +379,8 @@ import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useCardEscape } from "../../composables/useCardEscape";
 import { useRevealInPage } from "../../composables/useRevealInPage";
-import { breakpointsTailwind, useBreakpoints, useElementSize } from "@vueuse/core";
+import { useScreenIsWide } from "../../composables/useScreenIsWide";
+import { useElementSize } from "@vueuse/core";
 
 const props = defineProps({
   question: {
@@ -407,21 +410,23 @@ const { height: cardHeaderHeight } = useElementSize(useTemplateRef("cardHeader")
 const onCardEscape = useCardEscape(cardRef);
 const isFocused = ref(false);
 const isInputFocused = ref(false);
-// The table shows from Tailwind's sm breakpoint up, the way frappe-ui's Sidebar reads it, and only
-// the layout on screen is rendered (#118). data-cell lands on the element that takes focus, since
+// The table shows from Tailwind's sm breakpoint up and the cards below it, and only the layout on
+// screen is rendered (#118). data-cell lands on the element that takes focus, since
 // frappe-ui TextInput passes attrs to its input element and Select to its trigger button; a ref would
 // hold the component, which has no focus().
-const showsTable = useBreakpoints(breakpointsTailwind).greaterOrEqual("sm");
+const showsTable = useScreenIsWide();
 const cellAt = (rIdx, cIdx) => cardRef.value?.querySelector(`[data-cell="${rIdx}_${cIdx}"]`);
-// A rotated tablet or a resized window swaps the layout and removes the focused cell, so focus
-// moves to the same cell in the new layout rather than dropping to the page. A pre-flush watcher
-// reads the focused cell before the old layout goes.
+// A phone turned on its side or a resized window swaps the layout and removes whatever had focus in
+// it, a cell or its stepper button, so focus moves to that cell in the new layout and the page scrolls
+// to it (the cards are much taller than the table) rather than focus dropping to the page. Every matrix
+// swaps in the same render, so the page is scrolled once the ones above have grown too. A pre-flush
+// watcher reads the focused cell's area before the old layout goes.
 watch(showsTable, async () => {
-  const cell = document.activeElement?.closest?.("[data-cell]");
-  if (!cell || !cardRef.value?.contains(cell)) return;
-  const [rIdx, cIdx] = cell.dataset.cell.split("_");
+  const area = document.activeElement?.closest?.("[data-cell-area]");
+  if (!area || !cardRef.value?.contains(area)) return;
+  const [rIdx, cIdx] = area.dataset.cellArea.split("_");
   await nextTick();
-  cellAt(rIdx, cIdx)?.focus({ preventScroll: true });
+  moveTo(rIdx, cIdx);
 });
 
 // Parse question title & number

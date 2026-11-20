@@ -8,6 +8,7 @@ import QuestionCard from "../survey/QuestionCard.vue";
 import GroupedQuestionCard from "../survey/GroupedQuestionCard.vue";
 import MatrixQuestionCard from "../survey/MatrixQuestionCard.vue";
 import { useTranslation } from "../../composables/useTranslation";
+import { fakeScreen } from "../../test/matchMedia";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -214,7 +215,7 @@ describe("Gate 2: Accessibility Invariants (WCAG 2.2 AA)", () => {
       };
       // only the layout on screen is rendered (#118): the table from Tailwind's sm breakpoint up
       for (const [wide, layout] of [[true, "table"], [false, "cards"]]) {
-        vi.stubGlobal("matchMedia", () => ({ matches: wide, addEventListener() {}, removeEventListener() {} }));
+        fakeScreen({ width: wide ? 1024 : 375 });
         const wrapper = mount(MatrixQuestionCard, { props: { question: matrix, modelValue: {} } });
         await nextTick();
         const names = wrapper.findAll(`[data-matrix-layout=${layout}] [data-cell]`).map((c) => c.attributes("aria-label"));

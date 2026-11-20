@@ -1,25 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { effectScope, nextTick } from "vue";
 import { applyTheme, useTheme, THEME_COLORS, DEFAULT_THEME } from "../theme";
+import { fakeScreen } from "../../test/matchMedia";
 
 // A device that prefers dark (or not), whose setting can flip while the app is open
 function stubDevice(prefersDark) {
-  const listeners = new Set();
-  const query = {
-    matches: prefersDark,
-    media: "(prefers-color-scheme: dark)",
-    addEventListener: (_, fn) => listeners.add(fn),
-    removeEventListener: (_, fn) => listeners.delete(fn),
-    addListener: (fn) => listeners.add(fn),
-    removeListener: (fn) => listeners.delete(fn),
-  };
-  vi.stubGlobal("matchMedia", vi.fn(() => query));
-  return {
-    flip(dark) {
-      query.matches = dark;
-      listeners.forEach((fn) => fn({ matches: dark }));
-    },
-  };
+  const scheme = (dark) => ({ "prefers-color-scheme": dark ? "dark" : "light" });
+  const screen = fakeScreen(scheme(prefersDark));
+  return { flip: (dark) => screen.change(scheme(dark)) };
 }
 
 const root = () => document.documentElement;
@@ -86,7 +74,7 @@ describe("theme (#39, #45)", () => {
     expect(theme.value).toBe("auto");
     expect(resolvedTheme.value).toBe("dark");
     expect(root().dataset.theme).toBe("dark");
-    device.flip(false);
+    await device.flip(false);
     await nextTick();
     expect(root().dataset.theme).toBe("light");
     expect(themeColor()).toBe(THEME_COLORS.light);

@@ -8,6 +8,7 @@ import FCurrencyInput from "../common/FCurrencyInput.vue";
 import FRating from "../common/FRating.vue";
 import FRangeSlider from "../common/FRangeSlider.vue";
 import GroupedQuestionCard from "../survey/GroupedQuestionCard.vue";
+import { fakeScreen } from "../../test/matchMedia";
 
 // A ref on a frappe-ui component holds the component, not its element: TextInput exposes its <input>
 // as `el`, and Button its <button> as `rootRef`. Calling focus() on the component throws.
@@ -104,34 +105,22 @@ describe("focus reaches the element frappe-ui exposes", () => {
       columns: [{ key: "count", label: "Count", type: "number" }],
       rows: [{ id: "summer", label: "Summer" }, { id: "winter", label: "Winter" }],
     };
-    // the table shows from Tailwind's sm breakpoint (640px) up. Each query is answered against a
-    // screen width, so a wrong breakpoint or direction shows; resize() tells every listener, as a
-    // rotated tablet would.
+    // the table shows from Tailwind's sm breakpoint (640px) up; the fake answers each query against
+    // the screen width, so a wrong breakpoint or direction shows
     let screen;
-    // other queries (a colour scheme, reduced motion) do not match
-    const queryMatches = (query) => {
-      const [, side, px] = query.match(/(min|max)-width:\s*([\d.]+)px/) || [];
-      if (!side) return false;
-      return side === "min" ? screen.width >= Number(px) : screen.width <= Number(px);
-    };
-    const screenIsWide = (wide) => {
-      screen = { width: wide ? 1024 : 375, listeners: new Map() };
-      vi.stubGlobal("matchMedia", (query) => ({
-        media: query,
-        get matches() {
-          return queryMatches(query);
-        },
-        addEventListener: (_, fn) => screen.listeners.set(fn, query),
-        removeEventListener: (_, fn) => screen.listeners.delete(fn),
-      }));
-    };
+    const screenIsWide = (wide) => (screen = fakeScreen({ width: wide ? 1024 : 375 }));
+    // as turning a phone on its side does
     const resize = async (wide) => {
-      screen.width = wide ? 1024 : 375;
-      screen.listeners.forEach((query, fn) => fn({ matches: queryMatches(query) }));
-      await nextTick();
+      await screen.change({ width: wide ? 1024 : 375 });
       await nextTick();
     };
-    afterEach(() => vi.unstubAllGlobals());
+    let outside;
+    afterEach(() => {
+      outside?.remove();
+      outside = null;
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    });
 
     for (const [wide, layout, other] of [[true, "table", "cards"], [false, "cards", "table"]]) {
       it(`renders each cell once, in the ${layout}, on a ${wide ? "wide" : "narrow"} screen`, async () => {
@@ -144,30 +133,71 @@ describe("focus reaches the element frappe-ui exposes", () => {
       });
     }
 
-    it("keeps focus on the same cell when the screen crosses the breakpoint", async () => {
+    it("keeps focus on the same cell, and scrolls to it, when the screen crosses the breakpoint", async () => {
       screenIsWide(true);
       mountHere(MatrixQuestionCard, { question: matrix, modelValue: {} });
       await nextTick();
       wrapper.find('[data-matrix-layout=table] [data-cell="1_0"]').element.focus();
+      const scrolledTo = [];
+      vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(function () {
+        scrolledTo.push(this);
+      });
+
+      await resize(false);
+      const card = wrapper.find('[data-matrix-layout=cards] [data-cell="1_0"]').element;
+      expect(focused()).toBe(card);
+      expect(scrolledTo).toEqual([card]);
+      await resize(true);
+      expect(focused()).toBe(wrapper.find('[data-matrix-layout=table] [data-cell="1_0"]').element);
+    });
+
+    it("scrolls to the cell only once the matrices above it have swapped too", async () => {
+      screenIsWide(true);
+      // mounted after the focused one, so a listener of its own would hear the change after it
+      mountHere(MatrixQuestionCard, { question: matrix, modelValue: {} });
+      const spot = document.createElement("div");
+      document.body.prepend(spot);
+      const above = mount(MatrixQuestionCard, { props: { question: matrix, modelValue: {} }, attachTo: spot });
+      await nextTick();
+      wrapper.find('[data-cell="1_0"]').element.focus();
+      // how many tables are left on the page when the page is scrolled to the cell
+      const tablesLeft = [];
+      vi.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {
+        tablesLeft.push(document.querySelectorAll("[data-matrix-layout=table]").length);
+      });
+
+      try {
+        await resize(false);
+        expect(tablesLeft).toEqual([0]);
+      } finally {
+        above.unmount();
+        spot.remove();
+      }
+    });
+
+    it("moves focus from a cell's stepper button to that cell when the layout swaps", async () => {
+      screenIsWide(true);
+      mountHere(MatrixQuestionCard, { question: matrix, modelValue: {} });
+      await nextTick();
+      // a desktop browser focuses a button it clicks
+      const plus = wrapper.findAll("[data-matrix-layout=table] button").filter((b) => b.text() === "+")[1];
+      plus.element.focus();
 
       await resize(false);
       expect(focused()).toBe(wrapper.find('[data-matrix-layout=cards] [data-cell="1_0"]').element);
-      await resize(true);
-      expect(focused()).toBe(wrapper.find('[data-matrix-layout=table] [data-cell="1_0"]').element);
     });
 
     it("leaves focus alone when the layout swaps while it is in another matrix", async () => {
       screenIsWide(true);
       mountHere(MatrixQuestionCard, { question: matrix, modelValue: {} });
       await nextTick();
-      const outside = document.createElement("button");
-      outside.dataset.cell = "1_0";
+      outside = document.createElement("button");
+      outside.dataset.cellArea = "1_0";
       document.body.append(outside);
       outside.focus();
 
       await resize(false);
       expect(focused()).toBe(outside);
-      outside.remove();
     });
 
     it("moves between the rows of a dropdown column", async () => {
