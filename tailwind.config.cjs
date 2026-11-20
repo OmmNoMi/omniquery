@@ -3,11 +3,16 @@ const colors = require("tailwindcss/colors");
 
 module.exports = {
 	presets: [frappeUIPreset],
-	content: [
-		"./src/**/*.{vue,js,ts,jsx,tsx}",
-		"./omniquery/www/omniquery.html",
-		"./node_modules/frappe-ui/src/components/**/*.{vue,js,ts,jsx,tsx}",
-	],
+	// relative: the globs are read from this file's folder, not from wherever the build or the tests
+	// run (test/guards/template_classes.test.js builds from the bench root too)
+	content: {
+		relative: true,
+		files: [
+			"./src/**/*.{vue,js,ts,jsx,tsx}",
+			"./omniquery/www/omniquery.html",
+			"./node_modules/frappe-ui/src/components/**/*.{vue,js,ts,jsx,tsx}",
+		],
+	},
 	darkMode: "class",
 	theme: {
 		extend: {

@@ -71,6 +71,52 @@ export function elementProp(node, name) {
 // The static class plus every bound :class of one template element, as one string.
 export const elementClasses = (node) => elementProp(node, "class");
 
+// The class names one template element sets for sure: its static class, plus the class strings in
+// its bound :class, read with Vue's own expression parser. Only the places a :class takes a class
+// from count: strings, array items, object keys, both arms of `?:` and both sides of `&&`/`||`, so
+// the 'success' in `tone === 'success' ? 'x' : 'y'` is not a class. Names built at runtime, such as
+// `bg-${tone}-50`, can't be read and are left out. A prop that hands a child a class
+// (`panel-class`, `:inputClass`) counts too.
+const CLASS_PROP = /^(?:class|[\w-]+-class|\w+Class)$/;
+export function elementClassNames(node) {
+  const names = [];
+  const words = (text) => text.split(/\s+/).filter(Boolean);
+  const read = (n) => {
+    if (!n) return;
+    if (n.type === "StringLiteral") names.push(...words(n.value));
+    else if (n.type === "TemplateLiteral") {
+      n.quasis.forEach((q, i) => {
+        const text = q.value.cooked;
+        const parts = words(text);
+        if (i > 0 && !/^\s/.test(text)) parts.shift(); // glued to the ${} before it
+        if (i < n.expressions.length && !/\s$/.test(text)) parts.pop(); // glued to the ${} after it
+        names.push(...parts);
+      });
+      // a ${} with space (or the literal's own edge) on both sides holds whole class names
+      const last = n.expressions.length - 1;
+      n.expressions.forEach((e, i) => {
+        const before = n.quasis[i].value.cooked, after = n.quasis[i + 1].value.cooked;
+        const spaceBefore = (i === 0 && before === "") || /\s$/.test(before);
+        const spaceAfter = (i === last && after === "") || /^\s/.test(after);
+        if (spaceBefore && spaceAfter) read(e);
+      });
+    } else if (n.type === "ArrayExpression") n.elements.forEach(read);
+    else if (n.type === "ObjectExpression") {
+      for (const prop of n.properties) {
+        if (prop.computed) continue;
+        if (prop.key?.type === "StringLiteral") names.push(...words(prop.key.value));
+        else if (prop.key?.type === "Identifier") names.push(prop.key.name);
+      }
+    } else if (n.type === "ConditionalExpression") [n.consequent, n.alternate].forEach(read);
+    else if (n.type === "LogicalExpression") [n.left, n.right].forEach(read);
+  };
+  for (const p of node.props) {
+    if (p.type === 6 && CLASS_PROP.test(p.name)) names.push(...words(p.value?.content || ""));
+    if (p.type === 7 && p.name === "bind" && CLASS_PROP.test(p.arg?.content || "") && p.exp) read(babelParse(`(${p.exp.content})`).program.body[0].expression);
+  }
+  return names;
+}
+
 // Every element in a .vue file's template, v-if branches included, read with Vue's own compiler.
 export function templateElements(source) {
   const { descriptor } = sfcParse(source);

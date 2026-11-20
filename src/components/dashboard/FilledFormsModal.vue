@@ -73,8 +73,9 @@
 
       <!-- 3. Clean, Single-Row Toolbar (No Duplicate Badges, Compact Export Dropdown) -->
       <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2.5 sm:px-6 shrink-0 flex items-center justify-between gap-3 flex-wrap">
-        <!-- Clean Filter Tabs -->
-        <div class="flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs font-semibold py-0.5">
+        <!-- Filter chips wrap onto a second line on a phone: a hidden-scrollbar strip gave no sign
+             that more chips sat off to the right -->
+        <div class="flex flex-wrap items-center gap-1.5 text-xs font-semibold py-0.5">
           <Button
             @click="activeFilter = 'all'"
             class="px-3 py-1.5 rounded-lg transition whitespace-nowrap cursor-pointer"
