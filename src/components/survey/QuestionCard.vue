@@ -315,29 +315,13 @@
         class="w-full"
       />
 
-      <!-- 10. Phone Input -->
-      <TextInput
-        v-else-if="isPhoneControl"
-        :id="'q_input_' + question.question_code"
-        type="tel"
-        inputmode="tel"
-        :modelValue="modelValue"
-        :aria-label="questionLabel"
-        :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
-        :aria-invalid="Boolean(phoneValidationError || errorMessage)"
-        :aria-errormessage="(phoneValidationError || errorMessage) ? 'q_err_' + question.question_code : undefined"
-        @update:modelValue="onPhoneInput"
-        @keydown.enter="onInputEnter"
-        @keydown.esc.stop="focusCard"
-        :placeholder="__('Enter 10-digit mobile number')"
-        class="block w-full min-h-[50px] rounded-xl border border-slate-300 dark:border-slate-700 py-3 px-4 text-base font-semibold text-slate-900 dark:text-white focus:border-emerald-500 focus:ring-emerald-500 bg-white dark:bg-slate-800"
-      />
-
-      <!-- 11. Default Text Input -->
+      <!-- 10. Default Text Input; a Phone question (#22) brings up the phone keypad, and the section
+           check, not each keystroke, says whether it is a 10-digit number -->
       <TextInput
         v-else
         :id="'q_input_' + question.question_code"
-        type="text"
+        :type="isPhoneControl ? 'tel' : 'text'"
+        :inputmode="isPhoneControl ? 'tel' : undefined"
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
@@ -345,7 +329,7 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
-        :placeholder="__('Enter value')"
+        :placeholder="isPhoneControl ? __('Enter 10-digit mobile number') : __('Enter value')"
         size="lg"
         variant="outline"
         class="w-full"
@@ -354,12 +338,12 @@
 
     <!-- Validation Error -->
     <p
-      v-if="phoneValidationError || errorMessage"
+      v-if="errorMessage"
       :id="'q_err_' + question.question_code"
       role="alert"
       class="mt-2 text-xs font-semibold text-rose-600"
     >
-      {{ __(phoneValidationError || errorMessage) }}
+      {{ __(errorMessage) }}
     </p>
 
     <!-- Card Footer: Status Badge (Right) -->
@@ -542,6 +526,7 @@ import FRangeSlider from "../common/FRangeSlider.vue";
 import { choiceButtonProps } from "../../utils/choiceButton";
 import { choiceGroupState } from "../../utils/choiceGroup";
 import { choiceOptions, hasOptions } from "../../utils/cascadingOptions";
+import { isPhoneQuestion } from "../../utils/phone";
 
 const props = defineProps({
   question: {
@@ -1217,44 +1202,7 @@ const isDateControl = computed(() => {
   return type.includes("date");
 });
 
-const isPhoneControl = computed(() => {
-  const type = (props.question.field_type || "").toLowerCase();
-  const variant = (props.question.control_variant || "").toLowerCase();
-  const code = (props.question.question_code || "").toLowerCase();
-  const label = (props.question.label_en || "").toLowerCase();
-  return (
-    type === "phone" ||
-    variant === "phone" ||
-    code.includes("phone") ||
-    code.includes("mobile") ||
-    label.includes("phone number") ||
-    label.includes("mobile number") ||
-    label.includes("contact number")
-  );
-});
-
-const phoneValidationError = ref("");
-
-function onPhoneInput(val) {
-  if (!val || String(val).trim() === "") {
-    phoneValidationError.value = "";
-    emit("update:modelValue", "");
-    return;
-  }
-  const clean = String(val).trim();
-  if (/[a-zA-Z]/.test(clean)) {
-    phoneValidationError.value = __("Enter a 10-digit mobile number");
-    return;
-  }
-  const digitsOnly = clean.replace(/\D/g, "");
-  if (digitsOnly.length !== 10 && clean.length !== 10) {
-    phoneValidationError.value = __("Enter a 10-digit mobile number");
-    return;
-  }
-  phoneValidationError.value = "";
-  emit("update:modelValue", clean);
-  emit("answered");
-}
+const isPhoneControl = computed(() => isPhoneQuestion(props.question));
 
 function formatCoords(coords) {
   if (typeof coords === "object" && coords.latitude) {

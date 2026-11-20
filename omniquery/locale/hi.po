@@ -2748,3 +2748,21 @@ msgstr "लक्षित क्षेत्र"
 #: src/components/common/FRangeSlider.vue
 msgid "Not answered"
 msgstr "उत्तर नहीं दिया गया"
+
+#: omniquery/omniquery/doctype/omniquery_template_question_reference/omniquery_template_question_reference.json
+#: src/components/survey/QuestionCard.vue
+msgid "Phone"
+msgstr "फ़ोन नंबर"
+
+#: src/utils/phone.js
+msgid "Enter a 10-digit mobile number"
+msgstr "10 अंकों का मोबाइल नंबर दर्ज करें"
+
+#: src/components/survey/QuestionCard.vue
+#: src/components/survey/GroupedQuestionCard.vue
+msgid "Enter 10-digit mobile number"
+msgstr "10 अंकों का मोबाइल नंबर दर्ज करें"
+
+#: omniquery/omniquery/doctype/omniquery_response/omniquery_response.py
+msgid "These answers are not 10-digit mobile numbers: {0}"
+msgstr "ये उत्तर 10 अंकों के मोबाइल नंबर नहीं हैं: {0}"

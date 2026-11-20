@@ -2,6 +2,7 @@ import { ref, computed } from "vue";
 import { call } from "frappe-ui";
 import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { isAnswered, responseItems } from "../utils/responsePayload";
+import { PHONE_ERROR, isPhoneQuestion, isValidMobile } from "../utils/phone";
 import { uuidv4 } from "../utils/uuid";
 import { projectHelp } from "../utils/projectHelp";
 import { templatesOfProject } from "../utils/projectTemplates";
@@ -533,12 +534,17 @@ export function useSurvey() {
     validationErrors.value = {};
     let isValid = true;
     for (const q of activeQuestions.value) {
-      if (q.is_mandatory && isQuestionVisible(q)) {
-        const val = responses.value[q.question_code];
-        if (val === undefined || val === null || String(val).trim() === "") {
+      if (!isQuestionVisible(q)) continue;
+      const val = responses.value[q.question_code];
+      if (!isAnswered(val)) {
+        if (q.is_mandatory) {
           validationErrors.value[q.question_code] = "This field is required";
           isValid = false;
         }
+      } else if (isPhoneQuestion(q) && !isValidMobile(val)) {
+        // an optional phone number may be left out, but not left wrong (#22)
+        validationErrors.value[q.question_code] = PHONE_ERROR;
+        isValid = false;
       }
     }
 

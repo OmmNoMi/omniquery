@@ -83,7 +83,7 @@
             </label>
           </div>
           <p v-if="validationErrors[q.question_code]" :id="'sub_err_' + q.question_code" class="text-[11px] text-rose-600 font-semibold mt-1">
-            {{ validationErrors[q.question_code] }}
+            {{ __(validationErrors[q.question_code]) }}
           </p>
         </div>
 
@@ -145,13 +145,17 @@
             </Button>
           </div>
 
-          <!-- Default Text Box -->
+          <!-- Default Text Box; a Phone question brings up the phone keypad (#22) -->
           <div v-else>
             <TextInput
-              type="text"
+              :type="isPhoneQuestion(q) ? 'tel' : 'text'"
+              :inputmode="isPhoneQuestion(q) ? 'tel' : undefined"
+              :aria-labelledby="'sub_label_' + q.question_code"
+              :aria-invalid="Boolean(validationErrors[q.question_code])"
+              :aria-errormessage="validationErrors[q.question_code] ? 'sub_err_' + q.question_code : undefined"
               :modelValue="responses[q.question_code]"
               @update:modelValue="(val) => onUpdateValue(q.question_code, val)"
-              :placeholder="__('Enter value')"
+              :placeholder="isPhoneQuestion(q) ? __('Enter 10-digit mobile number') : __('Enter value')"
               class="w-full sm:w-44 rounded-lg border border-slate-300 dark:border-slate-600 text-xs sm:text-sm font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800"
             />
           </div>
@@ -196,6 +200,7 @@ import { useTranslation } from "../../composables/useTranslation";
 import { choiceOptions, hasOptions, parentAnswer } from "../../utils/cascadingOptions";
 import { choiceGroupState } from "../../utils/choiceGroup";
 import { isAnswered } from "../../utils/responsePayload";
+import { isPhoneQuestion } from "../../utils/phone";
 
 const props = defineProps({
   group: {

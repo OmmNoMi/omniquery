@@ -178,6 +178,41 @@ describe("useSurvey", () => {
     expect(survey.activeSectionIndex.value).toBe(1);
   });
 
+  // #22: a Phone question holds a 10-digit mobile number, checked when the surveyor moves on
+  it("refuses a section whose phone number is not 10 digits, even when the question is optional", () => {
+    const survey = useSurvey();
+    survey.activeTemplate.value = {
+      template_name: "TMPL-PHONE",
+      title: "Phone Test",
+      sections: [
+        { section_code: "sec1", section_title: "Section 1" },
+        { section_code: "sec2", section_title: "Section 2" },
+      ],
+      questions: [
+        { section_code: "sec1", question_code: "respondent_phone", field_type: "Phone", is_mandatory: 1 },
+        { section_code: "sec1", question_code: "spouse_phone", field_type: "Phone", is_mandatory: 0 },
+        { section_code: "sec1", question_code: "owns_smartphone", field_type: "Single Choice (Radio)", is_mandatory: 0 },
+        { section_code: "sec2", question_code: "notes", is_mandatory: 0 },
+      ],
+    };
+    survey.activeSectionIndex.value = 0;
+
+    survey.responses.value = { respondent_phone: "98765", owns_smartphone: "Yes" };
+    expect(survey.nextSection()).toBe(false);
+    expect(survey.validationErrors.value.respondent_phone).toBe("Enter a 10-digit mobile number");
+    expect(survey.validationErrors.value.spouse_phone).toBeUndefined();
+    expect(survey.validationErrors.value.owns_smartphone).toBeUndefined();
+
+    survey.responses.value = { respondent_phone: "+91 98765 43210", spouse_phone: "12abc", owns_smartphone: "Yes" };
+    expect(survey.validateCurrentSection()).toBe(false);
+    expect(survey.validationErrors.value.respondent_phone).toBeUndefined();
+    expect(survey.validationErrors.value.spouse_phone).toBe("Enter a 10-digit mobile number");
+
+    survey.responses.value = { respondent_phone: "+91 98765 43210", spouse_phone: "", owns_smartphone: "Yes" };
+    expect(survey.nextSection()).toBe(true);
+    expect(survey.activeSectionIndex.value).toBe(1);
+  });
+
   it("loads available templates directly from IndexedDB when network fetch fails (offline mode)", async () => {
     // Pre-populate IndexedDB with cached templates
     await db.templates.put({

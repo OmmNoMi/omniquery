@@ -81,6 +81,10 @@ const CORE_HINDI = {
   "Direct Grid": "प्रत्यक्ष ग्रिड",
   "Search Dropdown": "खोज ड्रॉपडाउन",
   "This field is required": "यह फ़ील्ड अनिवार्य है",
+  // a Phone question (#22)
+  "Phone": "फ़ोन नंबर",
+  "Enter a 10-digit mobile number": "10 अंकों का मोबाइल नंबर दर्ज करें",
+  "Enter 10-digit mobile number": "10 अंकों का मोबाइल नंबर दर्ज करें",
   "Saved offline": "ऑफ़लाइन सुरक्षित किया गया",
   "No active surveys available.": "कोई सक्रिय सर्वेक्षण उपलब्ध नहीं है।",
   "Check your network connection or permissions.": "अपना नेटवर्क कनेक्शन या अनुमतियां जांचें।",
