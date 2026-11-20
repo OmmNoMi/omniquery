@@ -1,10 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
 import SurveyorDashboard from "../dashboard/SurveyorDashboard.vue";
+import { useTranslation } from "../../composables/useTranslation.js";
+import { classTargetSize } from "../../test/tapTargets";
+import { db } from "../../services/db";
 
 describe("SurveyorDashboard", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    useTranslation().setLanguage("en");
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -22,6 +26,7 @@ describe("SurveyorDashboard", () => {
       props: {
         pendingWALCount: 2,
         isOnline: true,
+        userRoles: ["OmniQuery User"],
         activeDrafts: {
           "TMPL-SHG": {
             response_uid: "DRAFT-1",
@@ -68,7 +73,19 @@ describe("SurveyorDashboard", () => {
     expect(wrapper.emitted("open-filtered-forms")[2]).toEqual(["drafts"]);
   });
 
-  it("renders active in-progress draft card and handles resume and start-new events", async () => {
+  it("opens the filled forms from every KPI tile with Enter or Space, not only a click", async () => {
+    const wrapper = mount(SurveyorDashboard, { props: { pendingWALCount: 1, isOnline: true } });
+    const tiles = wrapper.findAll("[role='button'][tabindex='0']");
+    expect(tiles).toHaveLength(4);
+    for (const tile of tiles) {
+      await tile.trigger("keydown.enter");
+      await tile.trigger("keydown.space");
+    }
+    const opened = ["today", "queue", "drafts", "all"].flatMap((f) => [[f], [f]]);
+    expect(wrapper.emitted("open-filtered-forms")).toEqual(opened);
+  });
+
+  it("renders active in-progress draft card and resumes it", async () => {
     const draft = {
       response_uid: "DRAFT-001",
       template_name: "TMPL-SHG",
@@ -99,21 +116,212 @@ describe("SurveyorDashboard", () => {
     });
 
     expect(wrapper.text()).toContain("Sunita Devi - Rampur");
+    // the respondent is the title, so the survey's name under it is a fact of its own
+    expect(wrapper.text()).toContain("SHG Enterprise Study");
     expect(wrapper.text()).toContain("65%");
 
     const buttons = wrapper.findAll("button");
     const resumeBtn = buttons.find((b) => b.text().includes("Resume"));
-    const startNewBtn = buttons.find((b) => b.text().includes("Start New"));
-
     expect(resumeBtn).toBeDefined();
-    expect(startNewBtn).toBeDefined();
+    // Start New belongs to the survey, on its catalog card, so the page offers each action once (#18)
+    expect(buttons.some((b) => b.text().includes("Start New"))).toBe(false);
 
     await resumeBtn.trigger("click");
     expect(wrapper.emitted("resume-draft")).toBeTruthy();
     expect(wrapper.emitted("resume-draft")[0]).toEqual(["TMPL-SHG"]);
+  });
 
-    await startNewBtn.trigger("click");
-    expect(wrapper.emitted("start-new-survey")).toBeTruthy();
-    expect(wrapper.emitted("start-new-survey")[0]).toEqual(["TMPL-SHG"]);
+  it("names a draft with no answers yet by its survey once, not twice (#18)", () => {
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        isOnline: true,
+        activeDrafts: { "TMPL-SHG": { response_uid: "DRAFT-2", template_name: "TMPL-SHG", updated_at: new Date().toISOString(), responses: {} } },
+        templates: [{ template_name: "TMPL-SHG", title: "SHG Enterprise Study" }],
+      },
+    });
+    expect(wrapper.find("h4").text()).toBe("SHG Enterprise Study");
+    expect(wrapper.text().split("SHG Enterprise Study").length - 1).toBe(1);
+  });
+
+  describe("at 375px (#41)", () => {
+    const draft = { response_uid: "DRAFT-1", template_name: "TMPL-SHG", progress_percent: 40, updated_at: new Date().toISOString() };
+
+    async function mountSurveyorWithDraft() {
+      mockKpis({ today_count: 2, total_count: 10, daily_target: 6 });
+      const wrapper = mount(SurveyorDashboard, {
+        props: {
+          isOnline: true,
+          userRoles: ["OmniQuery User"],
+          activeDrafts: { "TMPL-SHG": draft },
+          templates: [{ template_name: "TMPL-SHG", title: "SHG Study" }],
+        },
+      });
+      await vi.waitFor(() => expect(wrapper.text()).toContain("Daily Target"));
+      return wrapper;
+    }
+
+    const elementWithText = (wrapper, text) => wrapper.findAll("span").find((s) => s.text() === text)?.element;
+    const isBefore = (a, b) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+    it("puts the draft's Resume above the Daily Target strip and the KPI tiles, so it is above the fold", async () => {
+      const wrapper = await mountSurveyorWithDraft();
+      const draftCard = elementWithText(wrapper, "In-Progress Draft");
+      const target = elementWithText(wrapper, "Daily Target:");
+      const firstKpi = wrapper.find("[role='button']").element;
+      expect(draftCard && target && firstKpi, "draft card, target strip and KPI tile rendered").toBeTruthy();
+      expect(isBefore(draftCard, target), "draft before Daily Target").toBe(true);
+      expect(isBefore(draftCard, firstKpi), "draft before the KPI tiles").toBe(true);
+    });
+
+    it("sizes Resume at 32px and gives it the row", async () => {
+      const wrapper = await mountSurveyorWithDraft();
+      const button = wrapper.findAll("button").find((b) => b.text() === "Resume Survey");
+      expect(button).toBeDefined();
+      expect(classTargetSize(button.attributes("class")).height).toBeGreaterThanOrEqual(32);
+      expect(button.classes()).toContain("flex-1");
+    });
+  });
+
+  it("renders Manager Review Queue banner and Desk link when user has OmniQuery Manager role", async () => {
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+        userRoles: ["OmniQuery Manager"],
+      },
+    });
+
+    expect(wrapper.text()).toContain("Manager Operations & Review Queue");
+    expect(wrapper.text()).toContain("Manager View");
+    const deskLink = wrapper.find('a[href="/desk/omniquery"]');
+    expect(deskLink.exists()).toBe(true);
+    expect(wrapper.text()).not.toContain("Daily Target");
+  });
+
+  it("never shows Daily Target or Manager banner to a user without OmniQuery User or Manager role", async () => {
+    // Issue #60: Guest or Desk User without OmniQuery User or Manager role
+    const wrapper = mount(SurveyorDashboard, {
+      props: {
+        pendingWALCount: 0,
+        isOnline: true,
+        userRoles: ["Desk User"],
+      },
+    });
+
+    expect(wrapper.text()).not.toContain("Daily Target");
+    expect(wrapper.text()).not.toContain("Manager Operations & Review Queue");
+  });
+
+  it("renders Daily Target strip and remaining count for a surveyor with a configured target", async () => {
+    mockKpis({ today_count: 2, total_count: 10, daily_target: 6 });
+    const wrapper = mount(SurveyorDashboard, {
+      props: { pendingWALCount: 0, isOnline: true, userRoles: ["OmniQuery User"] },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("2 / 6");
+    });
+    expect(wrapper.text()).toContain("Daily Target");
+    expect(wrapper.text()).toContain("4 left for target");
+    expect(wrapper.text()).not.toContain("Manager Operations & Review Queue");
+  });
+
+  it("hides the target strip and shows a plain count when no target is configured (#55)", async () => {
+    mockKpis({ today_count: 3, total_count: 12, daily_target: null });
+    const wrapper = mount(SurveyorDashboard, {
+      props: { pendingWALCount: 0, isOnline: true, userRoles: ["OmniQuery User"] },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("3 surveys today");
+    });
+    expect(wrapper.text()).not.toContain("Daily Target");
+    expect(wrapper.text()).not.toContain("left for target");
+  });
+
+  it("says 1 survey today, singular, when no target is configured", async () => {
+    mockKpis({ today_count: 1, total_count: 1, daily_target: null });
+    const wrapper = mount(SurveyorDashboard, {
+      props: { pendingWALCount: 0, isOnline: true, userRoles: ["OmniQuery User"] },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("1 survey today");
+    });
+  });
+
+  it("puts the count where Hindi word order wants it, not glued in front", async () => {
+    useTranslation().setLanguage("hi");
+    mockKpis({ today_count: 2, total_count: 10, daily_target: 6 });
+    const wrapper = mount(SurveyorDashboard, {
+      props: { pendingWALCount: 0, isOnline: true, userRoles: ["OmniQuery User"] },
+    });
+
+    await vi.waitFor(() => {
+      expect(wrapper.text()).toContain("लक्ष्य के लिए 4 शेष");
+    });
+  });
+
+  it("tells an unassigned user to ask their supervisor, and still shows their unsynced queue (#57)", async () => {
+    const wrapper = mount(SurveyorDashboard, {
+      props: { isUnassigned: true, pendingWALCount: 3, isOnline: true, userRoles: ["OmniQuery User"] },
+    });
+    const card = wrapper.find("[role='status']");
+    expect(card.exists()).toBe(true);
+    expect(card.text()).toContain("You are not assigned to a project yet. Ask your supervisor.");
+    expect(card.find("svg").attributes("aria-hidden")).toBe("true");
+    await vi.waitFor(() => expect(wrapper.text()).toContain("5"));
+    expect(wrapper.text()).toContain("3");
+    expect(wrapper.text()).not.toContain("5 / 10"); // no daily target for someone in no project
+  });
+
+  it("does not take an empty survey list for being unassigned (#57)", () => {
+    const wrapper = mount(SurveyorDashboard, { props: { templates: [], isOnline: true } });
+    expect(wrapper.text()).not.toContain("not assigned to a project");
+  });
+
+  it("welcomes the surveyor by full name, not by the start of their email (#51)", () => {
+    const original = window.frappe;
+    window.frappe = { ...original, user: "oq.surveyor.test@example.com", user_fullname: "OQ Test Surveyor" };
+    try {
+      const wrapper = mount(SurveyorDashboard, { props: { pendingWALCount: 0, isOnline: true } });
+      expect(wrapper.find("h2").text()).toBe("Welcome, OQ Test Surveyor");
+    } finally {
+      window.frappe = original;
+    }
+  });
+
+  describe("counts for the selected project (#15)", () => {
+    const templates = [{ name: "T-OTHER", template_name: "T-OTHER", title: "Other Survey", project: "PROJ-OTHER" }];
+    const now = new Date().toISOString();
+    const submitted = (uid) => ({ response_uid: uid, template_name: "T-OTHER", status: "Submitted", created_at: now, updated_at: now });
+    const draft = { response_uid: "DRAFT-OTHER", template_name: "T-OTHER", title: "Other Survey", updated_at: now, responses: {} };
+    const mountFor = (selectedProject) =>
+      mount(SurveyorDashboard, {
+        props: { isOnline: false, userRoles: ["OmniQuery User"], templates, selectedProject, activeDrafts: { "T-OTHER": draft } },
+      });
+
+    beforeEach(async () => {
+      await db.responses.clear();
+      await db.responses.bulkPut([submitted("R1"), submitted("R2")]);
+    });
+
+    it("counts another project's submissions and draft under that project", async () => {
+      const wrapper = mountFor("PROJ-OTHER");
+      await vi.waitFor(() => expect(wrapper.vm.totalCompleted).toBe(2));
+      expect(wrapper.findAll("button").some((b) => b.text().includes("Resume"))).toBe(true);
+    });
+
+    it("counts none of them for a project with no templates of its own", async () => {
+      const wrapper = mountFor("PROJ-EMPTY");
+      await flushPromises();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      expect(wrapper.vm.totalCompleted).toBe(0);
+      expect(wrapper.findAll("button").some((b) => b.text().includes("Resume"))).toBe(false);
+    });
   });
 });
+
+function mockKpis(message) {
+  globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message }) });
+}

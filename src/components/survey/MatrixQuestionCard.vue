@@ -7,9 +7,9 @@
     :aria-label="parsedMeta.text"
     @focusin="onFocusIn"
     @focusout="onFocusOut"
-    @keydown.esc.stop="focusCard"
+    @keydown.esc="onCardEscape"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-20',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default scroll-mt-20',
       notApplicable
         ? 'bg-slate-50/70 dark:bg-slate-900/60 border-dashed border-slate-300 dark:border-slate-700 opacity-75'
         : errorMessage
@@ -84,7 +84,7 @@
     </div>
 
     <!-- 3D / 4D Matrix Content: Desktop Table Grid (sm:block) -->
-    <div class="hidden sm:block rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
+    <div data-matrix-layout="table" class="hidden sm:block rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-700 text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">
@@ -130,13 +130,14 @@
                   -
                 </Button>
                 <TextInput
-                  :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                  :data-cell="`${rIdx}_${cIdx}`"
+                  :aria-label="cellLabel(row, col)"
                   type="number"
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
                   :placeholder="col.placeholder || '0'"
-                  class="w-16 sm:w-20 text-center rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                  class="w-16 sm:w-20 text-center rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
                 />
                 <Button
                   tabindex="-1"
@@ -153,38 +154,41 @@
                   ₹
                 </span>
                 <TextInput
-                  :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                  :data-cell="`${rIdx}_${cIdx}`"
+                  :aria-label="cellLabel(row, col)"
                   type="number"
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
                   :placeholder="col.placeholder || '0'"
-                  class="w-full text-right rounded-lg border border-slate-200 dark:border-slate-700 pl-6 pr-2.5 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none transition"
+                  class="w-full text-right rounded-lg border border-slate-200 dark:border-slate-700 pl-6 pr-2.5 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
                 />
               </div>
 
               <!-- Select Dropdown -->
               <Select
                 v-else-if="col.type === 'select'"
-                :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                :data-cell="`${rIdx}_${cIdx}`"
+                :aria-label="cellLabel(row, col)"
                 :options="col.options || []"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="__('-- Select --')"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:border-emerald-500 outline-none"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:border-emerald-500"
               />
 
               <!-- Standard Text Input -->
               <TextInput
                 v-else
-                :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                :data-cell="`${rIdx}_${cIdx}`"
+                :aria-label="cellLabel(row, col)"
                 type="text"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="col.placeholder || __('Enter text')"
-                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:bg-white dark:focus:bg-slate-900 focus:border-emerald-500 outline-none transition"
+                class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
               />
             </td>
           </tr>
@@ -210,7 +214,7 @@
     </div>
 
     <!-- 3D / 4D Matrix Content: Mobile Card-Per-Row Layout (block sm:hidden - ZERO Horizontal Scroll) -->
-    <div class="block sm:hidden space-y-3">
+    <div data-matrix-layout="cards" class="block sm:hidden space-y-3">
       <div
         v-for="(row, rIdx) in matrixRows"
         :key="row.id"
@@ -252,13 +256,14 @@
                 -
               </Button>
               <TextInput
-                :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                :data-cell="`${rIdx}_${cIdx}`"
+                :aria-label="cellLabel(row, col)"
                 type="number"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="col.placeholder || '0'"
-                class="w-14 text-center rounded-lg border border-slate-300 dark:border-slate-600 px-1.5 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none"
+                class="w-14 text-center rounded-lg border border-slate-300 dark:border-slate-600 px-1.5 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900"
               />
               <Button
                 tabindex="-1"
@@ -275,38 +280,41 @@
                 ₹
               </span>
               <TextInput
-                :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+                :data-cell="`${rIdx}_${cIdx}`"
+                :aria-label="cellLabel(row, col)"
                 type="number"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="col.placeholder || '0'"
-                class="w-full text-right rounded-lg border border-slate-300 dark:border-slate-600 pl-5 pr-2 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none"
+                class="w-full text-right rounded-lg border border-slate-300 dark:border-slate-600 pl-5 pr-2 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900"
               />
             </div>
 
             <!-- Select Dropdown -->
             <Select
               v-else-if="col.type === 'select'"
-              :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+              :data-cell="`${rIdx}_${cIdx}`"
+              :aria-label="cellLabel(row, col)"
               :options="col.options || []"
               :modelValue="getCellValue(row.id, col.key)"
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
               :placeholder="__('-- Select --')"
-              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none shrink-0"
+              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 shrink-0"
             />
 
             <!-- Standard Text Input -->
             <TextInput
               v-else
-              :ref="(el) => setCellInputRef(rIdx, cIdx, el)"
+              :data-cell="`${rIdx}_${cIdx}`"
+              :aria-label="cellLabel(row, col)"
               type="text"
               :modelValue="getCellValue(row.id, col.key)"
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
               :placeholder="col.placeholder || __('Enter text')"
-              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 outline-none shrink-0"
+              class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 shrink-0"
             />
           </div>
         </div>
@@ -365,6 +373,8 @@ import { computed, ref, reactive, watch, nextTick } from "vue";
 import { Button, TextInput, Select } from "frappe-ui";
 import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { useCardEscape } from "../../composables/useCardEscape";
+import { useMediaQuery } from "@vueuse/core";
 
 const props = defineProps({
   question: {
@@ -389,9 +399,18 @@ const emit = defineEmits(["update:modelValue", "answered", "next"]);
 const { __ } = useTranslation();
 
 const cardRef = ref(null);
+const onCardEscape = useCardEscape(cardRef);
 const isFocused = ref(false);
 const isInputFocused = ref(false);
-const cellInputRefs = ref({});
+// Both layouts are rendered and CSS hides one, so a cell is looked up in the one on screen: a cell of
+// the hidden layout cannot take focus. The table shows from Tailwind's sm breakpoint up. data-cell
+// lands on the element that takes focus, since frappe-ui TextInput passes attrs to its input element and
+// Select to its trigger button; a ref would hold the component, which has no focus().
+const showsTable = useMediaQuery("(min-width: 640px)");
+const cellAt = (rIdx, cIdx) =>
+  cardRef.value?.querySelector(
+    `[data-matrix-layout="${showsTable.value ? "table" : "cards"}"] [data-cell="${rIdx}_${cIdx}"]`,
+  );
 
 // Parse question title & number
 const parsedMeta = computed(() => {
@@ -530,6 +549,12 @@ function getColumnTotal(colKey) {
   return total;
 }
 
+// a cell's accessible name: its row and its column, which the table shows only as headers
+// and the phone layout as a row title and an unlinked label (#19)
+function cellLabel(row, col) {
+  return `${row.label}, ${col.label}`;
+}
+
 function getCellKey(rowId, colKey) {
   if (is4DMatrix.value) {
     return `${activeInstance.value}__${rowId}__${colKey}`;
@@ -588,13 +613,6 @@ const isCompleted = computed(() => {
 });
 
 // Keyboard Matrix Navigation
-function setCellInputRef(rIdx, cIdx, el) {
-  if (el) {
-    const target = el?.el || el?.$el?.querySelector?.("input, select, button") || el?.$el || el;
-    cellInputRefs.value[`${rIdx}_${cIdx}`] = target;
-  }
-}
-
 function onCellKeydown(e, rIdx, cIdx) {
   const numRows = matrixRows.value.length;
   const numCols = matrixColumns.value.length;
@@ -602,11 +620,11 @@ function onCellKeydown(e, rIdx, cIdx) {
   if (e.key === "ArrowDown") {
     e.preventDefault();
     const nextRow = (rIdx + 1) % numRows;
-    cellInputRefs.value[`${nextRow}_${cIdx}`]?.focus({ preventScroll: true });
+    cellAt(nextRow, cIdx)?.focus({ preventScroll: true });
   } else if (e.key === "ArrowUp") {
     e.preventDefault();
     const prevRow = (rIdx - 1 + numRows) % numRows;
-    cellInputRefs.value[`${prevRow}_${cIdx}`]?.focus({ preventScroll: true });
+    cellAt(prevRow, cIdx)?.focus({ preventScroll: true });
   } else if (e.key === "Enter") {
     e.preventDefault();
     if (rIdx === numRows - 1 && cIdx === numCols - 1) {
@@ -619,13 +637,9 @@ function onCellKeydown(e, rIdx, cIdx) {
         nextC = 0;
         nextR = (rIdx + 1) % numRows;
       }
-      cellInputRefs.value[`${nextR}_${nextC}`]?.focus({ preventScroll: true });
+      cellAt(nextR, nextC)?.focus({ preventScroll: true });
     }
   }
-}
-
-function focusCard() {
-  cardRef.value?.focus();
 }
 
 function onFocusIn(e) {
@@ -644,8 +658,7 @@ function onFocusOut(e) {
 }
 
 defineExpose({
-  focus: () => {
-    cellInputRefs.value["0_0"]?.focus({ preventScroll: true }) || cardRef.value?.focus();
-  },
+  // the first cell, or the card when the matrix has none (focus() returns nothing, so no `||`)
+  focus: () => (cellAt(0, 0) || cardRef.value)?.focus({ preventScroll: true }),
 });
 </script>
