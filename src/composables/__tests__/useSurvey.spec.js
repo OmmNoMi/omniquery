@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useSurvey, generateSurveyId } from "../useSurvey";
-import { db } from "../../services/db";
+import { db, audioRecordingsFor } from "../../services/db";
+import { useAudioRecorder } from "../useAudioRecorder";
 
 describe("useSurvey", () => {
   beforeEach(async () => {
@@ -9,12 +10,19 @@ describe("useSurvey", () => {
     vi.restoreAllMocks();
   });
 
-  it("generates deterministic format survey ID with prefix and random entropy", () => {
-    const id = generateSurveyId("OQS-SHG-SURVEY");
-    expect(id).toMatch(/^OQS-SHG-SURVEY-[a-z0-9]{6}$/);
+  it("generates client-side UUIDv4 survey ID matching regex and 10,000 calls produce no duplicates", () => {
+    const uuidV4Regex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const id = generateSurveyId();
+    expect(id).toMatch(uuidV4Regex);
 
-    const defaultId = generateSurveyId(null);
-    expect(defaultId).toMatch(/^OQS-SURVEY-[a-z0-9]{6}$/);
+    const seen = new Set();
+    for (let i = 0; i < 10000; i++) {
+      const nextId = generateSurveyId();
+      expect(nextId).toMatch(uuidV4Regex);
+      expect(seen.has(nextId)).toBe(false);
+      seen.add(nextId);
+    }
+    expect(seen.size).toBe(10000);
   });
 
   it("saves drafts into IndexedDB and maintains multi-draft ordering by updated_at", async () => {
@@ -207,6 +215,56 @@ describe("useSurvey", () => {
     expect(survey.activeTemplate.value.title).toBe("Offline Test Survey");
   });
 
+  it("takes an unassigned user's empty bootstrap as the answer, not a cue for another endpoint (#57)", async () => {
+    await db.templates.put({ template_name: "OQS-STALE", title: "Old Project Survey", schema: {} });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ message: { templates: [], is_unassigned: true } }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const survey = useSurvey();
+    const loaded = await survey.loadAvailableTemplates();
+
+    expect(survey.isUnassigned.value).toBe(true);
+    expect(loaded).toEqual([]);
+    const calls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(calls.some((url) => url.includes("list_active_templates"))).toBe(false);
+    expect(await db.templates.get("OQS-STALE")).toBeDefined(); // drafts may still need the cached schema
+  });
+
+  it("is not unassigned when the server does not say so, or cannot be reached", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: { templates: [] } }) }));
+    const survey = useSurvey();
+    await survey.loadAvailableTemplates();
+    expect(survey.isUnassigned.value).toBe(false);
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+    const offline = useSurvey();
+    await offline.loadAvailableTemplates();
+    expect(offline.isUnassigned.value).toBe(false);
+  });
+
+  it("keeps the project's helpline, SOPs and status with the cached template, through a download and offline (#14, #16)", async () => {
+    const help = { support_email: "help@example.org", helpline_phone: "+91 1800 000 111", sop_sections: "<p>Introduce yourself.</p>", project_status: "Completed" };
+    const template = { name: "OQS-HELP-01", title: "Help Survey", project: "PROJ-HELP", version: 1, schema: { questions: [] }, ...help };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: { templates: [template] } }) }));
+
+    const survey = useSurvey();
+    const [listed] = await survey.loadAvailableTemplates();
+    expect(listed).toMatchObject(help);
+    expect(await db.templates.get("OQS-HELP-01")).toMatchObject(help);
+
+    // get_schema sends no project help: downloading the survey again must not wipe what the bootstrap cached
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: { template_name: "OQS-HELP-01", schema: { questions: [] } } }) }));
+    expect(await survey.downloadSurveyForOffline("OQS-HELP-01")).toBe(true);
+    expect(await db.templates.get("OQS-HELP-01")).toMatchObject(help);
+
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Failed to fetch (offline)")));
+    const [offline] = await useSurvey().loadAvailableTemplates();
+    expect(offline).toMatchObject(help);
+  });
+
   it("refreshes cachedTemplatesMap and downloads surveys for offline", async () => {
     const survey = useSurvey();
     await db.templates.clear();
@@ -304,5 +362,27 @@ describe("useSurvey", () => {
     expect(validPass).toBe(true);
     expect(survey.validationErrors.value.q_expenses).toBeUndefined();
   });
-});
+  it("takes a discarded draft's recordings with it, and leaves a submitted response's alone (#37)", async () => {
+    await db.audio_recordings.clear();
+    const { saveAudioForResponse } = useAudioRecorder();
+    const take = (text) => new Blob([text], { type: "audio/webm" });
+    await db.responses.bulkPut([
+      { response_uid: "OQS-WATER-aaa111", template_name: "OQS-WATER", status: "Draft", updated_at: "2026-11-01" },
+      { response_uid: "OQS-WATER-bbb222", template_name: "OQS-WATER", status: "Draft", updated_at: "2026-11-02" },
+      { response_uid: "OQS-WATER-ccc333", template_name: "OQS-WATER", status: "Submitted", updated_at: "2026-11-03" },
+    ]);
+    await saveAudioForResponse("OQS-WATER-aaa111", take("one"));
+    await saveAudioForResponse("OQS-WATER-aaa111", take("one, after resuming"));
+    await saveAudioForResponse("OQS-WATER-bbb222", take("two"));
+    await saveAudioForResponse("OQS-WATER-ccc333", take("submitted"));
 
+    const { discardDraft } = useSurvey();
+    await discardDraft(null, "OQS-WATER-aaa111");
+    expect(await audioRecordingsFor("OQS-WATER-aaa111").count(), "both parts of the one draft").toBe(0);
+    expect(await audioRecordingsFor("OQS-WATER-bbb222").count(), "the other draft keeps its recording").toBe(1);
+
+    await discardDraft("OQS-WATER");
+    expect(await audioRecordingsFor("OQS-WATER-bbb222").count(), "every draft of the survey").toBe(0);
+    expect(await audioRecordingsFor("OQS-WATER-ccc333").count(), "a submitted response is not a draft").toBe(1);
+  });
+});

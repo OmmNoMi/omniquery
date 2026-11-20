@@ -3,6 +3,8 @@ import json
 
 import frappe
 
+from omniquery.services.response_title import DEFAULT_RESPONSE_TITLE_FORMAT
+
 
 def compile_template_schema(template_document):
 	"""Compiles and hashes template schema into JSON fields."""
@@ -27,7 +29,7 @@ def build_schema_dictionary(template_document):
 		"version": template_document.version or 1,
 		"status": template_document.status,
 		"amended_from": template_document.amended_from,
-		"response_title_format": getattr(template_document, "response_title_format", None) or "{respondent_name} - {village_gp} ({enterprise_name})",
+		"response_title_format": getattr(template_document, "response_title_format", None) or DEFAULT_RESPONSE_TITLE_FORMAT,
 		"is_public_citizen_link": bool(template_document.is_public_citizen_link),
 		"auto_advance": bool(getattr(template_document, "auto_advance", 1)),
 		"presentation_mode": getattr(template_document, "presentation_mode", "Standard Section") or "Standard Section",
@@ -54,6 +56,8 @@ def format_question_dictionary(question_row):
 	"""Formats a template question reference into dictionary and enriches metadata."""
 	label = resolve_question_label(question_row)
 	raw_options = parse_json_value(getattr(question_row, "options_json", None))
+	# a blank row value leaves the master question's depends_on_field to fill it
+	depends_on_field = getattr(question_row, "depends_on_field", None) or None
 	question_dictionary = {
 		"section_code": question_row.section_code,
 		"question_code": question_row.question_code,
@@ -64,13 +68,29 @@ def format_question_dictionary(question_row):
 		"field_type": getattr(question_row, "field_type", None) or "Text",
 		"is_mandatory": bool(question_row.is_mandatory),
 		"display_order": question_row.display_order or question_row.idx,
+		"depends_on_field": depends_on_field,
 		"options": raw_options,
-		"options_translated": [frappe._(str(opt)) for opt in raw_options] if isinstance(raw_options, list) else raw_options,
+		"options_translated": translate_options(raw_options),
 		"conditional_logic": parse_json_value(getattr(question_row, "conditional_logic_json", None)),
 		"validation_rules": parse_json_value(getattr(question_row, "validation_rules_json", None)),
 		"audio_prompt": getattr(question_row, "audio_prompt", None),
+		# the PWA titles a group of questions from these, never from a question_code (#14)
+		"group_title": getattr(question_row, "group_title", None) or None,
+		"group_code": getattr(question_row, "group_code", None) or None,
 	}
 	return enrich_question_metadata(question_row, question_dictionary)
+
+
+def translate_options(raw_options):
+	"""Translates options list or options dict values."""
+	if isinstance(raw_options, list):
+		return [frappe._(str(opt)) for opt in raw_options]
+	if isinstance(raw_options, dict):
+		return {
+			parent: [frappe._(str(opt)) for opt in opts] if isinstance(opts, list) else opts
+			for parent, opts in raw_options.items()
+		}
+	return raw_options
 
 
 
@@ -91,7 +111,7 @@ def get_master_question_metadata(q_ref):
 	fields = [
 		"field_category", "control_variant", "rating_icon", "rating_max",
 		"rating_step", "temporal_granularity", "geographic_granularity",
-		"options_set", "allow_user_toggle"
+		"options_set", "allow_user_toggle", "depends_on_field", "group_title", "group_code"
 	]
 	return frappe.db.get_value("OmniQuery Question", q_ref, fields, as_dict=True) or {}
 
@@ -99,14 +119,16 @@ def get_master_question_metadata(q_ref):
 def merge_master_metadata(question_dict, metadata):
 	"""Merges master metadata keys into question dict if not present."""
 	for key, value in metadata.items():
-		if value is not None and key not in question_dict:
+		if value is not None and (key not in question_dict or question_dict[key] is None):
 			question_dict[key] = value
 
 
 def resolve_question_options(question_dict, metadata):
 	"""Populates options from option set if options list is empty."""
 	if not question_dict.get("options") and metadata.get("options_set"):
-		question_dict["options"] = resolve_option_set_items(metadata["options_set"])
+		opts = resolve_option_set_items(metadata["options_set"])
+		question_dict["options"] = opts
+		question_dict["options_translated"] = translate_options(opts)
 
 
 def resolve_control_variant_and_toggle(question_row, question_dict, metadata):
@@ -125,10 +147,17 @@ def resolve_option_set_items(option_set_name):
 	"""Resolves ordered option values from an OmniQuery Option Set."""
 	items = frappe.get_all(
 		"OmniQuery Option Item",
-		filters={"parent": option_set_name},
-		fields=["option_code"],
+		filters={"parent": option_set_name, "parenttype": "OmniQuery Option Set", "parentfield": "options"},
+		fields=["option_code", "parent_option"],
 		order_by="idx asc",
 	)
+	has_parent = any(bool(item.get("parent_option")) for item in items)
+	if has_parent:
+		options_by_parent = {}
+		# the Option Set refuses a mix, so every item here has a parent option
+		for item in items:
+			options_by_parent.setdefault(item.parent_option, []).append(item.option_code)
+		return options_by_parent
 	return [item.option_code for item in items]
 
 

@@ -9,7 +9,7 @@
     @focusin="onFocusIn"
     @focusout="onFocusOut"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none cursor-default scroll-mt-28',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default scroll-mt-28',
       hasGroupError
         ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 border-l-4 border-l-rose-500 shadow-xs ring-1 ring-rose-500/20'
         : isFocused
@@ -79,10 +79,10 @@
               class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-200 leading-snug"
             >
               {{ getCleanSubLabel(q) }}
-              <span v-if="q.is_mandatory" class="text-rose-500 font-bold">*</span>
+              <span v-if="q.is_mandatory" class="text-rose-500 font-bold" aria-hidden="true">*</span>
             </label>
           </div>
-          <p v-if="validationErrors[q.question_code]" class="text-[11px] text-rose-600 font-semibold mt-1">
+          <p v-if="validationErrors[q.question_code]" :id="'sub_err_' + q.question_code" class="text-[11px] text-rose-600 font-semibold mt-1">
             {{ validationErrors[q.question_code] }}
           </p>
         </div>
@@ -94,8 +94,7 @@
             v-if="isChoiceQuestion(q)"
             role="radiogroup"
             :aria-labelledby="'sub_label_' + q.question_code"
-            :aria-label="getCleanSubLabel(q)"
-            :aria-required="Boolean(q.is_mandatory || q.reqd)"
+            v-bind="choiceGroupState({ required: q.is_mandatory, errorId: validationErrors[q.question_code] ? 'sub_err_' + q.question_code : undefined })"
             class="flex flex-wrap items-center gap-1.5 py-1"
           >
             <Button
@@ -108,13 +107,13 @@
               @keydown="onChoiceKeydown($event, q, optIdx, getQuestionOptions(q))"
               @click="onUpdateValue(q.question_code, opt.value)"
               :class="[
-                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900',
+                'px-2.5 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer active:scale-95',
                 responses[q.question_code] === opt.value
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm hover:bg-emerald-700 hover:border-emerald-700 focus:bg-emerald-700'
                   : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600 focus:border-emerald-500'
               ]"
             >
-              {{ opt.label }}
+              {{ __(opt.label) }}
             </Button>
           </div>
 
@@ -126,7 +125,7 @@
             <Button
               @click="stepNumber(q.question_code, -1)"
               class="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-100 active:scale-95 transition"
-              aria-label="Decrement"
+              :label="__('Decrease')"
             >
               -
             </Button>
@@ -135,12 +134,12 @@
               :modelValue="responses[q.question_code]"
               @update:modelValue="(val) => onUpdateValue(q.question_code, val)"
               :placeholder="__('0')"
-              class="w-20 sm:w-24 text-center rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:border-emerald-500 focus:outline-none"
+              class="w-20 sm:w-24 text-center rounded-lg border border-slate-300 dark:border-slate-600 text-sm font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-800"
             />
             <Button
               @click="stepNumber(q.question_code, 1)"
               class="w-8 h-8 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-200 font-bold flex items-center justify-center hover:bg-slate-100 active:scale-95 transition"
-              aria-label="Increment"
+              :label="__('Increase')"
             >
               +
             </Button>
@@ -153,7 +152,7 @@
               :modelValue="responses[q.question_code]"
               @update:modelValue="(val) => onUpdateValue(q.question_code, val)"
               :placeholder="__('Enter value')"
-              class="w-full sm:w-44 rounded-lg border border-slate-300 dark:border-slate-600 text-xs sm:text-sm font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800 focus:border-emerald-500 focus:outline-none"
+              class="w-full sm:w-44 rounded-lg border border-slate-300 dark:border-slate-600 text-xs sm:text-sm font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-800"
             />
           </div>
         </div>
@@ -194,6 +193,9 @@ import { computed, ref } from "vue";
 import { Button, TextInput } from "frappe-ui";
 import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { choiceOptions, hasOptions, parentAnswer } from "../../utils/cascadingOptions";
+import { choiceGroupState } from "../../utils/choiceGroup";
+import { isAnswered } from "../../utils/responsePayload";
 
 const props = defineProps({
   group: {
@@ -217,19 +219,8 @@ const props = defineProps({
 const emit = defineEmits(["update-response", "answered"]);
 const { __ } = useTranslation();
 
-const answeredCount = computed(() => {
-  return props.group.questions.filter((q) => {
-    const val = props.responses[q.question_code];
-    return val !== undefined && val !== null && String(val).trim() !== "";
-  }).length;
-});
-
-const isGroupCompleted = computed(() => {
-  return props.group.questions.every((q) => {
-    const val = props.responses[q.question_code];
-    return val !== undefined && val !== null && String(val).trim() !== "";
-  });
-});
+const answeredCount = computed(() => props.group.questions.filter((q) => isAnswered(props.responses[q.question_code])).length);
+const isGroupCompleted = computed(() => props.group.questions.every((q) => isAnswered(props.responses[q.question_code])));
 
 const parsedGroupMeta = computed(() => {
   const full = props.group.title || "";
@@ -277,25 +268,24 @@ function isNumericQuestion(q) {
 
 function isChoiceQuestion(q) {
   const type = (q.field_type || "").toLowerCase();
-  return (type.includes("choice") || type.includes("radio") || type.includes("select")) && Array.isArray(q.options) && q.options.length > 0;
+  return (type.includes("choice") || type.includes("radio") || type.includes("select")) && hasOptions(q.options);
 }
 
+// a dependent question (Block under District) offers only the parent answer's choices (#24)
 function getQuestionOptions(q) {
-  const raw = q.options_translated || q.options || [];
-  return raw.map((opt) => ({
-    value: typeof opt === "object" && opt ? opt.value : opt,
-    label: typeof opt === "object" && opt ? opt.label : String(opt),
-  }));
+  return choiceOptions(q, parentAnswer(q, props.responses));
 }
 
+// frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
 const optionRefsMap = ref({});
+const optionButton = (qCode, idx) => optionRefsMap.value[qCode]?.[idx]?.rootRef;
 
 function setOptionRef(qCode, optIdx, el) {
   if (!optionRefsMap.value[qCode]) {
     optionRefsMap.value[qCode] = [];
   }
   if (el) {
-    optionRefsMap.value[qCode][optIdx] = el.$el || el;
+    optionRefsMap.value[qCode][optIdx] = el;
   }
 }
 
@@ -315,14 +305,14 @@ function onChoiceKeydown(e, q, optIdx, options) {
     e.stopPropagation();
     const nextIdx = (optIdx + 1) % options.length;
     const nextOpt = options[nextIdx];
-    optionRefsMap.value[q.question_code]?.[nextIdx]?.focus({ preventScroll: true });
+    optionButton(q.question_code, nextIdx)?.focus({ preventScroll: true });
     onUpdateValue(q.question_code, nextOpt.value);
   } else if (e.key === "ArrowLeft") {
     e.preventDefault();
     e.stopPropagation();
     const prevIdx = (optIdx - 1 + options.length) % options.length;
     const prevOpt = options[prevIdx];
-    optionRefsMap.value[q.question_code]?.[prevIdx]?.focus({ preventScroll: true });
+    optionButton(q.question_code, prevIdx)?.focus({ preventScroll: true });
     onUpdateValue(q.question_code, prevOpt.value);
   } else if (["ArrowDown", "ArrowUp"].includes(e.key)) {
     const qList = props.group.questions || [];
@@ -338,7 +328,7 @@ function onChoiceKeydown(e, q, optIdx, options) {
         const targetOpts = getQuestionOptions(nextQ);
         const selIdx = targetOpts.findIndex((o) => o.value === props.responses[nextQ.question_code]);
         const focusIdx = selIdx >= 0 ? selIdx : 0;
-        const targetBtn = optionRefsMap.value[nextQ.question_code]?.[focusIdx];
+        const targetBtn = optionButton(nextQ.question_code, focusIdx);
         if (targetBtn) {
           targetBtn.focus({ preventScroll: true });
           ensureVisibleAboveFooter(targetBtn);
@@ -414,24 +404,4 @@ function onFocusOut(e) {
     isInputFocused.value = false;
   }
 }
-
-function focusPrimaryInput(options = {}) {
-  const preventScroll = options.preventScroll !== undefined ? options.preventScroll : false;
-  nextTick(() => {
-    if (!cardRef.value) return;
-    if (preventScroll === false) {
-      cardRef.value.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
-    const input = cardRef.value.querySelector("input:not([type=hidden]):not([disabled]), button:not([disabled])");
-    if (input) {
-      input.focus({ preventScroll });
-    } else {
-      cardRef.value.focus({ preventScroll });
-    }
-  });
-}
-
-defineExpose({
-  focus: focusPrimaryInput,
-});
 </script>
