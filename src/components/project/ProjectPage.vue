@@ -102,7 +102,7 @@
       v-if="tabs.length > 1"
       v-model="activeTabIndex"
       :tabs="tabs"
-      class="!overflow-visible [&>[role=tablist]]:sticky [&>[role=tablist]]:top-[52px] sm:[&>[role=tablist]]:top-[56px] [&>[role=tablist]]:z-20 [&>[role=tablist]]:bg-slate-100/95 dark:[&>[role=tablist]]:bg-slate-950/95 [&>[role=tablist]]:backdrop-blur-md [&>[role=tablist]]:no-scrollbar [&>[role=tabpanel]]:pt-4"
+      class="!overflow-visible [&>[role=tablist]]:sticky [&>[role=tablist]]:top-[var(--app-header-height)] [&>[role=tablist]]:z-20 [&>[role=tablist]]:bg-slate-100/95 dark:[&>[role=tablist]]:bg-slate-950/95 [&>[role=tablist]]:backdrop-blur-md [&>[role=tablist]]:no-scrollbar [&>[role=tabpanel]]:pt-4"
     >
       <template #tab-panel="{ tab }">
         <ProjectSurveyList v-if="tab.id === 'surveys'" v-bind="surveyList" />

@@ -2,6 +2,7 @@
 // clips a tab or shows a scrollbar, at desktop and phone widths. The header and the strip stay at
 // the top while the page scrolls (#141).
 import { test, expect } from "../../../frappe/playwright/support/index.js";
+import { withApi, createSurvey, removeSurvey, openProject } from "../support/omniquery.js";
 
 const PROJECT_NAME = "UI Test Tabs Project";
 const TEMPLATE_TITLE = "UI Test Tabs Survey";
@@ -10,49 +11,35 @@ const SOP = "<p>Introduce yourself before the first question.</p>" + "<p>Read ea
 
 test.describe.configure({ mode: "serial" });
 
-let project;
-
 test.beforeAll(async ({ playwright, baseURL, storageState }) => {
-  const request = await playwright.request.newContext({ baseURL, storageState });
-  await removeTestRecords(request);
-  project = await insert(request, "OmniQuery Project", {
-    project_name: PROJECT_NAME,
-    grantor_organization: "UI Test Grantor",
-    support_email: "helpdesk@example.org",
-    helpline_phone: "+91 1800 000 111",
-    sop_sections: SOP,
-    status: "Active",
-  });
-  const template = await insert(request, "OmniQuery Template", {
-    title: TEMPLATE_TITLE,
-    project: project.name,
-    version: 1,
-    sections: [{ section_code: "SEC_1", section_title: "Basic section" }],
-    questions: [{ section_code: "SEC_1", question_code: "q1", label_en: "Question 1" }],
-  });
-  await call(request, "frappe.client.submit", { doc: template });
-  await request.dispose();
+  await withApi({ playwright, baseURL, storageState }, (api) =>
+    createSurvey(
+      api,
+      {
+        project_name: PROJECT_NAME,
+        grantor_organization: "UI Test Grantor",
+        support_email: "helpdesk@example.org",
+        helpline_phone: "+91 1800 000 111",
+        sop_sections: SOP,
+      },
+      {
+        title: TEMPLATE_TITLE,
+        sections: [{ section_code: "SEC_1", section_title: "Basic section" }],
+        questions: [{ section_code: "SEC_1", question_code: "q1", label_en: "Question 1" }],
+      },
+    ),
+  );
 });
 
 test.afterAll(async ({ playwright, baseURL, storageState }) => {
-  const request = await playwright.request.newContext({ baseURL, storageState });
-  await removeTestRecords(request);
-  await request.dispose();
+  await withApi({ playwright, baseURL, storageState }, (api) => removeSurvey(api, PROJECT_NAME, TEMPLATE_TITLE));
 });
-
-async function openProject(page) {
-  await page.addInitScript(() => localStorage.setItem("omniquery_lang", "en"));
-  await page.goto("/omniquery");
-  const card = page.locator("div").filter({ hasText: PROJECT_NAME }).filter({ has: page.getByRole("button", { name: /Project details/ }) }).last();
-  await card.getByRole("button", { name: /Project details/ }).click();
-  await expect(page.getByRole("heading", { name: PROJECT_NAME })).toBeVisible();
-  return page.getByRole("tablist");
-}
 
 for (const [width, height] of [[1280, 900], [375, 812]]) {
   test(`tabs at ${width}px: one tab stop, arrow keys, nothing clipped`, async ({ page }) => {
     await page.setViewportSize({ width, height });
-    const tablist = await openProject(page);
+    await openProject(page, PROJECT_NAME);
+    const tablist = page.getByRole("tablist");
     const surveys = page.getByRole("tab", { name: /Surveys in this Project \(1\)/ });
     const sops = page.getByRole("tab", { name: "Field SOPs & Protocols" });
     await expect(page.getByRole("tab")).toHaveCount(2);
@@ -105,7 +92,8 @@ for (const [width, height] of [[1280, 900], [375, 812]]) {
 for (const [width, height] of [[1280, 700], [375, 640]]) {
   test(`header and tab strip stay at the top while the page scrolls, at ${width}px (#141)`, async ({ page }) => {
     await page.setViewportSize({ width, height });
-    const tablist = await openProject(page);
+    await openProject(page, PROJECT_NAME);
+    const tablist = page.getByRole("tablist");
     await page.getByRole("tab", { name: "Field SOPs & Protocols" }).click();
     await expect(page.getByRole("tabpanel")).toContainText("Read each question exactly as it is written.");
     const header = page.locator("header").first();
@@ -117,42 +105,9 @@ for (const [width, height] of [[1280, 700], [375, 640]]) {
     const headerBox = await header.boundingBox();
     const stripBox = await tablist.boundingBox();
     expect(headerBox.y).toBe(0);
-    // the strip sits just under the header (its top-[52px]/sm:top-[56px] is a few px off the
-    // header's 53px, logged on ROADMAP), not scrolled out of view
-    const headerBottom = headerBox.y + headerBox.height;
-    expect(stripBox.y).toBeGreaterThanOrEqual(headerBottom - 2);
-    expect(stripBox.y).toBeLessThanOrEqual(headerBottom + 4);
+    // the strip sits right under the header: both read --app-header-height (#146)
+    expect(Math.abs(stripBox.y - (headerBox.y + headerBox.height))).toBeLessThanOrEqual(1);
     // clip still keeps the page from scrolling sideways
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
-}
-
-async function call(request, method, args) {
-  const res = await request.post(`/api/method/${method}`, { data: args, headers: { Accept: "application/json" } });
-  expect(res.status(), `${method}: ${await res.text()}`).toBe(200);
-  return (await res.json()).message;
-}
-
-async function insert(request, doctype, doc) {
-  const res = await request.post(`/api/resource/${doctype}`, { data: doc, headers: { Accept: "application/json" } });
-  expect(res.status(), `insert ${doctype}: ${await res.text()}`).toBe(200);
-  return (await res.json()).data;
-}
-
-async function names(request, doctype, filters) {
-  const res = await request.get(`/api/resource/${doctype}`, {
-    params: { fields: JSON.stringify(["name", "docstatus"]), filters: JSON.stringify(filters) },
-  });
-  expect(res.status()).toBe(200);
-  return (await res.json()).data;
-}
-
-async function removeTestRecords(request) {
-  for (const t of await names(request, "OmniQuery Template", [["title", "=", TEMPLATE_TITLE]])) {
-    if (t.docstatus === 1) await call(request, "frappe.client.cancel", { doctype: "OmniQuery Template", name: t.name });
-    await call(request, "frappe.client.delete", { doctype: "OmniQuery Template", name: t.name });
-  }
-  for (const p of await names(request, "OmniQuery Project", [["project_name", "=", PROJECT_NAME]])) {
-    await call(request, "frappe.client.delete", { doctype: "OmniQuery Project", name: p.name });
-  }
 }

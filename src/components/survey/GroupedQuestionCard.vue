@@ -6,10 +6,11 @@
     tabindex="-1"
     role="region"
     :aria-label="group.title"
+    :style="{ '--card-header-height': `${cardHeaderHeight}px` }"
     @focusin="onFocusIn"
     @focusout="onFocusOut"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default scroll-mt-28',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default',
       hasGroupError
         ? 'bg-rose-50/30 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 border-l-4 border-l-rose-500 shadow-xs ring-1 ring-rose-500/20'
         : isFocused
@@ -20,7 +21,7 @@
     ]"
   >
     <!-- Group Header (Pinned / Sticky during scroll so user always knows the main question) -->
-    <div class="sticky top-[52px] sm:top-[56px] z-20 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-3 p-4 sm:p-5 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 flex items-start justify-between gap-2 flex-wrap shadow-xs">
+    <div ref="cardHeader" data-card-header class="sticky top-[var(--app-header-height)] z-20 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-3 p-4 sm:p-5 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 flex items-start justify-between gap-2 flex-wrap shadow-xs">
       <div class="flex items-start gap-2.5 min-w-0 flex-1">
         <!-- Question Number / Group Badge -->
         <span
@@ -53,7 +54,7 @@
         :key="q.question_code"
         :id="'qc_' + q.question_code"
         :data-subquestion-code="q.question_code"
-        class="p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition border-l-4 scroll-mt-28"
+        class="p-3 sm:p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition border-l-4"
         :class="[
           focusedQuestionCode === q.question_code
             ? 'bg-emerald-50/70 dark:bg-emerald-950/40 border-l-emerald-600 shadow-2xs'
@@ -193,10 +194,12 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, useTemplateRef } from "vue";
+import { useElementSize } from "@vueuse/core";
 import { Button, TextInput } from "frappe-ui";
 import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
+import { useRevealInPage } from "../../composables/useRevealInPage";
 import { choiceOptions, hasOptions, parentAnswer } from "../../utils/cascadingOptions";
 import { choiceGroupState } from "../../utils/choiceGroup";
 import { isAnswered } from "../../utils/responsePayload";
@@ -343,7 +346,7 @@ function onChoiceKeydown(e, q, optIdx, options) {
         const targetBtn = optionButton(nextQ.question_code, focusIdx);
         if (targetBtn) {
           targetBtn.focus({ preventScroll: true });
-          ensureVisibleAboveFooter(targetBtn);
+          revealInPage(targetBtn);
         }
       }
     }
@@ -370,21 +373,9 @@ const isFocused = ref(false);
 const focusedQuestionCode = ref(null);
 const isInputFocused = ref(false);
 
-function ensureVisibleAboveFooter(targetEl) {
-  if (!targetEl || typeof targetEl.getBoundingClientRect !== "function") return;
-  const rect = targetEl.getBoundingClientRect();
-  const vh = window.innerHeight || document.documentElement.clientHeight;
-  const footerClearance = 80;
-  const headerClearance = 96;
-
-  if (rect.bottom > vh - footerClearance) {
-    const diff = rect.bottom - (vh - footerClearance) + 16;
-    window.scrollBy({ top: diff, behavior: "smooth" });
-  } else if (rect.top < headerClearance) {
-    const diff = rect.top - headerClearance - 16;
-    window.scrollBy({ top: diff, behavior: "smooth" });
-  }
-}
+// The sticky header's height, as the rows' scroll margin (main.css), so a row scrolled to lands below it
+const { height: cardHeaderHeight } = useElementSize(useTemplateRef("cardHeader"), undefined, { box: "border-box" });
+const revealInPage = useRevealInPage();
 
 function onFocusIn(e) {
   const fromOutside = !cardRef.value?.contains(e.relatedTarget);
@@ -401,7 +392,7 @@ function onFocusIn(e) {
   if (fromOutside) {
     cardRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
   } else {
-    ensureVisibleAboveFooter(e.target);
+    revealInPage(e.target);
   }
 }
 

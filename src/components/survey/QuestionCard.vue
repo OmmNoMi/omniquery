@@ -16,7 +16,7 @@
     @touchcancel="onTouchCancel"
     @contextmenu.prevent="openConfigModal"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default scroll-mt-28',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default',
       notApplicable
         ? 'bg-slate-50/70 dark:bg-slate-900/60 border-dashed border-slate-300 dark:border-slate-700 opacity-75'
         : errorMessage
@@ -518,6 +518,7 @@ import {
 } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useCardEscape } from "../../composables/useCardEscape";
+import { useRevealInPage } from "../../composables/useRevealInPage";
 import FSwitch from "../common/FSwitch.vue";
 import FRating from "../common/FRating.vue";
 import FCurrencyInput from "../common/FCurrencyInput.vue";
@@ -601,21 +602,7 @@ let touchTimer = null;
 let touchStartX = 0;
 let touchStartY = 0;
 
-function ensureVisibleAboveFooter(targetEl) {
-  if (!targetEl || typeof targetEl.getBoundingClientRect !== "function") return;
-  const rect = targetEl.getBoundingClientRect();
-  const vh = window.innerHeight || document.documentElement.clientHeight;
-  const footerClearance = 80;
-  const headerClearance = 96;
-
-  if (rect.bottom > vh - footerClearance) {
-    const diff = rect.bottom - (vh - footerClearance) + 16;
-    window.scrollBy({ top: diff, behavior: "smooth" });
-  } else if (rect.top < headerClearance) {
-    const diff = rect.top - headerClearance - 16;
-    window.scrollBy({ top: diff, behavior: "smooth" });
-  }
-}
+const revealInPage = useRevealInPage();
 
 function onCardClick() {
   if (!isFocused.value && cardRef.value) {
@@ -634,7 +621,7 @@ function onFocusIn(e) {
   if (fromOutside) {
     cardRef.value?.scrollIntoView({ behavior: "smooth", block: "start" });
   } else {
-    ensureVisibleAboveFooter(e.target);
+    revealInPage(e.target);
   }
 }
 
@@ -1077,7 +1064,7 @@ function handleOptionArrowNav(e, curIdx) {
   const targetBtn = optionButton(nextIdx);
   if (targetBtn) {
     targetBtn.focus({ preventScroll: true });
-    ensureVisibleAboveFooter(targetBtn);
+    revealInPage(targetBtn);
     if (!isMultiSelect.value) {
       emit("update:modelValue", displayedGridOptions.value[nextIdx].value);
     }
