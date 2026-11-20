@@ -95,7 +95,7 @@ describe("focus reaches the element frappe-ui exposes", () => {
     expect(focused().matches("input, select, button"), `focus is on ${focused().outerHTML.slice(0, 80)}`).toBe(true);
   });
 
-  describe("a matrix renders a table and a card layout, and CSS hides one", () => {
+  describe("a matrix renders a table on a wide screen and cards on a narrow one, never both (#118)", () => {
     const matrix = {
       question_code: "q_herd",
       label_en: "Herd by season",
@@ -104,10 +104,71 @@ describe("focus reaches the element frappe-ui exposes", () => {
       columns: [{ key: "count", label: "Count", type: "number" }],
       rows: [{ id: "summer", label: "Summer" }, { id: "winter", label: "Winter" }],
     };
-    // the table shows from Tailwind's sm breakpoint up
-    const screenIsWide = (wide) =>
-      vi.stubGlobal("matchMedia", () => ({ matches: wide, addEventListener() {}, removeEventListener() {} }));
+    // the table shows from Tailwind's sm breakpoint (640px) up. Each query is answered against a
+    // screen width, so a wrong breakpoint or direction shows; resize() tells every listener, as a
+    // rotated tablet would.
+    let screen;
+    // other queries (a colour scheme, reduced motion) do not match
+    const queryMatches = (query) => {
+      const [, side, px] = query.match(/(min|max)-width:\s*([\d.]+)px/) || [];
+      if (!side) return false;
+      return side === "min" ? screen.width >= Number(px) : screen.width <= Number(px);
+    };
+    const screenIsWide = (wide) => {
+      screen = { width: wide ? 1024 : 375, listeners: new Map() };
+      vi.stubGlobal("matchMedia", (query) => ({
+        media: query,
+        get matches() {
+          return queryMatches(query);
+        },
+        addEventListener: (_, fn) => screen.listeners.set(fn, query),
+        removeEventListener: (_, fn) => screen.listeners.delete(fn),
+      }));
+    };
+    const resize = async (wide) => {
+      screen.width = wide ? 1024 : 375;
+      screen.listeners.forEach((query, fn) => fn({ matches: queryMatches(query) }));
+      await nextTick();
+      await nextTick();
+    };
     afterEach(() => vi.unstubAllGlobals());
+
+    for (const [wide, layout, other] of [[true, "table", "cards"], [false, "cards", "table"]]) {
+      it(`renders each cell once, in the ${layout}, on a ${wide ? "wide" : "narrow"} screen`, async () => {
+        screenIsWide(wide);
+        mountHere(MatrixQuestionCard, { question: matrix, modelValue: {} });
+        await nextTick();
+        expect(wrapper.findAll(`[data-matrix-layout=${other}]`)).toHaveLength(0);
+        expect(wrapper.findAll("[data-cell]").map((c) => c.attributes("data-cell"))).toEqual(["0_0", "1_0"]);
+        expect(wrapper.findAll(`[data-matrix-layout=${layout}] [data-cell]`)).toHaveLength(2);
+      });
+    }
+
+    it("keeps focus on the same cell when the screen crosses the breakpoint", async () => {
+      screenIsWide(true);
+      mountHere(MatrixQuestionCard, { question: matrix, modelValue: {} });
+      await nextTick();
+      wrapper.find('[data-matrix-layout=table] [data-cell="1_0"]').element.focus();
+
+      await resize(false);
+      expect(focused()).toBe(wrapper.find('[data-matrix-layout=cards] [data-cell="1_0"]').element);
+      await resize(true);
+      expect(focused()).toBe(wrapper.find('[data-matrix-layout=table] [data-cell="1_0"]').element);
+    });
+
+    it("leaves focus alone when the layout swaps while it is in another matrix", async () => {
+      screenIsWide(true);
+      mountHere(MatrixQuestionCard, { question: matrix, modelValue: {} });
+      await nextTick();
+      const outside = document.createElement("button");
+      outside.dataset.cell = "1_0";
+      document.body.append(outside);
+      outside.focus();
+
+      await resize(false);
+      expect(focused()).toBe(outside);
+      outside.remove();
+    });
 
     it("moves between the rows of a dropdown column", async () => {
       screenIsWide(true);

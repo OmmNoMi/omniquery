@@ -84,8 +84,9 @@
       </Button>
     </div>
 
-    <!-- 3D / 4D Matrix Content: Desktop Table Grid (sm:block) -->
-    <div data-matrix-layout="table" class="hidden sm:block rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
+    <!-- 3D / 4D Matrix Content: the table from Tailwind's sm breakpoint up, else one card per row.
+      Only one is rendered, so every cell exists once (#118) -->
+    <div v-if="showsTable" data-matrix-layout="table" class="rounded-xl border border-slate-200 dark:border-slate-700/80 overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
       <table class="w-full text-left border-collapse">
         <thead>
           <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-700 text-[11px] font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">
@@ -214,8 +215,8 @@
       </table>
     </div>
 
-    <!-- 3D / 4D Matrix Content: Mobile Card-Per-Row Layout (block sm:hidden - ZERO Horizontal Scroll) -->
-    <div data-matrix-layout="cards" class="block sm:hidden space-y-3">
+    <!-- Card-per-row layout for phones: no horizontal scroll -->
+    <div v-else data-matrix-layout="cards" class="space-y-3">
       <div
         v-for="(row, rIdx) in matrixRows"
         :key="row.id"
@@ -376,7 +377,7 @@ import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useCardEscape } from "../../composables/useCardEscape";
 import { useRevealInPage } from "../../composables/useRevealInPage";
-import { useElementSize, useMediaQuery } from "@vueuse/core";
+import { breakpointsTailwind, useBreakpoints, useElementSize } from "@vueuse/core";
 
 const props = defineProps({
   question: {
@@ -406,15 +407,22 @@ const { height: cardHeaderHeight } = useElementSize(useTemplateRef("cardHeader")
 const onCardEscape = useCardEscape(cardRef);
 const isFocused = ref(false);
 const isInputFocused = ref(false);
-// Both layouts are rendered and CSS hides one, so a cell is looked up in the one on screen: a cell of
-// the hidden layout cannot take focus. The table shows from Tailwind's sm breakpoint up. data-cell
-// lands on the element that takes focus, since frappe-ui TextInput passes attrs to its input element and
-// Select to its trigger button; a ref would hold the component, which has no focus().
-const showsTable = useMediaQuery("(min-width: 640px)");
-const cellAt = (rIdx, cIdx) =>
-  cardRef.value?.querySelector(
-    `[data-matrix-layout="${showsTable.value ? "table" : "cards"}"] [data-cell="${rIdx}_${cIdx}"]`,
-  );
+// The table shows from Tailwind's sm breakpoint up, the way frappe-ui's Sidebar reads it, and only
+// the layout on screen is rendered (#118). data-cell lands on the element that takes focus, since
+// frappe-ui TextInput passes attrs to its input element and Select to its trigger button; a ref would
+// hold the component, which has no focus().
+const showsTable = useBreakpoints(breakpointsTailwind).greaterOrEqual("sm");
+const cellAt = (rIdx, cIdx) => cardRef.value?.querySelector(`[data-cell="${rIdx}_${cIdx}"]`);
+// A rotated tablet or a resized window swaps the layout and removes the focused cell, so focus
+// moves to the same cell in the new layout rather than dropping to the page. A pre-flush watcher
+// reads the focused cell before the old layout goes.
+watch(showsTable, async () => {
+  const cell = document.activeElement?.closest?.("[data-cell]");
+  if (!cell || !cardRef.value?.contains(cell)) return;
+  const [rIdx, cIdx] = cell.dataset.cell.split("_");
+  await nextTick();
+  cellAt(rIdx, cIdx)?.focus({ preventScroll: true });
+});
 
 // Parse question title & number
 const parsedMeta = computed(() => {

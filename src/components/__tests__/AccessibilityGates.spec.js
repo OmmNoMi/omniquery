@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
+import { nextTick } from "vue";
 import FSwitch from "../common/FSwitch.vue";
 import FCurrencyInput from "../common/FCurrencyInput.vue";
 import FRangeSlider from "../common/FRangeSlider.vue";
@@ -7,6 +8,8 @@ import QuestionCard from "../survey/QuestionCard.vue";
 import GroupedQuestionCard from "../survey/GroupedQuestionCard.vue";
 import MatrixQuestionCard from "../survey/MatrixQuestionCard.vue";
 import { useTranslation } from "../../composables/useTranslation";
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("Gate 2: Accessibility Invariants (WCAG 2.2 AA)", () => {
   describe("FSwitch", () => {
@@ -196,7 +199,7 @@ describe("Gate 2: Accessibility Invariants (WCAG 2.2 AA)", () => {
       expect(stars.attributes("aria-required")).toBe("true");
     });
 
-    it("names every matrix cell by its row and column, in both layouts", () => {
+    it("names every matrix cell by its row and column, in both layouts", async () => {
       const matrix = {
         question_code: "q_herd",
         label_en: "Herd by season",
@@ -209,10 +212,14 @@ describe("Gate 2: Accessibility Invariants (WCAG 2.2 AA)", () => {
         ],
         rows: [{ id: "summer", label: "Summer" }],
       };
-      const wrapper = mount(MatrixQuestionCard, { props: { question: matrix, modelValue: {} } });
-      for (const layout of ["table", "cards"]) {
+      // only the layout on screen is rendered (#118): the table from Tailwind's sm breakpoint up
+      for (const [wide, layout] of [[true, "table"], [false, "cards"]]) {
+        vi.stubGlobal("matchMedia", () => ({ matches: wide, addEventListener() {}, removeEventListener() {} }));
+        const wrapper = mount(MatrixQuestionCard, { props: { question: matrix, modelValue: {} } });
+        await nextTick();
         const names = wrapper.findAll(`[data-matrix-layout=${layout}] [data-cell]`).map((c) => c.attributes("aria-label"));
         expect(names, layout).toEqual(["Summer, Count", "Summer, Value", "Summer, Breed", "Summer, Notes"]);
+        wrapper.unmount();
       }
     });
   });
