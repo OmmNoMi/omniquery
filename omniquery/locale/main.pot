@@ -2247,3 +2247,23 @@ msgstr ""
 #: omniquery/omniquery/doctype/omniquery_response/omniquery_response.py
 msgid "These answers are not 10-digit mobile numbers: {0}"
 msgstr ""
+
+#: src/utils/requiredMessage.js
+msgid "Choose {0}"
+msgstr ""
+
+#: src/utils/requiredMessage.js
+msgid "Enter {0}"
+msgstr ""
+
+#: src/utils/requiredMessage.js
+msgid "Choose an answer"
+msgstr ""
+
+#: src/utils/requiredMessage.js
+msgid "Enter an answer"
+msgstr ""
+
+#: src/utils/requiredMessage.js
+msgid "Capture the location"
+msgstr ""

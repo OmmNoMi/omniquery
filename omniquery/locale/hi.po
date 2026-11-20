@@ -2766,3 +2766,23 @@ msgstr "10 अंकों का मोबाइल नंबर दर्ज �
 #: omniquery/omniquery/doctype/omniquery_response/omniquery_response.py
 msgid "These answers are not 10-digit mobile numbers: {0}"
 msgstr "ये उत्तर 10 अंकों के मोबाइल नंबर नहीं हैं: {0}"
+
+#: src/utils/requiredMessage.js
+msgid "Choose {0}"
+msgstr "{0} चुनें"
+
+#: src/utils/requiredMessage.js
+msgid "Enter {0}"
+msgstr "{0} दर्ज करें"
+
+#: src/utils/requiredMessage.js
+msgid "Choose an answer"
+msgstr "एक उत्तर चुनें"
+
+#: src/utils/requiredMessage.js
+msgid "Enter an answer"
+msgstr "उत्तर दर्ज करें"
+
+#: src/utils/requiredMessage.js
+msgid "Capture the location"
+msgstr "लोकेशन दर्ज करें"
