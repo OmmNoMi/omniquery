@@ -378,6 +378,9 @@ def seed():
 					"Jodhpur": ["Mandor", "Luni Shergadh"],
 				}
 			)
+		elif fieldname == "respondent_phone" or fieldtype == "Phone" or df.options == "Phone":
+			# a mobile number (#22): the source survey keeps it as plain Data
+			target_type = "Phone"
 		elif fieldtype == "Select":
 			target_type = "Single Choice (Radio)"
 			opts = [o.strip() for o in (df.options or "").split("\n") if o.strip()]

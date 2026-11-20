@@ -315,11 +315,13 @@
         class="w-full"
       />
 
-      <!-- 10. Default Text Input -->
+      <!-- 10. Default Text Input; a Phone question (#22) brings up the phone keypad, and the section
+           check, not each keystroke, says whether it is a 10-digit number -->
       <TextInput
         v-else
         :id="'q_input_' + question.question_code"
-        type="text"
+        :type="isPhoneControl ? 'tel' : 'text'"
+        :inputmode="isPhoneControl ? 'tel' : undefined"
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
@@ -327,7 +329,7 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
-        :placeholder="__('Enter value')"
+        :placeholder="isPhoneControl ? __('Enter 10-digit mobile number') : __('Enter value')"
         size="lg"
         variant="outline"
         class="w-full"
@@ -524,6 +526,7 @@ import FRangeSlider from "../common/FRangeSlider.vue";
 import { choiceButtonProps } from "../../utils/choiceButton";
 import { choiceGroupState } from "../../utils/choiceGroup";
 import { choiceOptions, hasOptions } from "../../utils/cascadingOptions";
+import { isPhoneQuestion } from "../../utils/phone";
 
 const props = defineProps({
   question: {
@@ -703,6 +706,7 @@ const inputTypeLabel = computed(() => {
   if (isYearControl.value) return __("Year");
   if (isGeolocationControl.value) return __("GPS");
   if (isChoiceControl.value) return isMultiSelect.value ? __("Multi-select") : __("Select");
+  if (isPhoneControl.value) return __("Phone");
   if (isDateControl.value) return __("Date");
   if (isNumberControl.value) return __("Number");
   return __("Text");
@@ -1197,6 +1201,8 @@ const isDateControl = computed(() => {
   const type = (props.question.field_type || "").toLowerCase();
   return type.includes("date");
 });
+
+const isPhoneControl = computed(() => isPhoneQuestion(props.question));
 
 function formatCoords(coords) {
   if (typeof coords === "object" && coords.latitude) {

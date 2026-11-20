@@ -179,7 +179,8 @@ describe("Gate 2: Accessibility Invariants (WCAG 2.2 AA)", () => {
       expect(radiogroup.attributes("aria-label")).toBeUndefined();
       expect(radiogroup.attributes("aria-required")).toBe("true");
       expect(radiogroup.attributes("aria-errormessage")).toBe("sub_err_q_sub_1");
-      expect(wrapper.find("#sub_err_q_sub_1").text()).toBe("This field is required");
+      // shown in the surveyor's language, as a single question's error is (#22)
+      expect(wrapper.find("#sub_err_q_sub_1").text()).toBe("यह फ़ील्ड अनिवार्य है");
       expect(wrapper.find("#sub_label_q_sub_1 span").attributes("aria-hidden")).toBe("true");
     });
 

@@ -7,6 +7,7 @@ from frappe.utils import formatdate, now_datetime
 from omniquery.services.cascading_options import invalid_dependent_answers, response_answers
 from omniquery.services.idempotency import require_key
 from omniquery.services.location import resolve_gps_status
+from omniquery.services.phone import invalid_phone_answers
 from omniquery.services.response_title import answers_from_items, resolve_response_title
 
 # written only by sync (with db.set_value), so a form or API save may not change them
@@ -43,22 +44,28 @@ class OmniQueryResponse(Document):
 		# validate runs on insert, save and submit; before_save is skipped when a draft is submitted
 		self.title = self.compute_title()
 		self.gps_status = resolve_gps_status(self.gps_latitude, self.gps_longitude, self.gps_status)
-		self._validate_dependent_answers()
+		self._validate_submitted_answers()
 		if self.is_new():
 			return
 		self._guard_quality_signals()
 
-	def _validate_dependent_answers(self):
-		"""A Block must be one of the chosen District's blocks (#24). A draft may still be half-answered."""
+	def _validate_submitted_answers(self):
+		"""Checks a submitted response's answers against its template. A draft may still be half-answered."""
 		if self.docstatus == 0 and self.survey_status in (None, "", "Draft"):
 			return
 		schema = self.survey_template and frappe.db.get_value("OmniQuery Template", self.survey_template, "compiled_schema_json")
 		if not schema:
 			return
 		questions = frappe.parse_json(schema).get("questions") or []
-		invalid = invalid_dependent_answers(questions, response_answers(self.items))
+		answers = response_answers(self.items)
+		# a Block must be one of the chosen District's blocks (#24)
+		invalid = invalid_dependent_answers(questions, answers)
 		if invalid:
 			frappe.throw(_("These answers are not among the choices for the answer they depend on: {0}").format(", ".join(invalid)))
+		# every way in (sync, Desk, Data Import, the API) gets the field app's phone rule (#22)
+		invalid = invalid_phone_answers(questions, answers)
+		if invalid:
+			frappe.throw(_("These answers are not 10-digit mobile numbers: {0}").format(", ".join(invalid)))
 
 	def compute_title(self):
 		fmt, template_title = "", ""
