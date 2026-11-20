@@ -229,6 +229,11 @@ function cancelAdvance() {
   advanceTimer = null;
 }
 
+// Survey.vue keeps focus mode mounted, so closing it is only isOpen turning false: an answer's pending
+// auto-advance would still move the section on behind the user's back (#152). Unmounting needs nothing:
+// Vue drops an emit from an unmounted component.
+watch(() => props.isOpen, (open) => open || cancelAdvance());
+
 function onQuestionAnswered() {
   if (!props.autoAdvance) return;
   cancelAdvance();

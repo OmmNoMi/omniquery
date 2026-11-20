@@ -2053,6 +2053,22 @@ const MUTANTS = [
     vitest("src/components/__tests__/FocusModeEscape.spec.js"),
   ],
   [
+    "focus",
+    "an answer's auto-advance still fires after focus mode closes (#152)",
+    src("src/components/survey/FocusModeModal.vue"),
+    "watch(() => props.isOpen, (open) => open || cancelAdvance());",
+    "",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
+    "focus",
+    "closing focus mode is taken for opening it, so the pending auto-advance stays",
+    src("src/components/survey/FocusModeModal.vue"),
+    "watch(() => props.isOpen, (open) => open || cancelAdvance());",
+    "watch(() => props.isOpen, (open) => open && cancelAdvance());",
+    vitest("src/components/__tests__/FocusModeEscape.spec.js"),
+  ],
+  [
     "element-refs",
     "a ref callback stores a Button's $el again",
     src("src/components/common/FRating.vue"),

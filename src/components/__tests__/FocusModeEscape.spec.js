@@ -304,6 +304,22 @@ describe("Focus mode focuses the question once (#120)", () => {
       await settle();
       expect(modal.emitted("next-question")).toHaveLength(1);
     });
+
+    // #152: Survey.vue keeps focus mode mounted, so closing it is only isOpen turning false
+    it("is dropped when focus mode closes before it fires", async () => {
+      const modal = mountFocusMode({ autoAdvance: true });
+      await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+      answer(modal);
+      await modal.setProps({ isOpen: false });
+      await settle();
+      expect(modal.emitted("next-question"), "the section stays on the question the user left").toBeFalsy();
+
+      await modal.setProps({ isOpen: true });
+      answer(modal);
+      await settle();
+      expect(modal.emitted("next-question"), "auto-advance works again once reopened").toHaveLength(1);
+    });
   });
 });
 
