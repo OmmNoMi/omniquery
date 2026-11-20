@@ -3,8 +3,10 @@
   <FrappeUIProvider>
   <!-- isolate: the app's z-indexes (header, carousel arrows, section footer) stay in this layer, so
        frappe-ui's Dialogs, teleported to <body> with no z-index, cover all of it. The toast list
-       is outside this div, so a toast still shows above an open dialog. test/guards/dialog_layer.test.js -->
-  <div class="isolate min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-hidden">
+       is outside this div, so a toast still shows above an open dialog. test/guards/dialog_layer.test.js
+       overflow-x-clip, never -hidden: hidden makes this div a scroll container and the sticky header
+       scrolls away with the page (#141). test/guards/sticky_ancestors.test.js -->
+  <div class="isolate min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans select-none antialiased w-full max-w-full overflow-x-clip">
     <!-- Live Region for Screen Readers (WCAG 2.2 AA) -->
     <div id="omniquery-live-region" role="status" aria-live="polite" aria-atomic="true" class="sr-only">
       {{ s.liveAnnouncementText }}

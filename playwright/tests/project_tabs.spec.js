@@ -1,10 +1,12 @@
 // The project page's tabs (#17): frappe-ui Tabs, one tab stop, arrow keys, and a strip that never
-// clips a tab or shows a scrollbar, at desktop and phone widths.
+// clips a tab or shows a scrollbar, at desktop and phone widths. The header and the strip stay at
+// the top while the page scrolls (#141).
 import { test, expect } from "../../../frappe/playwright/support/index.js";
 
 const PROJECT_NAME = "UI Test Tabs Project";
 const TEMPLATE_TITLE = "UI Test Tabs Survey";
-const SOP = "<p>Introduce yourself before the first question.</p>";
+// long enough that the Guide tab scrolls the page on a phone and on a desktop
+const SOP = "<p>Introduce yourself before the first question.</p>" + "<p>Read each question exactly as it is written.</p>".repeat(60);
 
 test.describe.configure({ mode: "serial" });
 
@@ -97,6 +99,31 @@ for (const [width, height] of [[1280, 900], [375, 812]]) {
     }));
     expect(scrollWidth).toBeLessThanOrEqual(clientWidth);
     expect(scrollbar).toBe(0);
+  });
+}
+
+for (const [width, height] of [[1280, 700], [375, 640]]) {
+  test(`header and tab strip stay at the top while the page scrolls, at ${width}px (#141)`, async ({ page }) => {
+    await page.setViewportSize({ width, height });
+    const tablist = await openProject(page);
+    await page.getByRole("tab", { name: "Field SOPs & Protocols" }).click();
+    await expect(page.getByRole("tabpanel")).toContainText("Read each question exactly as it is written.");
+    const header = page.locator("header").first();
+
+    await page.mouse.wheel(0, 1500);
+    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
+
+    // overflow-x: hidden on #app or the shell made them scroll containers, so both scrolled away
+    const headerBox = await header.boundingBox();
+    const stripBox = await tablist.boundingBox();
+    expect(headerBox.y).toBe(0);
+    // the strip sits just under the header (its top-[52px]/sm:top-[56px] is a few px off the
+    // header's 53px, logged on ROADMAP), not scrolled out of view
+    const headerBottom = headerBox.y + headerBox.height;
+    expect(stripBox.y).toBeGreaterThanOrEqual(headerBottom - 2);
+    expect(stripBox.y).toBeLessThanOrEqual(headerBottom + 4);
+    // clip still keeps the page from scrolling sideways
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
   });
 }
 

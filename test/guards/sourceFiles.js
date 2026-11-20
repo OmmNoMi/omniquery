@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import postcss from "postcss";
 import { parse as sfcParse, babelParse } from "vue/compiler-sfc";
 
 const SKIP_DIRS = new Set(["__tests__", "test", "tests", "node_modules", "dist", "__pycache__"]);
@@ -82,4 +83,21 @@ export function templateElements(source) {
   };
   walk(descriptor.template.ast);
   return elements;
+}
+
+// The value of `prop` in the rule whose selector is exactly `selector`
+export function ruleValue(css, selector, prop) {
+  let value = null;
+  postcss.parse(css).walkRules((rule) => {
+    if (!rule.selectors.map((s) => s.trim()).includes(selector)) return;
+    rule.walkDecls(prop, (decl) => (value = decl.value.trim()));
+  });
+  return value;
+}
+
+// The class tokens of the first element inside App.vue's <FrappeUIProvider>
+export function appLayerClasses(source) {
+  const provider = templateElements(source).find((el) => el.tag === "FrappeUIProvider");
+  const layer = provider?.children.find((child) => child.type === 1);
+  return layer ? classTokens(elementClasses(layer)) : [];
 }

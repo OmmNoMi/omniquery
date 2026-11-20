@@ -45,8 +45,11 @@ cost real time to learn. Add to it when you learn something new.
   upstream frappe-ui candidates); `src/styles/main.css` rings `[role=tab]` and `[role=tabpanel]`,
   and `test/guards/focus_rings.test.js` checks it.
 - `overflow-x: hidden` on `#app` and the App.vue shell makes them scroll containers (computed
-  `overflow-y: auto`), so `position: sticky` never sticks anywhere in the PWA (#141). Use
-  `overflow-x: clip`; never put overflow on html (`test/guards/scroll_lock.test.js`).
+  `overflow-y: auto`), so `position: sticky` never stuck anywhere in the PWA (#141). Both use
+  `overflow-x: clip`, which hides the sideways overflow without a scroll container
+  (`test/guards/sticky_ancestors.test.js`); never put overflow on html
+  (`test/guards/scroll_lock.test.js`). A sticky element under the header hard-codes the header's
+  height as `top-[52px] sm:top-[56px]`, so check it if the header's height changes.
 
 ## Tests
 
