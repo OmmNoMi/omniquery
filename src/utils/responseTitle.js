@@ -1,3 +1,5 @@
+import { isAnswered } from "./responsePayload";
+
 /**
  * Response Title Resolver
  * Dynamically computes a human-readable title for drafts and survey responses
@@ -13,7 +15,7 @@ export function resolveResponseTitle(responses = {}, formatString = "", fallback
   // 1. Normalize response keys (case-insensitive & trimmed)
   const normMap = new Map();
   for (const [k, v] of Object.entries(responses)) {
-    if (v !== undefined && v !== null && String(v).trim() !== "") {
+    if (isAnswered(v)) {
       normMap.set(k.toLowerCase().trim(), String(v).trim());
     }
   }

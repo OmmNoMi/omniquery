@@ -1,7 +1,7 @@
 import { ref, computed } from "vue";
 import { call } from "frappe-ui";
 import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
-import { responseItems } from "../utils/responsePayload";
+import { isAnswered, responseItems } from "../utils/responsePayload";
 import { uuidv4 } from "../utils/uuid";
 import { projectHelp } from "../utils/projectHelp";
 import { templatesOfProject } from "../utils/projectTemplates";
@@ -479,9 +479,7 @@ export function useSurvey() {
       (q) => q.section_code === section.section_code && isQuestionVisible(q)
     );
     return questions.every((q) => {
-      if (!q.is_mandatory) return true;
-      const val = responses.value[q.question_code];
-      return val !== undefined && val !== null && String(val).trim() !== "";
+      return !q.is_mandatory || isAnswered(responses.value[q.question_code]);
     });
   }
 

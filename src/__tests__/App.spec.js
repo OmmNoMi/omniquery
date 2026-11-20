@@ -28,6 +28,18 @@ const schemas = {
       { question_code: "q_village", section_code: "s1", field_type: "Data", label_en: "Village", is_mandatory: 1 },
     ],
   },
+  // a required range question a surveyor can answer 0, then another required one (#21)
+  "OQS-YEARS": {
+    template_name: "OQS-YEARS",
+    title: "SHG Membership",
+    project: "P-1",
+    sections: [{ section_code: "s1", section_title: "Membership", is_mandatory: 1 }],
+    questions: [
+      // the label names no unit, so the one shown comes from the validation rules
+      { question_code: "q_years", section_code: "s1", field_type: "Range", label_en: "Time in the SHG", is_mandatory: 1, validation_rules: { min: 0, max: 7, unit: "Years" } },
+      { question_code: "q_village", section_code: "s1", field_type: "Data", label_en: "Village", is_mandatory: 1 },
+    ],
+  },
   "OQS-ONE-BY-ONE": {
     template_name: "OQS-ONE-BY-ONE",
     title: "Household Roster",
@@ -465,5 +477,62 @@ describe("an opened survey starts at the top, with focus where the work is (#20)
     await wrapper.vm.s.selectSurvey("OQS-INTAKE", { draftId: "OQS-DRAFT-1" });
     await vi.waitFor(() => expect(cardHasFocus("q_village")).toBe(true));
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "auto", block: "start" });
+  });
+});
+
+describe("a range question answered 0 counts as answered (#21)", () => {
+  let wrapper;
+  const card = () => document.getElementById("qc_q_years");
+  const choice = (n) => Array.from(card().querySelectorAll("[role=radio]")).find((r) => r.textContent.trim() === String(n));
+  const checked = () => Array.from(card().querySelectorAll("[role=radio][aria-checked=true]")).map((r) => r.textContent.trim());
+  const saveDraft = (responses) =>
+    db.responses.put({ response_uid: "OQS-DRAFT-YEARS", template_name: "OQS-YEARS", status: "Draft", responses, active_section_index: 0, updated_at: new Date().toISOString() });
+
+  beforeEach(async () => {
+    bootstrap = assigned;
+    useTranslation().setLanguage("en");
+    await db.templates.clear();
+    await db.responses.clear();
+    window.scrollTo = vi.fn();
+    recordHistory();
+    openLink("/omniquery");
+    wrapper = mount(App, { attachTo: document.body });
+    await settle();
+  });
+  afterEach(() => {
+    wrapper?.unmount();
+    document.body.innerHTML = "";
+    delete window.frappe;
+    vi.restoreAllMocks();
+  });
+
+  it("shows a new survey's range question as not answered, then keeps the 0 the surveyor picks", async () => {
+    await wrapper.vm.s.selectSurvey("OQS-YEARS", { startNew: true });
+    await vi.waitFor(() => expect(card()).toBeTruthy());
+    expect(card().textContent).toContain("Not answered");
+    expect(checked(), "no answer picked for the surveyor").toEqual([]);
+    expect(wrapper.vm.s.progressPercent).toBe(0);
+
+    choice(0).click();
+    await nextTick();
+    expect(wrapper.vm.s.responses.q_years).toBe(0);
+    expect(checked()).toEqual(["0"]);
+    expect(card().textContent).not.toContain("Not answered");
+    expect(card().textContent, "the unit from its validation rules").toMatch(/Selected Value\s*0\s*Years/);
+    expect(wrapper.vm.s.progressPercent, "the 0 counts towards progress").toBe(50);
+  });
+
+  it("resumes a draft answered 0 past the range question, with the 0 still picked", async () => {
+    await saveDraft({ q_years: 0 });
+    await wrapper.vm.s.selectSurvey("OQS-YEARS", { draftId: "OQS-DRAFT-YEARS" });
+    await vi.waitFor(() => expect(document.getElementById("qc_q_village")?.contains(document.activeElement), "focus on Village").toBe(true));
+    expect(checked()).toEqual(["0"]);
+    expect(wrapper.vm.s.isSectionComplete(wrapper.vm.s.activeSection), "Village is still to answer").toBe(false);
+    wrapper.vm.s.setResponse("q_village", "Rampur");
+    expect(wrapper.vm.s.isSectionComplete(wrapper.vm.s.activeSection), "the 0 completes its section").toBe(true);
+    wrapper.vm.s.setResponse("q_village", "");
+
+    wrapper.vm.s.openFocusMode();
+    expect(wrapper.vm.s.focusQuestionIndex, "focus mode opens on Village, not the 0").toBe(1);
   });
 });

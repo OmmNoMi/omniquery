@@ -195,6 +195,7 @@ import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { choiceOptions, hasOptions, parentAnswer } from "../../utils/cascadingOptions";
 import { choiceGroupState } from "../../utils/choiceGroup";
+import { isAnswered } from "../../utils/responsePayload";
 
 const props = defineProps({
   group: {
@@ -218,19 +219,8 @@ const props = defineProps({
 const emit = defineEmits(["update-response", "answered"]);
 const { __ } = useTranslation();
 
-const answeredCount = computed(() => {
-  return props.group.questions.filter((q) => {
-    const val = props.responses[q.question_code];
-    return val !== undefined && val !== null && String(val).trim() !== "";
-  }).length;
-});
-
-const isGroupCompleted = computed(() => {
-  return props.group.questions.every((q) => {
-    const val = props.responses[q.question_code];
-    return val !== undefined && val !== null && String(val).trim() !== "";
-  });
-});
+const answeredCount = computed(() => props.group.questions.filter((q) => isAnswered(props.responses[q.question_code])).length);
+const isGroupCompleted = computed(() => props.group.questions.every((q) => isAnswered(props.responses[q.question_code])));
 
 const parsedGroupMeta = computed(() => {
   const full = props.group.title || "";

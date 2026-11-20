@@ -6,7 +6,8 @@
  * gps is useGPS's gpsReport: { latitude, longitude, accuracy, status }.
  */
 
-const isAnswered = (value) => value !== undefined && value !== null && String(value).trim() !== "";
+/** A value the surveyor gave: 0 and false count, an empty or blank string does not. */
+export const isAnswered = (value) => value !== undefined && value !== null && String(value).trim() !== "";
 
 export function responseItems(responses = {}, questions = []) {
   const byCode = new Map(questions.map((q) => [q.question_code, q]));

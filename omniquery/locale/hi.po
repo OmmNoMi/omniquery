@@ -2744,3 +2744,7 @@ msgstr "इस परियोजना के सर्वेक्षण"
 #: src/components/project/ProjectPage.vue
 msgid "Target Scope"
 msgstr "लक्षित क्षेत्र"
+
+#: src/components/common/FRangeSlider.vue
+msgid "Not answered"
+msgstr "उत्तर नहीं दिया गया"

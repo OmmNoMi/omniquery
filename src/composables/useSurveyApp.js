@@ -8,7 +8,7 @@ import { useGPS } from "./useGPS";
 import { useTextScale } from "./useTextScale";
 import { useTranslation } from "./useTranslation";
 import { useAudioRecorder } from "./useAudioRecorder";
-import { buildResponsePayload, draftStored, responseItems } from "../utils/responsePayload";
+import { buildResponsePayload, draftStored, isAnswered, responseItems } from "../utils/responsePayload";
 import { staleDependentAnswers } from "../utils/cascadingOptions";
 import { layoutQuestions } from "../utils/questionLayout";
 import { bootRoute, catalogRoute, projectRoute, pushRoute, replaceRoute, routeFromPath, routeFromState, surveyRoute } from "../utils/route";
@@ -265,8 +265,7 @@ export function useSurveyApp() {
     if (!questions.length) return 0;
     let filled = 0;
     for (const q of questions) {
-      const val = responses.value[q.question_code];
-      if (val !== undefined && val !== null && String(val).trim() !== "") filled++;
+      if (isAnswered(responses.value[q.question_code])) filled++;
     }
     return Math.round((filled / questions.length) * 100);
   });
@@ -341,7 +340,7 @@ export function useSurveyApp() {
 
   function openFocusMode() {
     const firstUnanswered = activeQuestions.value.findIndex(
-      (q) => !responses.value[q.question_code]
+      (q) => !isAnswered(responses.value[q.question_code])
     );
     focusQuestionIndex.value = firstUnanswered >= 0 ? firstUnanswered : 0;
     isFocusMode.value = true;
@@ -583,8 +582,7 @@ export function useSurveyApp() {
     const firstPending = activeQuestions.value.find((q) => {
       if (validationErrors.value[q.question_code]) return true;
       if (!q.is_mandatory) return false;
-      const val = responses.value[q.question_code];
-      return val === undefined || val === null || String(val).trim() === "";
+      return !isAnswered(responses.value[q.question_code]);
     });
     if (!firstPending) return null;
     const groupItem = displayQuestionItems.value.find(

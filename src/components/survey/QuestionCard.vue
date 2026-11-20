@@ -807,7 +807,11 @@ const rangeStep = computed(() => {
   return 1;
 });
 
+// a question's unit is set in its validation rules, as min, max and step are; older questions
+// without one fall back to the label
 const rangeUnit = computed(() => {
+  const unit = props.question.validation_rules?.unit;
+  if (typeof unit === "string" && unit.trim()) return unit.trim();
   const label = (props.question.label_en || "").toLowerCase();
   if (label.includes("year")) return "Years";
   if (label.includes("month")) return "Months";

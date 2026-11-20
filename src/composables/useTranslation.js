@@ -160,6 +160,8 @@ const CORE_HINDI = {
   "Interview not saved": "साक्षात्कार सहेजा नहीं गया",
   "The interview could not be saved on this device. Storage may be full. Please try again.": "साक्षात्कार इस डिवाइस पर सहेजा नहीं जा सका। स्टोरेज भर गया हो सकता है। कृपया फिर से प्रयास करें।",
   "Try again": "फिर से प्रयास करें",
+  // a range question with no answer yet (#21)
+  "Not answered": "उत्तर नहीं दिया गया",
 };
 
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";
