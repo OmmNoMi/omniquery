@@ -34,8 +34,8 @@ body {
   box-sizing: border-box;
 }
 
-/* A strip that scrolls sideways without drawing a scrollbar: the project carousel, the filter chips
-   and the project tab strip (#142). Touch and trackpad scrolling still work. A utility, so variants
+/* A strip that scrolls sideways without drawing a scrollbar: the project carousel (which has arrow
+   buttons) and the project tab strip (#142). Touch and trackpad scrolling still work. A utility, so variants
    reach it (`[&>[role=tablist]]:no-scrollbar`). test/guards/template_classes.test.js fails on a class
    used in a template that nothing defines. */
 @layer utilities {

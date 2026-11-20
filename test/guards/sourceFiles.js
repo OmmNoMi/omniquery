@@ -74,7 +74,9 @@ export const elementClasses = (node) => elementProp(node, "class");
 // its bound :class, read with Vue's own expression parser. Only the places a :class takes a class
 // from count: strings, array items, object keys, both arms of `?:` and both sides of `&&`/`||`, so
 // the 'success' in `tone === 'success' ? 'x' : 'y'` is not a class. Names built at runtime, such as
-// `bg-${tone}-50`, can't be read and are left out.
+// `bg-${tone}-50`, can't be read and are left out. A prop that hands a child a class
+// (`panel-class`, `:inputClass`) counts too.
+const CLASS_PROP = /^(?:class|[\w-]+-class|\w+Class)$/;
 export function elementClassNames(node) {
   const names = [];
   const words = (text) => text.split(/\s+/).filter(Boolean);
@@ -108,8 +110,8 @@ export function elementClassNames(node) {
     else if (n.type === "LogicalExpression") [n.left, n.right].forEach(read);
   };
   for (const p of node.props) {
-    if (p.type === 6 && p.name === "class") names.push(...words(p.value?.content || ""));
-    if (p.type === 7 && p.name === "bind" && p.arg?.content === "class" && p.exp) read(babelParse(`(${p.exp.content})`).program.body[0].expression);
+    if (p.type === 6 && CLASS_PROP.test(p.name)) names.push(...words(p.value?.content || ""));
+    if (p.type === 7 && p.name === "bind" && CLASS_PROP.test(p.arg?.content || "") && p.exp) read(babelParse(`(${p.exp.content})`).program.body[0].expression);
   }
   return names;
 }

@@ -52,7 +52,8 @@ cost real time to learn. Add to it when you learn something new.
   builds nothing, with no warning from Vite or ESLint. A utility of our own (`no-scrollbar`) goes in
   `@layer utilities` in `src/styles/main.css`, so variants such as `[&>[role=tablist]]:` reach it.
   `test/guards/template_classes.test.js` builds the CSS and fails on a template class nothing
-  defines; its allowlist only shrinks.
+  defines; its allowlist lists each file's dead classes by name and only shrinks (#145).
+  `content.relative` in `tailwind.config.cjs` keeps the build from depending on the cwd.
 
 ## Tests
 
