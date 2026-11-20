@@ -741,6 +741,22 @@ const MUTANTS = [
     vitest("test/guards/palette_shades.test.js"),
   ],
   [
+    "template-classes",
+    "no-scrollbar is used but nothing defines it",
+    src("src/styles/main.css"),
+    "@layer utilities {\n  .no-scrollbar {\n    scrollbar-width: none;\n  }\n  .no-scrollbar::-webkit-scrollbar {\n    display: none;\n  }\n}\n",
+    "",
+    vitest("test/guards/template_classes.test.js"),
+  ],
+  [
+    "template-classes",
+    "a dead class is added to a file with none",
+    src("src/components/survey/FocusModeModal.vue"),
+    'class="bg-slate-950 text-white max-h-[calc(100dvh-6rem)]',
+    'class="shadow-xs bg-slate-950 text-white max-h-[calc(100dvh-6rem)]',
+    vitest("test/guards/template_classes.test.js"),
+  ],
+  [
     "dialog-layer",
     "the app's z-indexes climb over an open dialog again",
     src("src/App.vue"),
