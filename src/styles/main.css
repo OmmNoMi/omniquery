@@ -5,16 +5,25 @@
 :root {
   --app-bg: #f8fafc;
   --text-main: #0f172a;
+  /* The sticky header's height, border included. CompactHeader takes its height from it and every
+     sticky element under the header uses it as its top (top-[var(--app-header-height)]), so they
+     can't drift apart (#146). */
+  --app-header-height: 53px;
 }
 
 /* No overflow on html: it would make html the scroll container, and frappe-ui Dialog's scroll
    lock (overflow: hidden on body) would stop reaching the page, so the page scrolled behind every
    open dialog. body's overflow-x below reaches the viewport instead. Guarded by
-   test/guards/scroll_lock.test.js. */
+   test/guards/scroll_lock.test.js.
+   The scroll padding keeps whatever the page scrolls to (scrollIntoView, a focused field, a jump to
+   an error) clear of the sticky header and of the section footer, which SectionCard measures into
+   --app-footer-height. */
 html {
   font-size: 16px !important;
   width: 100%;
   max-width: 100vw;
+  scroll-padding-top: calc(var(--app-header-height) + 1rem);
+  scroll-padding-bottom: calc(var(--app-footer-height, 0px) + 1rem);
 }
 
 body {
@@ -24,10 +33,31 @@ body {
   box-sizing: border-box;
 }
 
+/* clip, not hidden: overflow-x: hidden turns overflow-y into auto, which makes #app a scroll
+   container that never scrolls, and every position: sticky inside it (the header, question
+   headers, the project tab strip) stuck to #app and scrolled away with the page (#141). clip
+   cuts the sideways overflow without a scroll container. Guarded by
+   test/guards/sticky_ancestors.test.js. */
 #app {
   width: 100%;
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+/* A browser without clip (Safari before 16) gets hidden back: the page can't scroll sideways there,
+   and only the sticky headers lose their stickiness, as they did before #141. */
+@supports not (overflow-x: clip) {
+  #app {
+    overflow-x: hidden;
+  }
+}
+
+/* A grouped or matrix question card's header sticks under the page header. Everything after it in
+   the card takes its height as scroll margin, so a row or field scrolled into view lands below the
+   card header, not under it. The card measures the header into --card-header-height. */
+[data-card-header] ~ *,
+[data-card-header] ~ * * {
+  scroll-margin-top: var(--card-header-height, 0px);
 }
 
 *, *::before, *::after {

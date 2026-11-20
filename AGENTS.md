@@ -44,9 +44,21 @@ cost real time to learn. Add to it when you learn something new.
   takes no `aria-label` for the tablist and draws no focus ring on its tabs or panel (both are
   upstream frappe-ui candidates); `src/styles/main.css` rings `[role=tab]` and `[role=tabpanel]`,
   and `test/guards/focus_rings.test.js` checks it.
-- `overflow-x: hidden` on `#app` and the App.vue shell makes them scroll containers (computed
-  `overflow-y: auto`), so `position: sticky` never sticks anywhere in the PWA (#141). Use
-  `overflow-x: clip`; never put overflow on html (`test/guards/scroll_lock.test.js`).
+- `overflow-x: hidden` makes an element a scroll container (computed `overflow-y: auto`), and a
+  sticky element sticks to its nearest one. `#app` and the App.vue shell had it, so nothing in the
+  PWA ever stuck (#141). `#app` uses `overflow-x: clip`, with `hidden` back only under
+  `@supports not (overflow-x: clip)` (Safari before 16), and nothing between it and a sticky
+  element may scroll. `test/guards/sticky_ancestors.test.js` walks up from every sticky element
+  through each file that renders it, the `<slot>`s it lands in included, reading each class's
+  effect from the Tailwind build; `FocusModeModal` is exempt, since it sticks to its own scroll
+  area. Never put overflow on html (`test/guards/scroll_lock.test.js`).
+- The header's height is one variable, `--app-header-height` in `src/styles/main.css`. The header
+  takes its height from it and every sticky element sits at `top-[var(--app-header-height)]`
+  (#146; the guard checks both). html's `scroll-padding` keeps a focused or revealed element clear
+  of the header and of the section footer, whose height `SectionCard` writes to
+  `--app-footer-height`. A grouped or matrix card sets `--card-header-height` from its sticky
+  header, and `[data-card-header] ~ *` takes it as `scroll-margin-top`. Bring an element into view
+  with `useRevealInPage()`, which honours reduced motion, never a hand-measured `scrollBy`.
 - frappe-ui's Tailwind preset replaces whole scales rather than extending them. `borderRadius`
   stops at `2xl`, `boxShadow` has no `xs`, `2xs` or `inner`, and a class from a missing step
   builds nothing, with no warning from Vite or ESLint. A utility of our own (`no-scrollbar`) goes in
@@ -95,6 +107,8 @@ cost real time to learn. Add to it when you learn something new.
   `playwright/package.json` sets `"type": "commonjs"`. Specs import `test`/`expect` from
   `../../../frappe/playwright/support/index.js`, which logs in `TEST_USER` (default
   `frappe@example.com`) with `ADMIN_PASSWORD`, so that user must exist on the site.
+  `playwright/support/omniquery.js` makes and removes a spec's project and survey through Frappe's
+  own Playwright `Api` and opens them, so a spec never hand-rolls `/api/resource` calls.
 
 ## frappe-ui answer choices and TextInput
 

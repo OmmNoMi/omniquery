@@ -39,7 +39,8 @@
     </div>
 
     <!-- Fixed Native Mobile Bottom Action Bar (Soft Grayish Sage Green): Tab sequence is Next (primary) -> Mode -> Previous -->
-    <div class="fixed bottom-0 inset-x-0 z-50 bg-[#d0ded3] dark:bg-[#142019] border-t border-[#b8cdbf] dark:border-[#1f3026] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 sm:px-4 py-2.5 pb-safe">
+    <!-- measured into --app-footer-height, html's bottom scroll padding (main.css) -->
+    <div ref="footer" class="fixed bottom-0 inset-x-0 z-50 bg-[#d0ded3] dark:bg-[#142019] border-t border-[#b8cdbf] dark:border-[#1f3026] shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 sm:px-4 py-2.5 pb-safe">
       <div class="max-w-3xl mx-auto flex items-center justify-between gap-2">
         <!-- 1st in DOM (Focus 1): Next / Submit Page Controls (Visual: Right) -->
         <div class="order-3">
@@ -98,7 +99,8 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, nextTick, watch } from "vue";
+import { computed, ref, onMounted, onUnmounted, nextTick, watch, watchEffect, useTemplateRef } from "vue";
+import { useCssVar, useElementSize } from "@vueuse/core";
 import { Button } from "frappe-ui";
 import { ArrowLeft, ArrowRight, Check } from "lucide-vue-next";
 import SurveyModeMenu from "./SurveyModeMenu.vue";
@@ -195,7 +197,14 @@ onMounted(() => {
   window.addEventListener("resize", updateBottomSpacer);
 });
 
+// The fixed footer's height, as the page's bottom scroll padding: whatever the page scrolls to
+// stops above the footer, not behind it. Gone with the footer, so other views don't keep it.
+const { height: footerHeight } = useElementSize(useTemplateRef("footer"), undefined, { box: "border-box" });
+const footerSpace = useCssVar("--app-footer-height", document.documentElement);
+watchEffect(() => (footerSpace.value = `${footerHeight.value}px`));
+
 onUnmounted(() => {
+  document.documentElement.style.removeProperty("--app-footer-height");
   if (resizeObserver) resizeObserver.disconnect();
   window.removeEventListener("resize", updateBottomSpacer);
 });

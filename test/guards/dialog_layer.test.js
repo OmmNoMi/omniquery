@@ -1,8 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import postcss from "postcss";
-import { classTokens, elementClasses, templateElements } from "./sourceFiles";
+import { appLayerClasses, ruleValue } from "./sourceFiles";
 
 // An open frappe-ui Dialog dims and covers the whole page. frappe-ui teleports the Dialog (and
 // Dropdown, Popover) to <body>, after #app, as a fixed layer with no z-index of its own, so any
@@ -13,23 +12,6 @@ import { classTokens, elementClasses, templateElements } from "./sourceFiles";
 // #app, next to that div, and a toast fired from an open dialog has to show above it.
 
 const read = (file) => fs.readFileSync(path.resolve(__dirname, "../..", file), "utf8");
-
-// The value of `prop` in the rule whose selector is exactly `selector`
-export function ruleValue(css, selector, prop) {
-  let value = null;
-  postcss.parse(css).walkRules((rule) => {
-    if (!rule.selectors.map((s) => s.trim()).includes(selector)) return;
-    rule.walkDecls(prop, (decl) => (value = decl.value.trim()));
-  });
-  return value;
-}
-
-// The class tokens of the first element inside App.vue's <FrappeUIProvider>
-export function appLayerClasses(source) {
-  const provider = templateElements(source).find((el) => el.tag === "FrappeUIProvider");
-  const layer = provider?.children.find((child) => child.type === 1);
-  return layer ? classTokens(elementClasses(layer)) : [];
-}
 
 describe("Dialogs cover every part of the app", () => {
   it("makes App.vue's root div its own stacking context, so frappe-ui's teleported layers sit above all of it", () => {

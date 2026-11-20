@@ -1,6 +1,7 @@
 <template>
-  <header class="sticky top-0 z-40 bg-[#d0ded3] dark:bg-[#142019] border-b border-[#b8cdbf] dark:border-[#1f3026] shadow-xs">
-    <div class="max-w-3xl mx-auto px-3 sm:px-4 h-13 flex items-center justify-between">
+  <!-- its height is --app-header-height (main.css), which every sticky element below it uses as its top -->
+  <header class="sticky top-0 z-40 h-[var(--app-header-height)] bg-[#d0ded3] dark:bg-[#142019] border-b border-[#b8cdbf] dark:border-[#1f3026] shadow-xs">
+    <div class="max-w-3xl mx-auto px-3 sm:px-4 h-full flex items-center justify-between">
       <!-- Left: Back Chevron & OmniQuery Wordmark -->
       <div class="flex items-center gap-2 shrink-0">
         <!-- Home / Exit Form Button (when in survey) -->

@@ -5,11 +5,12 @@
     tabindex="-1"
     role="region"
     :aria-label="parsedMeta.text"
+    :style="{ '--card-header-height': `${cardHeaderHeight}px` }"
     @focusin="onFocusIn"
     @focusout="onFocusOut"
     @keydown.esc="onCardEscape"
     :class="[
-      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default scroll-mt-20',
+      'p-4 sm:p-5 rounded-2xl border transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-outline-gray-3 cursor-default',
       notApplicable
         ? 'bg-slate-50/70 dark:bg-slate-900/60 border-dashed border-slate-300 dark:border-slate-700 opacity-75'
         : errorMessage
@@ -22,7 +23,7 @@
     ]"
   >
     <!-- Header (Pinned / Sticky during scroll so user always knows the main question) -->
-    <div class="sticky top-[52px] sm:top-[56px] z-20 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-3 p-4 sm:p-5 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 flex items-start justify-between gap-2 flex-wrap shadow-xs">
+    <div ref="cardHeader" data-card-header class="sticky top-[var(--app-header-height)] z-20 -mx-4 sm:-mx-5 -mt-4 sm:-mt-5 mb-3 p-4 sm:p-5 rounded-t-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 flex items-start justify-between gap-2 flex-wrap shadow-xs">
       <div class="flex items-start gap-2.5 min-w-0 flex-1">
         <!-- Question Number Badge -->
         <span
@@ -369,12 +370,13 @@
 </template>
 
 <script setup>
-import { computed, ref, reactive, watch, nextTick } from "vue";
+import { computed, ref, reactive, watch, nextTick, useTemplateRef } from "vue";
 import { Button, TextInput, Select } from "frappe-ui";
 import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useCardEscape } from "../../composables/useCardEscape";
-import { useMediaQuery } from "@vueuse/core";
+import { useRevealInPage } from "../../composables/useRevealInPage";
+import { useElementSize, useMediaQuery } from "@vueuse/core";
 
 const props = defineProps({
   question: {
@@ -399,6 +401,8 @@ const emit = defineEmits(["update:modelValue", "answered", "next"]);
 const { __ } = useTranslation();
 
 const cardRef = ref(null);
+// The sticky header's height, as the cells' scroll margin (main.css), so a cell scrolled to lands below it
+const { height: cardHeaderHeight } = useElementSize(useTemplateRef("cardHeader"), undefined, { box: "border-box" });
 const onCardEscape = useCardEscape(cardRef);
 const isFocused = ref(false);
 const isInputFocused = ref(false);
@@ -612,7 +616,15 @@ const isCompleted = computed(() => {
   return filledRowsCount.value > 0;
 });
 
-// Keyboard Matrix Navigation
+// Keyboard Matrix Navigation. The page scrolls to the cell only as far as it has to, so a cell
+// never ends up under the card's sticky header or the section footer.
+const revealInPage = useRevealInPage();
+function moveTo(rIdx, cIdx) {
+  const cell = cellAt(rIdx, cIdx);
+  cell?.focus({ preventScroll: true });
+  revealInPage(cell);
+}
+
 function onCellKeydown(e, rIdx, cIdx) {
   const numRows = matrixRows.value.length;
   const numCols = matrixColumns.value.length;
@@ -620,11 +632,11 @@ function onCellKeydown(e, rIdx, cIdx) {
   if (e.key === "ArrowDown") {
     e.preventDefault();
     const nextRow = (rIdx + 1) % numRows;
-    cellAt(nextRow, cIdx)?.focus({ preventScroll: true });
+    moveTo(nextRow, cIdx);
   } else if (e.key === "ArrowUp") {
     e.preventDefault();
     const prevRow = (rIdx - 1 + numRows) % numRows;
-    cellAt(prevRow, cIdx)?.focus({ preventScroll: true });
+    moveTo(prevRow, cIdx);
   } else if (e.key === "Enter") {
     e.preventDefault();
     if (rIdx === numRows - 1 && cIdx === numCols - 1) {
@@ -637,7 +649,7 @@ function onCellKeydown(e, rIdx, cIdx) {
         nextC = 0;
         nextR = (rIdx + 1) % numRows;
       }
-      cellAt(nextR, nextC)?.focus({ preventScroll: true });
+      moveTo(nextR, nextC);
     }
   }
 }

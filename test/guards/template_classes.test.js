@@ -1,10 +1,8 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import postcss from "postcss";
-import tailwind from "tailwindcss";
 import { createRequire } from "node:module";
-import { getSourceFiles, templateElements, elementClassNames } from "./sourceFiles";
+import { getSourceFiles, templateElements, elementClassNames, selectedClasses, buildAppCss } from "./sourceFiles";
 
 // A class in a template that no stylesheet defines does nothing, and nothing says so. `no-scrollbar`
 // was written on two scroll strips but defined nowhere, so both showed a scrollbar (#142). And
@@ -51,19 +49,6 @@ export const DEAD_CLASS_ALLOWLIST = {
   "src/views/Success.vue": { "shadow-2xs": 1, "shadow-xs": 2 },
 };
 
-// Every class name a stylesheet selects, unescaped: `.hover\:bg-x:hover` gives "hover:bg-x", and
-// Tailwind's `\2c ` (a comma in an arbitrary value) gives ",".
-const ESCAPE = /\\(?:([0-9a-fA-F]{1,6}) ?|(.))/g;
-export function selectedClasses(css) {
-  const names = new Set();
-  postcss.parse(css).walkRules((rule) => {
-    for (const m of rule.selector.matchAll(/\.((?:\\[0-9a-fA-F]{1,6} ?|\\.|[\w-])+)/g)) {
-      names.add(m[1].replace(ESCAPE, (_, hex, char) => (hex ? String.fromCodePoint(parseInt(hex, 16)) : char)));
-    }
-  });
-  return names;
-}
-
 // Class names in a .vue file's template that `known` doesn't have: ["shadow-xs", ...]
 export function deadClasses(source, known) {
   return templateElements(source)
@@ -85,9 +70,7 @@ export function overAllowlist(more, less = {}) {
 export const classConstants = (source) => [...source.matchAll(/export const \w+_CLASS = "([^"]*)"/g)].flatMap((m) => m[1].split(/\s+/).filter(Boolean));
 
 describe("Every class a template sets is defined", async () => {
-  const mainCss = path.join(appDir, "src/styles/main.css");
-  const built = await postcss([tailwind(path.join(appDir, "tailwind.config.cjs"))]).process(fs.readFileSync(mainCss, "utf8"), { from: mainCss });
-  const known = selectedClasses(built.css);
+  const known = selectedClasses(await buildAppCss());
   const files = getSourceFiles(path.join(appDir, "src"), [".vue"]);
   const found = Object.fromEntries(files.map((file) => [rel(file), deadClasses(fs.readFileSync(file, "utf8"), known)]));
 
