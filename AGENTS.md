@@ -33,6 +33,11 @@ cost real time to learn. Add to it when you learn something new.
 - `TextInput` sets `inheritAttrs: false`: `class` and `style` land on its wrapper div, every other
   attribute on the input. Style it through `size`, `variant` and the `#prefix`/`#suffix` slots
   (as Catalog.vue's search does), not a class string.
+- frappe-ui 0.1.x `Dialog` does not pass reka's `open-auto-focus` on, and reka focuses the first
+  tabbable (often the close button) once the content mounts, unless focus is already inside. To
+  focus something else when a dialog opens, watch the ref of the element or component you want
+  (keyed, if it changes) and focus it there, once; never on a timer, which takes focus back from a
+  user who has moved it (#120). frappe-ui 1.0 honours `[autofocus]` instead.
 - Chrome blurs a focused element when it is removed from the DOM (a `focusout` with no
   `relatedTarget`); jsdom does not. Move focus somewhere that stays before filtering out the
   element that holds it, and assert that order in the test, since jsdom will not catch it.

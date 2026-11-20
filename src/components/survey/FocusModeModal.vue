@@ -134,7 +134,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, nextTick } from "vue";
+import { computed, ref, watch } from "vue";
 import { Button, Dialog } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
 import { ArrowLeft, ArrowRight, ClipboardList, X } from "lucide-vue-next";
@@ -201,15 +201,11 @@ const { __ } = useTranslation();
 const questionCardRef = ref(null);
 const scrollAreaRef = ref(null);
 
-function focusCurrentQuestion() {
-  if (!props.isOpen) return;
-  nextTick(() => {
-    questionCardRef.value?.focus?.();
-    setTimeout(() => {
-      questionCardRef.value?.focus?.();
-    }, 60);
-  });
-}
+// Focus goes to the question once, when its card is mounted: on opening, once the dialog's content is,
+// and on each move to another question, since each question gets a card of its own (:key). Vue sets the
+// ref only after the card has mounted. No timer focuses it again, so whatever the user moves focus to
+// after that keeps it (#120).
+watch(questionCardRef, (card) => card?.focus?.());
 
 const currentQuestion = computed(() => {
   return props.questions[props.currentIndex] || null;
@@ -274,17 +270,6 @@ watch(
     if (scrollAreaRef.value) {
       scrollAreaRef.value.scrollTop = 0;
     }
-    focusCurrentQuestion();
   }
-);
-
-watch(
-  () => props.isOpen,
-  (open) => {
-    if (open) {
-      focusCurrentQuestion();
-    }
-  },
-  { immediate: true }
 );
 </script>

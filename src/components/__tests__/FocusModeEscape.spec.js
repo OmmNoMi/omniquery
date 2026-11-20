@@ -111,11 +111,8 @@ describe("Focus mode Escape and focus (#42)", () => {
     const modal = mountFocusMode({ questions: [matrix] });
     await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
     const matrixCard = document.querySelector("[data-matrix-question-card]");
-    // focus mode opens in a cell of the matrix, and focuses it again 60ms later
+    // focus mode opens in a cell of the matrix
     await vi.waitFor(() => expect(document.activeElement.matches("[data-matrix-question-card] input")).toBe(true));
-    const input = document.activeElement;
-    await new Promise((r) => setTimeout(r, 80));
-    expect(document.activeElement).toBe(input);
 
     press("Escape");
     expect(document.activeElement).toBe(matrixCard);
@@ -204,6 +201,50 @@ describe("Focus mode Escape and focus (#42)", () => {
 
     await modal.setProps({ isOpen: false });
     await vi.waitFor(() => expect(document.activeElement).toBe(opener));
+  });
+});
+
+describe("Focus mode focuses the question once (#120)", () => {
+  beforeEach(() => useTranslation().setLanguage("en"));
+  afterEach(() => {
+    wrappers.forEach((w) => w.unmount());
+    wrappers = [];
+    document.body.innerHTML = "";
+  });
+
+  const exitButton = () => document.querySelector("button[aria-label='Exit Focus Mode']");
+  const settle = () => new Promise((r) => setTimeout(r, 120));
+
+  // Survey.vue keeps focus mode mounted and opens it by isOpen; a test can also mount it open
+  for (const [opening, open] of [
+    ["opened on a mounted focus mode", async () => {
+      const modal = mountFocusMode({ isOpen: false });
+      await modal.setProps({ isOpen: true });
+      return modal;
+    }],
+    ["mounted open", async () => mountFocusMode()],
+  ]) {
+    it(`leaves focus where the user moves it right after it is ${opening}`, async () => {
+      await open();
+      await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+      exitButton().focus();
+      await settle();
+      expect(document.activeElement, "nothing takes focus back to the question").toBe(exitButton());
+    });
+  }
+
+  it("focuses the next question when the user moves to it, and only then", async () => {
+    const modal = mountFocusMode();
+    await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+    await modal.setProps({ currentIndex: 1 });
+    const herd = document.getElementById("q_input_q_herd");
+    await vi.waitFor(() => expect(document.activeElement).toBe(herd));
+
+    exitButton().focus();
+    await settle();
+    expect(document.activeElement).toBe(exitButton());
   });
 });
 
