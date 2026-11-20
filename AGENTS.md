@@ -47,6 +47,13 @@ cost real time to learn. Add to it when you learn something new.
 - `overflow-x: hidden` on `#app` and the App.vue shell makes them scroll containers (computed
   `overflow-y: auto`), so `position: sticky` never sticks anywhere in the PWA (#141). Use
   `overflow-x: clip`; never put overflow on html (`test/guards/scroll_lock.test.js`).
+- frappe-ui's Tailwind preset replaces whole scales rather than extending them. `borderRadius`
+  stops at `2xl`, `boxShadow` has no `xs`, `2xs` or `inner`, and a class from a missing step
+  builds nothing, with no warning from Vite or ESLint. A utility of our own (`no-scrollbar`) goes in
+  `@layer utilities` in `src/styles/main.css`, so variants such as `[&>[role=tablist]]:` reach it.
+  `test/guards/template_classes.test.js` builds the CSS and fails on a template class nothing
+  defines; its allowlist lists each file's dead classes by name and only shrinks (#145).
+  `content.relative` in `tailwind.config.cjs` keeps the build from depending on the cwd.
 
 ## Tests
 
