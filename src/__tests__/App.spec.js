@@ -67,6 +67,7 @@ import { db } from "../services/db";
 import { useTranslation } from "../composables/useTranslation";
 import { useAudioRecorder } from "../composables/useAudioRecorder";
 import { fakeMicrophone, micError } from "../test/microphone";
+import { fakeScreen } from "../test/matchMedia";
 
 const surveyTitles = () => Array.from(document.body.querySelectorAll("h2")).map((h) => h.textContent.trim());
 
@@ -383,6 +384,7 @@ describe("an opened survey starts at the top, with focus where the work is (#20)
     document.body.innerHTML = "";
     delete window.frappe;
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   async function openCatalog() {
@@ -463,14 +465,7 @@ describe("an opened survey starts at the top, with focus where the work is (#20)
   });
 
   it("jumps instead of gliding when the surveyor asks for reduced motion", async () => {
-    vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-      matches: query.includes("prefers-reduced-motion: reduce"),
-      media: query,
-      addEventListener() {},
-      removeEventListener() {},
-      addListener() {},
-      removeListener() {},
-    }));
+    fakeScreen({ "prefers-reduced-motion": "reduce" });
     await saveDraft({ q_name: "Sunita Dairy" });
     await openCatalog();
     const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView");
