@@ -2,7 +2,7 @@
   <!-- frappe-ui Dialog (reka): focus trap, focus return, inert background, scroll lock and an Escape
     that closes only the topmost layer, so the mode menu or Question Settings close before focus mode (#42) -->
   <Dialog
-    :modelValue="isOpen && Boolean(currentQuestion)"
+    :modelValue="dialogOpen"
     :options="{ size: '2xl' }"
     @update:modelValue="(open) => !open && emit('close')"
   >
@@ -66,31 +66,35 @@
           </div>
         </div>
 
-        <MatrixQuestionCard
-          v-if="isMatrixQuestion(currentQuestion)"
-          ref="questionCardRef"
-          :key="'matrix_' + (currentQuestion?.question_code || currentIndex)"
-          :question="currentQuestion"
-          :modelValue="responses[currentQuestion.question_code]"
-          :errorMessage="validationErrors[currentQuestion.question_code]"
-          @update:modelValue="onQuestionInput"
-          @answered="onQuestionAnswered"
-          @next="nextQuestion"
-        />
-        <QuestionCard
-          v-else
-          ref="questionCardRef"
-          :key="currentQuestion?.question_code || currentIndex"
-          :question="currentQuestion"
-          :modelValue="responses[currentQuestion.question_code]"
-          :parentValue="parentAnswer(currentQuestion, responses)"
-          :errorMessage="validationErrors[currentQuestion.question_code]"
-          @update:modelValue="onQuestionInput"
-          @answered="onQuestionAnswered"
-          @next="nextQuestion"
-          :gpsAlert="gpsAlert"
-          @capture-gps="$emit('capture-gps')"
-        />
+        <!-- the dialog's leave transition still renders this after its question is gone, as when an
+          answer hides the questions after it (#152) -->
+        <template v-if="currentQuestion">
+          <MatrixQuestionCard
+            v-if="isMatrixQuestion(currentQuestion)"
+            ref="questionCardRef"
+            :key="'matrix_' + (currentQuestion?.question_code || currentIndex)"
+            :question="currentQuestion"
+            :modelValue="responses[currentQuestion.question_code]"
+            :errorMessage="validationErrors[currentQuestion.question_code]"
+            @update:modelValue="onQuestionInput"
+            @answered="onQuestionAnswered"
+            @next="nextQuestion"
+          />
+          <QuestionCard
+            v-else
+            ref="questionCardRef"
+            :key="currentQuestion?.question_code || currentIndex"
+            :question="currentQuestion"
+            :modelValue="responses[currentQuestion.question_code]"
+            :parentValue="parentAnswer(currentQuestion, responses)"
+            :errorMessage="validationErrors[currentQuestion.question_code]"
+            @update:modelValue="onQuestionInput"
+            @answered="onQuestionAnswered"
+            @next="nextQuestion"
+            :gpsAlert="gpsAlert"
+            @capture-gps="$emit('capture-gps')"
+          />
+        </template>
       </div>
 
       <!-- Bottom Floating Navigation Bar: Tab sequence is Next (primary) -> Mode -> Previous -->
@@ -135,6 +139,7 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
+import { useTimeoutFn } from "@vueuse/core";
 import { Button, Dialog } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
 import { ArrowLeft, ArrowRight, ClipboardList, X } from "lucide-vue-next";
@@ -211,6 +216,9 @@ const currentQuestion = computed(() => {
   return props.questions[props.currentIndex] || null;
 });
 
+// Focus mode shows only while it has a question to show, so it can close with isOpen still true
+const dialogOpen = computed(() => props.isOpen && Boolean(currentQuestion.value));
+
 const progressPercent = computed(() => {
   if (!props.questions.length) return 0;
   return Math.round(((props.currentIndex + 1) / props.questions.length) * 100);
@@ -221,35 +229,35 @@ function onQuestionInput(val) {
   emit("update-response", { code: currentQuestion.value.question_code, value: val });
 }
 
-let advanceTimer = null;
-let isAdvancing = false;
+// An answer moves on to the next question 220 ms later, and a move locks Next for 350 ms so a double
+// press skips no question. useTimeoutFn stops both timers when focus mode unmounts.
+const { start: scheduleAdvance, stop: cancelAdvance } = useTimeoutFn(advanceToNext, 220, { immediate: false });
+const { isPending: isAdvancing, start: lockAdvance, stop: unlockAdvance } = useTimeoutFn(() => {}, 350, {
+  immediate: false,
+});
 
-function cancelAdvance() {
-  clearTimeout(advanceTimer);
-  advanceTimer = null;
-}
+// Survey.vue keeps focus mode mounted, so it closes without unmounting: a pending auto-advance would
+// still move the section on behind the user's back, and the lock would swallow the first Next after
+// it reopens (#152).
+watch(dialogOpen, (open) => {
+  if (open) return;
+  cancelAdvance();
+  unlockAdvance();
+});
 
 function onQuestionAnswered() {
-  if (!props.autoAdvance) return;
-  cancelAdvance();
-  advanceTimer = setTimeout(() => {
-    advanceToNext();
-    advanceTimer = null;
-  }, 220);
+  if (props.autoAdvance) scheduleAdvance();
 }
 
 function advanceToNext() {
-  if (isAdvancing) return;
-  isAdvancing = true;
+  if (isAdvancing.value) return;
+  lockAdvance();
   cancelAdvance();
   if (props.currentIndex < props.questions.length - 1) {
     emit("next-question");
   } else {
     emit("finish-section");
   }
-  setTimeout(() => {
-    isAdvancing = false;
-  }, 350);
 }
 
 function prevQuestion() {

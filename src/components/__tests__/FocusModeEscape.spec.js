@@ -304,6 +304,86 @@ describe("Focus mode focuses the question once (#120)", () => {
       await settle();
       expect(modal.emitted("next-question")).toHaveLength(1);
     });
+
+    // #152: Survey.vue keeps focus mode mounted, so closing it is only isOpen turning false. On the
+    // last question the advance would finish the section, which moves the survey to the next one.
+    const moves = (modal) => [...(modal.emitted("next-question") || []), ...(modal.emitted("finish-section") || [])];
+
+    it("waits for an answer", async () => {
+      const modal = mountFocusMode({ autoAdvance: true });
+      await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
+      await settle();
+      expect(moves(modal), "opening focus mode moves nowhere on its own").toHaveLength(0);
+    });
+
+    for (const [where, currentIndex] of [["a question", 0], ["the section's last question", QUESTIONS.length - 1]]) {
+      it(`is dropped when focus mode closes before it fires, on ${where}`, async () => {
+        const modal = mountFocusMode({ autoAdvance: true, currentIndex });
+        await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
+
+        answer(modal);
+        await modal.setProps({ isOpen: false });
+        await settle();
+        expect(moves(modal), "the survey stays on the question the user left").toHaveLength(0);
+
+        await modal.setProps({ isOpen: true });
+        answer(modal);
+        await settle();
+        expect(moves(modal), "auto-advance works again once reopened").toHaveLength(1);
+      });
+    }
+
+    it("is dropped when focus mode closes because its question is gone", async () => {
+      const modal = mountFocusMode({ autoAdvance: true });
+      await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+      answer(modal);
+      await modal.setProps({ currentIndex: QUESTIONS.length }); // as when an answer hides the questions after it
+      await vi.waitFor(() => expect(dialogs()).toHaveLength(0));
+      await settle();
+      expect(moves(modal), "no question to move from, and no section to finish").toHaveLength(0);
+    });
+
+    it("is dropped when the user closes focus mode with Escape in Survey.vue", async () => {
+      const onNext = vi.fn();
+      // Survey.vue's wiring: isOpen follows s.isFocusMode, which @close turns off
+      const Harness = defineComponent(() => {
+        const isOpen = ref(true);
+        return () =>
+          h(FocusModeModal, {
+            isOpen: isOpen.value,
+            questions: QUESTIONS,
+            currentIndex: 0,
+            responses: {},
+            autoAdvance: true,
+            onClose: () => (isOpen.value = false),
+            "onNext-question": onNext,
+          });
+      });
+      const harness = mountAttached(Harness, {});
+      await vi.waitFor(() => expect(document.activeElement).toBe(field()));
+
+      answer(harness);
+      press("Escape"); // the field hands focus to its card
+      press("Escape"); // the card's Escape closes focus mode
+      await vi.waitFor(() => expect(dialogs()).toHaveLength(0));
+      await settle();
+      expect(onNext).not.toHaveBeenCalled();
+    });
+  });
+
+  it("takes the first Next after focus mode reopens, though the last move was just before it closed", async () => {
+    const modal = mountFocusMode();
+    await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
+    const next = () => [...document.querySelectorAll("button")].find((b) => b.textContent.trim() === "Next");
+
+    next().click();
+    expect(modal.emitted("next-question")).toHaveLength(1);
+    await modal.setProps({ isOpen: false });
+    await modal.setProps({ isOpen: true });
+    await vi.waitFor(() => expect(next()).toBeTruthy());
+    next().click();
+    expect(modal.emitted("next-question"), "the double-press lock ends when focus mode closes").toHaveLength(2);
   });
 });
 
