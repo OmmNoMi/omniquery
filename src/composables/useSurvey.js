@@ -508,9 +508,10 @@ export function useSurvey() {
     return null;
   }
 
-  function validateCrossFieldRules() {
+  // Checks the rules of the questions given: Next and Submit check the section's own, so a rule on a
+  // question the surveyor has not reached yet cannot hold them in this section (#155).
+  function validateCrossFieldRules(questions = (activeTemplate.value && activeTemplate.value.questions) || []) {
     let isValid = true;
-    const questions = (activeTemplate.value && activeTemplate.value.questions) || [];
     for (const q of questions) {
       if (q.validation_rule && isQuestionVisible(q)) {
         const rule = q.validation_rule;
@@ -533,25 +534,28 @@ export function useSurvey() {
     return isValid;
   }
 
+  // A question the surveyor still has to answer: required, shown by the answers so far, and with no
+  // answer yet. Next and Submit refuse to pass one, and the app sends the surveyor to the first (#155).
+  function isRequiredAndMissing(q) {
+    return Boolean(q.is_mandatory) && isQuestionVisible(q) && !isAnswered(responses.value[q.question_code]);
+  }
+
   function validateCurrentSection() {
     validationErrors.value = {};
     let isValid = true;
     for (const q of activeQuestions.value) {
-      if (!isQuestionVisible(q)) continue;
       const val = responses.value[q.question_code];
-      if (!isAnswered(val)) {
-        if (q.is_mandatory) {
-          validationErrors.value[q.question_code] = REQUIRED_ERROR;
-          isValid = false;
-        }
-      } else if (isPhoneQuestion(q) && !isValidMobile(val)) {
+      if (isRequiredAndMissing(q)) {
+        validationErrors.value[q.question_code] = REQUIRED_ERROR;
+        isValid = false;
+      } else if (isQuestionVisible(q) && isAnswered(val) && isPhoneQuestion(q) && !isValidMobile(val)) {
         // an optional phone number may be left out, but not left wrong (#22)
         validationErrors.value[q.question_code] = PHONE_ERROR;
         isValid = false;
       }
     }
 
-    if (!validateCrossFieldRules()) {
+    if (!validateCrossFieldRules(activeQuestions.value)) {
       isValid = false;
     }
 
@@ -609,6 +613,7 @@ export function useSurvey() {
     validateCurrentSection,
     evaluateFormula,
     validateCrossFieldRules,
+    isRequiredAndMissing,
     nextSection,
     prevSection,
     cachedTemplatesMap,
