@@ -89,6 +89,7 @@ export function useSurveyApp() {
     toggleFullForm,
     isSectionComplete,
     validateCurrentSection,
+    isRequiredAndMissing,
     nextSection,
     prevSection,
     cachedTemplatesMap,
@@ -380,13 +381,20 @@ export function useSurveyApp() {
     }, 100);
   }
 
+  // Finish on a section's last question passes only a section that passes validation, as Next and
+  // Submit on the page do. The watcher below starts a new section at its first question, and the last
+  // section returns to the page, where Submit is. When it does not pass, focus mode goes to the first
+  // question that still needs the surveyor, where its error shows (#155).
   function onFocusModeFinishSection() {
-    if (activeSectionIndex.value < sections.value.length - 1) {
-      nextSection();
-      focusQuestionIndex.value = 0;
-    } else {
-      isFocusMode.value = false;
+    const isLast = activeSectionIndex.value >= sections.value.length - 1;
+    const passed = isLast ? validateCurrentSection() : nextSection();
+    scheduleDraftSaveAndSync();
+    if (passed) {
+      if (isLast) isFocusMode.value = false;
+      return;
     }
+    const at = firstPendingIndex();
+    if (at >= 0) focusQuestionIndex.value = at;
   }
 
   // Focus mode shows activeQuestions[focusQuestionIndex]. When that list changes within a section
@@ -607,14 +615,17 @@ export function useSurveyApp() {
     }
   }
 
-  // The card of the section's first question that still needs the surveyor: one with a
-  // validation error, or a required one with no answer. A grouped question's card is its group's.
+  // Where in the section the first question that still needs the surveyor is: one with a validation
+  // error, or one isRequiredAndMissing, which also finds it on a resumed draft before any validation.
+  function firstPendingIndex() {
+    return activeQuestions.value.findIndex(
+      (q) => Boolean(validationErrors.value[q.question_code]) || isRequiredAndMissing(q)
+    );
+  }
+
+  // The card of that question on the page. A grouped question's card is its group's.
   function firstPendingCardCode() {
-    const firstPending = activeQuestions.value.find((q) => {
-      if (validationErrors.value[q.question_code]) return true;
-      if (!q.is_mandatory) return false;
-      return !isAnswered(responses.value[q.question_code]);
-    });
+    const firstPending = activeQuestions.value[firstPendingIndex()];
     if (!firstPending) return null;
     const groupItem = displayQuestionItems.value.find(
       (item) => item.type === "group" && item.questions.some((q) => q.question_code === firstPending.question_code)
@@ -627,14 +638,16 @@ export function useSurveyApp() {
     if (code) scrollAndHighlightQuestion(code);
   }
 
+  // The draft is saved after the move: the save reads the section index as it starts, and a draft
+  // saved before it would reopen on the section the surveyor has left (#155).
   function handlePrevSection() {
-    scheduleDraftSaveAndSync();
     prevSection();
+    scheduleDraftSaveAndSync();
   }
 
   function handleNextSection() {
-    scheduleDraftSaveAndSync();
     const ok = nextSection();
+    scheduleDraftSaveAndSync();
     if (!ok) {
       scrollToFirstPendingQuestion();
     }
