@@ -380,10 +380,14 @@ export function useSurveyApp() {
     }, 100);
   }
 
+  // Finish moves on only when the section passes validation, and the watcher below starts the new
+  // section at its first question. When it does not pass, focus mode goes to the first question that
+  // still needs the surveyor, where its error shows, as Next on the page scrolls to it (#155).
   function onFocusModeFinishSection() {
     if (activeSectionIndex.value < sections.value.length - 1) {
-      nextSection();
-      focusQuestionIndex.value = 0;
+      if (nextSection()) return;
+      const pending = firstPendingQuestion();
+      if (pending) focusQuestionIndex.value = activeQuestions.value.indexOf(pending);
     } else {
       isFocusMode.value = false;
     }
@@ -607,14 +611,19 @@ export function useSurveyApp() {
     }
   }
 
-  // The card of the section's first question that still needs the surveyor: one with a
-  // validation error, or a required one with no answer. A grouped question's card is its group's.
-  function firstPendingCardCode() {
-    const firstPending = activeQuestions.value.find((q) => {
+  // The section's first question that still needs the surveyor: one with a validation error, or a
+  // required one with no answer.
+  function firstPendingQuestion() {
+    return activeQuestions.value.find((q) => {
       if (validationErrors.value[q.question_code]) return true;
       if (!q.is_mandatory) return false;
       return !isAnswered(responses.value[q.question_code]);
     });
+  }
+
+  // The card of that question on the page. A grouped question's card is its group's.
+  function firstPendingCardCode() {
+    const firstPending = firstPendingQuestion();
     if (!firstPending) return null;
     const groupItem = displayQuestionItems.value.find(
       (item) => item.type === "group" && item.questions.some((q) => q.question_code === firstPending.question_code)
