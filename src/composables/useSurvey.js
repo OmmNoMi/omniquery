@@ -439,13 +439,15 @@ export function useSurvey() {
     }
   }
 
+  // the questions a section shows, in template order: the hidden ones only with Full Form on
+  function shownQuestions(section) {
+    if (!section || !activeTemplate.value) return [];
+    const inSection = (activeTemplate.value.questions || []).filter((q) => q.section_code === section.section_code);
+    return isFullForm.value ? inSection : inSection.filter((q) => isQuestionVisible(q));
+  }
+
   const activeQuestions = computed(() => {
-    if (!activeSection.value || !activeTemplate.value) return [];
-    const all = activeTemplate.value.questions || [];
-    let sectionQs = all.filter((q) => q.section_code === activeSection.value.section_code);
-    if (!isFullForm.value) {
-      sectionQs = sectionQs.filter((q) => isQuestionVisible(q));
-    }
+    const sectionQs = shownQuestions(activeSection.value);
 
     // Automatically link sub-questions to their parent Table/Dynamic Grid question
     let currentParentTitle = null;
@@ -556,23 +558,27 @@ export function useSurvey() {
     return isValid;
   }
 
+  // Next and Previous pass over a section with nothing to show (every question in it hidden), as the
+  // surveyor would only press again there. The last section holds Submit, so Next still stops on it,
+  // and Previous stops on the first, there being nowhere before it (#154).
   function nextSection() {
     if (!validateCurrentSection()) return false;
-    if (activeSectionIndex.value < sections.value.length - 1) {
-      activeSectionIndex.value++;
-      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-      return true;
-    }
-    return false;
+    const last = sections.value.length - 1;
+    if (activeSectionIndex.value >= last) return false;
+    let next = activeSectionIndex.value + 1;
+    while (next < last && !shownQuestions(sections.value[next]).length) next++;
+    activeSectionIndex.value = next;
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    return true;
   }
 
   function prevSection() {
-    if (activeSectionIndex.value > 0) {
-      activeSectionIndex.value--;
-      if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
-      return true;
-    }
-    return false;
+    if (activeSectionIndex.value <= 0) return false;
+    let prev = activeSectionIndex.value - 1;
+    while (prev > 0 && !shownQuestions(sections.value[prev]).length) prev--;
+    activeSectionIndex.value = prev;
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+    return true;
   }
 
   return {

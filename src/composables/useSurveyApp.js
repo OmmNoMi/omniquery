@@ -299,8 +299,11 @@ export function useSurveyApp() {
     if (route.type === "survey") showSurveyStart();
   }
 
-  watch(activeTemplate, (tmpl) => {
+  watch(activeTemplate, (tmpl, before) => {
     if (!tmpl) return;
+    // loadTemplate shows the cached copy and then the server's: that refresh of the open survey keeps
+    // the surveyor's place and settings, and is not announced a second time
+    if (before && (before.name || before.template_name) === (tmpl.name || tmpl.template_name)) return;
     autoAdvance.value = tmpl.auto_advance !== false;
     if (tmpl.presentation_mode === "One-by-One Focus Popup") {
       isFocusMode.value = true;
@@ -380,34 +383,34 @@ export function useSurveyApp() {
   function onFocusModeFinishSection() {
     if (activeSectionIndex.value < sections.value.length - 1) {
       nextSection();
-      // focus mode has nothing to show in a section whose questions are all hidden, so it goes on
-      // past it, as Next on each would; an empty last section closes it below (#154)
-      while (!activeQuestions.value.length && activeSectionIndex.value < sections.value.length - 1 && nextSection());
       focusQuestionIndex.value = 0;
     } else {
       isFocusMode.value = false;
     }
   }
 
-  // Focus mode shows activeQuestions[focusQuestionIndex], so when that list changes in the same
-  // section (Full Form toggled, an answer showing or hiding questions) it stays on its question. A
-  // question that is gone gives way to the next one still shown, and a section with none closes focus
-  // mode, so isFocusMode never claims a focus mode that shows nothing (#154). Pre-flush, so focus
-  // mode never renders the stale index.
-  watch(activeQuestions, (questions, before) => {
-    if (!isFocusMode.value) return;
+  // Focus mode shows activeQuestions[focusQuestionIndex]. When that list changes within a section
+  // (Full Form toggled, an answer showing or hiding questions) it stays on its question, or else the
+  // next one still shown, or the last. A new section or survey starts at its first question, and a
+  // move made in the same change stands. A section with nothing to show closes focus mode, so
+  // isFocusMode never claims a dialog that shows nothing (#154); with no survey open the mode stays
+  // on for the next one. The index is watched with the list so `was` pairs the old list with the old
+  // index. Pre-flush, so focus mode never renders a stale index.
+  watch([activeQuestions, focusQuestionIndex], ([questions, index], [before, indexBefore]) => {
+    if (!isFocusMode.value || !activeTemplate.value) return;
     if (!questions.length) {
       isFocusMode.value = false;
       return;
     }
-    const was = before && before[focusQuestionIndex.value];
-    if (!was || was.section_code !== questions[0].section_code) {
-      focusQuestionIndex.value = Math.min(focusQuestionIndex.value, questions.length - 1);
+    const was = before[indexBefore];
+    if (index !== indexBefore || (was && questions[index] === was)) return;
+    const position = new Map(activeTemplate.value.questions.map((q, i) => [q.question_code, i]));
+    const at = was && was.section_code === questions[0].section_code ? position.get(was.question_code) : undefined;
+    if (at === undefined) {
+      focusQuestionIndex.value = 0;
       return;
     }
-    const order = ((activeTemplate.value && activeTemplate.value.questions) || []).map((q) => q.question_code);
-    const at = order.indexOf(was.question_code);
-    const next = questions.findIndex((q) => order.indexOf(q.question_code) >= at);
+    const next = questions.findIndex((q) => position.get(q.question_code) >= at);
     focusQuestionIndex.value = next >= 0 ? next : questions.length - 1;
   });
 

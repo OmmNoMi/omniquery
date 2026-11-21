@@ -15,8 +15,9 @@ const question = (section_code, question_code, conditional_logic) => ({
   ...(conditional_logic && { conditional_logic }),
 });
 
-const template = (sections) => ({
+const template = (sections, extra = {}) => ({
   name: "TMPL-TEST-154",
+  ...extra,
   title: "Test Survey",
   version: 1,
   sections: sections.map((section_code) => ({ section_code })),
@@ -33,13 +34,15 @@ const template = (sections) => ({
 
 let wrapper;
 
+const popup = { presentation_mode: "One-by-One Focus Popup" };
+
 // waits out the app's own start (the catalog load), so it can't overwrite the survey a test opens
-async function openSurvey({ sections = ["s1", "s2", "s3"], fullForm = false, answers = {} } = {}) {
+async function openSurvey({ sections = ["s1", "s2", "s3"], fullForm = false, answers = {}, extra } = {}) {
   let app;
   wrapper = mount(defineComponent({ setup: () => ((app = useSurveyApp()), () => h("div")) }));
   await vi.waitFor(() => expect(app.isLoading.value).toBe(false));
   app.isFullForm.value = fullForm;
-  app.activeTemplate.value = template(sections);
+  app.activeTemplate.value = template(sections, extra);
   app.responses.value = answers;
   return app;
 }
@@ -146,6 +149,55 @@ describe("focus mode follows its question (#154)", () => {
     await nextTick();
     expect(app.activeSection.value.section_code).toBe("s3");
     expect(focused(app), "a new section is not a list change to follow").toBe("q_phone_alt");
+  });
+
+  it("starts a section it is moved to at its first question, wherever the template lists it", async () => {
+    const app = await openSurvey({ sections: ["s1", "s3"] });
+    app.activeTemplate.value.questions.unshift(question("s3", "q_phone_alt"));
+    await focusOn(app, "q_name");
+
+    app.activeSectionIndex.value = 1; // as a restored draft moves it, without touching the index
+    await nextTick();
+    expect(focused(app)).toBe("q_phone_alt");
+  });
+
+  it("keeps a move made in the same change as the list", async () => {
+    const app = await openSurvey({ fullForm: true });
+    await focusOn(app, "q_crop");
+
+    app.toggleFullForm();
+    app.focusQuestionIndex.value = 0;
+    await nextTick();
+    expect(focused(app), "the move says where to go, so q_crop's place is not followed").toBe("q_has_land");
+  });
+
+  it("stays on with no survey open, and starts the next survey at its first question", async () => {
+    const app = await openSurvey({ fullForm: true });
+    await focusOn(app, "q_age");
+
+    app.activeTemplate.value = null;
+    await nextTick();
+    expect(app.isFocusMode.value, "Focus form is the surveyor's choice, not this survey's").toBe(true);
+
+    app.activeTemplate.value = template(["s3"], { name: "TMPL-OTHER" }); // one question, so index 4 is past it
+    await nextTick();
+    expect(focused(app)).toBe("q_phone");
+    expect(app.isFocusMode.value).toBe(true);
+  });
+
+  it("keeps its place when the open survey is refreshed from the server", async () => {
+    const app = await openSurvey({ extra: popup });
+    await nextTick();
+    expect(app.isFocusMode.value, "a one-by-one survey opens in focus mode").toBe(true);
+    await focusOn(app, "q_name");
+
+    app.activeTemplate.value = template(["s1", "s2", "s3"], popup); // the server's copy of the same survey
+    await nextTick();
+    expect(focused(app)).toBe("q_name");
+
+    app.activeTemplate.value = template(["s1", "s2", "s3"], { ...popup, name: "TMPL-OTHER" });
+    await nextTick();
+    expect(focused(app), "another survey starts at its beginning").toBe("q_has_land");
   });
 
   it("keeps a section that has questions to show", async () => {
