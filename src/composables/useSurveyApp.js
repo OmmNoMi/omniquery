@@ -380,11 +380,36 @@ export function useSurveyApp() {
   function onFocusModeFinishSection() {
     if (activeSectionIndex.value < sections.value.length - 1) {
       nextSection();
+      // focus mode has nothing to show in a section whose questions are all hidden, so it goes on
+      // past it, as Next on each would; an empty last section closes it below (#154)
+      while (!activeQuestions.value.length && activeSectionIndex.value < sections.value.length - 1 && nextSection());
       focusQuestionIndex.value = 0;
     } else {
       isFocusMode.value = false;
     }
   }
+
+  // Focus mode shows activeQuestions[focusQuestionIndex], so when that list changes in the same
+  // section (Full Form toggled, an answer showing or hiding questions) it stays on its question. A
+  // question that is gone gives way to the next one still shown, and a section with none closes focus
+  // mode, so isFocusMode never claims a focus mode that shows nothing (#154). Pre-flush, so focus
+  // mode never renders the stale index.
+  watch(activeQuestions, (questions, before) => {
+    if (!isFocusMode.value) return;
+    if (!questions.length) {
+      isFocusMode.value = false;
+      return;
+    }
+    const was = before && before[focusQuestionIndex.value];
+    if (!was || was.section_code !== questions[0].section_code) {
+      focusQuestionIndex.value = Math.min(focusQuestionIndex.value, questions.length - 1);
+      return;
+    }
+    const order = ((activeTemplate.value && activeTemplate.value.questions) || []).map((q) => q.question_code);
+    const at = order.indexOf(was.question_code);
+    const next = questions.findIndex((q) => order.indexOf(q.question_code) >= at);
+    focusQuestionIndex.value = next >= 0 ? next : questions.length - 1;
+  });
 
   function onExit() {
     if (isGuest.value) {
