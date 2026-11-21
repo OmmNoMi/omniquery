@@ -2509,6 +2509,18 @@ msgstr "{0} साक्षात्कार अपलोड करने क�
 msgid "Sign in"
 msgstr "साइन इन करें"
 
+#: omniquery/api/sync.py:278
+msgid "Sign in to save this survey"
+msgstr "यह सर्वेक्षण सेव करने के लिए साइन इन करें"
+
+#: omniquery/api/sync.py:444
+msgid "Sign in to sync these interviews"
+msgstr "ये साक्षात्कार सिंक करने के लिए साइन इन करें"
+
+#: omniquery/api/sync.py:487
+msgid "Sign in to sync this interview"
+msgstr "यह साक्षात्कार सिंक करने के लिए साइन इन करें"
+
 #: src/App.vue
 msgid "Interview not saved"
 msgstr "साक्षात्कार सहेजा नहीं गया"
