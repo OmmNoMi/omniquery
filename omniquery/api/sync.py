@@ -231,12 +231,22 @@ def gps_reason(gps_variance, thresholds):
 	return f"GPS variance high: {gps_variance}m from respondent centroid (>{limit}m)"
 
 
+def refuse_ended_session():
+	"""Raise SessionExpired (401) for a request whose session has ended, as Frappe does on a method that
+	needs a sign-in (frappe.is_whitelisted). Such a request runs as Guest: on a public template its
+	interview would be filed under the Guest Surveyor and owned by Guest, so the surveyor's own retry is
+	refused as an overwrite; on any other it would be REJECTED, which the device quarantines (#127)."""
+	if frappe.session.user == "Guest" and frappe.response.get("session_expired"):
+		raise frappe.SessionExpired
+
+
 @frappe.whitelist(allow_guest=True)
 def sync_draft(data=None):
 	"""
 	Lightweight in-flight live draft save handler.
 	Upserts OmniQuery Response in 'Draft' status, named by the device's idempotency key.
 	"""
+	refuse_ended_session()
 	raw_data = None
 	if data is None:
 		if hasattr(frappe.local, "request") and frappe.local.request:
@@ -263,8 +273,10 @@ def sync_draft(data=None):
 
 	# Security: Strict template RBAC validation
 	if not user_has_template_permission(template_name, user=current_user):
-		err_msg = "Guest access not permitted for private survey template" if current_user == "Guest" else f"Permission denied for template {template_name}"
-		return {"status": "REJECTED", "error": err_msg}
+		# a Guest is refused as Frappe refuses one, so the device asks for a sign-in (#127)
+		if current_user == "Guest":
+			frappe.throw(_("Sign in to save this survey"), frappe.PermissionError)
+		return {"status": "REJECTED", "error": f"Permission denied for template {template_name}"}
 
 	doc_name = (
 		frappe.db.get_value("OmniQuery Response", {"idempotency_key": idempotency_key}, "name")
@@ -424,19 +436,12 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 	to the session user's Surveyor (#35)."""
 	client_ip = getattr(frappe.local, "request_ip", "127.0.0.1")
 	current_user = frappe.session.user
+	refuse_ended_session()
 
-	# Security: Guests are strictly limited to single-form submission (no batch processing)
+	# Security: Guests are strictly limited to single-form submission (no batch processing). They are
+	# refused as Frappe refuses a Guest, so the device keeps the queue and asks for a sign-in (#127).
 	if current_user == "Guest" and len(submissions) > 1:
-		return {
-			"results": [
-				{
-					"idempotency_key": sub.get("idempotency_key", "UNKNOWN"),
-					"status": "REJECTED",
-					"error": "Batch push not permitted for Guest users",
-				}
-				for sub in submissions
-			]
-		}
+		frappe.throw(_("Sign in to sync these interviews"), frappe.PermissionError)
 
 	# Durable file-system dump: guaranteed never to fail even under DB lockouts
 	log_raw_ingestion_dump("batch_push", raw_data or submissions, client_ip=client_ip, surveyor=current_user)
@@ -478,7 +483,9 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 
 		# Security: Strict template RBAC validation
 		if not user_has_template_permission(template_name, user=current_user):
-			err_msg = "Guest access not permitted for private survey template" if current_user == "Guest" else f"Permission denied for template {template_name}"
+			if current_user == "Guest":
+				frappe.throw(_("Sign in to sync this interview"), frappe.PermissionError)
+			err_msg = f"Permission denied for template {template_name}"
 			upsert_audit_log(idempotency_key, {
 				"surveyor": surveyor, "sync_status": "REJECTED",
 				"client_ip": client_ip, "raw_payload": raw_payload_str, "error_message": err_msg,
