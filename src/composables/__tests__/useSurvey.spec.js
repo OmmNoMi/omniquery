@@ -178,6 +178,49 @@ describe("useSurvey", () => {
     expect(survey.activeSectionIndex.value).toBe(1);
   });
 
+  // #154: a section whose questions are all hidden has nothing to answer, so Next and Previous pass it
+  describe("a section with nothing to show", () => {
+    const ifLand = { depends_on: "has_land", equals: "Yes" };
+    function surveyWith(sectionCodes) {
+      const survey = useSurvey();
+      survey.isFullForm.value = false;
+      survey.activeTemplate.value = {
+        template_name: "TMPL-EMPTY-SECTION",
+        sections: sectionCodes.map((section_code) => ({ section_code })),
+        questions: [
+          { section_code: "s1", question_code: "has_land" },
+          { section_code: "s2", question_code: "land_owner", conditional_logic: ifLand },
+          { section_code: "s3", question_code: "phone" },
+        ].filter((q) => sectionCodes.includes(q.section_code)),
+      };
+      survey.activeSectionIndex.value = 0;
+      survey.responses.value = { has_land: "No" };
+      return survey;
+    }
+
+    it("is passed by Next and by Previous", () => {
+      const survey = surveyWith(["s1", "s2", "s3"]);
+      expect(survey.nextSection()).toBe(true);
+      expect(survey.activeSectionIndex.value).toBe(2);
+      expect(survey.prevSection()).toBe(true);
+      expect(survey.activeSectionIndex.value).toBe(0);
+    });
+
+    it("is still where Next stops when it is the last, since it holds Submit", () => {
+      const survey = surveyWith(["s1", "s2"]);
+      expect(survey.nextSection()).toBe(true);
+      expect(survey.activeSectionIndex.value).toBe(1);
+    });
+
+    it("is not passed with Full Form on, which shows its questions", () => {
+      const survey = surveyWith(["s1", "s2", "s3"]);
+      survey.isFullForm.value = true;
+      expect(survey.nextSection()).toBe(true);
+      expect(survey.activeSectionIndex.value).toBe(1);
+      expect(survey.activeQuestions.value.map((q) => q.question_code)).toEqual(["land_owner"]);
+    });
+  });
+
   // #22: a Phone question holds a 10-digit mobile number, checked when the surveyor moves on
   it("refuses a section whose phone number is not 10 digits, even when the question is optional", () => {
     const survey = useSurvey();
