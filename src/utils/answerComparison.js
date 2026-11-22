@@ -11,6 +11,9 @@ export const COMPARISON_OPERATORS = {
   eq: (a, b) => a === b,
 };
 
+// shown for a rule with no message; a template submitted before #159 was never checked for one
+export const COMPARISON_FALLBACK = "This answer does not fit with an earlier answer";
+
 // a plain number as typed: no thousands separators, units or blanks
 const NUMBER = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/;
 
@@ -26,13 +29,14 @@ export function answerNumber(value) {
 }
 
 // The rule's message when the question's answer breaks it, else "". A rule waits until both answers
-// are numbers, so a blank income never reads as 0 and holds the surveyor on expenses.
-export function comparisonError(question, answers) {
+// are numbers, so a blank income never reads as 0 and holds the surveyor on expenses. messageOf picks
+// the message in the surveyor's language (useTranslation's getRuleMessage).
+export function comparisonError(question, answers, messageOf = (rule) => rule.message) {
   const rule = comparisonRule(question);
-  const compare = rule && COMPARISON_OPERATORS[rule.operator];
-  if (!compare) return "";
+  if (!rule || !Object.hasOwn(COMPARISON_OPERATORS, rule.operator)) return "";
+  const compare = COMPARISON_OPERATORS[rule.operator];
   const a = answerNumber(answers[question.question_code]);
   const b = answerNumber(answers[rule.compare_to]);
   if (a === null || b === null) return "";
-  return compare(a, b) ? "" : rule.message;
+  return compare(a, b) ? "" : messageOf(rule) || COMPARISON_FALLBACK;
 }

@@ -2792,6 +2792,18 @@ msgid "Question {0} is compared with {1}, which is not another question in this 
 msgstr "प्रश्न {0} की तुलना {1} से होती है, जो इस टेम्पलेट का कोई दूसरा प्रश्न नहीं है।"
 
 #: omniquery/services/answer_comparisons.py
+msgid "Question {0} has an operator but no compare_to; name the question to compare with."
+msgstr "प्रश्न {0} में ऑपरेटर है पर compare_to नहीं; जिस प्रश्न से तुलना करनी है उसका नाम दें।"
+
+#: omniquery/services/answer_comparisons.py
+msgid "Question {0} is compared with {1} but has no operator; use lte, gte or eq."
+msgstr "प्रश्न {0} की तुलना {1} से होती है पर इसमें कोई ऑपरेटर नहीं है; lte, gte या eq का उपयोग करें।"
+
+#: src/utils/answerComparison.js
+msgid "This answer does not fit with an earlier answer"
+msgstr "यह उत्तर पहले दिए गए उत्तर से मेल नहीं खाता"
+
+#: omniquery/services/answer_comparisons.py
 msgid "Question {0} has operator {1}; use lte, gte or eq."
 msgstr "प्रश्न {0} में ऑपरेटर {1} है; lte, gte या eq का उपयोग करें।"
 

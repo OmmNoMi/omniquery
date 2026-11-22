@@ -472,6 +472,23 @@ describe("useSurvey", () => {
     survey.activeTemplate.value.questions[1].conditional_logic = null;
     expect(survey.validateCurrentSection()).toBe(true);
   });
+
+  it("shows a comparison's message in the surveyor's language (#159)", () => {
+    const survey = useSurvey();
+    const rule = { operator: "lte", compare_to: "q_income", message: "Expenses cannot exceed income", message_hi: "खर्च आय से अधिक नहीं हो सकता" };
+    survey.activeTemplate.value = {
+      template_name: "TMPL-159",
+      sections: [{ section_code: "sec1" }],
+      questions: [
+        { question_code: "q_income", section_code: "sec1" },
+        { question_code: "q_expenses", section_code: "sec1", validation_rules: rule },
+      ],
+    };
+    survey.responses.value = { q_income: "400", q_expenses: "500" };
+    // the field app starts in Hindi
+    expect(survey.validateCurrentSection()).toBe(false);
+    expect(survey.validationErrors.value.q_expenses).toBe("खर्च आय से अधिक नहीं हो सकता");
+  });
   it("takes a discarded draft's recordings with it, and leaves a submitted response's alone (#37)", async () => {
     await db.audio_recordings.clear();
     const { saveAudioForResponse } = useAudioRecorder();

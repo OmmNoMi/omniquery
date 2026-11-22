@@ -5,16 +5,17 @@ import json
 import frappe
 from frappe.tests.utils import FrappeTestCase
 
-from omniquery.services.answer_comparisons import validate_comparison_rules
+from omniquery.patches.v1_0.report_unchecked_comparison_rules import execute as report_unchecked_rules
+from omniquery.services.answer_comparisons import comparison_rule_problems, validate_comparison_rules
 from omniquery.tests.utils import delete_test_docs
 
 TAG = frappe.generate_hash(length=8).upper()
 RULE = {"compare_to": "income", "operator": "lte", "message": "Expenses cannot exceed income"}
 
 
-def question(code, section="S1", field_type="Currency (INR)", rules=None):
+def question(code, section="S1", field_type="Currency (INR)", rules=None, **extra):
 	return {"section_code": section, "question_code": code, "label_en": code, "field_type": field_type,
-		"validation_rules_json": json.dumps(rules) if rules else None}
+		"validation_rules_json": json.dumps(rules) if rules else None, **extra}
 
 
 def schema(*questions, sections=("S1", "S2")):
@@ -58,6 +59,9 @@ class TestAnswerComparisons(FrappeTestCase):
 			question("expenses", section="S2", field_type="Decimal", rules={"min": 0, **RULE})))
 		for field_type in ("Range (Slider)", "Rating (1-5)"):
 			validate_comparison_rules(schema(question("income", field_type=field_type), question("expenses", rules=RULE)))
+		# a control the device draws as a number counts as one, whatever the field type says
+		for variant in ("Currency", "range", "Slider", "Rating"):
+			validate_comparison_rules(schema(question("income", field_type="Text", control_variant=variant), question("expenses", rules=RULE)))
 
 	def test_rules_without_a_comparison_are_left_alone(self):
 		validate_comparison_rules(schema(question("age", field_type="Text", rules={"min": 0, "max": 7}), question("note")))
@@ -66,11 +70,15 @@ class TestAnswerComparisons(FrappeTestCase):
 	def test_the_other_question_must_be_in_the_template(self):
 		self.assertRefused("expenses is compared with salary", question("income"), question("expenses", rules={**RULE, "compare_to": "salary"}))
 		self.assertRefused("not another question", question("expenses", rules={**RULE, "compare_to": "expenses"}))
-		self.assertRefused("not another question", question("income"), question("expenses", rules={"operator": "lte", "message": "m"}))
+		self.assertRefused("expenses has an operator but no compare_to", question("income"), question("expenses", rules={"operator": "lte", "message": "m"}))
+		# JSON that names the other question as a list or a number is not a question code
+		for other in (["income"], 7, {"code": "income"}):
+			self.assertRefused("not another question", question("income"), question("expenses", rules={**RULE, "compare_to": other}))
 
 	def test_the_operator_must_be_lte_gte_or_eq(self):
 		self.assertRefused("operator lt", question("income"), question("expenses", rules={**RULE, "operator": "lt"}))
-		self.assertRefused("operator None", question("income"), question("expenses", rules={"compare_to": "income", "message": "m"}))
+		self.assertRefused("expenses is compared with income but has no operator", question("income"),
+			question("expenses", rules={"compare_to": "income", "message": "m"}))
 
 	def test_both_questions_must_be_numbers(self):
 		self.assertRefused("Question income is compared as a number",
@@ -86,6 +94,13 @@ class TestAnswerComparisons(FrappeTestCase):
 		self.assertRefused("needs a message", question("income"), question("expenses", rules={**RULE, "message": "  "}))
 		self.assertRefused("needs a message", question("income"), question("expenses", rules={"compare_to": "income", "operator": "lte"}))
 
+	def test_every_problem_is_listed(self):
+		problems = comparison_rule_problems(schema(question("income"), question("expenses", rules={**RULE, "operator": "lt"}),
+			question("savings", rules={**RULE, "compare_to": "wages"}), question("assets", rules=RULE)))
+		self.assertEqual(len(problems), 2, problems)
+		self.assertIn("operator lt", problems[0])
+		self.assertIn("savings is compared with wages", problems[1])
+
 	def test_a_template_is_checked_when_submitted(self):
 		bad = self.make_template([question("income"), question("expenses", rules={**RULE, "operator": "less"})])
 		self.assertRaisesRegex(frappe.ValidationError, "operator less", bad.submit)
@@ -94,5 +109,26 @@ class TestAnswerComparisons(FrappeTestCase):
 		good = self.make_template([question("income"), question("expenses", section="S2", rules=RULE)])
 		good.submit()
 		compiled = json.loads(good.compiled_schema_json)
-		self.assertEqual(next(q for q in compiled["questions"] if q["question_code"] == "expenses")["validation_rules"], RULE,
-			"the device reads the rule from validation_rules")
+		rule = next(q for q in compiled["questions"] if q["question_code"] == "expenses")["validation_rules"]
+		self.assertEqual(rule, {**RULE, "message_translated": frappe._(RULE["message"])}, "the device reads the rule from validation_rules")
+
+	def test_a_published_template_with_a_bad_rule_is_reported(self):
+		"""A template submitted before #159 was never checked, and a submitted one cannot be edited."""
+		start = frappe.utils.now()
+		good = self.make_template([question("income"), question("expenses", section="S2", rules=RULE)])
+		good.submit()
+		old = self.make_template([question("income"), question("expenses", section="S2", rules=RULE)])
+		old.submit()
+		compiled = json.loads(old.compiled_schema_json)
+		compiled["questions"][1]["validation_rules"] = {**RULE, "operator": "less"}
+		frappe.db.set_value("OmniQuery Template", old.name, "compiled_schema_json", json.dumps(compiled), update_modified=False)
+		try:
+			report_unchecked_rules()
+			logs = frappe.get_all("Error Log", filters={"reference_doctype": "OmniQuery Template", "creation": (">=", start)},
+				fields=["reference_name", "error"])
+			self.assertEqual([log.error.splitlines()[0] for log in logs if log.reference_name == old.name],
+				["Question expenses has operator less; use lte, gte or eq."])
+			self.assertNotIn(good.name, [log.reference_name for log in logs])
+		finally:
+			frappe.db.delete("Error Log", {"reference_doctype": "OmniQuery Template", "creation": (">=", start)})
+			frappe.db.commit()

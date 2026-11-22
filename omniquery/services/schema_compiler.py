@@ -72,13 +72,20 @@ def format_question_dictionary(question_row):
 		"options": raw_options,
 		"options_translated": translate_options(raw_options),
 		"conditional_logic": parse_json_value(getattr(question_row, "conditional_logic_json", None)),
-		"validation_rules": parse_json_value(getattr(question_row, "validation_rules_json", None)),
+		"validation_rules": translate_rule_message(parse_json_value(getattr(question_row, "validation_rules_json", None))),
 		"audio_prompt": getattr(question_row, "audio_prompt", None),
 		# the PWA titles a group of questions from these, never from a question_code (#14)
 		"group_title": getattr(question_row, "group_title", None) or None,
 		"group_code": getattr(question_row, "group_code", None) or None,
 	}
 	return enrich_question_metadata(question_row, question_dictionary)
+
+
+def translate_rule_message(rules):
+	"""An answer comparison's message, translated as a label is (#159)."""
+	if isinstance(rules, dict) and isinstance(rules.get("message"), str):
+		rules["message_translated"] = frappe._(rules["message"])
+	return rules
 
 
 def translate_options(raw_options):

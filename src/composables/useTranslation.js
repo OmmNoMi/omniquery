@@ -172,6 +172,8 @@ const CORE_HINDI = {
   "Try again": "फिर से प्रयास करें",
   // a range question with no answer yet (#21)
   "Not answered": "उत्तर नहीं दिया गया",
+  // src/utils/answerComparison.js, for a comparison rule with no message (#159)
+  "This answer does not fit with an earlier answer": "यह उत्तर पहले दिए गए उत्तर से मेल नहीं खाता",
 };
 
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";
@@ -229,6 +231,14 @@ export function useTranslation() {
     return __(base);
   }
 
+  // an answer comparison's message (#159), picked as a question's label is; QuestionCard passes it
+  // through __() as it does every error
+  function getRuleMessage(rule) {
+    const text = (key) => (typeof rule?.[key] === "string" ? rule[key] : "");
+    if (currentLang.value === "hi") return text("message_hi") || text("message_translated") || text("message");
+    return text("message");
+  }
+
   function getSectionTitle(section) {
     if (!section) return "";
     if (currentLang.value === "hi" && section.section_title_hi) return section.section_title_hi;
@@ -247,6 +257,7 @@ export function useTranslation() {
     toggleLanguage,
     setLanguage,
     getQuestionLabel,
+    getRuleMessage,
     getSectionTitle,
     getOptionLabel,
   };

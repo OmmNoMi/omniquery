@@ -4,6 +4,7 @@ import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { isAnswered, responseItems } from "../utils/responsePayload";
 import { PHONE_ERROR, isPhoneQuestion, isValidMobile } from "../utils/phone";
 import { comparisonError } from "../utils/answerComparison";
+import { useTranslation } from "./useTranslation";
 import { REQUIRED_ERROR } from "../utils/requiredMessage";
 import { uuidv4 } from "../utils/uuid";
 import { projectHelp } from "../utils/projectHelp";
@@ -13,6 +14,7 @@ import { templatesOfProject } from "../utils/projectTemplates";
 export const generateSurveyId = uuidv4;
 
 export function useSurvey() {
+  const { getRuleMessage } = useTranslation();
   const activeTemplate = ref(null);
   const activeSectionIndex = ref(0);
   const availableTemplates = ref([]);
@@ -518,7 +520,7 @@ export function useSurvey() {
     );
     let isValid = true;
     for (const q of questions) {
-      const error = comparisonError(q, shownAnswers);
+      const error = comparisonError(q, shownAnswers, getRuleMessage);
       if (error) {
         validationErrors.value[q.question_code] = error;
         isValid = false;

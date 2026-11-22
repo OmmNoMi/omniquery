@@ -35,3 +35,32 @@ describe("useTranslation sets <html lang>", () => {
     expect(document.documentElement.lang).toBe("hi");
   });
 });
+
+// #159: an answer comparison's message, picked for the surveyor's language as a question's label is
+describe("getRuleMessage", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    localStorage.clear();
+  });
+
+  const rule = { message: "Expenses cannot exceed income", message_translated: "Expenses (site)", message_hi: "खर्च आय से अधिक नहीं हो सकता" };
+
+  it("prefers the rule's Hindi, then the site's translation, then the message, in Hindi", async () => {
+    const { getRuleMessage } = (await import("../useTranslation")).useTranslation();
+    expect(getRuleMessage(rule)).toBe("खर्च आय से अधिक नहीं हो सकता");
+    expect(getRuleMessage({ ...rule, message_hi: "" })).toBe("Expenses (site)");
+    expect(getRuleMessage({ message: "Expenses cannot exceed income" })).toBe("Expenses cannot exceed income");
+  });
+
+  it("shows the message as written in English", async () => {
+    const { getRuleMessage, setLanguage } = (await import("../useTranslation")).useTranslation();
+    setLanguage("en");
+    expect(getRuleMessage(rule)).toBe("Expenses cannot exceed income");
+  });
+
+  it("reads only text, and nothing from a rule with no message", async () => {
+    const { getRuleMessage } = (await import("../useTranslation")).useTranslation();
+    expect(getRuleMessage({ message: 5, message_hi: ["x"] })).toBe("");
+    expect(getRuleMessage(null)).toBe("");
+  });
+});
