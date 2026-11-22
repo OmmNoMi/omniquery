@@ -4,7 +4,7 @@ import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { isAnswered, responseItems } from "../utils/responsePayload";
 import { PHONE_ERROR, isPhoneQuestion, isValidMobile } from "../utils/phone";
 import { comparisonError } from "../utils/answerComparison";
-import { parentGrid } from "../utils/questionLayout";
+import { gridsByCode } from "../utils/questionLayout";
 import { useTranslation } from "./useTranslation";
 import { REQUIRED_ERROR } from "../utils/requiredMessage";
 import { uuidv4 } from "../utils/uuid";
@@ -443,24 +443,23 @@ export function useSurvey() {
     }
   }
 
-  // the questions a section shows, in template order: the hidden ones only with Full Form on
-  function shownQuestions(section) {
+  // a section's questions, in template order
+  function sectionQuestions(section) {
     if (!section || !activeTemplate.value) return [];
-    const inSection = (activeTemplate.value.questions || []).filter((q) => q.section_code === section.section_code);
+    return (activeTemplate.value.questions || []).filter((q) => q.section_code === section.section_code);
+  }
+
+  // the questions a section shows: the hidden ones only with Full Form on
+  function shownQuestions(section) {
+    const inSection = sectionQuestions(section);
     return isFullForm.value ? inSection : inSection.filter((q) => isQuestionVisible(q));
   }
 
-  const activeQuestions = computed(() => {
-    const sectionQs = shownQuestions(activeSection.value);
+  const activeQuestions = computed(() => shownQuestions(activeSection.value));
 
-    // the grid each question sits under, by its group_code; set on every question every time, so a
-    // question that leaves a grid's group never keeps the old card (#140)
-    for (const q of sectionQs) {
-      q._parentQuestion = parentGrid(q, sectionQs);
-    }
-
-    return sectionQs;
-  });
+  // the active section's grids, shown or hidden, for parentGrid: a question under a hidden grid still
+  // says which table it belongs to, and the template's questions are never written to (#140)
+  const sectionGrids = computed(() => gridsByCode(sectionQuestions(activeSection.value)));
 
   function isSectionComplete(section) {
     if (!section || !activeTemplate.value) return false;
@@ -570,6 +569,7 @@ export function useSurvey() {
     sections,
     activeSection,
     activeQuestions,
+    sectionGrids,
     responses,
     validationErrors,
     isSubmitting,

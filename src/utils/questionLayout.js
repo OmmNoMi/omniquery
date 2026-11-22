@@ -17,13 +17,18 @@ export function groupHeading(first, fallbackCode, fallbackTitle) {
   };
 }
 
+// A section's grids by question_code, so each question finds its own in one lookup (#140)
+export function gridsByCode(questions) {
+  return new Map((questions || []).filter(isMatrixQuestion).map((grid) => [grid.question_code, grid]));
+}
+
 // The grid a question sits under, when the template says so: its group_code names a matrix question
-// of the section. A question is never put under a grid for the shape of its label (#140).
-export function parentGrid(question, sectionQuestions) {
+// of the section (grids, from gridsByCode). A question is never put under a grid for the shape of its
+// label (#140).
+export function parentGrid(question, grids) {
   const code = question?.group_code;
   if (!code || code === question.question_code) return null;
-  const grid = sectionQuestions.find((other) => other.question_code === code);
-  return isMatrixQuestion(grid) ? grid : null;
+  return grids?.get(code) || null;
 }
 
 // The survey's questions as the page shows them: single cards, matrix cards, and runs of lettered
@@ -31,6 +36,13 @@ export function parentGrid(question, sectionQuestions) {
 // __ translates the one fallback title.
 export function layoutQuestions(questions, __ = (text) => text) {
   const items = [];
+  // a group's code is its card's id (qc_<code>), so a group_code that names a question of the
+  // section, as one naming its grid does, gives way to the group's own code (#140)
+  const questionCodes = new Set(questions.map((q) => q.question_code));
+  const heading = (first, fallbackCode, fallbackTitle) => {
+    const own = groupHeading(first, fallbackCode, fallbackTitle);
+    return questionCodes.has(own.group_code) ? { ...own, group_code: fallbackCode } : own;
+  };
   let i = 0;
   while (i < questions.length) {
     const q = questions[i];
@@ -64,7 +76,7 @@ export function layoutQuestions(questions, __ = (text) => text) {
       if (groupQuestions.length > 1) {
         items.push({
           type: "group",
-          ...groupHeading(q, `group_${baseNum}`, baseNum),
+          ...heading(q, `group_${baseNum}`, baseNum),
           number: baseNum,
           description: "",
           questions: groupQuestions,
@@ -94,7 +106,7 @@ export function layoutQuestions(questions, __ = (text) => text) {
         const prevLabel = prevQuestion ? prevQuestion.label_en || prevQuestion.label || "" : "";
         items.push({
           type: "group",
-          ...groupHeading(q, `group_${q.question_code}`, prevLabel || __("Breakdown table")),
+          ...heading(q, `group_${q.question_code}`, prevLabel || __("Breakdown table")),
           number: "TABLE",
           description: "",
           questions: groupQuestions,

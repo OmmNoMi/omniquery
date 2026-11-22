@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useSurvey, generateSurveyId } from "../useSurvey";
+import { parentGrid } from "../../utils/questionLayout";
 import { db, audioRecordingsFor } from "../../services/db";
 import { useAudioRecorder } from "../useAudioRecorder";
 
@@ -441,23 +442,27 @@ describe("useSurvey", () => {
     expect(survey.validationErrors.value.q_expenses).toBeUndefined();
   });
 
-  // #140: a question is put under a grid by its group_code, and the link is redone every time
-  it("puts a question under the grid its group_code names, and takes it away when that goes (#140)", () => {
+  // #140: a question is put under a grid by its group_code, through the section's grids, shown or
+  // hidden; the template's questions are never written to
+  it("finds the grid a question's group_code names, even a hidden one, and writes nothing on the questions (#140)", () => {
     const survey = useSurvey();
-    survey.isFullForm.value = true;
-    const activity = { section_code: "s1", question_code: "activity", label_en: "Activity Involvements", field_type: "Dynamic Grid" };
+    survey.isFullForm.value = false;
+    const activity = {
+      section_code: "s1",
+      question_code: "activity",
+      label_en: "Activity Involvements",
+      field_type: "Dynamic Grid",
+      conditional_logic: { depends_on: "has_shop", operator: "equals", value: "Yes" },
+    };
     const share = { section_code: "s1", question_code: "a_share", label_en: "a. Own share", group_code: "activity" };
-    const note = { section_code: "s1", question_code: "b_note", label_en: "b. Notes" };
-    const template = { template_name: "TMPL-GRID", sections: [{ section_code: "s1" }], questions: [activity, share, note] };
+    const elsewhere = { section_code: "s2", question_code: "other_grid", field_type: "Table" };
+    const template = { template_name: "TMPL-GRID", sections: [{ section_code: "s1" }, { section_code: "s2" }], questions: [activity, share, elsewhere] };
     survey.activeTemplate.value = template;
     survey.activeSectionIndex.value = 0;
-    const [, linked, unlinked] = survey.activeQuestions.value;
-    expect(linked._parentQuestion).toMatchObject({ question_code: "activity" });
-    expect(unlinked._parentQuestion).toBeNull();
-
-    delete share.group_code;
-    survey.activeTemplate.value = { ...template };
-    expect(survey.activeQuestions.value[1]._parentQuestion).toBeNull();
+    expect(survey.activeQuestions.value.map((q) => q.question_code)).toEqual(["a_share"]);
+    expect([...survey.sectionGrids.value.keys()]).toEqual(["activity"]);
+    expect(parentGrid(share, survey.sectionGrids.value)).toMatchObject({ question_code: "activity" });
+    expect(Object.keys(share).some((key) => key.startsWith("_"))).toBe(false);
   });
 
   it("waits to compare answers until both are in and both questions are shown (#159)", () => {

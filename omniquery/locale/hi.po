@@ -2645,6 +2645,10 @@ msgstr "डैशबोर्ड पर वापस जाएँ"
 msgid "Breakdown table"
 msgstr "विवरण तालिका"
 
+#: src/components/survey/ParentGridCard.vue
+msgid "Main table question"
+msgstr "मुख्य तालिका प्रश्न"
+
 #: src/components/project/ProjectPage.vue
 msgid "Direct telephone dispatch to field supervisor"
 msgstr "फ़ील्ड पर्यवेक्षक को सीधे फ़ोन करें"

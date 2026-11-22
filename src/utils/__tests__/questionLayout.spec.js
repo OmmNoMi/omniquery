@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupHeading, isMatrixQuestion, layoutQuestions, parentGrid } from "../questionLayout";
+import { gridsByCode, groupHeading, isMatrixQuestion, layoutQuestions, parentGrid } from "../questionLayout";
 
 const q = (question_code, label_en, extra = {}) => ({ question_code, label_en, field_type: "Text", ...extra });
 
@@ -81,9 +81,35 @@ describe("layoutQuestions", () => {
     });
   }
 
+  it("gives a run whose group_code names its grid its own code, so the two cards never share an id (#140)", () => {
+    const linked = sourcing.map((x) => ({ ...x, group_code: "activity_involvements", group_title: "Where you buy" }));
+    const items = layoutQuestions([grid("Dynamic Grid"), ...linked]);
+    expect(items.map((x) => x.type)).toEqual(["matrix", "group"]);
+    expect(items[1].group_code).toBe("group_source_nearby_town_pct");
+    expect(items[1].title).toBe("Where you buy");
+    const lettered = [q("q3a", "Q3a. Cows", { group_code: "activity_involvements" }), q("q3b", "Q3b. Goats")];
+    expect(layoutQuestions([grid("Dynamic Grid"), ...lettered])[1].group_code).toBe("group_Q3");
+  });
+
+  it("keeps a group_code that names no question of the section", () => {
+    const own = sourcing.map((x) => ({ ...x, group_code: "sourcing" }));
+    expect(layoutQuestions([grid("Dynamic Grid"), ...own])[1].group_code).toBe("sourcing");
+  });
+
   it("draws a grid followed by a label that opens with a one-letter word as two cards (#140)", () => {
     const items = layoutQuestions([grid("Dynamic Grid"), q("owner", "I am the owner")]);
     expect(items.map((x) => x.type)).toEqual(["matrix", "single"]);
+  });
+});
+
+describe("gridsByCode", () => {
+  it("is the section's matrix questions by question_code, and nothing else", () => {
+    const activity = q("activity_involvements", "Activity Involvements", { field_type: "Dynamic Grid" });
+    const herd = q("herd", "Herd", { control_variant: "Matrix" });
+    const grids = gridsByCode([activity, q("lead", "Who owns the shop?"), herd]);
+    expect([...grids.keys()]).toEqual(["activity_involvements", "herd"]);
+    expect(grids.get("herd")).toBe(herd);
+    expect(gridsByCode(undefined).size).toBe(0);
   });
 });
 
@@ -93,18 +119,19 @@ describe("parentGrid", () => {
 
   it("is the grid the question's group_code names (#140)", () => {
     const share = q("a_share", "a. Own share", { group_code: "activity_involvements" });
-    expect(parentGrid(share, [activity, share])).toBe(activity);
+    expect(parentGrid(share, gridsByCode([activity, share]))).toBe(activity);
   });
 
   it("is never read off the shape of a label", () => {
     const share = q("a_share", "a. Own share");
-    expect(parentGrid(share, [activity, share])).toBeNull();
+    expect(parentGrid(share, gridsByCode([activity, share]))).toBeNull();
   });
 
   it("is nothing when the group_code names no grid of the section, or the question itself", () => {
-    expect(parentGrid(q("a_share", "a. Own share", { group_code: "lead" }), [lead])).toBeNull();
-    expect(parentGrid(q("a_share", "a. Own share", { group_code: "elsewhere" }), [activity])).toBeNull();
-    expect(parentGrid(activity, [{ ...activity, group_code: "activity_involvements" }])).toBeNull();
-    expect(parentGrid({ ...activity, group_code: "activity_involvements" }, [activity])).toBeNull();
+    expect(parentGrid(q("a_share", "a. Own share", { group_code: "lead" }), gridsByCode([lead]))).toBeNull();
+    expect(parentGrid(q("a_share", "a. Own share", { group_code: "elsewhere" }), gridsByCode([activity]))).toBeNull();
+    const selfLinked = { ...activity, group_code: "activity_involvements" };
+    expect(parentGrid(selfLinked, gridsByCode([selfLinked]))).toBeNull();
+    expect(parentGrid(q("a_share", "a. Own share", { group_code: "activity_involvements" }), undefined)).toBeNull();
   });
 });

@@ -52,6 +52,8 @@
         <!-- the dialog's leave transition still renders this after its question is gone, as when an
           answer hides the questions after it (#152) -->
         <template v-if="currentQuestion">
+          <!-- the grid the question sits under stays at the top as the question scrolls (#140) -->
+          <ParentGridCard :grid="parentGrid(currentQuestion, sectionGrids)" class="sticky top-0 z-20 shadow-sm" />
           <MatrixQuestionCard
             v-if="isMatrixQuestion(currentQuestion)"
             ref="questionCardRef"
@@ -128,7 +130,9 @@ import { DialogDescription, DialogTitle } from "reka-ui";
 import { ArrowLeft, ArrowRight, X } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
+import ParentGridCard from "./ParentGridCard.vue";
 import { parentAnswer } from "../../utils/cascadingOptions";
+import { parentGrid } from "../../utils/questionLayout";
 import MatrixQuestionCard from "./MatrixQuestionCard.vue";
 import { isMatrixQuestion } from "../../utils/questionLayout";
 import SurveyModeMenu from "./SurveyModeMenu.vue";
@@ -141,6 +145,11 @@ const props = defineProps({
   questions: {
     type: Array,
     required: true,
+  },
+  // the section's grids, from gridsByCode, so a question shows the grid it sits under (#140)
+  sectionGrids: {
+    type: Map,
+    default: () => new Map(),
   },
   currentIndex: {
     type: Number,
