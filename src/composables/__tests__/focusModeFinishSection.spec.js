@@ -37,7 +37,7 @@ const template = () => ({
     question("s2", "q_crop"),
     question("s2", "q_crop_area", {
       is_mandatory: 1, // a new section's own empty required question is no error yet
-      validation_rule: { operator: "lte", compare_to: "q_age", message: "Crop area is more than the age" },
+      validation_rules: { operator: "lte", compare_to: "q_age", message: "Crop area is more than the age" },
     }),
   ],
 });

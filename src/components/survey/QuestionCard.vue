@@ -285,6 +285,7 @@
         v-else-if="isNumberControl"
         :id="'q_input_' + question.question_code"
         type="number"
+        :step="isWholeNumberControl ? undefined : 'any'"
         :modelValue="modelValue"
         :aria-label="questionLabel"
         :aria-describedby="questionDescription ? 'q_desc_' + question.question_code : undefined"
@@ -767,7 +768,7 @@ const isYesNoOptions = computed(() => {
 const isRatingControl = computed(() => {
   const variant = (props.question.control_variant || "").toLowerCase();
   const type = (props.question.field_type || "").toLowerCase();
-  return variant === "rating" || type === "rating";
+  return variant === "rating" || type.startsWith("rating");
 });
 
 const isRangeControl = computed(() => {
@@ -1180,10 +1181,12 @@ const isGeolocationControl = computed(() => {
   return type === "Geolocation" || props.question.control_variant === "GPS";
 });
 
-const isNumberControl = computed(() => {
-  const type = props.question.field_type || "";
-  return type === "Int" || type === "Float" || type === "Number";
-});
+// a typed number; a Currency (INR) question lands here when its label reads as a year or an age
+// (isCurrencyControl). Keep in step with NUMBER_FIELD_TYPES in omniquery/services/answer_comparisons.py.
+const NUMBER_TYPES = ["Integer", "Decimal", "Currency (INR)", "Int", "Float", "Number"];
+const WHOLE_NUMBER_TYPES = ["Integer", "Int"];
+const isNumberControl = computed(() => NUMBER_TYPES.includes(props.question.field_type));
+const isWholeNumberControl = computed(() => WHOLE_NUMBER_TYPES.includes(props.question.field_type));
 
 const isDateControl = computed(() => {
   const type = (props.question.field_type || "").toLowerCase();

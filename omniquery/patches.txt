@@ -11,3 +11,4 @@ omniquery.patches.v1_0.submit_final_documents
 omniquery.patches.v1_0.sync_analyst_viewer_roles
 omniquery.patches.v1_0.backfill_response_titles
 omniquery.patches.v1_0.backfill_gps_status
+omniquery.patches.v1_0.report_unchecked_comparison_rules
