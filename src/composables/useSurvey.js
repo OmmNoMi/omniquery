@@ -3,6 +3,7 @@ import { call } from "frappe-ui";
 import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { isAnswered, responseItems } from "../utils/responsePayload";
 import { PHONE_ERROR, isPhoneQuestion, isValidMobile } from "../utils/phone";
+import { comparisonError } from "../utils/answerComparison";
 import { REQUIRED_ERROR } from "../utils/requiredMessage";
 import { uuidv4 } from "../utils/uuid";
 import { projectHelp } from "../utils/projectHelp";
@@ -508,27 +509,19 @@ export function useSurvey() {
     return null;
   }
 
-  // Checks the rules of the questions given: Next and Submit check the section's own, so a rule on a
-  // question the surveyor has not reached yet cannot hold them in this section (#155).
-  function validateCrossFieldRules(questions = (activeTemplate.value && activeTemplate.value.questions) || []) {
+  // Checks the answer comparisons of the questions given (#159). Next and Submit check the section's
+  // own; a rule only compares with the same or an earlier section, so its other answer is in by then
+  // (#155). An answer the surveyor can no longer see counts as none, and a rule waits for it.
+  function validateCrossFieldRules(questions) {
+    const shownAnswers = Object.fromEntries(
+      (activeTemplate.value?.questions || []).filter(isQuestionVisible).map((q) => [q.question_code, responses.value[q.question_code]]),
+    );
     let isValid = true;
     for (const q of questions) {
-      if (q.validation_rule && isQuestionVisible(q)) {
-        const rule = q.validation_rule;
-        // Example rule: { operator: "lte", compare_to: "q_income", message: "Expenses cannot exceed income" }
-        if (rule.compare_to && rule.operator) {
-          const valA = Number(responses.value[q.question_code]) || 0;
-          const valB = Number(responses.value[rule.compare_to]) || 0;
-          let failed = false;
-          if (rule.operator === "lte" && valA > valB) failed = true;
-          if (rule.operator === "gte" && valA < valB) failed = true;
-          if (rule.operator === "eq" && valA !== valB) failed = true;
-
-          if (failed) {
-            validationErrors.value[q.question_code] = rule.message || `Value must be ${rule.operator} ${rule.compare_to}`;
-            isValid = false;
-          }
-        }
+      const error = comparisonError(q, shownAnswers);
+      if (error) {
+        validationErrors.value[q.question_code] = error;
+        isValid = false;
       }
     }
     return isValid;

@@ -413,7 +413,7 @@ describe("useSurvey", () => {
           question_code: "q_expenses",
           section_code: "sec1",
           is_mandatory: true,
-          validation_rule: {
+          validation_rules: {
             operator: "lte",
             compare_to: "q_income",
             message: "Total expenses cannot exceed total revenue",
@@ -439,6 +439,38 @@ describe("useSurvey", () => {
     const validPass = survey.validateCurrentSection();
     expect(validPass).toBe(true);
     expect(survey.validationErrors.value.q_expenses).toBeUndefined();
+  });
+
+  it("waits to compare answers until both are in and both questions are shown (#159)", () => {
+    const survey = useSurvey();
+    const rule = { operator: "lte", compare_to: "q_income", message: "Expenses cannot exceed income" };
+    survey.activeTemplate.value = {
+      template_name: "TMPL-159",
+      sections: [{ section_code: "sec1" }],
+      questions: [
+        { question_code: "q_earns", section_code: "sec1" },
+        { question_code: "q_income", section_code: "sec1", conditional_logic: { depends_on: "q_earns", equals: "Yes" } },
+        { question_code: "q_expenses", section_code: "sec1", validation_rules: { min: 0, ...rule } },
+      ],
+    };
+
+    // a blank income is no answer yet, not an income of 0
+    survey.responses.value = { q_earns: "Yes", q_expenses: "500" };
+    expect(survey.validateCurrentSection()).toBe(true);
+
+    survey.responses.value = { q_earns: "Yes", q_income: "400", q_expenses: "500" };
+    expect(survey.validateCurrentSection()).toBe(false);
+    expect(survey.validationErrors.value.q_expenses).toBe("Expenses cannot exceed income");
+
+    // the answers say income was not asked, so the old answer to it does not count
+    survey.responses.value = { q_earns: "No", q_income: "400", q_expenses: "500" };
+    expect(survey.validateCurrentSection()).toBe(true);
+    expect(survey.validationErrors.value.q_expenses).toBeUndefined();
+
+    // nor is a rule on a question the answers hide
+    survey.activeTemplate.value.questions[2].conditional_logic = { depends_on: "q_earns", equals: "Yes" };
+    survey.activeTemplate.value.questions[1].conditional_logic = null;
+    expect(survey.validateCurrentSection()).toBe(true);
   });
   it("takes a discarded draft's recordings with it, and leaves a submitted response's alone (#37)", async () => {
     await db.audio_recordings.clear();

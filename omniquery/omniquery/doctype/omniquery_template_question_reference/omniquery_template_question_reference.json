@@ -109,6 +109,7 @@
    "options": "JSON"
   },
   {
+   "description": "To check this number against an earlier one, add for example {\"compare_to\": \"q_income\", \"operator\": \"lte\", \"message\": \"Expenses cannot exceed income\"} beside min, max, step and unit. The operator is lte, gte or eq, and the other question must be a number in this section or an earlier one. The check waits until both are answered.",
    "fieldname": "validation_rules_json",
    "fieldtype": "Code",
    "label": "Validation Rules (JSON)",
@@ -144,7 +145,7 @@
  "index_web_pages_for_search": 0,
  "istable": 1,
  "links": [],
- "modified": "2026-11-20 12:00:00.000000",
+ "modified": "2026-11-22 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "OmniQuery",
  "name": "OmniQuery Template Question Reference",

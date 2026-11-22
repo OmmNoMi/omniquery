@@ -2,6 +2,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import now_datetime
 
+from omniquery.services.answer_comparisons import validate_comparison_rules
 from omniquery.services.cascading_options import validate_cascading_questions
 from omniquery.services.schema_compiler import compile_template_schema
 
@@ -38,7 +39,9 @@ class OmniQueryTemplate(Document):
 		self.published_at = self.published_at or now_datetime()
 		schema = self._compile_schema()
 		# a draft may be saved half-built; what goes to the field must offer every dependent choice
+		# and check every answer comparison
 		validate_cascading_questions(schema["questions"])
+		validate_comparison_rules(schema)
 
 	def before_cancel(self):
 		self.status = "Deprecated"

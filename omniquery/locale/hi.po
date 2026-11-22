@@ -2786,3 +2786,23 @@ msgstr "उत्तर दर्ज करें"
 #: src/utils/requiredMessage.js
 msgid "Capture the location"
 msgstr "लोकेशन दर्ज करें"
+
+#: omniquery/services/answer_comparisons.py
+msgid "Question {0} is compared with {1}, which is not another question in this template."
+msgstr "प्रश्न {0} की तुलना {1} से होती है, जो इस टेम्पलेट का कोई दूसरा प्रश्न नहीं है।"
+
+#: omniquery/services/answer_comparisons.py
+msgid "Question {0} has operator {1}; use lte, gte or eq."
+msgstr "प्रश्न {0} में ऑपरेटर {1} है; lte, gte या eq का उपयोग करें।"
+
+#: omniquery/services/answer_comparisons.py
+msgid "Question {0} is compared as a number, so it needs a number field type."
+msgstr "प्रश्न {0} की तुलना संख्या के रूप में होती है, इसलिए इसे संख्या वाला फ़ील्ड प्रकार चाहिए।"
+
+#: omniquery/services/answer_comparisons.py
+msgid "Question {0} is compared with {1}, which comes in a later section."
+msgstr "प्रश्न {0} की तुलना {1} से होती है, जो बाद के अनुभाग में आता है।"
+
+#: omniquery/services/answer_comparisons.py
+msgid "Question {0} is compared with {1}, so it needs a message to show the surveyor."
+msgstr "प्रश्न {0} की तुलना {1} से होती है, इसलिए इसे सर्वेक्षक को दिखाने के लिए एक संदेश चाहिए।"
