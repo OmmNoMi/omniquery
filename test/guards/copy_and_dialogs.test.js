@@ -24,7 +24,7 @@ export const TITLE_CASE_ALLOWLIST = {
   "src/components/survey/FocusModeModal.vue": 5,
   "src/components/survey/GroupedQuestionCard.vue": 1,
   "src/components/survey/MatrixQuestionCard.vue": 11,
-  "src/components/survey/QuestionCard.vue": 14,
+  "src/components/survey/QuestionCard.vue": 13,
   "src/components/survey/SectionCard.vue": 1,
   "src/composables/useSession.js": 1,
   "src/composables/useSurveyApp.js": 2,

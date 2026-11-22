@@ -243,7 +243,7 @@ const parsedGroupMeta = computed(() => {
     };
   }
   const num = props.group.number;
-  if (num && !["TABLE", "GRID"].includes(String(num).toUpperCase())) {
+  if (num && String(num).toUpperCase() !== "TABLE") {
     return {
       number: num,
       text: full,

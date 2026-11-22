@@ -21,7 +21,7 @@ export const SMALL_TEXT_ALLOWLIST = {
   "src/components/survey/FocusModeModal.vue": 1,
   "src/components/survey/GroupedQuestionCard.vue": 5,
   "src/components/survey/MatrixQuestionCard.vue": 10,
-  "src/components/survey/QuestionCard.vue": 12,
+  "src/components/survey/QuestionCard.vue": 11,
   "src/views/Catalog.vue": 2,
   "src/views/Success.vue": 2,
 };

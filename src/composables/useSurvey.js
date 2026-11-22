@@ -4,6 +4,7 @@ import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { isAnswered, responseItems } from "../utils/responsePayload";
 import { PHONE_ERROR, isPhoneQuestion, isValidMobile } from "../utils/phone";
 import { comparisonError } from "../utils/answerComparison";
+import { gridsByCode } from "../utils/questionLayout";
 import { useTranslation } from "./useTranslation";
 import { REQUIRED_ERROR } from "../utils/requiredMessage";
 import { uuidv4 } from "../utils/uuid";
@@ -442,43 +443,23 @@ export function useSurvey() {
     }
   }
 
-  // the questions a section shows, in template order: the hidden ones only with Full Form on
-  function shownQuestions(section) {
+  // a section's questions, in template order
+  function sectionQuestions(section) {
     if (!section || !activeTemplate.value) return [];
-    const inSection = (activeTemplate.value.questions || []).filter((q) => q.section_code === section.section_code);
+    return (activeTemplate.value.questions || []).filter((q) => q.section_code === section.section_code);
+  }
+
+  // the questions a section shows: the hidden ones only with Full Form on
+  function shownQuestions(section) {
+    const inSection = sectionQuestions(section);
     return isFullForm.value ? inSection : inSection.filter((q) => isQuestionVisible(q));
   }
 
-  const activeQuestions = computed(() => {
-    const sectionQs = shownQuestions(activeSection.value);
+  const activeQuestions = computed(() => shownQuestions(activeSection.value));
 
-    // Automatically link sub-questions to their parent Table/Dynamic Grid question
-    let currentParentTitle = null;
-    let currentParentDesc = null;
-    let currentParentCode = null;
-
-    for (let i = 0; i < sectionQs.length; i++) {
-      const q = sectionQs[i];
-      const type = (q.field_type || "").toLowerCase();
-      const label = q.label_en || q.label || "";
-
-      if (type === "dynamic grid" || type === "table") {
-        currentParentTitle = label;
-        currentParentDesc = q.description || "";
-        currentParentCode = q.question_code;
-      } else if (/^[a-z][.\s]\s*/i.test(label) && currentParentTitle) {
-        q._parentTitle = currentParentTitle;
-        q._parentDescription = currentParentDesc;
-        q._parentCode = currentParentCode;
-      } else {
-        currentParentTitle = null;
-        currentParentDesc = null;
-        currentParentCode = null;
-      }
-    }
-
-    return sectionQs;
-  });
+  // the active section's grids, shown or hidden, for parentGrid: a question under a hidden grid still
+  // says which table it belongs to, and the template's questions are never written to (#140)
+  const sectionGrids = computed(() => gridsByCode(sectionQuestions(activeSection.value)));
 
   function isSectionComplete(section) {
     if (!section || !activeTemplate.value) return false;
@@ -588,6 +569,7 @@ export function useSurvey() {
     sections,
     activeSection,
     activeQuestions,
+    sectionGrids,
     responses,
     validationErrors,
     isSubmitting,

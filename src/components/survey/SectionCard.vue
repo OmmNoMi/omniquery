@@ -162,7 +162,7 @@ const emit = defineEmits([
   "toggle-full-form",
   "toggle-audio",
 ]);
-const { __, getSectionTitle } = useTranslation();
+const { __, getSectionTitle, getDescription } = useTranslation();
 
 const questionsContainerRef = ref(null);
 const bottomSpacerHeight = ref(80);
@@ -215,8 +215,5 @@ watch(() => props.currentIndex, () => {
 
 const sectionTitle = computed(() => getSectionTitle(props.section));
 
-const sectionDescription = computed(() => {
-  if (props.section.description_translated) return props.section.description_translated;
-  return props.section.description ? __(props.section.description) : "";
-});
+const sectionDescription = computed(() => getDescription(props.section));
 </script>

@@ -28,22 +28,7 @@
               : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
     ]"
   >
-    <!-- Pinned Parent Context (When rendering a subquestion belonging to a table/matrix) -->
-    <div
-      v-if="question._parentTitle"
-      class="mb-3 p-3 rounded-xl bg-surface-blue-1 border border-outline-blue-1 text-xs"
-    >
-      <div class="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">
-        <ClipboardList class="w-3.5 h-3.5" />
-        <span>{{ __('Main Table Question') }}</span>
-      </div>
-      <div class="font-extrabold text-sm text-slate-800 dark:text-slate-100 mt-0.5 leading-snug">
-        {{ question._parentTitle }}
-      </div>
-      <div v-if="question._parentDescription" class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-        {{ question._parentDescription }}
-      </div>
-    </div>
+    <ParentGridCard :grid="parentQuestion" />
 
     <!-- Question Header -->
     <div class="mb-2 flex items-start justify-between gap-2">
@@ -504,7 +489,6 @@ import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import { Alert, Button, Dialog, TabButtons, TextInput } from "frappe-ui";
 import { DialogDescription } from "reka-ui";
 import {
-  ClipboardList,
   X,
   Check,
   MapPin,
@@ -525,6 +509,7 @@ import FRating from "../common/FRating.vue";
 import FCurrencyInput from "../common/FCurrencyInput.vue";
 import FCombobox from "../common/FCombobox.vue";
 import FRangeSlider from "../common/FRangeSlider.vue";
+import ParentGridCard from "./ParentGridCard.vue";
 import { choiceButtonProps } from "../../utils/choiceButton";
 import { choiceGroupState } from "../../utils/choiceGroup";
 import { choiceOptions, hasOptions } from "../../utils/cascadingOptions";
@@ -558,10 +543,15 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  // the grid this question sits under, from parentGrid (#140)
+  parentQuestion: {
+    type: Object,
+    default: null,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "capture-gps", "answered", "next"]);
-const { __, getQuestionLabel } = useTranslation();
+const { __, getQuestionLabel, getDescription } = useTranslation();
 
 const cardRef = ref(null);
 const onCardEscape = useCardEscape(cardRef);
@@ -747,10 +737,7 @@ const parsedQuestionMeta = computed(() => {
   };
 });
 
-const questionDescription = computed(() => {
-  if (props.question.description_translated) return props.question.description_translated;
-  return props.question.description ? __(props.question.description) : "";
-});
+const questionDescription = computed(() => getDescription(props.question));
 
 const isSwitchControl = computed(() => {
   const variant = (props.question.control_variant || "").toLowerCase();

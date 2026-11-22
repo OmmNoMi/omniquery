@@ -7,6 +7,8 @@ const CORE_HINDI = {
   "Archived": "संग्रहीत",
   "Back to Dashboard": "डैशबोर्ड पर वापस जाएँ",
   "Breakdown table": "विवरण तालिका",
+  // the heading over the grid a question sits under (#140)
+  "Main table question": "मुख्य तालिका प्रश्न",
   "Download for Offline": "ऑफ़लाइन के लिए डाउनलोड करें",
   "Field SOPs & Protocols": "फ़ील्ड SOP और प्रोटोकॉल",
   "Loaded survey": "सर्वेक्षण लोड हुआ",
@@ -231,6 +233,16 @@ export function useTranslation() {
     return __(base);
   }
 
+  // a question's or a section's description in the surveyor's language. description_translated is
+  // compiled in the language of whoever submitted the template, so it is shown only in Hindi and only
+  // when it differs from the English; otherwise the text goes through __() (#140)
+  function getDescription(item) {
+    const text = item?.description || "";
+    const compiled = item?.description_translated;
+    if (currentLang.value === "hi" && compiled && compiled !== text) return compiled;
+    return text ? __(text) : "";
+  }
+
   // an answer comparison's message (#159), picked as a question's label is; QuestionCard passes it
   // through __() as it does every error
   function getRuleMessage(rule) {
@@ -257,6 +269,7 @@ export function useTranslation() {
     toggleLanguage,
     setLanguage,
     getQuestionLabel,
+    getDescription,
     getRuleMessage,
     getSectionTitle,
     getOptionLabel,

@@ -17,52 +17,36 @@ export function groupHeading(first, fallbackCode, fallbackTitle) {
   };
 }
 
+// A section's grids by question_code, so each question finds its own in one lookup (#140)
+export function gridsByCode(questions) {
+  return new Map((questions || []).filter(isMatrixQuestion).map((grid) => [grid.question_code, grid]));
+}
+
+// The grid a question sits under, when the template says so: its group_code names a matrix question
+// of the section (grids, from gridsByCode). A question is never put under a grid for the shape of its
+// label (#140).
+export function parentGrid(question, grids) {
+  const code = question?.group_code;
+  if (!code || code === question.question_code) return null;
+  return grids?.get(code) || null;
+}
+
 // The survey's questions as the page shows them: single cards, matrix cards, and runs of lettered
-// sub-questions (Q3a, Q3b or a., b.) under one heading. __ translates the one fallback title.
+// sub-questions (Q3a, Q3b or a., b.) under one heading. A grid is always a matrix card (#140).
+// __ translates the one fallback title.
 export function layoutQuestions(questions, __ = (text) => text) {
   const items = [];
+  // a group's code is its card's id (qc_<code>), so a group_code that names a question of the
+  // section, as one naming its grid does, gives way to the group's own code (#140)
+  const questionCodes = new Set(questions.map((q) => q.question_code));
+  const heading = (first, fallbackCode, fallbackTitle) => {
+    const own = groupHeading(first, fallbackCode, fallbackTitle);
+    return questionCodes.has(own.group_code) ? { ...own, group_code: fallbackCode } : own;
+  };
   let i = 0;
   while (i < questions.length) {
     const q = questions[i];
     const label = q.label_en || q.label || "";
-    const type = q.field_type || "";
-
-    if (type === "Dynamic Grid" || type === "Table") {
-      const groupQuestions = [];
-      let j = i + 1;
-      while (j < questions.length) {
-        const nextQ = questions[j];
-        const nextLabel = nextQ.label_en || nextQ.label || "";
-        if (/^[a-z][.\s]\s*/i.test(nextLabel)) {
-          nextQ._parentTitle = label;
-          nextQ._parentDescription = q.description || "";
-          nextQ._parentCode = q.question_code;
-          groupQuestions.push(nextQ);
-          j++;
-        } else {
-          break;
-        }
-      }
-      if (groupQuestions.length > 0) {
-        items.push({
-          type: "group",
-          group_code: q.question_code,
-          number: "GRID",
-          title: label,
-          description: q.description || "",
-          questions: groupQuestions,
-        });
-        i = j;
-        continue;
-      }
-
-      items.push({
-        type: "matrix",
-        question: q,
-      });
-      i++;
-      continue;
-    }
 
     if (isMatrixQuestion(q)) {
       items.push({
@@ -92,7 +76,7 @@ export function layoutQuestions(questions, __ = (text) => text) {
       if (groupQuestions.length > 1) {
         items.push({
           type: "group",
-          ...groupHeading(q, `group_${baseNum}`, baseNum),
+          ...heading(q, `group_${baseNum}`, baseNum),
           number: baseNum,
           description: "",
           questions: groupQuestions,
@@ -116,11 +100,13 @@ export function layoutQuestions(questions, __ = (text) => text) {
         }
       }
       if (groupQuestions.length > 1) {
-        const prevQuestion = items[items.length - 1]?.question;
+        // a grid before the run is its own card, not the run's lead question (#140)
+        const prev = items[items.length - 1];
+        const prevQuestion = prev?.type === "single" ? prev.question : null;
         const prevLabel = prevQuestion ? prevQuestion.label_en || prevQuestion.label || "" : "";
         items.push({
           type: "group",
-          ...groupHeading(q, `group_${q.question_code}`, prevLabel || __("Breakdown table")),
+          ...heading(q, `group_${q.question_code}`, prevLabel || __("Breakdown table")),
           number: "TABLE",
           description: "",
           questions: groupQuestions,

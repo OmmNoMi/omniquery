@@ -49,26 +49,11 @@
 
       <!-- Top-Aligned Question Area: Mobile Keyboard-Friendly (no jumping/squishing) -->
       <div ref="scrollAreaRef" class="w-full flex-1 min-h-0 py-1 overflow-y-auto" @focusout="onQuestionFocusOut">
-        <!-- Pinned Parent Question Card (Sticky inside Focus Mode scroll area) -->
-        <div
-          v-if="currentQuestion?._parentTitle || currentQuestion?.parent_title"
-          class="sticky top-0 z-20 mb-3 p-3.5 rounded-2xl bg-slate-900/95 border border-emerald-500/40 shadow-xl backdrop-blur-md text-left"
-        >
-          <div class="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-400">
-            <ClipboardList class="w-3.5 h-3.5" />
-            <span>{{ __('Main Table Question') }}</span>
-          </div>
-          <div class="text-sm sm:text-base font-extrabold text-white mt-1 leading-snug">
-            {{ currentQuestion._parentTitle || currentQuestion.parent_title }}
-          </div>
-          <div v-if="currentQuestion._parentDescription" class="text-xs text-slate-300 mt-1">
-            {{ currentQuestion._parentDescription }}
-          </div>
-        </div>
-
         <!-- the dialog's leave transition still renders this after its question is gone, as when an
           answer hides the questions after it (#152) -->
         <template v-if="currentQuestion">
+          <!-- the grid the question sits under stays at the top as the question scrolls (#140) -->
+          <ParentGridCard :grid="parentGrid(currentQuestion, sectionGrids)" class="sticky top-0 z-20 shadow-sm" />
           <MatrixQuestionCard
             v-if="isMatrixQuestion(currentQuestion)"
             ref="questionCardRef"
@@ -142,10 +127,12 @@ import { computed, ref, watch } from "vue";
 import { useTimeoutFn } from "@vueuse/core";
 import { Button, Dialog } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
-import { ArrowLeft, ArrowRight, ClipboardList, X } from "lucide-vue-next";
+import { ArrowLeft, ArrowRight, X } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
+import ParentGridCard from "./ParentGridCard.vue";
 import { parentAnswer } from "../../utils/cascadingOptions";
+import { parentGrid } from "../../utils/questionLayout";
 import MatrixQuestionCard from "./MatrixQuestionCard.vue";
 import { isMatrixQuestion } from "../../utils/questionLayout";
 import SurveyModeMenu from "./SurveyModeMenu.vue";
@@ -158,6 +145,11 @@ const props = defineProps({
   questions: {
     type: Array,
     required: true,
+  },
+  // the section's grids, from gridsByCode, so a question shows the grid it sits under (#140)
+  sectionGrids: {
+    type: Map,
+    default: () => new Map(),
   },
   currentIndex: {
     type: Number,

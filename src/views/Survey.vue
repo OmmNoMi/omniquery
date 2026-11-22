@@ -47,6 +47,7 @@
           :question="item.question"
           :modelValue="s.responses[item.question.question_code]"
           :parentValue="parentAnswer(item.question, s.responses)"
+          :parentQuestion="parentGrid(item.question, s.sectionGrids)"
           @update:modelValue="s.setResponse(item.question.question_code, $event)"
           :errorMessage="s.validationErrors[item.question.question_code]"
           :notApplicable="!s.isQuestionVisible(item.question)"
@@ -62,6 +63,7 @@
     <FocusModeModal
       :isOpen="s.isFocusMode"
       :questions="s.activeQuestions"
+      :sectionGrids="s.sectionGrids"
       :currentIndex="s.focusQuestionIndex"
       :responses="s.responses"
       :validationErrors="s.validationErrors"
@@ -89,6 +91,7 @@ import MatrixQuestionCard from "../components/survey/MatrixQuestionCard.vue";
 import FocusModeModal from "../components/survey/FocusModeModal.vue";
 import { useSurveySession } from "../composables/useSurveyApp";
 import { parentAnswer } from "../utils/cascadingOptions";
+import { parentGrid } from "../utils/questionLayout";
 
 // every answer goes through s.setResponse, so the session owns the one write path (#46)
 const s = useSurveySession();
