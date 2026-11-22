@@ -4,6 +4,7 @@ import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { isAnswered, responseItems } from "../utils/responsePayload";
 import { PHONE_ERROR, isPhoneQuestion, isValidMobile } from "../utils/phone";
 import { comparisonError } from "../utils/answerComparison";
+import { parentGrid } from "../utils/questionLayout";
 import { useTranslation } from "./useTranslation";
 import { REQUIRED_ERROR } from "../utils/requiredMessage";
 import { uuidv4 } from "../utils/uuid";
@@ -452,29 +453,10 @@ export function useSurvey() {
   const activeQuestions = computed(() => {
     const sectionQs = shownQuestions(activeSection.value);
 
-    // Automatically link sub-questions to their parent Table/Dynamic Grid question
-    let currentParentTitle = null;
-    let currentParentDesc = null;
-    let currentParentCode = null;
-
-    for (let i = 0; i < sectionQs.length; i++) {
-      const q = sectionQs[i];
-      const type = (q.field_type || "").toLowerCase();
-      const label = q.label_en || q.label || "";
-
-      if (type === "dynamic grid" || type === "table") {
-        currentParentTitle = label;
-        currentParentDesc = q.description || "";
-        currentParentCode = q.question_code;
-      } else if (/^[a-z][.\s]\s*/i.test(label) && currentParentTitle) {
-        q._parentTitle = currentParentTitle;
-        q._parentDescription = currentParentDesc;
-        q._parentCode = currentParentCode;
-      } else {
-        currentParentTitle = null;
-        currentParentDesc = null;
-        currentParentCode = null;
-      }
+    // the grid each question sits under, by its group_code; set on every question every time, so a
+    // question that leaves a grid's group never keeps the old card (#140)
+    for (const q of sectionQs) {
+      q._parentQuestion = parentGrid(q, sectionQs);
     }
 
     return sectionQs;

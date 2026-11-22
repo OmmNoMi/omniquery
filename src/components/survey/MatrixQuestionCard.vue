@@ -38,8 +38,8 @@
             {{ parsedMeta.text }}
             <span v-if="question.is_mandatory" class="text-rose-500 font-extrabold ml-0.5">*</span>
           </h3>
-          <p v-if="question.description" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {{ __(question.description) }}
+          <p v-if="getQuestionDescription(question)" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            {{ getQuestionDescription(question) }}
           </p>
         </div>
       </div>
@@ -402,7 +402,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue", "answered", "next"]);
-const { __ } = useTranslation();
+const { __, getQuestionDescription } = useTranslation();
 
 const cardRef = ref(null);
 // The sticky header's height, as the cells' scroll margin (main.css), so a cell scrolled to lands below it

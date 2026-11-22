@@ -441,6 +441,25 @@ describe("useSurvey", () => {
     expect(survey.validationErrors.value.q_expenses).toBeUndefined();
   });
 
+  // #140: a question is put under a grid by its group_code, and the link is redone every time
+  it("puts a question under the grid its group_code names, and takes it away when that goes (#140)", () => {
+    const survey = useSurvey();
+    survey.isFullForm.value = true;
+    const activity = { section_code: "s1", question_code: "activity", label_en: "Activity Involvements", field_type: "Dynamic Grid" };
+    const share = { section_code: "s1", question_code: "a_share", label_en: "a. Own share", group_code: "activity" };
+    const note = { section_code: "s1", question_code: "b_note", label_en: "b. Notes" };
+    const template = { template_name: "TMPL-GRID", sections: [{ section_code: "s1" }], questions: [activity, share, note] };
+    survey.activeTemplate.value = template;
+    survey.activeSectionIndex.value = 0;
+    const [, linked, unlinked] = survey.activeQuestions.value;
+    expect(linked._parentQuestion).toMatchObject({ question_code: "activity" });
+    expect(unlinked._parentQuestion).toBeNull();
+
+    delete share.group_code;
+    survey.activeTemplate.value = { ...template };
+    expect(survey.activeQuestions.value[1]._parentQuestion).toBeNull();
+  });
+
   it("waits to compare answers until both are in and both questions are shown (#159)", () => {
     const survey = useSurvey();
     const rule = { operator: "lte", compare_to: "q_income", message: "Expenses cannot exceed income" };

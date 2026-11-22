@@ -28,9 +28,9 @@
               : 'bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 shadow-2xs hover:border-slate-300 dark:hover:border-slate-700'
     ]"
   >
-    <!-- Pinned Parent Context (When rendering a subquestion belonging to a table/matrix) -->
+    <!-- the grid this question sits under, when its group_code names one (#140) -->
     <div
-      v-if="question._parentTitle"
+      v-if="question._parentQuestion"
       class="mb-3 p-3 rounded-xl bg-surface-blue-1 border border-outline-blue-1 text-xs"
     >
       <div class="flex items-center gap-1.5 text-[10px] font-mono font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">
@@ -38,10 +38,10 @@
         <span>{{ __('Main Table Question') }}</span>
       </div>
       <div class="font-extrabold text-sm text-slate-800 dark:text-slate-100 mt-0.5 leading-snug">
-        {{ question._parentTitle }}
+        {{ getQuestionLabel(question._parentQuestion) }}
       </div>
-      <div v-if="question._parentDescription" class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-        {{ question._parentDescription }}
+      <div v-if="getQuestionDescription(question._parentQuestion)" class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+        {{ getQuestionDescription(question._parentQuestion) }}
       </div>
     </div>
 
@@ -561,7 +561,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue", "capture-gps", "answered", "next"]);
-const { __, getQuestionLabel } = useTranslation();
+const { __, getQuestionLabel, getQuestionDescription } = useTranslation();
 
 const cardRef = ref(null);
 const onCardEscape = useCardEscape(cardRef);
@@ -747,10 +747,7 @@ const parsedQuestionMeta = computed(() => {
   };
 });
 
-const questionDescription = computed(() => {
-  if (props.question.description_translated) return props.question.description_translated;
-  return props.question.description ? __(props.question.description) : "";
-});
+const questionDescription = computed(() => getQuestionDescription(props.question));
 
 const isSwitchControl = computed(() => {
   const variant = (props.question.control_variant || "").toLowerCase();

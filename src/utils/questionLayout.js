@@ -17,52 +17,24 @@ export function groupHeading(first, fallbackCode, fallbackTitle) {
   };
 }
 
+// The grid a question sits under, when the template says so: its group_code names a matrix question
+// of the section. A question is never put under a grid for the shape of its label (#140).
+export function parentGrid(question, sectionQuestions) {
+  const code = question?.group_code;
+  if (!code || code === question.question_code) return null;
+  const grid = sectionQuestions.find((other) => other.question_code === code);
+  return isMatrixQuestion(grid) ? grid : null;
+}
+
 // The survey's questions as the page shows them: single cards, matrix cards, and runs of lettered
-// sub-questions (Q3a, Q3b or a., b.) under one heading. __ translates the one fallback title.
+// sub-questions (Q3a, Q3b or a., b.) under one heading. A grid is always a matrix card (#140).
+// __ translates the one fallback title.
 export function layoutQuestions(questions, __ = (text) => text) {
   const items = [];
   let i = 0;
   while (i < questions.length) {
     const q = questions[i];
     const label = q.label_en || q.label || "";
-    const type = q.field_type || "";
-
-    if (type === "Dynamic Grid" || type === "Table") {
-      const groupQuestions = [];
-      let j = i + 1;
-      while (j < questions.length) {
-        const nextQ = questions[j];
-        const nextLabel = nextQ.label_en || nextQ.label || "";
-        if (/^[a-z][.\s]\s*/i.test(nextLabel)) {
-          nextQ._parentTitle = label;
-          nextQ._parentDescription = q.description || "";
-          nextQ._parentCode = q.question_code;
-          groupQuestions.push(nextQ);
-          j++;
-        } else {
-          break;
-        }
-      }
-      if (groupQuestions.length > 0) {
-        items.push({
-          type: "group",
-          group_code: q.question_code,
-          number: "GRID",
-          title: label,
-          description: q.description || "",
-          questions: groupQuestions,
-        });
-        i = j;
-        continue;
-      }
-
-      items.push({
-        type: "matrix",
-        question: q,
-      });
-      i++;
-      continue;
-    }
 
     if (isMatrixQuestion(q)) {
       items.push({
@@ -116,7 +88,9 @@ export function layoutQuestions(questions, __ = (text) => text) {
         }
       }
       if (groupQuestions.length > 1) {
-        const prevQuestion = items[items.length - 1]?.question;
+        // a grid before the run is its own card, not the run's lead question (#140)
+        const prev = items[items.length - 1];
+        const prevQuestion = prev?.type === "single" ? prev.question : null;
         const prevLabel = prevQuestion ? prevQuestion.label_en || prevQuestion.label || "" : "";
         items.push({
           type: "group",

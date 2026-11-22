@@ -231,6 +231,12 @@ export function useTranslation() {
     return __(base);
   }
 
+  // a question's description: the site's translation when the template has one, else through __()
+  function getQuestionDescription(question) {
+    if (question?.description_translated) return question.description_translated;
+    return question?.description ? __(question.description) : "";
+  }
+
   // an answer comparison's message (#159), picked as a question's label is; QuestionCard passes it
   // through __() as it does every error
   function getRuleMessage(rule) {
@@ -257,6 +263,7 @@ export function useTranslation() {
     toggleLanguage,
     setLanguage,
     getQuestionLabel,
+    getQuestionDescription,
     getRuleMessage,
     getSectionTitle,
     getOptionLabel,

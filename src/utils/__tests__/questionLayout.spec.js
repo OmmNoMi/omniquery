@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { groupHeading, isMatrixQuestion, layoutQuestions } from "../questionLayout";
+import { groupHeading, isMatrixQuestion, layoutQuestions, parentGrid } from "../questionLayout";
 
 const q = (question_code, label_en, extra = {}) => ({ question_code, label_en, field_type: "Text", ...extra });
 
@@ -59,5 +59,52 @@ describe("layoutQuestions", () => {
   it("puts a matrix question on its own matrix card and the rest on single cards", () => {
     const items = layoutQuestions([q("grid", "Sources", { field_type: "Matrix" }), q("note", "Notes")]);
     expect(items.map((x) => x.type)).toEqual(["matrix", "single"]);
+  });
+
+  // #140: the SHG survey's activity grid was swallowed by the sourcing questions after it: they took
+  // its place under its title, and the grid itself was never drawn
+  const grid = (field_type) => q("activity_involvements", "Activity Involvements", { field_type });
+  const sourcing = [
+    q("source_nearby_town_pct", "a. Nearby town/district (%)"),
+    q("source_wholesale_in_state_pct", "b. Wholesale market in the state (%)"),
+    q("source_wholesale_out_state_pct", "c. Wholesale market outside the state (%)"),
+    q("source_online_pct", "d. Order online (Amazon/Meesho) (%)"),
+  ];
+
+  for (const field_type of ["Dynamic Grid", "Table"]) {
+    it(`draws a ${field_type} before a lettered run as its own card, and the run apart (#140)`, () => {
+      const items = layoutQuestions([grid(field_type), ...sourcing, q("marketing_methods", "Q8. How do you sell?")]);
+      expect(items.map((x) => x.type)).toEqual(["matrix", "group", "single"]);
+      expect(items[0].question.question_code).toBe("activity_involvements");
+      expect(items[1].questions.map((x) => x.question_code)).toEqual(sourcing.map((x) => x.question_code));
+      expect(items[1].title).toBe("Breakdown table");
+    });
+  }
+
+  it("draws a grid followed by a label that opens with a one-letter word as two cards (#140)", () => {
+    const items = layoutQuestions([grid("Dynamic Grid"), q("owner", "I am the owner")]);
+    expect(items.map((x) => x.type)).toEqual(["matrix", "single"]);
+  });
+});
+
+describe("parentGrid", () => {
+  const activity = q("activity_involvements", "Activity Involvements", { field_type: "Dynamic Grid" });
+  const lead = q("lead", "Who owns the shop?");
+
+  it("is the grid the question's group_code names (#140)", () => {
+    const share = q("a_share", "a. Own share", { group_code: "activity_involvements" });
+    expect(parentGrid(share, [activity, share])).toBe(activity);
+  });
+
+  it("is never read off the shape of a label", () => {
+    const share = q("a_share", "a. Own share");
+    expect(parentGrid(share, [activity, share])).toBeNull();
+  });
+
+  it("is nothing when the group_code names no grid of the section, or the question itself", () => {
+    expect(parentGrid(q("a_share", "a. Own share", { group_code: "lead" }), [lead])).toBeNull();
+    expect(parentGrid(q("a_share", "a. Own share", { group_code: "elsewhere" }), [activity])).toBeNull();
+    expect(parentGrid(activity, [{ ...activity, group_code: "activity_involvements" }])).toBeNull();
+    expect(parentGrid({ ...activity, group_code: "activity_involvements" }, [activity])).toBeNull();
   });
 });

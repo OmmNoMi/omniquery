@@ -64,3 +64,25 @@ describe("getRuleMessage", () => {
     expect(getRuleMessage(null)).toBe("");
   });
 });
+
+// #140: a question's description, shared by the question card, the matrix card and the grid a
+// question sits under
+describe("getQuestionDescription", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    localStorage.clear();
+  });
+
+  it("prefers the site's translation, then puts the description through __()", async () => {
+    const { __, getQuestionDescription } = (await import("../useTranslation")).useTranslation();
+    expect(getQuestionDescription({ description: "Next", description_translated: "साइट" })).toBe("साइट");
+    expect(__("Next")).not.toBe("Next");
+    expect(getQuestionDescription({ description: "Next" })).toBe(__("Next"));
+  });
+
+  it("is nothing for a question with no description", async () => {
+    const { getQuestionDescription } = (await import("../useTranslation")).useTranslation();
+    expect(getQuestionDescription({})).toBe("");
+    expect(getQuestionDescription(null)).toBe("");
+  });
+});
