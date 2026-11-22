@@ -551,7 +551,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue", "capture-gps", "answered", "next"]);
-const { __, getQuestionLabel, getDescription } = useTranslation();
+const { __, getQuestionLabel, getDescription, getOptionLabel } = useTranslation();
 
 const cardRef = ref(null);
 const onCardEscape = useCardEscape(cardRef);
@@ -871,7 +871,7 @@ const isChoiceControl = computed(() => {
 
 // a dependent question (Block under District) offers only the parent answer's choices (#24)
 const normalizedOptions = computed(() =>
-  choiceOptions(props.question, props.parentValue).map((opt) => ({ value: opt.value, label: __(opt.label) }))
+  choiceOptions(props.question, props.parentValue).map((opt) => ({ value: opt.value, label: getOptionLabel(opt) }))
 );
 
 const displayedGridOptions = computed(() => {

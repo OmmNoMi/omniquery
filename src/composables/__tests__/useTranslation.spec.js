@@ -105,3 +105,59 @@ describe("getDescription", () => {
     expect(getDescription(null)).toBe("");
   });
 });
+
+// #165: a question's label, a section's title and a choice's label. Each *_translated field is
+// frappe._() run once at template submit, in the submitter's language, so it is shown only in Hindi
+// and only when it differs from the authored text; otherwise the text goes through __(), which
+// reads the surveyor's own translations.
+describe("labels, section titles and choices in the surveyor's language", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    localStorage.clear();
+  });
+
+  async function load(lang) {
+    const t = (await import("../useTranslation")).useTranslation();
+    t.setLanguage(lang);
+    return t;
+  }
+
+  it("shows a Hindi surveyor the compiled Hindi", async () => {
+    const { getQuestionLabel, getSectionTitle, getOptionLabel } = await load("hi");
+    expect(getQuestionLabel({ label_en: "Village", label_translated: "गाँव" })).toBe("गाँव");
+    expect(getSectionTitle({ section_title: "Household", section_title_translated: "परिवार" })).toBe("परिवार");
+    expect(getOptionLabel({ value: "Yes", label: "Yes", compiled: "हाँ (साइट)" })).toBe("हाँ (साइट)");
+  });
+
+  it("puts English-compiled text through __() for a Hindi surveyor", async () => {
+    const { __, getQuestionLabel, getSectionTitle, getOptionLabel } = await load("hi");
+    expect(__("Next")).not.toBe("Next");
+    expect(getQuestionLabel({ label_en: "Next", label_translated: "Next" })).toBe(__("Next"));
+    expect(getQuestionLabel({ label: "Next", label_translated: "Next" })).toBe(__("Next"));
+    expect(getSectionTitle({ section_title: "Next", section_title_translated: "Next" })).toBe(__("Next"));
+    expect(getOptionLabel({ value: "Next", label: "Next", compiled: "Next" })).toBe(__("Next"));
+    expect(getOptionLabel({ value: "Next", label: "Next", compiled: "" })).toBe(__("Next"));
+  });
+
+  it("shows an English surveyor the authored text, never Hindi-compiled", async () => {
+    const { getQuestionLabel, getSectionTitle, getOptionLabel } = await load("en");
+    expect(getQuestionLabel({ label_en: "Village", label_translated: "गाँव" })).toBe("Village");
+    expect(getSectionTitle({ section_title: "Household", section_title_translated: "परिवार" })).toBe("Household");
+    expect(getOptionLabel({ value: "Yes", label: "Yes", compiled: "हाँ" })).toBe("Yes");
+  });
+
+  it("keeps a template's own Hindi ahead of the compiled text", async () => {
+    const { getQuestionLabel, getSectionTitle } = await load("hi");
+    expect(getQuestionLabel({ label_en: "Village", label_hi: "ग्राम", label_translated: "गाँव" })).toBe("ग्राम");
+    expect(getSectionTitle({ section_title: "Household", section_title_hi: "घर", section_title_translated: "परिवार" })).toBe("घर");
+  });
+
+  it("is nothing with no text, and reads only text", async () => {
+    const { getQuestionLabel, getSectionTitle, getOptionLabel } = await load("hi");
+    expect(getQuestionLabel(null)).toBe("");
+    expect(getSectionTitle(null)).toBe("");
+    expect(getOptionLabel(null)).toBe("");
+    expect(getQuestionLabel({ question_code: "q1", label_translated: ["x"] })).toBe("q1");
+    expect(getOptionLabel({ value: 0, label: "0", compiled: 0 })).toBe("0");
+  });
+});

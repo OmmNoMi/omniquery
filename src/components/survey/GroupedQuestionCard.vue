@@ -114,7 +114,7 @@
                   : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600 focus:border-emerald-500'
               ]"
             >
-              {{ __(opt.label) }}
+              {{ getOptionLabel(opt) }}
             </Button>
           </div>
 
@@ -226,7 +226,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update-response", "answered"]);
-const { __ } = useTranslation();
+const { __, getOptionLabel } = useTranslation();
 
 const answeredCount = computed(() => props.group.questions.filter((q) => isAnswered(props.responses[q.question_code])).length);
 const isGroupCompleted = computed(() => props.group.questions.every((q) => isAnswered(props.responses[q.question_code])));
