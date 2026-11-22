@@ -193,11 +193,18 @@ class TestSyncConcurrency(FrappeTestCase):
 		self.assert_not_recorded(*subs)
 
 	def test_guest_private_template_asks_for_a_sign_in(self):
+		"""The refusal is still in the Sync Audit Log, where a manager looks for a refused interview."""
 		self.as_guest()
 		sub = self.guest_submission()
 		with self.assertRaises(frappe.PermissionError):
 			batch_push([sub])
-		self.assert_not_recorded(sub)
+		key = sub["idempotency_key"]
+		self.assertFalse(frappe.db.exists("OmniQuery Response", {"idempotency_key": key}))
+		audit = frappe.db.get_value(
+			"OmniQuery Sync Audit Log", {"idempotency_key": key}, ["sync_status", "error_message"], as_dict=True
+		)
+		self.assertEqual(audit.sync_status, "REJECTED")
+		self.assertIn("Permission denied for template", audit.error_message)
 
 	def test_an_ended_session_is_reported_as_expired(self):
 		"""Even on a template a Guest may fill in: the interview belongs to the surveyor whose session ended,

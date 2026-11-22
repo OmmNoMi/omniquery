@@ -235,9 +235,20 @@ def refuse_ended_session():
 	"""Raise SessionExpired (401) for a request whose session has ended, as Frappe does on a method that
 	needs a sign-in (frappe.is_whitelisted). Such a request runs as Guest: on a public template its
 	interview would be filed under the Guest Surveyor and owned by Guest, so the surveyor's own retry is
-	refused as an overwrite; on any other it would be REJECTED, which the device quarantines (#127)."""
+	refused as an overwrite; on any other it would be REJECTED, which the device quarantines (#127).
+
+	Frappe marks the flag only for the first request after the session ends, whose response resets the
+	cookie to Guest; the device checks that cookie itself before each sync (syncCall in useWAL.js). The
+	Guest test is Frappe's own, kept so the two read alike."""
 	if frappe.session.user == "Guest" and frappe.response.get("session_expired"):
 		raise frappe.SessionExpired
+
+
+def refuse_guest():
+	"""Refuse a Guest with Frappe's own PermissionError (403) and message for a method that needs a
+	sign-in (frappe.is_whitelisted), so a surveyor's device keeps its queue and asks for a sign-in (#127)."""
+	if frappe.session.user == "Guest":
+		frappe.throw(_("You are not permitted to access this resource. Login to access"), frappe.PermissionError)
 
 
 @frappe.whitelist(allow_guest=True)
@@ -273,9 +284,7 @@ def sync_draft(data=None):
 
 	# Security: Strict template RBAC validation
 	if not user_has_template_permission(template_name, user=current_user):
-		# a Guest is refused as Frappe refuses one, so the device asks for a sign-in (#127)
-		if current_user == "Guest":
-			frappe.throw(_("Sign in to save this survey"), frappe.PermissionError)
+		refuse_guest()
 		return {"status": "REJECTED", "error": f"Permission denied for template {template_name}"}
 
 	doc_name = (
@@ -438,10 +447,9 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 	current_user = frappe.session.user
 	refuse_ended_session()
 
-	# Security: Guests are strictly limited to single-form submission (no batch processing). They are
-	# refused as Frappe refuses a Guest, so the device keeps the queue and asks for a sign-in (#127).
-	if current_user == "Guest" and len(submissions) > 1:
-		frappe.throw(_("Sign in to sync these interviews"), frappe.PermissionError)
+	# Security: Guests are strictly limited to single-form submission (no batch processing)
+	if len(submissions) > 1:
+		refuse_guest()
 
 	# Durable file-system dump: guaranteed never to fail even under DB lockouts
 	log_raw_ingestion_dump("batch_push", raw_data or submissions, client_ip=client_ip, surveyor=current_user)
@@ -483,13 +491,13 @@ def push_submissions(submissions, surveyor=None, raw_data=None):
 
 		# Security: Strict template RBAC validation
 		if not user_has_template_permission(template_name, user=current_user):
-			if current_user == "Guest":
-				frappe.throw(_("Sign in to sync this interview"), frappe.PermissionError)
 			err_msg = f"Permission denied for template {template_name}"
 			upsert_audit_log(idempotency_key, {
 				"surveyor": surveyor, "sync_status": "REJECTED",
 				"client_ip": client_ip, "raw_payload": raw_payload_str, "error_message": err_msg,
 			})
+			# the audit log above is committed, so a manager still finds the refused Guest's interview
+			refuse_guest()
 			results.append({"idempotency_key": reply_key, "status": "REJECTED", "error": err_msg})
 			continue
 
