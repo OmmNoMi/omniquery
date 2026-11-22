@@ -39,6 +39,8 @@ if (typeof window !== "undefined") {
       now_datetime: () => new Date().toISOString(),
     },
   };
+  // the cookie Frappe keeps beside the sid for the signed-in user, which syncCall checks (#127)
+  document.cookie = "user_id=test_surveyor@example.com";
 }
 
 // Global Vue Test Utils config for frappe-ui (router mock)

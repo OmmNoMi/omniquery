@@ -3,7 +3,7 @@ import { useTranslation } from "./useTranslation";
 
 // The signed-in user as the portal page boots them (omniquery/www/omniquery.html).
 // It does not change while the page is open: signing in or out reloads it.
-function booted(key) {
+export function booted(key) {
   return (typeof window !== "undefined" && window.frappe && window.frappe[key]) || "";
 }
 

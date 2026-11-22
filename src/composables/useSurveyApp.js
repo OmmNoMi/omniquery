@@ -3,7 +3,7 @@ import { call, toast } from "frappe-ui";
 import { useClipboard, usePreferredReducedMotion, watchDebounced } from "@vueuse/core";
 import { db, SYNCED, NOT_SYNCED } from "../services/db";
 import { useSurvey } from "./useSurvey";
-import { useWAL } from "./useWAL";
+import { useWAL, syncCall } from "./useWAL";
 import { useGPS } from "./useGPS";
 import { useTextScale } from "./useTextScale";
 import { useTranslation } from "./useTranslation";
@@ -476,7 +476,7 @@ export function useSurveyApp() {
 
     try {
       isSyncingDraft.value = true;
-      const res = await call("omniquery.api.sync.sync_draft", { draft: payload });
+      const res = await syncCall("omniquery.api.sync.sync_draft", { draft: payload });
       if (!draftStored(res)) {
         console.warn("Draft not stored on the server:", res);
         return false;

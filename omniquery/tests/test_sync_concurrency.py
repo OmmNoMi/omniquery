@@ -2,7 +2,7 @@ import unittest.mock
 import uuid
 import frappe
 from frappe.tests.utils import FrappeTestCase
-from omniquery.api.sync import batch_push
+from omniquery.api.sync import batch_push, sync_draft
 from omniquery.tests.utils import delete_test_docs, sync_records_of
 
 
@@ -157,39 +157,84 @@ class TestSyncConcurrency(FrappeTestCase):
 		dump_file = os.path.join(frappe.get_site_path("logs"), "omniquery_payloads_dump.jsonl")
 		self.assertTrue(os.path.exists(dump_file))
 
-	def test_guest_batch_push_rejected(self):
+	def as_guest(self, session_expired=False):
+		"""Run the rest of the test as Guest, as a request whose session has ended when `session_expired`
+		(Frappe's sessions.py marks the response so)."""
 		orig_user = frappe.session.user
-		try:
-			frappe.set_user("Guest")
-			subs = [
-				{"idempotency_key": str(uuid.uuid4()), "survey_template": self.test_template_name, "items": []},
-				{"idempotency_key": str(uuid.uuid4()), "survey_template": self.test_template_name, "items": []},
-			]
-			res = batch_push(subs)
-			results = res.get("results", []) if isinstance(res, dict) else res
-			self.assertEqual(len(results), 2)
-			self.assertEqual(results[0]["status"], "REJECTED")
-			self.assertIn("Batch push not permitted", results[0]["error"])
-		finally:
-			frappe.set_user(orig_user)
+		frappe.set_user("Guest")
+		self.addCleanup(frappe.set_user, orig_user)
+		if session_expired:
+			frappe.local.response["session_expired"] = 1
+			self.addCleanup(frappe.local.response.pop, "session_expired", None)
 
-	def test_guest_private_template_rejected(self):
-		orig_user = frappe.session.user
-		try:
-			frappe.set_user("Guest")
-			# test_template_name is not public
-			sub = {
-				"idempotency_key": str(uuid.uuid4()),
-				"survey_template": self.test_template_name,
-				"items": [{"question_code": "q1", "value": "test"}],
-			}
-			res = batch_push([sub])
-			results = res.get("results", []) if isinstance(res, dict) else res
-			self.assertEqual(len(results), 1)
-			self.assertEqual(results[0]["status"], "REJECTED")
-			self.assertIn("Guest access not permitted", results[0]["error"])
-		finally:
-			frappe.set_user(orig_user)
+	def guest_submission(self):
+		# test_template_name is not public
+		return {
+			"idempotency_key": str(uuid.uuid4()),
+			"survey_template": self.test_template_name,
+			"items": [{"question_code": "q1", "value": "test"}],
+		}
+
+	def assert_not_recorded(self, *subs):
+		for sub in subs:
+			key = sub["idempotency_key"]
+			self.assertFalse(frappe.db.exists("OmniQuery Response", {"idempotency_key": key}))
+			self.assertFalse(frappe.db.exists("OmniQuery Sync Audit Log", {"idempotency_key": key}))
+
+	# A Guest is refused the way Frappe refuses one on a method that needs a sign-in, so the device keeps
+	# the interviews queued and asks for a sign-in. A REJECTED result would quarantine them (#127).
+	def test_guest_batch_push_asks_for_a_sign_in(self):
+		"""Even on a template a Guest may fill in, a Guest sends one interview at a time."""
+		self.as_guest()
+		subs = [self.guest_submission(), self.guest_submission()]
+		with unittest.mock.patch("omniquery.api.sync.user_has_template_permission", return_value=True):
+			with self.assertRaises(frappe.PermissionError):
+				batch_push(subs)
+		self.assert_not_recorded(*subs)
+
+	def test_guest_private_template_asks_for_a_sign_in(self):
+		"""The refusal is still in the Sync Audit Log, where a manager looks for a refused interview."""
+		self.as_guest()
+		sub = self.guest_submission()
+		with self.assertRaises(frappe.PermissionError):
+			batch_push([sub])
+		key = sub["idempotency_key"]
+		self.assertFalse(frappe.db.exists("OmniQuery Response", {"idempotency_key": key}))
+		audit = frappe.db.get_value(
+			"OmniQuery Sync Audit Log", {"idempotency_key": key}, ["sync_status", "error_message"], as_dict=True
+		)
+		self.assertEqual(audit.sync_status, "REJECTED")
+		self.assertIn("Permission denied for template", audit.error_message)
+
+	def test_an_ended_session_is_reported_as_expired(self):
+		"""Even on a template a Guest may fill in: the interview belongs to the surveyor whose session ended,
+		not to Guest."""
+		self.as_guest(session_expired=True)
+		subs = [self.guest_submission() for _ in range(4)]
+		with unittest.mock.patch("omniquery.api.sync.user_has_template_permission", return_value=True):
+			with self.assertRaises(frappe.SessionExpired):
+				batch_push(subs[:2])
+			with self.assertRaises(frappe.SessionExpired):
+				batch_push([subs[2]])
+			with self.assertRaises(frappe.SessionExpired):
+				sync_draft(subs[3])
+		self.assert_not_recorded(*subs)
+
+	def test_guest_draft_on_a_private_template_asks_for_a_sign_in(self):
+		self.as_guest()
+		sub = self.guest_submission()
+		with self.assertRaises(frappe.PermissionError):
+			sync_draft(sub)
+		self.assert_not_recorded(sub)
+
+	def test_a_signed_in_user_without_the_template_is_still_rejected(self):
+		"""Signing in again would not help, so the submission is rejected and the device quarantines it."""
+		with unittest.mock.patch("omniquery.api.sync.user_has_template_permission", return_value=False):
+			results = batch_push([self.guest_submission()])["results"]
+			draft = sync_draft(self.guest_submission())
+		self.assertEqual(results[0]["status"], "REJECTED")
+		self.assertIn("Permission denied for template", results[0]["error"])
+		self.assertEqual(draft["status"], "REJECTED")
 
 	def test_xss_payload_is_stripped(self):
 		idempotency_key = str(uuid.uuid4())
@@ -385,8 +430,6 @@ class TestSyncConcurrency(FrappeTestCase):
 		self.assertEqual(len(self._bad_timestamp_error_logs(key)), 1)
 
 	def test_sync_draft_saves_when_captured_at_is_unreadable(self):
-		from omniquery.api.sync import sync_draft
-
 		key = str(uuid.uuid4())
 		res = sync_draft(
 			{

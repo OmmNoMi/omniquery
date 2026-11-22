@@ -4,6 +4,7 @@ import { call, fileToBase64 } from "frappe-ui";
 import { db, audioRecordingsFor, recordingResponse, SYNCED } from "../services/db";
 import { buildResponsePayload, draftStored } from "../utils/responsePayload";
 import { uuidv4 } from "../utils/uuid";
+import { booted } from "./useSession";
 
 const SERVER_BACKOFF_MS = 30000;
 const AUTH_EXC_TYPES = ["AuthenticationError", "SessionExpired", "CSRFTokenError"];
@@ -20,6 +21,42 @@ export function failureKind(err) {
   if (err?.status >= 500) return "server";
   if (err?.status >= 400) return "client";
   return "network";
+}
+
+// The user_id cookie Frappe keeps beside the sid (set_user_info in frappe/auth.py); "" when there is none
+function cookieUser() {
+  const entry = document.cookie.split(";").find((c) => c.trim().startsWith("user_id="));
+  try {
+    return entry ? decodeURIComponent(entry.trim().slice("user_id=".length)) : "";
+  } catch (e) {
+    return "";
+  }
+}
+
+// Whether the session this page was loaded for has ended, by Frappe's own test (is_session_expired in
+// frappe/public/js/frappe/request.js): Frappe sets the cookie to Guest at a logout, and in its answer to
+// the first request after the session expired. The cookie lasts only as long as the browser, and the
+// service worker opens the cached page offline, so a missing cookie, or another user's, is checked with
+// Frappe's get_logged_user, which also sets it again (#127, #160).
+export async function sessionEnded() {
+  const user = booted("user");
+  if (!user || user === "Guest") return false;
+  const cookie = cookieUser();
+  if (cookie === user) return false;
+  if (cookie === "Guest") return true;
+  try {
+    return (await call("frappe.auth.get_logged_user")) !== user;
+  } catch (err) {
+    return failureKind(err) === "auth";
+  }
+}
+
+// Every sync request goes through here. A device whose session has ended sends nothing, because the
+// server would take the interview as a Guest's; it fails as Frappe's SessionExpired does, so the
+// caller keeps the work and asks for a sign-in.
+export async function syncCall(method, args) {
+  if (await sessionEnded()) throw Object.assign(new Error("Session expired"), { exc_type: "SessionExpired" });
+  return call(method, args);
 }
 
 export function createWAL() {
@@ -131,11 +168,12 @@ export function createWAL() {
   // batch_push's results for a chunk, plus `error` when the pass has to stop
   async function postChunk(chunk) {
     try {
-      const res = await call("omniquery.api.sync.batch_push", { submissions: [...chunk.values()].map((c) => c.submission) });
+      const res = await syncCall("omniquery.api.sync.batch_push", { submissions: [...chunk.values()].map((c) => c.submission) });
       needsLogin.value = false;
       return { results: resultsOf(res) };
     } catch (err) {
-      const kind = failureKind(err);
+      // a citizen has no session to sign in to: a refusal is a failed attempt, quarantined at the fifth (#127)
+      const kind = failureKind(err) === "auth" && booted("user") === "Guest" ? "client" : failureKind(err);
       if (kind === "auth") needsLogin.value = true;
       if (kind === "server") serverBackoffUntil = Date.now() + SERVER_BACKOFF_MS;
       if (kind !== "client") return { results: [], error: kind };
@@ -255,7 +293,7 @@ export function createWAL() {
         });
         if (payload.items.length === 0) continue;
         try {
-          const res = await call("omniquery.api.sync.sync_draft", { draft: payload });
+          const res = await syncCall("omniquery.api.sync.sync_draft", { draft: payload });
           if (draftStored(res)) {
             await db.responses.update(draft.response_uid, { synced: SYNCED });
             syncedCount++;
@@ -293,7 +331,7 @@ export function createWAL() {
           // a recording that cannot be read is not uploaded empty: it stays pending, and the catch logs it
           const b64 = await fileToBase64(rec.blob);
 
-          const data = await call("omniquery.api.sync.upload_response_audio", {
+          const data = await syncCall("omniquery.api.sync.upload_response_audio", {
             response_name: recordingResponse(rec),
             file_base64: b64,
             filename: rec.file_name || `interview_${recordingResponse(rec)}.webm`,
