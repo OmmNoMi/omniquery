@@ -33,6 +33,7 @@ describe("focus reaches the element frappe-ui exposes", () => {
     wrapper.vm.focus();
     await nextTick();
     expect(focused()).toBe(wrapper.find("input[data-search-input]").element);
+    expect(focused().getAttribute("enterkeyhint"), "a phone keyboard's Enter reads Search").toBe("search");
   });
 
   it("types into the search box from an option, with the caret after what was typed", async () => {
