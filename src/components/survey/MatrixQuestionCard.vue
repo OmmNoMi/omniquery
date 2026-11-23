@@ -175,7 +175,7 @@
                 v-else-if="col.type === 'select'"
                 :data-cell="`${rIdx}_${cIdx}`"
                 :aria-label="cellLabel(row, col)"
-                :options="col.options || []"
+                :options="cellOptions(col)"
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => chooseCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
@@ -305,7 +305,7 @@
               v-else-if="col.type === 'select'"
               :data-cell="`${rIdx}_${cIdx}`"
               :aria-label="cellLabel(row, col)"
-              :options="col.options || []"
+              :options="cellOptions(col)"
               :modelValue="getCellValue(row.id, col.key)"
               @update:modelValue="(val) => chooseCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
@@ -386,6 +386,7 @@ import { useTranslation } from "../../composables/useTranslation";
 import { useCardEscape } from "../../composables/useCardEscape";
 import { useRevealInPage } from "../../composables/useRevealInPage";
 import { useScreenIsWide } from "../../composables/useScreenIsWide";
+import { splitQuestionNumber } from "../../utils/questionLayout";
 import { useElementSize } from "@vueuse/core";
 import { isAnswered } from "../../utils/responsePayload";
 
@@ -409,7 +410,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue", "answered", "next"]);
-const { __, getDescription } = useTranslation();
+const { __, getDescription, getQuestionLabel } = useTranslation();
 const questionDescription = computed(() => getDescription(props.question));
 
 const cardRef = ref(null);
@@ -437,21 +438,8 @@ watch(showsTable, async () => {
   moveTo(rIdx, cIdx);
 });
 
-// Parse question title & number
-const parsedMeta = computed(() => {
-  const full = props.question.label_en || props.question.label || "";
-  const match = full.match(/^(Q\d+[a-z]?\.?|\d+\.?|[A-Za-z]\.)\s*(.*)$/i);
-  if (match) {
-    return {
-      number: match[1].replace(/\.$/, "").trim(),
-      text: match[2].replace(/^[\s.:-]+\s*/, "").trim(),
-    };
-  }
-  return {
-    number: null,
-    text: full,
-  };
-});
+// the grid's number and title, in the surveyor's language (#165)
+const parsedMeta = computed(() => splitQuestionNumber(getQuestionLabel(props.question)));
 
 // Row Header Title
 const rowHeaderTitle = computed(() => {
@@ -480,8 +468,9 @@ const matrixRows = computed(() => {
       { id: "records", label: __("Record Keeping / Accounting") },
     ];
   }
+  // a template's own rows and columns are shown in the surveyor's language (#165)
   if (props.question.rows && Array.isArray(props.question.rows)) {
-    return props.question.rows;
+    return props.question.rows.map((row) => ({ ...row, label: __(row.label) }));
   }
   return [
     { id: "item_1", label: __("Item 1") },
@@ -513,7 +502,7 @@ const matrixColumns = computed(() => {
     ];
   }
   if (props.question.columns && Array.isArray(props.question.columns)) {
-    return props.question.columns;
+    return props.question.columns.map((col) => ({ ...col, label: __(col.label) }));
   }
   return [
     { key: "col_1", label: __("Quantity / Count"), type: "number", placeholder: "0" },
@@ -572,6 +561,13 @@ function getColumnTotal(colKey) {
     }
   }
   return total;
+}
+
+// a select cell's choices in the surveyor's language; the answer keeps the choice as authored (#165)
+function cellOptions(col) {
+  return (col.options || []).map((option) =>
+    option && typeof option === "object" ? { ...option, label: __(option.label ?? option.value) } : { label: __(option), value: option }
+  );
 }
 
 // a cell's accessible name: its row and its column, which the table shows only as headers

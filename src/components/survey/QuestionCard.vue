@@ -519,6 +519,7 @@ import { choiceGroupState } from "../../utils/choiceGroup";
 import { choiceOptions, hasOptions } from "../../utils/cascadingOptions";
 import { isPhoneQuestion } from "../../utils/phone";
 import { errorText } from "../../utils/requiredMessage";
+import { splitQuestionNumber } from "../../utils/questionLayout";
 
 const props = defineProps({
   question: {
@@ -555,7 +556,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update:modelValue", "capture-gps", "answered", "next"]);
-const { __, getQuestionLabel, getDescription } = useTranslation();
+const { __, getQuestionLabel, getDescription, getOptionLabel } = useTranslation();
 
 const cardRef = ref(null);
 const onCardEscape = useCardEscape(cardRef);
@@ -724,22 +725,7 @@ const isUserToggleAllowed = computed(() => {
 
 const questionLabel = computed(() => getQuestionLabel(props.question));
 
-const parsedQuestionMeta = computed(() => {
-  const full = questionLabel.value || "";
-  const match = full.match(/^(Q\d+[a-z]?\.?|\d+\.?|[A-Za-z]\.)\s*(.*)$/i);
-  if (match) {
-    const rawNum = match[1].replace(/\.$/, "").trim();
-    const cleanText = match[2].replace(/^[\s.:-]+\s*/, "").trim();
-    return {
-      number: rawNum,
-      text: cleanText,
-    };
-  }
-  return {
-    number: null,
-    text: full.replace(/^[\s.:-]+\s*/, "").trim(),
-  };
-});
+const parsedQuestionMeta = computed(() => splitQuestionNumber(questionLabel.value));
 
 const questionDescription = computed(() => getDescription(props.question));
 
@@ -875,7 +861,7 @@ const isChoiceControl = computed(() => {
 
 // a dependent question (Block under District) offers only the parent answer's choices (#24)
 const normalizedOptions = computed(() =>
-  choiceOptions(props.question, props.parentValue).map((opt) => ({ value: opt.value, label: __(opt.label) }))
+  choiceOptions(props.question, props.parentValue).map((opt) => ({ value: opt.value, label: getOptionLabel(opt) }))
 );
 
 const displayedGridOptions = computed(() => {

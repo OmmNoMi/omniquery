@@ -294,6 +294,62 @@ describe("useSurvey", () => {
     expect(survey.activeTemplate.value.title).toBe("Offline Test Survey");
   });
 
+  describe("a template whose questions were saved out of their Order (#169)", () => {
+    // the SHG survey's Section A: Q9 saved after Q6, Q18 after Q15, Q16 and Q17 after Q20
+    const schema = (name) => ({
+      template_name: name,
+      title: "Order Survey",
+      sections: [
+        { section_code: "SEC_B", section_title: "Second", display_order: 2 },
+        { section_code: "SEC_A", section_title: "First", display_order: 1 },
+      ],
+      questions: [
+        { question_code: "q6", section_code: "SEC_A", label: "Q6", display_order: 6 },
+        { question_code: "q9", section_code: "SEC_A", label: "Q9", display_order: 9 },
+        { question_code: "q7", section_code: "SEC_A", label: "Q7", display_order: 7 },
+        { question_code: "q8", section_code: "SEC_A", label: "Q8", display_order: 8 },
+        { question_code: "b1", section_code: "SEC_B", label: "B1", display_order: 1 },
+      ],
+    });
+    const shown = (survey) => survey.activeQuestions.value.map((q) => q.question_code);
+
+    it("asks them in their Order from the copy cached on the device, offline", async () => {
+      await db.templates.put({ template_name: "OQS-ORDER", title: "Order Survey", schema: schema("OQS-ORDER") });
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+      const survey = useSurvey();
+      await survey.loadTemplate("OQS-ORDER", { startNew: true });
+      expect(survey.sections.value.map((s) => s.section_code)).toEqual(["SEC_A", "SEC_B"]);
+      expect(shown(survey)).toEqual(["q6", "q7", "q8", "q9"]);
+    });
+
+    it("asks them in their Order from the server's copy", async () => {
+      vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ message: { schema: schema("OQS-ORDER-LIVE") } }) }));
+      const survey = useSurvey();
+      await survey.loadTemplate("OQS-ORDER-LIVE", { startNew: true });
+      expect(survey.activeTemplate.value.title).toBe("Order Survey");
+      expect(shown(survey)).toEqual(["q6", "q7", "q8", "q9"]);
+    });
+
+    it("goes back to the section a draft was left on, though the Order moved it", async () => {
+      await db.templates.put({ template_name: "OQS-ORDER-DRAFT", title: "Order Survey", schema: schema("OQS-ORDER-DRAFT") });
+      vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline")));
+      // saved on SEC_B when it was the first section; it is now the second
+      const draft = { template_name: "OQS-ORDER-DRAFT", status: "Draft", responses: { b1: "x" }, updated_at: new Date().toISOString() };
+      await db.responses.put({ ...draft, response_uid: "OQS-ORDER-B", active_section_index: 0, active_section_code: "SEC_B" });
+      await db.responses.put({ ...draft, response_uid: "OQS-ORDER-OLD", active_section_index: 1 });
+
+      const survey = useSurvey();
+      await survey.loadTemplate("OQS-ORDER-DRAFT", { draftId: "OQS-ORDER-B" });
+      expect(survey.activeSection.value.section_code).toBe("SEC_B");
+      await survey.saveDraftLocally();
+      expect((await db.responses.get("OQS-ORDER-B")).active_section_code).toBe("SEC_B");
+
+      const before169 = useSurvey();
+      await before169.loadTemplate("OQS-ORDER-DRAFT", { draftId: "OQS-ORDER-OLD" });
+      expect(before169.activeSectionIndex.value, "a draft saved before #169 has only its index").toBe(1);
+    });
+  });
+
   it("takes an unassigned user's empty bootstrap as the answer, not a cue for another endpoint (#57)", async () => {
     await db.templates.put({ template_name: "OQS-STALE", title: "Old Project Survey", schema: {} });
     const fetchMock = vi.fn().mockResolvedValue({

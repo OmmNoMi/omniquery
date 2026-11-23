@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gridsByCode, groupHeading, isMatrixQuestion, layoutQuestions, parentGrid } from "../questionLayout";
+import { gridsByCode, groupHeading, inDisplayOrder, isMatrixQuestion, layoutQuestions, parentGrid, splitQuestionNumber } from "../questionLayout";
 
 const q = (question_code, label_en, extra = {}) => ({ question_code, label_en, field_type: "Text", ...extra });
 
@@ -33,6 +33,21 @@ describe("groupHeading", () => {
   });
 });
 
+describe("splitQuestionNumber", () => {
+  it("splits a label into its number and its text", () => {
+    expect(splitQuestionNumber("Q3a. Cows")).toEqual({ number: "Q3a", text: "Cows" });
+    expect(splitQuestionNumber("Q3 Cows")).toEqual({ number: "Q3", text: "Cows" });
+    expect(splitQuestionNumber("12. Village")).toEqual({ number: "12", text: "Village" });
+    expect(splitQuestionNumber("b. - Age")).toEqual({ number: "b", text: "Age" });
+  });
+
+  it("gives a label with no number a null number, without its leading punctuation", () => {
+    expect(splitQuestionNumber("गाँव का नाम")).toEqual({ number: null, text: "गाँव का नाम" });
+    expect(splitQuestionNumber(": Village ")).toEqual({ number: null, text: "Village" });
+    expect(splitQuestionNumber(undefined)).toEqual({ number: null, text: "" });
+  });
+});
+
 describe("layoutQuestions", () => {
   it("titles a Q-number run from the template, with no invented description (#14)", () => {
     const [group] = layoutQuestions([
@@ -52,8 +67,19 @@ describe("layoutQuestions", () => {
     const run = [q("a_share", "a. Own share"), q("b_share", "b. Partner share")];
     const [, afterLead] = layoutQuestions([q("lead", "Who owns the shop?"), ...run]);
     expect(afterLead).toMatchObject({ type: "group", group_code: "group_a_share", title: "Who owns the shop?" });
-    const [alone] = layoutQuestions(run, (text) => `hi:${text}`);
+    const [alone] = layoutQuestions(run, { __: (text) => `hi:${text}` });
     expect(alone.title).toBe("hi:Breakdown table");
+  });
+
+  // #165: a heading is in the surveyor's language, while runs are still found by the authored label
+  it("titles a group in the surveyor's language", () => {
+    const t = { __: (text) => `hi:${text}`, getQuestionLabel: (x) => `label:${x.question_code}` };
+    const [titled] = layoutQuestions([q("cows", "Q3a. Cows", { group_title: "Herd size" }), q("buffaloes", "Q3b. Buffaloes")], t);
+    expect(titled.title).toBe("hi:Herd size");
+    const [numbered] = layoutQuestions([q("cows", "Q3a. Cows"), q("buffaloes", "Q3b. Buffaloes")], t);
+    expect(numbered.title).toBe("Q3");
+    const [, afterLead] = layoutQuestions([q("lead", "Who owns the shop?"), q("a_share", "a. Own share"), q("b_share", "b. Partner share")], t);
+    expect(afterLead.title).toBe("label:lead");
   });
 
   it("puts a matrix question on its own matrix card and the rest on single cards", () => {
@@ -133,5 +159,51 @@ describe("parentGrid", () => {
     const selfLinked = { ...activity, group_code: "activity_involvements" };
     expect(parentGrid(selfLinked, gridsByCode([selfLinked]))).toBeNull();
     expect(parentGrid(q("a_share", "a. Own share", { group_code: "activity_involvements" }), undefined)).toBeNull();
+  });
+});
+
+describe("inDisplayOrder (#169)", () => {
+  const row = (question_code, display_order, extra = {}) => ({ question_code, section_code: "SEC_A", display_order, ...extra });
+  const codes = (schema) => schema.questions.map((question) => question.question_code);
+
+  it("puts questions saved out of place back in their Order, as the SHG survey's Section A was", () => {
+    const saved = [row("q6", 6), row("q9", 9), row("q7", 7), row("q8", 8), row("q15", 15), row("q18", 18), row("q16", 16)];
+    expect(codes(inDisplayOrder({ questions: saved, sections: [] }))).toEqual(["q6", "q7", "q8", "q9", "q15", "q16", "q18"]);
+  });
+
+  it("orders the sections by their Order too", () => {
+    const sections = [{ section_code: "B", display_order: 2 }, { section_code: "A", display_order: 1 }];
+    expect(inDisplayOrder({ sections, questions: [] }).sections.map((s) => s.section_code)).toEqual(["A", "B"]);
+  });
+
+  it("keeps a row left at the default Order 1 after the row above it, as every new row starts at 1", () => {
+    const saved = [row("first", 1), row("second", 1), row("ordered_3", 3), row("added_later", 1), row("ordered_2", 2)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["first", "second", "ordered_2", "ordered_3", "added_later"]);
+  });
+
+  it("keeps a row with no Order, a 0 or a negative Order after the row above it", () => {
+    const saved = [row("ordered_5", 5), row("none", undefined), row("zero", 0), row("negative", -2), row("ordered_4", 4)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["ordered_4", "ordered_5", "none", "zero", "negative"]);
+  });
+
+  it("puts rows with no Order at the top of the first rows in their own order, and reads an Order saved as text", () => {
+    const saved = [row("one", undefined), row("two", null), row("four", "4"), row("three", 3.7)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["one", "two", "three", "four"]);
+  });
+
+  it("keeps the row order between rows that share an Order", () => {
+    const saved = [row("c", 2), row("a", 2), row("b", 2)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["c", "a", "b"]);
+  });
+
+  it("returns a new schema and leaves the one it was given, and what it cannot order, alone", () => {
+    const saved = [row("b", 2), row("a", 1)];
+    const schema = { title: "Survey", questions: saved };
+    const ordered = inDisplayOrder(schema);
+    expect(ordered).not.toBe(schema);
+    expect(ordered.title).toBe("Survey");
+    expect(codes(schema)).toEqual(["b", "a"]);
+    expect(inDisplayOrder(null)).toBe(null);
+    expect(inDisplayOrder({ title: "Empty" })).toEqual({ title: "Empty", sections: undefined, questions: undefined });
   });
 });

@@ -8,12 +8,50 @@ export function isMatrixQuestion(q) {
   return MATRIX_FIELD_TYPES.has((q.field_type || "").toLowerCase()) || q.control_variant === "Matrix";
 }
 
-// A group takes its code and title from its first question's group_code and group_title. Without
-// them it is named by what the survey already shows: its number, or the question before it.
-export function groupHeading(first, fallbackCode, fallbackTitle) {
+// A template's sections and questions in their Order (display_order), as the survey asks them. A
+// schema compiled before #169 keeps its rows in the order they were saved, so the device puts every
+// schema it opens in Order too. One rule, the same as in_display_order in schema_compiler.py: a row
+// goes by its Order, the row above it breaking a tie. A row with no Order, and a row repeating an
+// Order 1 already used above it (a new row left at the default), stays after the row above it.
+export function inDisplayOrder(schema) {
+  if (!schema) return schema;
+  return { ...schema, sections: byDisplayOrder(schema.sections), questions: byDisplayOrder(schema.questions) };
+}
+
+function byDisplayOrder(rows) {
+  if (!Array.isArray(rows)) return rows;
+  let place = 0;
+  let firstUsed = false;
+  return rows
+    .map((row) => {
+      const order = Math.trunc(Number(row?.display_order)) || 0;
+      if (order > 1 || (order === 1 && !firstUsed)) place = order;
+      if (order === 1) firstUsed = true;
+      return { row, place };
+    })
+    .sort((a, b) => a.place - b.place)
+    .map(({ row }) => row);
+}
+
+// A label's number and its text: "Q3a. Name" is Q3a and Name, "b. Age" is b and Age. A label with no
+// number has a null number. Every card splits the label it shows, in the surveyor's language, this way.
+const QUESTION_NUMBER = /^(Q\d+[a-z]?\.?|\d+\.?|[A-Za-z]\.)\s*(.*)$/i;
+const LEADING_PUNCTUATION = /^[\s.:-]+\s*/;
+
+export function splitQuestionNumber(label) {
+  const full = label || "";
+  const match = full.match(QUESTION_NUMBER);
+  if (!match) return { number: null, text: full.replace(LEADING_PUNCTUATION, "").trim() };
+  return { number: match[1].replace(/\.$/, "").trim(), text: match[2].replace(LEADING_PUNCTUATION, "").trim() };
+}
+
+// A group takes its code and title from its first question's group_code and group_title, the title
+// through __(). Without them it is named by what the survey already shows: its number, or the
+// question before it.
+export function groupHeading(first, fallbackCode, fallbackTitle, __ = (text) => text) {
   return {
     group_code: first.group_code || fallbackCode,
-    title: first.group_title || fallbackTitle,
+    title: first.group_title ? __(first.group_title) : fallbackTitle,
   };
 }
 
@@ -33,14 +71,16 @@ export function parentGrid(question, grids) {
 
 // The survey's questions as the page shows them: single cards, matrix cards, and runs of lettered
 // sub-questions (Q3a, Q3b or a., b.) under one heading. A grid is always a matrix card (#140).
-// __ translates the one fallback title.
-export function layoutQuestions(questions, __ = (text) => text) {
+// Runs are found by the shape of the authored label, whatever the surveyor's language. The headings
+// are in the surveyor's language: __ translates a group_title and the fallback title, and
+// getQuestionLabel gives the label of the question a run is named after (useTranslation, #165).
+export function layoutQuestions(questions, { __ = (text) => text, getQuestionLabel = (q) => q.label_en || q.label || "" } = {}) {
   const items = [];
   // a group's code is its card's id (qc_<code>), so a group_code that names a question of the
   // section, as one naming its grid does, gives way to the group's own code (#140)
   const questionCodes = new Set(questions.map((q) => q.question_code));
   const heading = (first, fallbackCode, fallbackTitle) => {
-    const own = groupHeading(first, fallbackCode, fallbackTitle);
+    const own = groupHeading(first, fallbackCode, fallbackTitle, __);
     return questionCodes.has(own.group_code) ? { ...own, group_code: fallbackCode } : own;
   };
   let i = 0;
@@ -103,7 +143,7 @@ export function layoutQuestions(questions, __ = (text) => text) {
         // a grid before the run is its own card, not the run's lead question (#140)
         const prev = items[items.length - 1];
         const prevQuestion = prev?.type === "single" ? prev.question : null;
-        const prevLabel = prevQuestion ? prevQuestion.label_en || prevQuestion.label || "" : "";
+        const prevLabel = prevQuestion ? getQuestionLabel(prevQuestion) : "";
         items.push({
           type: "group",
           ...heading(q, `group_${q.question_code}`, prevLabel || __("Breakdown table")),

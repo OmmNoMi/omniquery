@@ -58,7 +58,7 @@ export function useSurveyApp() {
     liveAnnouncementText.value = message;
   }
 
-  const { __ } = useTranslation();
+  const { __, getQuestionLabel, getSectionTitle } = useTranslation();
   const { textSize, cycleTextSize, setTextSize } = useTextScale();
   const { isOnline, pendingWALCount, needsLogin, queueWAL, syncWAL, forceSyncAll, syncPendingAudio } = useWAL();
   const { gpsStatus, gpsReport, captureGPS } = useGPS();
@@ -314,14 +314,16 @@ export function useSurveyApp() {
     announce(`${__('Loaded survey')}: ${tmpl.title || tmpl.name}`);
   });
 
+  // the open section's title as its card shows it, in the surveyor's language (#165)
+  const activeSectionTitle = computed(() => getSectionTitle(activeSection.value) || activeSection.value?.section_code || "");
+
   watch(activeSectionIndex, (idx) => {
     if (activeSection.value && sections.value.length > 0) {
-      const title = activeSection.value.section_title || activeSection.value.section_code || "";
-      announce(`${__('Section')} ${idx + 1} ${__('of')} ${sections.value.length}: ${title}`);
+      announce(`${__('Section')} ${idx + 1} ${__('of')} ${sections.value.length}: ${activeSectionTitle.value}`);
     }
   });
 
-  const displayQuestionItems = computed(() => layoutQuestions(activeQuestions.value || [], __));
+  const displayQuestionItems = computed(() => layoutQuestions(activeQuestions.value || [], { __, getQuestionLabel }));
 
   // the one write path for answers, from plain, grouped, matrix and focus-mode questions alike. It
   // also clears an answer the change made invalid, such as a Block that is not in the new District,
@@ -817,6 +819,7 @@ export function useSurveyApp() {
     showCatalog,
     sections,
     activeSection,
+    activeSectionTitle,
     activeQuestions,
     sectionGrids,
     responses,

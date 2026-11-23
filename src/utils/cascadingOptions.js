@@ -32,19 +32,21 @@ function optionValue(option) {
   return typeof option === "object" && option !== null ? (option.value ?? option.label) : option;
 }
 
-// [{ value, label }]. The value is the option as authored, so a stored answer (and the parent
-// answer a dependent question is keyed by) is the same in every language; only the label is
-// the compiled translation.
+// [{ value, label, compiled }]. The value is the option as authored, so a stored answer (and the
+// parent answer a dependent question is keyed by) is the same in every language. label is the
+// authored text and compiled its options_translated entry, which is in the language of whoever
+// submitted the template; show a choice with getOptionLabel from useTranslation, which picks
+// between them for the surveyor's language (#165).
 export function choiceOptions(question, parentValue) {
   const raw = optionsForParent(question.options, parentValue);
   const translated = optionsForParent(question.options_translated, parentValue);
   return raw.map((option, index) => {
     const value = optionValue(option);
     if (typeof option === "object" && option !== null) {
-      return { value, label: String(option.label || value) };
+      return { value, label: String(option.label || value), compiled: "" };
     }
-    const label = translated[index];
-    return { value, label: typeof label === "string" && label ? label : String(value) };
+    const compiled = translated[index];
+    return { value, label: String(value), compiled: typeof compiled === "string" ? compiled : "" };
   });
 }
 
