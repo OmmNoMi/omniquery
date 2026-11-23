@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
-import { getSourceFiles, hasProp, templateElements } from "./sourceFiles";
+import { getSourceFiles, hasProp, namedImports, templateElements } from "./sourceFiles";
 
 // Field surveyors fill the survey on a phone, where Enter in an answer moves to the next question
 // (QuestionCard's onInputEnter) or the next cell (MatrixQuestionCard's onCellKeydown). A phone keyboard
@@ -11,16 +11,18 @@ import { getSourceFiles, hasProp, templateElements } from "./sourceFiles";
 const appDir = path.resolve(__dirname, "../..");
 const rel = (file) => path.relative(appDir, file);
 
-const TEXT_FIELDS = new Set(["TextInput", "input"]);
 const KEY_EVENTS = new Set(["keydown", "keyup", "keypress"]);
 const NOT_TEXT = new Set(["checkbox", "radio", "hidden", "range", "file", "color", "button", "submit"]);
 
 const staticType = (node) => node.props.find((p) => p.type === 6 && p.name === "type")?.value?.content;
 
 // Text fields in a .vue source that act on a key but give the phone keyboard no label for Enter
+// frappe-ui's TextInput counts under any name it is imported as (`TextInput as Field`)
 export function fieldsWithoutEnterHint(source) {
+  const textFields = new Set(["input", "TextInput"]);
+  for (const [local, imported] of namedImports(source, "frappe-ui")) if (imported === "TextInput") textFields.add(local);
   return templateElements(source)
-    .filter((node) => TEXT_FIELDS.has(node.tag) && !NOT_TEXT.has(staticType(node)))
+    .filter((node) => textFields.has(node.tag) && !NOT_TEXT.has(staticType(node)))
     .filter((node) => node.props.some((p) => p.type === 7 && p.name === "on" && KEY_EVENTS.has(p.arg?.content)))
     .filter((node) => !hasProp(node, "enterkeyhint"))
     .map((node) => node.loc.start.line);
@@ -43,5 +45,7 @@ describe("Enter on a phone keyboard says what it does", () => {
     expect(fieldsWithoutEnterHint(sfc(`<TextInput @keydown.enter="go" :enterkeyhint="hint"/>`))).toEqual([]);
     expect(fieldsWithoutEnterHint(sfc(`<TextInput @input="go"/><input type="checkbox" @keydown.space="go"/>`))).toEqual([]);
     expect(fieldsWithoutEnterHint(sfc(`<textarea @keydown.enter="go"/>`))).toEqual([]);
+    const aliased = `<script setup>import { TextInput as Field } from "frappe-ui";</script>\n<template><Field @keydown.enter="go"/></template>`;
+    expect(fieldsWithoutEnterHint(aliased), "TextInput imported under another name").toEqual([2]);
   });
 });

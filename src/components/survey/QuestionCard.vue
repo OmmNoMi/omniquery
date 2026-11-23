@@ -140,7 +140,7 @@
               :aria-label="__('Search options')"
               @keydown.esc.prevent.stop="onSearchInputEsc"
               @keydown.enter.prevent="onSearchInputEnter"
-              enterkeyhint="next"
+              enterkeyhint="search"
               @keydown.down.prevent="focusFirstOption"
             >
               <template #prefix>

@@ -38,7 +38,8 @@
           @update:modelValue="s.setResponse(item.question.question_code, $event)"
           :errorMessage="s.validationErrors[item.question.question_code]"
           :notApplicable="!s.isQuestionVisible(item.question)"
-          @next="s.onQuestionAnswered(item.question)"
+          @answered="s.onQuestionAnswered(item.question)"
+          @next="s.goToNextQuestion(item.question)"
         />
         <QuestionCard
           v-else
@@ -51,7 +52,7 @@
           :errorMessage="s.validationErrors[item.question.question_code]"
           :notApplicable="!s.isQuestionVisible(item.question)"
           @answered="s.onQuestionAnswered(item.question)"
-          @next="s.onQuestionAnswered(item.question)"
+          @next="s.goToNextQuestion(item.question)"
           :gpsAlert="s.gpsAlert"
           @capture-gps="s.captureGPS()"
         />

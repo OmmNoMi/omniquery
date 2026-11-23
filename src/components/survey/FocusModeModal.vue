@@ -10,7 +10,7 @@
     <!-- One surface on the app's theme. On a phone it fills the screen (main.css, [data-focus-mode]),
       so the form behind it is out of sight and Previous and Next sit at the bottom edge, where a thumb
       reaches them -->
-    <div data-focus-mode class="flex h-[100dvh] flex-col bg-surface-modal sm:h-auto sm:max-h-[calc(100dvh-6rem)]">
+    <div data-focus-mode class="flex max-h-[calc(100dvh-6rem)] flex-col bg-surface-modal">
       <header class="shrink-0 space-y-2.5 border-b border-outline-gray-1 px-4 pb-3 pt-3">
         <div class="flex items-start gap-2">
           <div class="min-w-0 flex-1">
@@ -52,7 +52,8 @@
         <div v-if="currentQuestion" :class="{ 'pointer-events-none': isAdvancing }">
           <!-- the grid the question sits under stays at the top as the question scrolls (#140) -->
           <ParentGridCard :grid="parentGrid(currentQuestion, sectionGrids)" class="sticky top-0 z-20 shadow-sm" />
-          <!-- a matrix moves on only from Next or Enter in its last cell, never as its cells are typed (#170) -->
+          <!-- a typed matrix moves on only from Next or Enter in its last cell, never as its cells are typed
+            (#170); a choice that fills its last empty cell moves it on as a choice question does -->
           <MatrixQuestionCard
             v-if="isMatrixQuestion(currentQuestion)"
             ref="questionCardRef"
@@ -61,6 +62,7 @@
             :modelValue="responses[currentQuestion.question_code]"
             :errorMessage="validationErrors[currentQuestion.question_code]"
             @update:modelValue="onQuestionInput"
+            @answered="onQuestionAnswered"
             @next="nextQuestion"
           />
           <QuestionCard
@@ -81,7 +83,7 @@
       </div>
 
       <!-- Next comes first in the tab order, after the question; Previous sits on its left -->
-      <footer class="grid shrink-0 grid-cols-2 gap-2 border-t border-outline-gray-1 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+      <footer class="grid shrink-0 grid-cols-2 gap-2 border-t border-outline-gray-1 px-3 py-3">
         <Button
           variant="solid"
           size="xl"
@@ -237,9 +239,12 @@ function advanceToNext() {
   }
 }
 
+// Previous is a move too: it takes the same lock, so a double tap goes back one question, not two.
 function prevQuestion() {
+  if (isAdvancing.value) return;
   cancelAdvance();
   if (props.currentIndex > 0) {
+    lockAdvance();
     emit("prev-question");
   }
 }

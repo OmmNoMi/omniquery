@@ -354,8 +354,13 @@ export function useSurveyApp() {
     isFocusMode.value = true;
   }
 
+  // An answer moves the page on only with auto-advance on. Enter, which the keyboard labels Next,
+  // always moves on (goToNextQuestion), whatever auto-advance says.
   function onQuestionAnswered(currentQuestion) {
-    if (!autoAdvance.value) return;
+    if (autoAdvance.value) goToNextQuestion(currentQuestion);
+  }
+
+  function goToNextQuestion(currentQuestion) {
     const qCode = currentQuestion ? (currentQuestion.question_code || currentQuestion.code) : null;
     if (!qCode) return;
     const currentIdx = activeQuestions.value.findIndex(
@@ -858,6 +863,7 @@ export function useSurveyApp() {
     toggleFocusMode,
     openFocusMode,
     onQuestionAnswered,
+    goToNextQuestion,
     setResponse,
     onFocusModeFinishSection,
     onExit,

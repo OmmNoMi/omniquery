@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import { mount } from "@vue/test-utils";
+import { Select } from "frappe-ui";
 import FocusModeModal from "../survey/FocusModeModal.vue";
 import MatrixQuestionCard from "../survey/MatrixQuestionCard.vue";
 import QuestionCard from "../survey/QuestionCard.vue";
@@ -26,6 +27,17 @@ const grid = (question_code) => ({
   rows: [{ id: "r1", label: "Cows" }],
   columns: [{ key: "c1", label: "Count", type: "text" }],
 });
+
+// a grid of two choices, one row
+const choiceGrid = (question_code) => ({
+  question_code,
+  label: "Grazing",
+  field_type: "Matrix",
+  rows: [{ id: "r1", label: "Cows" }],
+  columns: ["c1", "c2"].map((key) => ({ key, label: key, type: "select", options: ["Yes", "No"] })),
+});
+// picks a choice in one of the grid's cells, as the phone's select does
+const pick = (wrapper, cell, value) => wrapper.findAllComponents(Select).find((c) => c.find(`[data-cell="${cell}"]`).exists()).vm.$emit("update:modelValue", value);
 
 let wrappers = [];
 function mountFocusMode(props = {}) {
@@ -84,20 +96,51 @@ describe("Focus mode on a phone", () => {
     expect(question().classList.contains("pointer-events-none")).toBe(false);
   });
 
+  it("goes back one question on a double tap of Previous, as Next moves one", async () => {
+    const modal = mountFocusMode({ currentIndex: 1 });
+    await openDialog();
+    vi.useFakeTimers();
+
+    button("Previous").click();
+    button("Previous").click();
+    expect((modal.emitted("prev-question") || []).length, "the second tap moves nowhere").toBe(1);
+    button("Finish").click();
+    expect(moves(modal), "nor does a tap of Finish straight after").toBe(0);
+
+    vi.advanceTimersByTime(350);
+    button("Previous").click();
+    expect(modal.emitted("prev-question").length).toBe(2);
+  });
+
   it("never moves on from a grid while it is typed into, only on Enter in its last cell or Next (#170)", async () => {
     const modal = mountFocusMode({ questions: [grid("q_grid"), QUESTIONS[0]] });
     await openDialog();
     const cell = body().querySelector("[data-cell='0_0'] input, input[data-cell='0_0']");
+    vi.useFakeTimers({ shouldAdvanceTime: true });
 
     for (const typed of ["1", "12", "120"]) {
       cell.value = typed;
       cell.dispatchEvent(new Event("input", { bubbles: true }));
       await vi.waitFor(() => expect(Object.values(modal.emitted("update-response")?.at(-1)?.[0].value || {})).toEqual([typed]));
     }
-    await new Promise((resolve) => setTimeout(resolve, 600));
+    await vi.advanceTimersByTimeAsync(5000);
     expect(moves(modal), "the grid stays while it is being filled").toBe(0);
 
     cell.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
+    expect(moves(modal)).toBe(1);
+  });
+
+  it("moves on from a grid of choices once its last empty cell is picked, as a choice question does", async () => {
+    const modal = mountFocusMode({ questions: [choiceGrid("q_graze"), QUESTIONS[0]] });
+    await openDialog();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+
+    pick(modal, "0_1", "No");
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(moves(modal), "a cell is still empty").toBe(0);
+
+    pick(modal, "0_0", "Yes");
+    await vi.advanceTimersByTimeAsync(450);
     expect(moves(modal)).toBe(1);
   });
 
@@ -127,14 +170,20 @@ describe("Focus mode on a phone", () => {
     expect(at(".dialog-content:has(> [data-focus-mode])", "margin")).toBe("0");
     expect(at(".dialog-content:has(> [data-focus-mode])", "max-width")).toBe("none");
     expect(at(".dialog-content:has(> [data-focus-mode])", "border-radius")).toBe("0");
-    expect(at(":has(> .dialog-content > [data-focus-mode])", "padding")).toBe("0");
+    expect(at(".dialog-content:has(> [data-focus-mode]) > [data-focus-mode]", "height"), "the full height comes with :has").toBe("100dvh");
+    expect(at(".dialog-content:has(> [data-focus-mode]) > [data-focus-mode]", "max-height")).toBe("none");
+    expect(at(".dialog-overlay > :has(> .dialog-content > [data-focus-mode])", "padding")).toBe("0");
+    expect(at(".dialog-overlay > :has(> .dialog-content > [data-focus-mode])", "min-height")).toBe("100dvh");
   });
 
   it("puts the [data-focus-mode] body straight inside frappe-ui's dialog content, where that rule looks", async () => {
     mountFocusMode();
     await openDialog();
     expect(body().parentElement.classList.contains("dialog-content")).toBe(true);
-    expect(body().classList.contains("h-[100dvh]")).toBe(true);
+    expect(body().parentElement.parentElement.matches(".dialog-overlay > :has(> .dialog-content > [data-focus-mode])"), "the wrapper rule reaches only frappe-ui's wrapper").toBe(true);
+    expect(document.querySelectorAll(":has(> .dialog-content > [data-focus-mode])").length).toBe(1);
+    // the body's own height is the dialog's: a full-screen height in a class would apply without :has
+    expect([...body().classList].filter((c) => /^h-|100dvh\]$/.test(c) && !c.startsWith("max-h-"))).toEqual([]);
   });
 });
 
@@ -144,6 +193,15 @@ describe("A grid's answers (#170)", () => {
     await wrapper.find("input").setValue("4");
     expect(Object.values(wrapper.emitted("update:modelValue").at(-1)[0])).toEqual(["4"]);
     expect(wrapper.emitted("answered")).toBeUndefined();
+    wrapper.unmount();
+  });
+
+  it("are answered once a choice fills the grid's last empty cell, and not before", async () => {
+    const wrapper = mount(MatrixQuestionCard, { props: { question: choiceGrid("q_graze"), modelValue: {} } });
+    pick(wrapper, "0_0", "Yes");
+    expect(wrapper.emitted("answered"), "one cell is still empty").toBeUndefined();
+    pick(wrapper, "0_1", "No");
+    expect(wrapper.emitted("answered")).toEqual([[{ code: "q_graze", value: { r1__c1: "Yes", r1__c2: "No" } }]]);
     wrapper.unmount();
   });
 });
