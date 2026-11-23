@@ -515,6 +515,7 @@ import { choiceGroupState } from "../../utils/choiceGroup";
 import { choiceOptions, hasOptions } from "../../utils/cascadingOptions";
 import { isPhoneQuestion } from "../../utils/phone";
 import { errorText } from "../../utils/requiredMessage";
+import { splitQuestionNumber } from "../../utils/questionLayout";
 
 const props = defineProps({
   question: {
@@ -720,22 +721,7 @@ const isUserToggleAllowed = computed(() => {
 
 const questionLabel = computed(() => getQuestionLabel(props.question));
 
-const parsedQuestionMeta = computed(() => {
-  const full = questionLabel.value || "";
-  const match = full.match(/^(Q\d+[a-z]?\.?|\d+\.?|[A-Za-z]\.)\s*(.*)$/i);
-  if (match) {
-    const rawNum = match[1].replace(/\.$/, "").trim();
-    const cleanText = match[2].replace(/^[\s.:-]+\s*/, "").trim();
-    return {
-      number: rawNum,
-      text: cleanText,
-    };
-  }
-  return {
-    number: null,
-    text: full.replace(/^[\s.:-]+\s*/, "").trim(),
-  };
-});
+const parsedQuestionMeta = computed(() => splitQuestionNumber(questionLabel.value));
 
 const questionDescription = computed(() => getDescription(props.question));
 

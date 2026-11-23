@@ -33,4 +33,30 @@ describe("compiled translations are read in one place (#165)", () => {
     expect(users.length).toBeGreaterThan(0);
     expect(users.filter(({ text }) => !/\bgetOptionLabel\(/.test(text)).map(({ rel }) => rel)).toEqual([]);
   });
+
+  // A label, a section title or a group title read straight off the template is the author's text,
+  // so a card that shows it shows English to a Hindi surveyor. It is shown through getQuestionLabel,
+  // getSectionTitle or __(). The reads left are counted, each for a reason that never reaches the
+  // screen as it is, so a new one fails here until it is shown the right way or added with its reason.
+  it("no card shows a template's label, section title or group title as authored", () => {
+    const AUTHORED = /\.(label_en|section_title|group_title)\b/g;
+    const ALLOWED = {
+      // the picker itself
+      [path.join("src", "composables", "useTranslation.js")]: Infinity,
+      // the answer keeps the label as authored, for the record, not the screen
+      [path.join("src", "utils", "responsePayload.js")]: 1,
+      // runs are found by the authored label's shape; group_title goes through __(), and the default
+      // getQuestionLabel is for callers with no language, the tests
+      [path.join("src", "utils", "questionLayout.js")]: 6,
+      // a sub-question's letter, taken from the authored label
+      [path.join("src", "components", "survey", "GroupedQuestionCard.vue")]: 1,
+      // the unit, money or a multi-select told from the authored wording
+      [path.join("src", "components", "survey", "QuestionCard.vue")]: 3,
+    };
+    const over = sources()
+      .map(({ rel, text }) => ({ rel, reads: [...text.matchAll(AUTHORED)].map((m) => `${rel}:${lineOf(text, m.index)} ${m[0]}`) }))
+      .filter(({ rel, reads }) => reads.length > (ALLOWED[rel] ?? 0))
+      .flatMap(({ reads }) => reads);
+    expect(over).toEqual([]);
+  });
 });

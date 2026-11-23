@@ -106,10 +106,9 @@ describe("getDescription", () => {
   });
 });
 
-// #165: a question's label, a section's title and a choice's label. Each *_translated field is
-// frappe._() run once at template submit, in the submitter's language, so it is shown only in Hindi
-// and only when it differs from the authored text; otherwise the text goes through __(), which
-// reads the surveyor's own translations.
+// #165: a question's label, a section's title and a choice's label. The text goes through __() first,
+// which reads the surveyor's own translations. Each *_translated field is frappe._() run once at
+// template submit, in the submitter's language, so it is the fallback only in Hindi.
 describe("labels, section titles and choices in the surveyor's language", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -150,6 +149,22 @@ describe("labels, section titles and choices in the surveyor's language", () => 
     const { getQuestionLabel, getSectionTitle } = await load("hi");
     expect(getQuestionLabel({ label_en: "Village", label_hi: "ग्राम", label_translated: "गाँव" })).toBe("ग्राम");
     expect(getSectionTitle({ section_title: "Household", section_title_hi: "घर", section_title_translated: "परिवार" })).toBe("घर");
+  });
+
+  // a translation fixed on the site after the template was submitted shows at once, not the
+  // compiled word from the submit
+  it("shows a Hindi surveyor the live translation ahead of the compiled text", async () => {
+    window.__messages = { Village: "ग्राम (साइट)", Household: "परिवार (साइट)", Yes: "हाँ (साइट)", "Expenses cannot exceed income": "खर्च (साइट)" };
+    try {
+      const { getQuestionLabel, getSectionTitle, getOptionLabel, getDescription, getRuleMessage } = await load("hi");
+      expect(getQuestionLabel({ label_en: "Village", label_translated: "गाँव" })).toBe("ग्राम (साइट)");
+      expect(getSectionTitle({ section_title: "Household", section_title_translated: "परिवार" })).toBe("परिवार (साइट)");
+      expect(getOptionLabel({ value: "Yes", label: "Yes", compiled: "हाँ" })).toBe("हाँ (साइट)");
+      expect(getDescription({ description: "Village", description_translated: "गाँव" })).toBe("ग्राम (साइट)");
+      expect(getRuleMessage({ message: "Expenses cannot exceed income", message_translated: "खर्च" })).toBe("खर्च (साइट)");
+    } finally {
+      delete window.__messages;
+    }
   });
 
   it("is nothing with no text, and reads only text", async () => {

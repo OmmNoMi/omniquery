@@ -69,7 +69,7 @@
       :validationErrors="s.validationErrors"
       :autoAdvance="s.autoAdvance"
       :isFullForm="s.isFullForm"
-      :sectionTitle="s.activeSection ? s.activeSection.section_title || s.activeSection.section_code : ''"
+      :sectionTitle="s.activeSectionTitle"
       @close="s.isFocusMode = false"
       @prev-question="s.focusQuestionIndex = Math.max(0, s.focusQuestionIndex - 1)"
       @next-question="s.focusQuestionIndex = Math.min(s.activeQuestions.length - 1, s.focusQuestionIndex + 1)"

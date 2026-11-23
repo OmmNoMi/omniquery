@@ -225,14 +225,17 @@ export function useTranslation() {
     }
   }
 
-  // a template's text in the surveyor's language. compiled is its *_translated field, frappe._(text)
-  // run once when the template was submitted, so in the submitter's language, not the surveyor's: it
-  // is taken only in Hindi and only when it differs from the text. Otherwise the text goes through
-  // __(), which reads the surveyor's own translations, a site Translation or hi.po included (#140, #165)
+  // a template's text in the surveyor's language. The text goes through __() first, which reads the
+  // surveyor's own translations, a site Translation or hi.po included, so a translation fixed after the
+  // template was submitted shows at once. compiled is its *_translated field, frappe._(text) run once
+  // when the template was submitted, so in the submitter's language, not the surveyor's: it is the
+  // fallback only in Hindi, and only when it differs from the text (#140, #165)
   function localise(text, compiled) {
     const source = text === null || text === undefined ? "" : String(text);
-    if (currentLang.value === "hi" && typeof compiled === "string" && compiled && compiled !== source) return compiled;
-    return __(source);
+    const live = __(source);
+    if (live !== source) return live;
+    if (currentLang.value === "hi" && typeof compiled === "string" && compiled) return compiled;
+    return source;
   }
 
   function getQuestionLabel(question) {
@@ -246,12 +249,11 @@ export function useTranslation() {
     return localise(item?.description, item?.description_translated);
   }
 
-  // an answer comparison's message (#159), picked as a question's label is; QuestionCard passes it
-  // through __() as it does every error
+  // an answer comparison's message (#159), picked as a question's label is
   function getRuleMessage(rule) {
     const text = (key) => (typeof rule?.[key] === "string" ? rule[key] : "");
-    if (currentLang.value === "hi") return text("message_hi") || text("message_translated") || text("message");
-    return text("message");
+    if (currentLang.value === "hi" && text("message_hi")) return text("message_hi");
+    return localise(text("message"), text("message_translated"));
   }
 
   function getSectionTitle(section) {
