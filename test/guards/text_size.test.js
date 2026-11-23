@@ -18,7 +18,6 @@ export const SMALL_TEXT_ALLOWLIST = {
   "src/components/dashboard/ProjectHeaderCard.vue": 3,
   "src/components/dashboard/SurveyorDashboard.vue": 13,
   "src/components/header/CompactHeader.vue": 2,
-  "src/components/survey/FocusModeModal.vue": 1,
   "src/components/survey/GroupedQuestionCard.vue": 5,
   "src/components/survey/MatrixQuestionCard.vue": 10,
   "src/components/survey/QuestionCard.vue": 11,

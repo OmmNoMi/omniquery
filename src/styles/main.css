@@ -33,6 +33,30 @@ body {
   box-sizing: border-box;
 }
 
+/* Focus mode fills a phone's screen: no margin, gutter or rounded corners round the dialog, so the
+   question and its Next button get every pixel. frappe-ui Dialog has no full-screen size, so this
+   reaches its content box and its wrapper through the [data-focus-mode] body. The body's full height
+   is set here too, under the same :has, so a browser without :has keeps the whole ordinary dialog
+   (a full-height body inside a dialog with its margins would not fit the screen). Guarded by
+   src/components/__tests__/FocusModeMobile.spec.js. */
+@media (max-width: 639.98px) {
+  .dialog-content:has(> [data-focus-mode]) {
+    margin: 0;
+    max-width: none;
+    border-radius: 0;
+  }
+
+  .dialog-content:has(> [data-focus-mode]) > [data-focus-mode] {
+    height: 100dvh;
+    max-height: none;
+  }
+
+  .dialog-overlay > :has(> .dialog-content > [data-focus-mode]) {
+    padding: 0;
+    min-height: 100dvh;
+  }
+}
+
 /* clip, not hidden: overflow-x: hidden turns overflow-y into auto, which makes #app a scroll
    container that never scrolls, and every position: sticky inside it (the header, question
    headers, the project tab strip) stuck to #app and scrolled away with the page (#141). clip

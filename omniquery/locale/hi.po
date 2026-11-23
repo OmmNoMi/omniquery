@@ -2822,3 +2822,59 @@ msgstr "प्रश्न {0} की तुलना {1} से होती �
 #: omniquery/services/answer_comparisons.py
 msgid "Question {0} is compared with {1}, so it needs a message to show the surveyor."
 msgstr "प्रश्न {0} की तुलना {1} से होती है, इसलिए इसे सर्वेक्षक को दिखाने के लिए एक संदेश चाहिए।"
+
+#: src/components/survey/FocusModeModal.vue
+msgid "Focus mode"
+msgstr "फ़ोकस मोड"
+
+#: src/components/survey/FocusModeModal.vue
+msgid "Exit focus mode"
+msgstr "फ़ोकस मोड से बाहर निकलें"
+
+#: src/components/survey/FocusModeModal.vue
+msgid "Question {0} of {1}"
+msgstr "प्रश्न {0} / {1}"
+
+#: src/components/survey/FocusModeModal.vue
+msgid "Finish"
+msgstr "समाप्त करें"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "Survey mode"
+msgstr "सर्वेक्षण मोड"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "Survey options"
+msgstr "सर्वेक्षण विकल्प"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "Standard"
+msgstr "सामान्य"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "Auto advance"
+msgstr "अपने-आप अगला"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "Next question on answer"
+msgstr "उत्तर देते ही अगला प्रश्न"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "Full form"
+msgstr "पूरा प्रपत्र"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "Show all fields (incl. N/A)"
+msgstr "सभी प्रश्न दिखाएँ (लागू नहीं वाले भी)"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "Focus form"
+msgstr "फ़ोकस प्रपत्र"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "One-by-one popup card"
+msgstr "एक-एक करके प्रश्न कार्ड"
+
+#: src/components/survey/SurveyModeMenu.vue
+msgid "Full (auto)"
+msgstr "पूरा (अपने-आप)"

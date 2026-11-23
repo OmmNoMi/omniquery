@@ -140,6 +140,7 @@
               :aria-label="__('Search options')"
               @keydown.esc.prevent.stop="onSearchInputEsc"
               @keydown.enter.prevent="onSearchInputEnter"
+              enterkeyhint="search"
               @keydown.down.prevent="focusFirstOption"
             >
               <template #prefix>
@@ -278,6 +279,7 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
+        enterkeyhint="next"
         :placeholder="__('Enter value')"
         size="lg"
         variant="outline"
@@ -296,6 +298,7 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
+        enterkeyhint="next"
         size="lg"
         variant="outline"
         class="w-full"
@@ -315,6 +318,7 @@
         :aria-errormessage="errorMessage ? 'q_err_' + question.question_code : undefined"
         @update:modelValue="(val) => $emit('update:modelValue', val)"
         @keydown.enter="onInputEnter"
+        enterkeyhint="next"
         :placeholder="isPhoneControl ? __('Enter 10-digit mobile number') : __('Enter value')"
         size="lg"
         variant="outline"

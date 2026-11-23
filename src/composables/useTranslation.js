@@ -176,6 +176,21 @@ const CORE_HINDI = {
   "Not answered": "उत्तर नहीं दिया गया",
   // src/utils/answerComparison.js, for a comparison rule with no message (#159)
   "This answer does not fit with an earlier answer": "यह उत्तर पहले दिए गए उत्तर से मेल नहीं खाता",
+  // focus mode and the survey mode menu, which field surveyors use on a phone
+  "Focus mode": "फ़ोकस मोड",
+  "Exit focus mode": "फ़ोकस मोड से बाहर निकलें",
+  "Question {0} of {1}": "प्रश्न {0} / {1}",
+  "Finish": "समाप्त करें",
+  "Survey mode": "सर्वेक्षण मोड",
+  "Survey options": "सर्वेक्षण विकल्प",
+  "Standard": "सामान्य",
+  "Auto advance": "अपने-आप अगला",
+  "Next question on answer": "उत्तर देते ही अगला प्रश्न",
+  "Full form": "पूरा प्रपत्र",
+  "Show all fields (incl. N/A)": "सभी प्रश्न दिखाएँ (लागू नहीं वाले भी)",
+  "Focus form": "फ़ोकस प्रपत्र",
+  "One-by-one popup card": "एक-एक करके प्रश्न कार्ड",
+  "Full (auto)": "पूरा (अपने-आप)",
 };
 
 const initialLang = (typeof window !== "undefined" && localStorage.getItem("omniquery_lang")) || "hi";

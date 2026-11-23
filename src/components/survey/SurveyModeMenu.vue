@@ -5,18 +5,26 @@
     arrow keys reach it and screen readers hear its state. frappe-ui's own `switch: true` option
     renders a row that is not a menu item, which a keyboard cannot reach (see AGENTS.md). Escape
     closes only the menu and focus returns to the trigger. A class on <SurveyModeMenu> lands on the
-    trigger button.
+    trigger button. `compact` shows only the mode's icon below 640px, where a header has no room for
+    the label; the button keeps the label as its accessible name (frappe-ui sets aria-label from it).
   -->
   <DropdownMenuRoot v-slot="{ open }">
     <DropdownMenuTrigger as-child>
-      <Button ref="triggerRef" v-bind="$attrs" :label="activeModeLabel" :title="__('Survey mode')">
+      <Button
+        ref="triggerRef"
+        v-bind="$attrs"
+        :label="activeModeLabel"
+        :title="__('Survey mode')"
+        :class="{ 'max-sm:w-10 max-sm:gap-0 max-sm:px-0': compact }"
+      >
         <template #prefix>
-          <component :is="activeModeIcon" class="w-3.5 h-3.5" aria-hidden="true" />
+          <component :is="activeModeIcon" class="w-3.5 h-3.5" :class="{ 'max-sm:size-4': compact }" aria-hidden="true" />
         </template>
+        <span :class="{ 'max-sm:sr-only': compact }">{{ activeModeLabel }}</span>
         <template #suffix>
           <ChevronDown
             class="w-3.5 h-3.5 opacity-70 transition-transform duration-200 shrink-0"
-            :class="{ 'rotate-180': open }"
+            :class="{ 'rotate-180': open, 'max-sm:hidden': compact }"
             aria-hidden="true"
           />
         </template>
@@ -83,6 +91,7 @@ const props = defineProps({
   autoAdvance: { type: Boolean, default: false },
   isFullForm: { type: Boolean, default: false },
   isFocusMode: { type: Boolean, default: false },
+  compact: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(["toggle-auto-advance", "toggle-full-form", "toggle-focus-mode"]);

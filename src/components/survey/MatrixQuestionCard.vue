@@ -139,6 +139,7 @@
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
+                  enterkeyhint="next"
                   :placeholder="col.placeholder || '0'"
                   class="w-16 sm:w-20 text-center rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
                 />
@@ -163,6 +164,7 @@
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
+                  enterkeyhint="next"
                   :placeholder="col.placeholder || '0'"
                   class="w-full text-right rounded-lg border border-slate-200 dark:border-slate-700 pl-6 pr-2.5 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
                 />
@@ -175,7 +177,7 @@
                 :aria-label="cellLabel(row, col)"
                 :options="cellOptions(col)"
                 :modelValue="getCellValue(row.id, col.key)"
-                @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
+                @update:modelValue="(val) => chooseCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
                 :placeholder="__('-- Select --')"
                 class="w-full rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 focus:border-emerald-500"
@@ -190,6 +192,7 @@
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
+                enterkeyhint="next"
                 :placeholder="col.placeholder || __('Enter text')"
                 class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
               />
@@ -266,6 +269,7 @@
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
+                enterkeyhint="next"
                 :placeholder="col.placeholder || '0'"
                 class="w-14 text-center rounded-lg border border-slate-300 dark:border-slate-600 px-1.5 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900"
               />
@@ -290,6 +294,7 @@
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
+                enterkeyhint="next"
                 :placeholder="col.placeholder || '0'"
                 class="w-full text-right rounded-lg border border-slate-300 dark:border-slate-600 pl-5 pr-2 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900"
               />
@@ -302,7 +307,7 @@
               :aria-label="cellLabel(row, col)"
               :options="cellOptions(col)"
               :modelValue="getCellValue(row.id, col.key)"
-              @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
+              @update:modelValue="(val) => chooseCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
               :placeholder="__('-- Select --')"
               class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 focus:border-emerald-500 shrink-0"
@@ -317,6 +322,7 @@
               :modelValue="getCellValue(row.id, col.key)"
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
+              enterkeyhint="next"
               :placeholder="col.placeholder || __('Enter text')"
               class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 shrink-0"
             />
@@ -382,6 +388,7 @@ import { useRevealInPage } from "../../composables/useRevealInPage";
 import { useScreenIsWide } from "../../composables/useScreenIsWide";
 import { splitQuestionNumber } from "../../utils/questionLayout";
 import { useElementSize } from "@vueuse/core";
+import { isAnswered } from "../../utils/responsePayload";
 
 const props = defineProps({
   question: {
@@ -593,12 +600,27 @@ function stepCellValue(rowId, colKey, delta) {
   updateCellValue(rowId, colKey, next);
 }
 
+// Typing never emits "answered": it fired on every keystroke once the grid counted as complete
+// (isCompleted, one filled row) and moved the surveyor on mid-typing (#170). A typed grid moves on
+// from Enter on its last cell (onCellKeydown) or Next.
 function emitData() {
-  const payload = { ...internalData };
-  emit("update:modelValue", payload);
-  if (isCompleted.value) {
-    emit("answered", { code: props.question.question_code, value: payload });
-  }
+  emit("update:modelValue", { ...internalData });
+}
+
+// A choice picked in a cell is a tap that completes an answer when it fills the grid's last empty
+// cell, so a grid of choices moves on as a choice question does. A phone's select has no Enter key.
+function chooseCellValue(rowId, colKey, value) {
+  updateCellValue(rowId, colKey, value);
+  if (everyCellFilled()) emit("answered", { code: props.question.question_code, value: { ...internalData } });
+}
+
+function everyCellFilled() {
+  const instances = is4DMatrix.value ? matrixInstances.value : [null];
+  return instances.every((inst) =>
+    matrixRows.value.every((row) =>
+      matrixColumns.value.every((col) => isAnswered(internalData[inst ? `${inst}__${row.id}__${col.key}` : `${row.id}__${col.key}`])),
+    ),
+  );
 }
 
 // Completion Checkers
