@@ -225,42 +225,47 @@ export function useTranslation() {
     }
   }
 
+  // a template's text in the surveyor's language. The text goes through __() first, which reads the
+  // surveyor's own translations, a site Translation or hi.po included, so a translation fixed after the
+  // template was submitted shows at once. compiled is its *_translated field, frappe._(text) run once
+  // when the template was submitted, so in the submitter's language, not the surveyor's: it is the
+  // fallback only in Hindi, and only when it differs from the text (#140, #165)
+  function localise(text, compiled) {
+    const source = text === null || text === undefined ? "" : String(text);
+    const live = __(source);
+    if (live !== source) return live;
+    if (currentLang.value === "hi" && typeof compiled === "string" && compiled) return compiled;
+    return source;
+  }
+
   function getQuestionLabel(question) {
     if (!question) return "";
     if (currentLang.value === "hi" && question.label_hi) return question.label_hi;
-    if (currentLang.value === "hi" && question.label_translated) return question.label_translated;
-    const base = question.label || question.label_en || question.question_code || "";
-    return __(base);
+    return localise(question.label || question.label_en || question.question_code || "", question.label_translated);
   }
 
-  // a question's or a section's description in the surveyor's language. description_translated is
-  // compiled in the language of whoever submitted the template, so it is shown only in Hindi and only
-  // when it differs from the English; otherwise the text goes through __() (#140)
+  // a question's or a section's description
   function getDescription(item) {
-    const text = item?.description || "";
-    const compiled = item?.description_translated;
-    if (currentLang.value === "hi" && compiled && compiled !== text) return compiled;
-    return text ? __(text) : "";
+    return localise(item?.description, item?.description_translated);
   }
 
-  // an answer comparison's message (#159), picked as a question's label is; QuestionCard passes it
-  // through __() as it does every error
+  // an answer comparison's message (#159), picked as a question's label is
   function getRuleMessage(rule) {
     const text = (key) => (typeof rule?.[key] === "string" ? rule[key] : "");
-    if (currentLang.value === "hi") return text("message_hi") || text("message_translated") || text("message");
-    return text("message");
+    if (currentLang.value === "hi" && text("message_hi")) return text("message_hi");
+    return localise(text("message"), text("message_translated"));
   }
 
   function getSectionTitle(section) {
     if (!section) return "";
     if (currentLang.value === "hi" && section.section_title_hi) return section.section_title_hi;
-    if (currentLang.value === "hi" && section.section_title_translated) return section.section_title_translated;
-    return __(section.section_title || "");
+    return localise(section.section_title, section.section_title_translated);
   }
 
-  function getOptionLabel(option) {
-    if (option === null || option === undefined) return "";
-    return __(String(option));
+  // a choice from choiceOptions in src/utils/cascadingOptions.js: its authored label and compiled
+  // translation
+  function getOptionLabel(choice) {
+    return localise(choice?.label, choice?.compiled);
   }
 
   return {

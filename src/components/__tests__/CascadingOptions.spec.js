@@ -7,6 +7,7 @@ import FocusModeModal from "../survey/FocusModeModal.vue";
 import FCombobox from "../common/FCombobox.vue";
 import Survey from "../../views/Survey.vue";
 import { SURVEY_SESSION, useSurveyApp } from "../../composables/useSurveyApp";
+import { useTranslation } from "../../composables/useTranslation";
 
 // #24: Block offers only the chosen District's blocks, wherever it is shown, and a District
 // change clears a Block it no longer offers through the session's one write path.
@@ -31,6 +32,7 @@ function track(wrapper) {
 afterEach(() => {
   while (wrappers.length) wrappers.pop().unmount();
   document.body.innerHTML = "";
+  useTranslation().setLanguage("hi");
 });
 
 const card = (props) => track(mount(QuestionCard, { props: { question: block, modelValue: "", ...props } }));
@@ -64,6 +66,21 @@ describe("a dependent question's choices (#24)", () => {
       { value: "Baran", label: "बारां" },
       { value: "Chhipabarod", label: "छीपाबड़ौद" },
     ]);
+  });
+
+  // the options were compiled in Hindi, by whoever submitted the template; an English surveyor sees
+  // them as authored (#165)
+  it("shows an English surveyor the authored labels, not Hindi-compiled ones", () => {
+    useTranslation().setLanguage("en");
+    const hindi = { ...block, options_translated: { Baran: ["बारां", "छीपाबड़ौद"], Churu: ["रतनगढ़", "सुजानगढ़"] } };
+    expect(card({ question: hindi, parentValue: "Baran" }).findComponent(FCombobox).props("options")).toEqual([
+      { value: "Baran", label: "Baran" },
+      { value: "Chhipabarod", label: "Chhipabarod" },
+    ]);
+    const grouped = track(mount(GroupedQuestionCard, {
+      props: { group: { group_code: "g", title: "Place", questions: [hindi] }, responses: { district: "Baran" } },
+    }));
+    expect(grouped.findAll('[role="radio"]').map((c) => c.text())).toEqual(["Baran", "Chhipabarod"]);
   });
 
   it("leaves the answer alone when the district changes, so a restored draft keeps its block", async () => {

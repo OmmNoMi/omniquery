@@ -81,10 +81,11 @@ describe("the grid a question sits under (#140)", () => {
 });
 
 // #140: every card shows a description compiled in English to a Hindi surveyor through __(), and a
-// Hindi-compiled one never to an English surveyor
+// Hindi-compiled one never to an English surveyor. A description __() has no translation for shows
+// the compiled Hindi (#165).
 describe("a description on a card", () => {
   const english = { description: "Next", description_translated: "Next" };
-  const hindi = { description: "Next", description_translated: "अगला अनुवाद" };
+  const hindi = { description: "One row per activity", description_translated: "अगला अनुवाद" };
 
   const matrixText = (extra) =>
     mount(MatrixQuestionCard, {

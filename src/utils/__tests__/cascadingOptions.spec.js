@@ -35,16 +35,19 @@ describe("cascading options (#24)", () => {
     expect(parentAnswer(block, undefined)).toBeUndefined();
   });
 
-  it("keeps the authored value and shows the translated label", () => {
+  // the label is the authored text and compiled its translation from template submit, in the
+  // submitter's language; getOptionLabel picks between them for the surveyor (#165)
+  it("keeps the authored value and label, with the compiled translation beside them", () => {
     const hindi = { ...block, options_translated: { Baran: ["बारां", "छीपाबड़ौद"], Churu: ["रतनगढ़", ""] } };
     expect(choiceOptions(hindi, "Baran")).toEqual([
-      { value: "Baran", label: "बारां" },
-      { value: "Chhipabarod", label: "छीपाबड़ौद" },
+      { value: "Baran", label: "Baran", compiled: "बारां" },
+      { value: "Chhipabarod", label: "Chhipabarod", compiled: "छीपाबड़ौद" },
     ]);
-    expect(choiceOptions(hindi, "Churu")[1]).toEqual({ value: "Sujangarh", label: "Sujangarh" });
+    expect(choiceOptions(hindi, "Churu")[1]).toEqual({ value: "Sujangarh", label: "Sujangarh", compiled: "" });
+    expect(choiceOptions({ options: ["Yes"], options_translated: [5] })).toEqual([{ value: "Yes", label: "Yes", compiled: "" }]);
     expect(choiceOptions({ options: [{ value: 1, label: "One" }, { label: "Two" }] })).toEqual([
-      { value: 1, label: "One" },
-      { value: "Two", label: "Two" },
+      { value: 1, label: "One", compiled: "" },
+      { value: "Two", label: "Two", compiled: "" },
     ]);
   });
 
