@@ -38,6 +38,7 @@
  * @property {string} [response_title_format]
  * @property {Record<string, any>} responses
  * @property {number} [active_section_index]
+ * @property {string} [active_section_code] the section the draft was left on, found again by code (#169)
  * @property {number} [progress_percent]
  * @property {'Draft'|'Submitted'} status
  * @property {string} created_at

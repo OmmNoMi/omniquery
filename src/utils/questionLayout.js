@@ -8,6 +8,31 @@ export function isMatrixQuestion(q) {
   return MATRIX_FIELD_TYPES.has((q.field_type || "").toLowerCase()) || q.control_variant === "Matrix";
 }
 
+// A template's sections and questions in their Order (display_order), as the survey asks them. A
+// schema compiled before #169 keeps its rows in the order they were saved, so the device puts every
+// schema it opens in Order too. One rule, the same as in_display_order in schema_compiler.py: a row
+// goes by its Order, the row above it breaking a tie. A row with no Order, and a row repeating an
+// Order 1 already used above it (a new row left at the default), stays after the row above it.
+export function inDisplayOrder(schema) {
+  if (!schema) return schema;
+  return { ...schema, sections: byDisplayOrder(schema.sections), questions: byDisplayOrder(schema.questions) };
+}
+
+function byDisplayOrder(rows) {
+  if (!Array.isArray(rows)) return rows;
+  let place = 0;
+  let firstUsed = false;
+  return rows
+    .map((row) => {
+      const order = Math.trunc(Number(row?.display_order)) || 0;
+      if (order > 1 || (order === 1 && !firstUsed)) place = order;
+      if (order === 1) firstUsed = true;
+      return { row, place };
+    })
+    .sort((a, b) => a.place - b.place)
+    .map(({ row }) => row);
+}
+
 // A label's number and its text: "Q3a. Name" is Q3a and Name, "b. Age" is b and Age. A label with no
 // number has a null number. Every card splits the label it shows, in the surveyor's language, this way.
 const QUESTION_NUMBER = /^(Q\d+[a-z]?\.?|\d+\.?|[A-Za-z]\.)\s*(.*)$/i;

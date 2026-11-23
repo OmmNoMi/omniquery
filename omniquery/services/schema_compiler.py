@@ -2,6 +2,7 @@ import hashlib
 import json
 
 import frappe
+from frappe.utils import cint
 
 from omniquery.services.response_title import DEFAULT_RESPONSE_TITLE_FORMAT
 
@@ -33,9 +34,34 @@ def build_schema_dictionary(template_document):
 		"is_public_citizen_link": bool(template_document.is_public_citizen_link),
 		"auto_advance": bool(getattr(template_document, "auto_advance", 1)),
 		"presentation_mode": getattr(template_document, "presentation_mode", "Standard Section") or "Standard Section",
-		"sections": [format_section_dictionary(s) for s in (template_document.sections or [])],
-		"questions": [format_question_dictionary(q) for q in (template_document.questions or [])],
+		"sections": [format_section_dictionary(s) for s in template_document.sections or []],
+		"questions": [format_question_dictionary(q) for q in template_document.questions or []],
 	}
+
+
+def in_display_order(rows):
+	"""Rows in their Order (display_order), the row above breaking a tie (#169).
+
+	A row with no Order, and a row repeating an Order 1 already used above it (a new row left at
+	the default), stays after the row above it. inDisplayOrder in questionLayout.js is the same rule.
+	"""
+	rows = list(rows or [])
+	places, place, first_used = [], 0, False
+	for row in rows:
+		order = cint(row.get("display_order"))
+		if order > 1 or (order == 1 and not first_used):
+			place = order
+		first_used = first_used or order == 1
+		places.append(place)
+	return [row for _, row in sorted(zip(places, rows, strict=True), key=lambda pair: pair[0])]
+
+
+def put_rows_in_display_order(document, fieldname):
+	"""Puts a child table's rows in their Order and numbers them again, so Desk shows them as asked."""
+	rows = document.get(fieldname)
+	rows[:] = in_display_order(rows)
+	for index, row in enumerate(rows, start=1):
+		row.idx = index
 
 
 def format_section_dictionary(section_row):
@@ -155,9 +181,11 @@ def resolve_option_set_items(option_set_name):
 	items = frappe.get_all(
 		"OmniQuery Option Item",
 		filters={"parent": option_set_name, "parenttype": "OmniQuery Option Set", "parentfield": "options"},
-		fields=["option_code", "parent_option"],
+		fields=["option_code", "parent_option", "display_order"],
 		order_by="idx asc",
 	)
+	# an Option Set saved before #169 keeps its rows in the order they were added
+	items = in_display_order(items)
 	has_parent = any(bool(item.get("parent_option")) for item in items)
 	if has_parent:
 		options_by_parent = {}
