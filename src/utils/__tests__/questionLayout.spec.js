@@ -176,19 +176,24 @@ describe("inDisplayOrder (#169)", () => {
     expect(inDisplayOrder({ sections, questions: [] }).sections.map((s) => s.section_code)).toEqual(["A", "B"]);
   });
 
-  it("keeps the template's row order between rows that share an Order, as new rows all start at 1", () => {
-    const saved = [row("c", 1), row("a", 1), row("b", 1), row("first", 0.5)];
-    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["first", "c", "a", "b"]);
+  it("keeps a row left at the default Order 1 after the row above it, as every new row starts at 1", () => {
+    const saved = [row("first", 1), row("second", 1), row("ordered_3", 3), row("added_later", 1), row("ordered_2", 2)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["first", "second", "ordered_2", "ordered_3", "added_later"]);
   });
 
-  it("leaves a row with no Order in its own place, as the compiler gives it its idx", () => {
-    const saved = [row("one", undefined), row("two", null), row("four", "4"), row("three", 3)];
+  it("keeps a row with no Order, a 0 or a negative Order after the row above it", () => {
+    const saved = [row("ordered_5", 5), row("none", undefined), row("zero", 0), row("negative", -2), row("ordered_4", 4)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["ordered_4", "ordered_5", "none", "zero", "negative"]);
+  });
+
+  it("puts rows with no Order at the top of the first rows in their own order, and reads an Order saved as text", () => {
+    const saved = [row("one", undefined), row("two", null), row("four", "4"), row("three", 3.7)];
     expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["one", "two", "three", "four"]);
   });
 
-  it("gives a row with no Order its row number from 1, as the compiler's idx, so a row ordered there comes first", () => {
-    const saved = [row("ordered_2", 2), row("second_row", undefined)];
-    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["ordered_2", "second_row"]);
+  it("keeps the row order between rows that share an Order", () => {
+    const saved = [row("c", 2), row("a", 2), row("b", 2)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["c", "a", "b"]);
   });
 
   it("returns a new schema and leaves the one it was given, and what it cannot order, alone", () => {

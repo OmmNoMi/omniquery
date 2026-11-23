@@ -4,7 +4,7 @@ from frappe.utils import now_datetime
 
 from omniquery.services.answer_comparisons import validate_comparison_rules
 from omniquery.services.cascading_options import validate_cascading_questions
-from omniquery.services.schema_compiler import compile_template_schema
+from omniquery.services.schema_compiler import compile_template_schema, put_rows_in_display_order
 
 
 class OmniQueryTemplate(Document):
@@ -62,4 +62,7 @@ class OmniQueryTemplate(Document):
 			frappe.throw(frappe._("Cannot modify published template. Create a new version via Amend."))
 
 	def _compile_schema(self):
+		# the schema asks sections and questions in the order Desk shows them (#169)
+		put_rows_in_display_order(self, "sections")
+		put_rows_in_display_order(self, "questions")
 		return compile_template_schema(self)

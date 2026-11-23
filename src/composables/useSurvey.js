@@ -324,7 +324,7 @@ export function useSurvey() {
         if (draft && draft.responses && Object.keys(draft.responses).length > 0) {
           currentDraftId.value = draft.response_uid;
           responses.value = { ...draft.responses };
-          activeSectionIndex.value = draft.active_section_index || 0;
+          activeSectionIndex.value = draftSectionIndex(draft);
         } else {
           currentDraftId.value = generateSurveyId();
           responses.value = {};
@@ -368,6 +368,7 @@ export function useSurvey() {
         response_title_format: activeTemplate.value.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})",
         responses: JSON.parse(JSON.stringify(responses.value)),
         active_section_index: activeSectionIndex.value,
+        active_section_code: activeSection.value?.section_code,
         progress_percent: progress,
         status: "Draft",
         created_at: new Date().toISOString(),
@@ -413,6 +414,13 @@ export function useSurvey() {
   const activeSection = computed(() => {
     return sections.value[activeSectionIndex.value] || null;
   });
+
+  // A draft goes back to its section by code: a template put in Order (#169) can move the section
+  // that the saved index pointed at. A draft saved before #169 has only the index.
+  function draftSectionIndex(draft) {
+    const index = sections.value.findIndex((section) => section.section_code === draft.active_section_code);
+    return index >= 0 ? index : draft.active_section_index || 0;
+  }
 
   function isQuestionVisible(question) {
     if (!question || !question.conditional_logic) return true;

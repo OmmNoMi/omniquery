@@ -1,11 +1,15 @@
 import frappe
 from frappe.model.document import Document
 
+from omniquery.services.schema_compiler import put_rows_in_display_order
+
 
 class OmniQueryOptionSet(Document):
 	def validate(self):
 		self._validate_scope_constraints()
 		self._validate_parent_options()
+		# a question offers the choices in the order Desk shows them (#169)
+		put_rows_in_display_order(self, "options")
 
 	def _validate_scope_constraints(self):
 		if self.scope == "Workspace" and not self.workspace:

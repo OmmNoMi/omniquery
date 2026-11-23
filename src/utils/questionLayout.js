@@ -8,10 +8,11 @@ export function isMatrixQuestion(q) {
   return MATRIX_FIELD_TYPES.has((q.field_type || "").toLowerCase()) || q.control_variant === "Matrix";
 }
 
-// A template's sections and questions in their Order (display_order), the template's row order
-// breaking ties, as the template editor shows them. The compiled schema keeps the rows in the order
-// they were saved, so a question moved by its Order alone came out of place, in the full form and in
-// focus mode (#169). A row with no Order keeps its own place, as the compiler gives it its idx.
+// A template's sections and questions in their Order (display_order), as the survey asks them. A
+// schema compiled before #169 keeps its rows in the order they were saved, so the device puts every
+// schema it opens in Order too. One rule, the same as in_display_order in schema_compiler.py: a row
+// goes by its Order, the row above it breaking a tie. A row with no Order, and a row repeating an
+// Order 1 already used above it (a new row left at the default), stays after the row above it.
 export function inDisplayOrder(schema) {
   if (!schema) return schema;
   return { ...schema, sections: byDisplayOrder(schema.sections), questions: byDisplayOrder(schema.questions) };
@@ -19,10 +20,16 @@ export function inDisplayOrder(schema) {
 
 function byDisplayOrder(rows) {
   if (!Array.isArray(rows)) return rows;
-  const order = (row, index) => (Number(row?.display_order) > 0 ? Number(row.display_order) : index + 1);
+  let place = 0;
+  let firstUsed = false;
   return rows
-    .map((row, index) => ({ row, index, at: order(row, index) }))
-    .sort((a, b) => a.at - b.at || a.index - b.index)
+    .map((row) => {
+      const order = Math.trunc(Number(row?.display_order)) || 0;
+      if (order > 1 || (order === 1 && !firstUsed)) place = order;
+      if (order === 1) firstUsed = true;
+      return { row, place };
+    })
+    .sort((a, b) => a.place - b.place)
     .map(({ row }) => row);
 }
 

@@ -3,7 +3,7 @@ import unittest
 
 import frappe
 
-from omniquery.services.schema_compiler import calculate_schema_hash, compile_template_schema
+from omniquery.services.schema_compiler import calculate_schema_hash, compile_template_schema, resolve_option_set_items
 from omniquery.tests.utils import delete_test_docs
 
 
@@ -124,6 +124,48 @@ class TestSchemaCompiler(unittest.TestCase):
 		schema_obj = json.loads(template.compiled_schema_json)
 		self.assertEqual([s["section_code"] for s in schema_obj["sections"]], ["SEC_1", "SEC_2"])
 		self.assertEqual([q["question_code"] for q in schema_obj["questions"]], ["q6", "q7", "tie_a", "q9"])
+
+		# Desk shows the rows as the survey asks them
+		self.assertEqual([(row.idx, row.question_code) for row in template.questions], [(1, "q6"), (2, "q7"), (3, "tie_a"), (4, "q9")])
+		self.assertEqual([(row.idx, row.section_code) for row in template.sections], [(1, "SEC_1"), (2, "SEC_2")])
+
+	def test_a_row_added_at_the_default_order_stays_last(self):
+		# every new row starts at Order 1; one added below rows ordered from 1 is not moved to the top
+		template = frappe.get_doc({
+			"doctype": "OmniQuery Template",
+			"title": "Test Women Dairy Assessment 2026",
+			"project": "PROJ-Test Dairy Initiative",
+			"version": 1,
+			"status": "Draft",
+			"sections": [{"section_code": "SEC_1", "section_title": "Section 1", "display_order": 1}],
+			"questions": [
+				{"section_code": "SEC_1", "question_code": "q1", "label_en": "Q1", "display_order": 1},
+				{"section_code": "SEC_1", "question_code": "q2", "label_en": "Q2", "display_order": 2},
+			],
+		}).insert(ignore_permissions=True)
+		template.append("questions", {"section_code": "SEC_1", "question_code": "added", "label_en": "Added"})
+		template.append("questions", {"section_code": "SEC_1", "question_code": "no_order", "label_en": "No order", "display_order": 0})
+		template.save(ignore_permissions=True)
+
+		schema_obj = json.loads(template.compiled_schema_json)
+		self.assertEqual([q["question_code"] for q in schema_obj["questions"]], ["q1", "q2", "added", "no_order"])
+
+	def test_option_set_choices_follow_their_order(self):
+		option_set = frappe.get_doc({
+			"doctype": "OmniQuery Option Set",
+			"set_name": "Test Animal Species",
+			"scope": "Platform",
+			"options": [
+				{"option_code": "Buffalo", "label_text": "Buffalo", "display_order": 2},
+				{"option_code": "Cow", "label_text": "Cow", "display_order": 1},
+				{"option_code": "Goat", "label_text": "Goat", "display_order": 3},
+			],
+		}).insert(ignore_permissions=True)
+		self.assertEqual([(row.idx, row.option_code) for row in option_set.options], [(1, "Cow"), (2, "Buffalo"), (3, "Goat")])
+
+		# a set saved before #169 kept its rows in the order they were added
+		frappe.db.set_value("OmniQuery Option Item", option_set.options[0].name, "idx", 9)
+		self.assertEqual(resolve_option_set_items(option_set.name), ["Cow", "Buffalo", "Goat"])
 
 	def test_response_title_format_compilation(self):
 		template = frappe.get_doc({
