@@ -5,12 +5,13 @@
  * It carries no surveyor: the server takes who did the survey from the session (#35).
  * gps is useGPS's gpsReport: { latitude, longitude, accuracy, status }.
  */
+import { byQuestionCode } from "./cascadingOptions";
 
 /** A value the surveyor gave: 0 and false count, an empty or blank string does not. */
 export const isAnswered = (value) => value !== undefined && value !== null && String(value).trim() !== "";
 
 export function responseItems(responses = {}, questions = []) {
-  const byCode = new Map(questions.map((q) => [q.question_code, q]));
+  const byCode = byQuestionCode(questions);
   return Object.entries(responses || {})
     .filter(([, value]) => isAnswered(value))
     .map(([code, value]) => {

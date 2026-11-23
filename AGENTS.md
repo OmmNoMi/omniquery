@@ -71,6 +71,11 @@ cost real time to learn. Add to it when you learn something new.
   `test/guards/template_classes.test.js` builds the CSS and fails on a template class nothing
   defines; its allowlist lists each file's dead classes by name and only shrinks (#145).
   `content.relative` in `tailwind.config.cjs` keeps the build from depending on the cwd.
+- A question with `depends_on_field` has choices grouped by its parent's answer. With the parent
+  blank there are none, and an empty combobox reads "No matching options found", which looks like
+  a failed search. Use `choicesWaitMessage` from `src/utils/cascadingOptions.js` in place of the
+  choices: it names the parent ("Answer “District” (Q1) first…") from `questionsByCode`, which
+  covers every section, since the parent is often in an earlier one.
 
 ## Tests
 

@@ -115,9 +115,19 @@
 
       <!-- 5. Choice Options: Direct Grid or Dropdown -->
       <div v-else-if="isChoiceControl">
+        <!-- a dependent question (Block under District) says what it waits on -->
+        <p
+          v-if="choicesWait"
+          data-choices-wait
+          class="flex items-start gap-2 rounded-lg border border-dashed border-outline-gray-2 bg-surface-gray-1 px-3 py-3 text-sm text-ink-gray-7"
+        >
+          <Info class="mt-0.5 size-4 shrink-0 text-ink-gray-5" aria-hidden="true" />
+          <span>{{ choicesWait }}</span>
+        </p>
+
         <!-- 5A. Searchable Combobox Dropdown -->
         <FCombobox
-          v-if="effectiveMode === 'combobox'"
+          v-else-if="effectiveMode === 'combobox'"
           :modelValue="modelValue"
           :options="normalizedOptions"
           :multiple="isMultiSelect"
@@ -512,7 +522,7 @@ import FRangeSlider from "../common/FRangeSlider.vue";
 import ParentGridCard from "./ParentGridCard.vue";
 import { choiceButtonProps } from "../../utils/choiceButton";
 import { choiceGroupState } from "../../utils/choiceGroup";
-import { choiceOptions, hasOptions } from "../../utils/cascadingOptions";
+import { choiceOptions, choicesWaitMessage, hasOptions } from "../../utils/cascadingOptions";
 import { isPhoneQuestion } from "../../utils/phone";
 import { errorText } from "../../utils/requiredMessage";
 import { splitQuestionNumber } from "../../utils/questionLayout";
@@ -538,6 +548,11 @@ const props = defineProps({
   parentValue: {
     type: [String, Number, Boolean, Array],
     default: undefined,
+  },
+  // the question named by depends_on_field (District for Block), from dependsOnQuestion
+  dependsOn: {
+    type: Object,
+    default: null,
   },
   // { title, description } when the last location request failed (#27)
   gpsAlert: {
@@ -858,6 +873,11 @@ const isChoiceControl = computed(() => {
 // a dependent question (Block under District) offers only the parent answer's choices (#24)
 const normalizedOptions = computed(() =>
   choiceOptions(props.question, props.parentValue).map((opt) => ({ value: opt.value, label: getOptionLabel(opt) }))
+);
+
+// a dependent question with nothing to offer says which question to answer first
+const choicesWait = computed(() =>
+  choicesWaitMessage({ __, getQuestionLabel }, props.question, props.parentValue, props.dependsOn)
 );
 
 const displayedGridOptions = computed(() => {

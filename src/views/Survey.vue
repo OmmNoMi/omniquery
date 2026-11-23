@@ -26,6 +26,7 @@
           :group="item"
           :responses="s.responses"
           :validationErrors="s.validationErrors"
+          :questionsByCode="s.questionsByCode"
           :notApplicable="item.questions && item.questions.every(q => !s.isQuestionVisible(q))"
           @update-response="({ code, value }) => s.setResponse(code, value)"
           @answered="s.onQuestionAnswered($event)"
@@ -47,6 +48,7 @@
           :question="item.question"
           :modelValue="s.responses[item.question.question_code]"
           :parentValue="parentAnswer(item.question, s.responses)"
+          :dependsOn="dependsOnQuestion(item.question, s.questionsByCode)"
           :parentQuestion="parentGrid(item.question, s.sectionGrids)"
           @update:modelValue="s.setResponse(item.question.question_code, $event)"
           :errorMessage="s.validationErrors[item.question.question_code]"
@@ -64,6 +66,7 @@
       :isOpen="s.isFocusMode"
       :questions="s.activeQuestions"
       :sectionGrids="s.sectionGrids"
+      :questionsByCode="s.questionsByCode"
       :currentIndex="s.focusQuestionIndex"
       :responses="s.responses"
       :validationErrors="s.validationErrors"
@@ -90,7 +93,7 @@ import GroupedQuestionCard from "../components/survey/GroupedQuestionCard.vue";
 import MatrixQuestionCard from "../components/survey/MatrixQuestionCard.vue";
 import FocusModeModal from "../components/survey/FocusModeModal.vue";
 import { useSurveySession } from "../composables/useSurveyApp";
-import { parentAnswer } from "../utils/cascadingOptions";
+import { dependsOnQuestion, parentAnswer } from "../utils/cascadingOptions";
 import { parentGrid } from "../utils/questionLayout";
 
 // every answer goes through s.setResponse, so the session owns the one write path (#46)

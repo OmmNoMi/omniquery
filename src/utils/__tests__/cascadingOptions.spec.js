@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { choiceOptions, hasOptions, optionsForParent, parentAnswer, staleDependentAnswers } from "../cascadingOptions";
+import { byQuestionCode, choiceOptions, choicesWaitOn, dependsOnQuestion, hasOptions, optionsForParent, parentAnswer, staleDependentAnswers } from "../cascadingOptions";
 
 // #24: Block offers only the chosen District's blocks. omniquery/services/cascading_options.py
 // checks the same rules on the server.
@@ -27,6 +27,27 @@ describe("cascading options (#24)", () => {
     expect(hasOptions(BLOCKS)).toBe(true);
     expect(hasOptions(["x"])).toBe(true);
     for (const none of [{}, [], null, undefined, "x"]) expect(hasOptions(none)).toBe(false);
+  });
+
+  it("says what a dependent question's choices wait on", () => {
+    for (const blank of [undefined, null, ""]) expect(choicesWaitOn(block, blank)).toBe("parent");
+    expect(choicesWaitOn(block, "Jaipur")).toBe("none");
+    expect(choicesWaitOn(block, "Baran")).toBeNull();
+    expect(choicesWaitOn(district, undefined), "a question that depends on nothing").toBeNull();
+    expect(choicesWaitOn({ ...block, options: ["a"] }, undefined), "a flat list is offered as it is").toBeNull();
+    expect(choicesWaitOn(null, undefined)).toBeNull();
+    expect(choicesWaitOn(block, 0), "0 is an answer: there are no blocks for it").toBe("none");
+    expect(choicesWaitOn({ ...block, depends_on_field: "" }, undefined), "grouped choices with no parent named").toBeNull();
+  });
+
+  it("finds the question a dependent question waits on", () => {
+    const byCode = byQuestionCode([district, block, village]);
+    expect(dependsOnQuestion(block, byCode)).toBe(district);
+    expect(dependsOnQuestion(village, byCode)).toBe(block);
+    expect(dependsOnQuestion(district, byCode)).toBeNull();
+    expect(dependsOnQuestion(block, new Map())).toBeNull();
+    expect(dependsOnQuestion(block, undefined)).toBeNull();
+    expect(byQuestionCode(undefined).size).toBe(0);
   });
 
   it("reads the parent's answer", () => {

@@ -72,6 +72,7 @@
             :question="currentQuestion"
             :modelValue="responses[currentQuestion.question_code]"
             :parentValue="parentAnswer(currentQuestion, responses)"
+            :dependsOn="dependsOnQuestion(currentQuestion, questionsByCode)"
             :errorMessage="validationErrors[currentQuestion.question_code]"
             @update:modelValue="onQuestionInput"
             @answered="onQuestionAnswered"
@@ -131,7 +132,7 @@ import { ArrowLeft, ArrowRight, X } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import QuestionCard from "./QuestionCard.vue";
 import ParentGridCard from "./ParentGridCard.vue";
-import { parentAnswer } from "../../utils/cascadingOptions";
+import { dependsOnQuestion, parentAnswer } from "../../utils/cascadingOptions";
 import { parentGrid } from "../../utils/questionLayout";
 import MatrixQuestionCard from "./MatrixQuestionCard.vue";
 import { isMatrixQuestion } from "../../utils/questionLayout";
@@ -148,6 +149,11 @@ const props = defineProps({
   },
   // the section's grids, from gridsByCode, so a question shows the grid it sits under (#140)
   sectionGrids: {
+    type: Map,
+    default: () => new Map(),
+  },
+  // the template's questions by code, so a dependent question names the question it waits on
+  questionsByCode: {
     type: Map,
     default: () => new Map(),
   },

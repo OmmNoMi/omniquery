@@ -91,8 +91,12 @@
         <!-- Sub-Question Input Control -->
         <div class="shrink-0 w-full sm:w-auto">
           <!-- Choice Radio/Percent Pills (Clean wrap, ZERO horizontal scroll, Roving Tabindex: 1 tab stop per row) -->
+          <!-- a dependent question (Block under District) says what it waits on -->
+          <p v-if="isChoiceQuestion(q) && choicesWait(q)" data-choices-wait class="py-1 text-xs text-ink-gray-6">
+            {{ choicesWait(q) }}
+          </p>
           <div
-            v-if="isChoiceQuestion(q)"
+            v-else-if="isChoiceQuestion(q)"
             role="radiogroup"
             :aria-labelledby="'sub_label_' + q.question_code"
             v-bind="choiceGroupState({ required: q.is_mandatory, errorId: validationErrors[q.question_code] ? 'sub_err_' + q.question_code : undefined })"
@@ -200,7 +204,7 @@ import { Button, TextInput } from "frappe-ui";
 import { Check, Ban } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
 import { useRevealInPage } from "../../composables/useRevealInPage";
-import { choiceOptions, hasOptions, parentAnswer } from "../../utils/cascadingOptions";
+import { choiceOptions, choicesWaitMessage, dependsOnQuestion, hasOptions, parentAnswer } from "../../utils/cascadingOptions";
 import { choiceGroupState } from "../../utils/choiceGroup";
 import { isAnswered } from "../../utils/responsePayload";
 import { isPhoneQuestion } from "../../utils/phone";
@@ -223,6 +227,11 @@ const props = defineProps({
   notApplicable: {
     type: Boolean,
     default: false,
+  },
+  // the template's questions by code, so a dependent question names the question it waits on
+  questionsByCode: {
+    type: Map,
+    default: () => new Map(),
   },
 });
 
@@ -275,6 +284,12 @@ function isChoiceQuestion(q) {
 // a dependent question (Block under District) offers only the parent answer's choices (#24)
 function getQuestionOptions(q) {
   return choiceOptions(q, parentAnswer(q, props.responses));
+}
+
+// what a dependent question with nothing to offer says in place of its choices, "" when it has some
+function choicesWait(q) {
+  const parent = dependsOnQuestion(q, props.questionsByCode);
+  return choicesWaitMessage({ __, getQuestionLabel }, q, parentAnswer(q, props.responses), parent);
 }
 
 // frappe-ui Buttons; each sets its rootRef, the button element, only after the ref callback runs, so read it at use
