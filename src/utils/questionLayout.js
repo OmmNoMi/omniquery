@@ -8,6 +8,24 @@ export function isMatrixQuestion(q) {
   return MATRIX_FIELD_TYPES.has((q.field_type || "").toLowerCase()) || q.control_variant === "Matrix";
 }
 
+// A template's sections and questions in their Order (display_order), the template's row order
+// breaking ties, as the template editor shows them. The compiled schema keeps the rows in the order
+// they were saved, so a question moved by its Order alone came out of place, in the full form and in
+// focus mode (#169). A row with no Order keeps its own place, as the compiler gives it its idx.
+export function inDisplayOrder(schema) {
+  if (!schema) return schema;
+  return { ...schema, sections: byDisplayOrder(schema.sections), questions: byDisplayOrder(schema.questions) };
+}
+
+function byDisplayOrder(rows) {
+  if (!Array.isArray(rows)) return rows;
+  const order = (row, index) => (Number(row?.display_order) > 0 ? Number(row.display_order) : index + 1);
+  return rows
+    .map((row, index) => ({ row, index, at: order(row, index) }))
+    .sort((a, b) => a.at - b.at || a.index - b.index)
+    .map(({ row }) => row);
+}
+
 // A group takes its code and title from its first question's group_code and group_title. Without
 // them it is named by what the survey already shows: its number, or the question before it.
 export function groupHeading(first, fallbackCode, fallbackTitle) {

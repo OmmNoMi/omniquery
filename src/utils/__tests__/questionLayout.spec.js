@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gridsByCode, groupHeading, isMatrixQuestion, layoutQuestions, parentGrid } from "../questionLayout";
+import { gridsByCode, groupHeading, inDisplayOrder, isMatrixQuestion, layoutQuestions, parentGrid } from "../questionLayout";
 
 const q = (question_code, label_en, extra = {}) => ({ question_code, label_en, field_type: "Text", ...extra });
 
@@ -133,5 +133,46 @@ describe("parentGrid", () => {
     const selfLinked = { ...activity, group_code: "activity_involvements" };
     expect(parentGrid(selfLinked, gridsByCode([selfLinked]))).toBeNull();
     expect(parentGrid(q("a_share", "a. Own share", { group_code: "activity_involvements" }), undefined)).toBeNull();
+  });
+});
+
+describe("inDisplayOrder (#169)", () => {
+  const row = (question_code, display_order, extra = {}) => ({ question_code, section_code: "SEC_A", display_order, ...extra });
+  const codes = (schema) => schema.questions.map((question) => question.question_code);
+
+  it("puts questions saved out of place back in their Order, as the SHG survey's Section A was", () => {
+    const saved = [row("q6", 6), row("q9", 9), row("q7", 7), row("q8", 8), row("q15", 15), row("q18", 18), row("q16", 16)];
+    expect(codes(inDisplayOrder({ questions: saved, sections: [] }))).toEqual(["q6", "q7", "q8", "q9", "q15", "q16", "q18"]);
+  });
+
+  it("orders the sections by their Order too", () => {
+    const sections = [{ section_code: "B", display_order: 2 }, { section_code: "A", display_order: 1 }];
+    expect(inDisplayOrder({ sections, questions: [] }).sections.map((s) => s.section_code)).toEqual(["A", "B"]);
+  });
+
+  it("keeps the template's row order between rows that share an Order, as new rows all start at 1", () => {
+    const saved = [row("c", 1), row("a", 1), row("b", 1), row("first", 0.5)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["first", "c", "a", "b"]);
+  });
+
+  it("leaves a row with no Order in its own place, as the compiler gives it its idx", () => {
+    const saved = [row("one", undefined), row("two", null), row("four", "4"), row("three", 3)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["one", "two", "three", "four"]);
+  });
+
+  it("gives a row with no Order its row number from 1, as the compiler's idx, so a row ordered there comes first", () => {
+    const saved = [row("ordered_2", 2), row("second_row", undefined)];
+    expect(codes(inDisplayOrder({ questions: saved }))).toEqual(["ordered_2", "second_row"]);
+  });
+
+  it("returns a new schema and leaves the one it was given, and what it cannot order, alone", () => {
+    const saved = [row("b", 2), row("a", 1)];
+    const schema = { title: "Survey", questions: saved };
+    const ordered = inDisplayOrder(schema);
+    expect(ordered).not.toBe(schema);
+    expect(ordered.title).toBe("Survey");
+    expect(codes(schema)).toEqual(["b", "a"]);
+    expect(inDisplayOrder(null)).toBe(null);
+    expect(inDisplayOrder({ title: "Empty" })).toEqual({ title: "Empty", sections: undefined, questions: undefined });
   });
 });

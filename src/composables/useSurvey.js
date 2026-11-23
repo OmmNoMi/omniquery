@@ -4,7 +4,7 @@ import { db, audioRecordingsFor, NOT_SYNCED } from "../services/db";
 import { isAnswered, responseItems } from "../utils/responsePayload";
 import { PHONE_ERROR, isPhoneQuestion, isValidMobile } from "../utils/phone";
 import { comparisonError } from "../utils/answerComparison";
-import { gridsByCode } from "../utils/questionLayout";
+import { gridsByCode, inDisplayOrder } from "../utils/questionLayout";
 import { useTranslation } from "./useTranslation";
 import { REQUIRED_ERROR } from "../utils/requiredMessage";
 import { uuidv4 } from "../utils/uuid";
@@ -280,7 +280,7 @@ export function useSurvey() {
     // 1. Instant offline retrieval from IndexedDB
     const cached = await getCachedTemplate(surveyId);
     if (cached) {
-      activeTemplate.value = cached;
+      activeTemplate.value = inDisplayOrder(cached);
       activeSectionIndex.value = 0;
     }
 
@@ -293,7 +293,7 @@ export function useSurvey() {
           schema.template_name = schema.template_name || payload.template_name || surveyId;
           schema.title = schema.title || payload.title || surveyId;
           schema.response_title_format = schema.response_title_format || payload.response_title_format || "{respondent_name} - {village_gp} ({enterprise_name})";
-          activeTemplate.value = schema;
+          activeTemplate.value = inDisplayOrder(schema);
           activeSectionIndex.value = 0;
           await cacheTemplateLocally(surveyId, schema, payload);
         }

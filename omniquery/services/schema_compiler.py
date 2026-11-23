@@ -33,9 +33,14 @@ def build_schema_dictionary(template_document):
 		"is_public_citizen_link": bool(template_document.is_public_citizen_link),
 		"auto_advance": bool(getattr(template_document, "auto_advance", 1)),
 		"presentation_mode": getattr(template_document, "presentation_mode", "Standard Section") or "Standard Section",
-		"sections": [format_section_dictionary(s) for s in (template_document.sections or [])],
-		"questions": [format_question_dictionary(q) for q in (template_document.questions or [])],
+		"sections": [format_section_dictionary(s) for s in in_display_order(template_document.sections)],
+		"questions": [format_question_dictionary(q) for q in in_display_order(template_document.questions)],
 	}
+
+
+def in_display_order(rows):
+	"""Rows in their Order (display_order), the row order breaking ties; a row with no Order keeps its idx (#169)."""
+	return sorted(rows or [], key=lambda row: (row.display_order or row.idx, row.idx))
 
 
 def format_section_dictionary(section_row):

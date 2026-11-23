@@ -101,6 +101,30 @@ class TestSchemaCompiler(unittest.TestCase):
 		self.assertEqual((grouped["group_title"], grouped["group_code"]), ("Herd size", "herd"))
 		self.assertEqual((plain["group_title"], plain["group_code"]), (None, None))
 
+	def test_sections_and_questions_compile_in_their_order(self):
+		# the SHG survey saved Q9 after Q6 with an Order of 9, and the survey asked it there (#169)
+		template = frappe.get_doc({
+			"doctype": "OmniQuery Template",
+			"title": "Test Women Dairy Assessment 2026",
+			"project": "PROJ-Test Dairy Initiative",
+			"version": 1,
+			"status": "Draft",
+			"sections": [
+				{"section_code": "SEC_2", "section_title": "Section 2", "display_order": 2},
+				{"section_code": "SEC_1", "section_title": "Section 1", "display_order": 1},
+			],
+			"questions": [
+				{"section_code": "SEC_1", "question_code": "q6", "label_en": "Q6", "display_order": 6},
+				{"section_code": "SEC_1", "question_code": "q9", "label_en": "Q9", "display_order": 9},
+				{"section_code": "SEC_1", "question_code": "q7", "label_en": "Q7", "display_order": 7},
+				{"section_code": "SEC_1", "question_code": "tie_a", "label_en": "Tie A", "display_order": 7},
+			],
+		}).insert(ignore_permissions=True)
+
+		schema_obj = json.loads(template.compiled_schema_json)
+		self.assertEqual([s["section_code"] for s in schema_obj["sections"]], ["SEC_1", "SEC_2"])
+		self.assertEqual([q["question_code"] for q in schema_obj["questions"]], ["q6", "q7", "tie_a", "q9"])
+
 	def test_response_title_format_compilation(self):
 		template = frappe.get_doc({
 			"doctype": "OmniQuery Template",
