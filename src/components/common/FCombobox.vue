@@ -92,6 +92,7 @@
             type="text"
             :placeholder="searchPlaceholder || __('Search options...')"
             @keydown="onSearchKeydown"
+            enterkeyhint="done"
             class="w-full text-xs pl-8 pr-7 py-2.5 rounded-xl border transition bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400"
             aria-autocomplete="list"
           />

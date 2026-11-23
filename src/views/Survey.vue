@@ -38,7 +38,6 @@
           @update:modelValue="s.setResponse(item.question.question_code, $event)"
           :errorMessage="s.validationErrors[item.question.question_code]"
           :notApplicable="!s.isQuestionVisible(item.question)"
-          @answered="s.onQuestionAnswered(item.question)"
           @next="s.onQuestionAnswered(item.question)"
         />
         <QuestionCard

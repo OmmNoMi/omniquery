@@ -6,10 +6,9 @@ import { getSourceFiles, namedImports } from "./sourceFiles.js";
 // Light-surface text in slate/gray/zinc 200 or 300 is under 2:1 on white, so it fails WCAG 2.2 AA
 // (4.5:1). 400 is about 2.6:1 and still fails; the existing uses are capped per file below and
 // may only shrink. A class counts unless its variant chain is dark: (dark:text-, dark:hover:text-).
-// Lucide icons are decorative (aria-hidden), and FocusModeModal is a dark surface.
+// Lucide icons are decorative (aria-hidden). Focus mode is a light surface too since its redesign.
 const root = path.resolve(__dirname, "../..");
 const LIGHT_TEXT = /(?<![\w:-])((?:[\w-]+:)*)text-(?:slate|gray|zinc)-(200|300|400)\b/g;
-const DARK_SURFACES = new Set(["src/components/survey/FocusModeModal.vue"]);
 
 export const SHADE_400_ALLOWLIST = {
   "src/components/common/FCombobox.vue": 8,
@@ -37,8 +36,7 @@ export function lightTextUses(content) {
 
 describe("Static Architectural Guard: Accessible Text Contrast (WCAG 2.2 AA) (#49)", () => {
   const files = getSourceFiles(path.join(root, "src"), [".vue"])
-    .map((f) => path.relative(root, f))
-    .filter((rel) => !DARK_SURFACES.has(rel));
+    .map((f) => path.relative(root, f));
   const usesByFile = Object.fromEntries(files.map((rel) => [rel, lightTextUses(fs.readFileSync(path.join(root, rel), "utf-8"))]));
 
   it("forbids 200 and 300 text shades on light surfaces", () => {

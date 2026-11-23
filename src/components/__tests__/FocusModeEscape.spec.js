@@ -75,7 +75,7 @@ describe("Focus mode Escape and focus (#42)", () => {
     vi.restoreAllMocks();
   });
 
-  it("is a modal dialog named Focus Mode, described by the section, hiding the page behind it", async () => {
+  it("is a modal dialog named Focus mode, described by the section, hiding the page behind it", async () => {
     const page = document.createElement("main");
     page.textContent = "section behind focus mode";
     document.body.appendChild(page);
@@ -84,7 +84,7 @@ describe("Focus mode Escape and focus (#42)", () => {
     await vi.waitFor(() => expect(dialogs()).toHaveLength(1));
     const [dialog] = dialogs();
     await vi.waitFor(() => expect(page.getAttribute("aria-hidden")).toBe("true"));
-    expect(document.getElementById(dialog.getAttribute("aria-labelledby")).textContent.trim()).toBe("Focus Mode");
+    expect(document.getElementById(dialog.getAttribute("aria-labelledby")).textContent.trim()).toBe("Focus mode");
     expect(document.getElementById(dialog.getAttribute("aria-describedby")).textContent.trim()).toBe("Household");
   });
 
@@ -220,7 +220,7 @@ describe("Focus mode focuses the question once (#120)", () => {
     vi.useRealTimers();
   });
 
-  const exitButton = () => document.querySelector("button[aria-label='Exit Focus Mode']");
+  const exitButton = () => document.querySelector("button[aria-label='Exit focus mode']");
   const matrixInput = () => document.querySelector("[data-matrix-question-card] input");
   const settle = () => vi.advanceTimersByTimeAsync(5000);
 

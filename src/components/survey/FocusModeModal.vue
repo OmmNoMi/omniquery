@@ -7,53 +7,52 @@
     @update:modelValue="(open) => !open && emit('close')"
   >
     <template #body>
-    <div class="bg-slate-950 text-white max-h-[calc(100dvh-6rem)] flex flex-col overflow-hidden p-2 sm:p-3 gap-2">
-      <!-- Top Navigation & Progress Header Card. The panel is dark in either app theme, so its strips
-        take frappe-ui's dark tokens (data-theme="dark"); the question card between them stays on the page theme -->
-      <div data-theme="dark" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-3 sm:p-4 space-y-2 shrink-0">
-        <div class="flex items-center justify-between gap-2">
-          <!-- Left: Focus Mode Badge & Counter -->
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-xs flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-              <DialogTitle as="span">{{ __('Focus Mode') }}</DialogTitle>
-            </span>
-            <span class="text-xs font-mono font-bold text-white bg-slate-800 px-2 py-0.5 rounded-md border border-slate-700">
-              {{ currentIndex + 1 }} / {{ questions.length }}
-            </span>
+    <!-- One surface on the app's theme. On a phone it fills the screen (main.css, [data-focus-mode]),
+      so the form behind it is out of sight and Previous and Next sit at the bottom edge, where a thumb
+      reaches them -->
+    <div data-focus-mode class="flex h-[100dvh] flex-col bg-surface-modal sm:h-auto sm:max-h-[calc(100dvh-6rem)]">
+      <header class="shrink-0 space-y-2.5 border-b border-outline-gray-1 px-4 pb-3 pt-3">
+        <div class="flex items-start gap-2">
+          <div class="min-w-0 flex-1">
+            <DialogDescription as="p" class="truncate text-base font-semibold text-ink-gray-9">{{ sectionTitle }}</DialogDescription>
+            <p class="flex flex-wrap gap-x-1.5 text-sm text-ink-gray-6">
+              <DialogTitle as="span">{{ __("Focus mode") }}</DialogTitle>
+              <span aria-hidden="true">/</span>
+              <span>{{ __("Question {0} of {1}", [currentIndex + 1, questions.length]) }}</span>
+            </p>
           </div>
-
-          <!-- Right: Close Button -->
+          <SurveyModeMenu
+            size="lg"
+            :variant="autoAdvance || isFullForm ? 'subtle' : 'outline'"
+            :autoAdvance="autoAdvance"
+            :isFullForm="isFullForm"
+            :isFocusMode="true"
+            @toggle-auto-advance="emit('toggle-auto-advance')"
+            @toggle-full-form="emit('toggle-full-form')"
+            @toggle-focus-mode="emit('close')"
+          />
           <Button
+            size="lg"
+            variant="ghost"
             :icon="X"
-            :label="__('Exit Focus Mode')"
-            :title="__('Exit Focus Mode')"
+            :label="__('Exit focus mode')"
+            :title="__('Exit focus mode')"
             @click="emit('close')"
           />
         </div>
+        <!-- the counter above says where the surveyor is in words, so the bar is only drawn -->
+        <Progress :value="progressPercent" size="md" aria-hidden="true" />
+      </header>
 
-        <!-- Section Title & Progress Bar -->
-        <div class="space-y-1.5 pt-0.5 border-t border-slate-800/80">
-          <div class="flex items-center justify-between text-xs font-medium">
-            <DialogDescription as="span" class="font-bold text-slate-200 truncate pr-2">{{ sectionTitle }}</DialogDescription>
-            <span class="font-mono font-bold text-emerald-400 shrink-0">{{ progressPercent }}%</span>
-          </div>
-          <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700/50 p-0.5">
-            <div
-              class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300 rounded-full shadow-[0_0_8px_rgba(52,211,153,0.3)]"
-              :style="{ width: `${progressPercent}%` }"
-            ></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Top-Aligned Question Area: Mobile Keyboard-Friendly (no jumping/squishing) -->
-      <div ref="scrollAreaRef" class="w-full flex-1 min-h-0 py-1 overflow-y-auto" @focusout="onQuestionFocusOut">
+      <!-- only the question scrolls; the header and the buttons stay put -->
+      <div ref="scrollAreaRef" class="min-h-0 w-full flex-1 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4" @focusout="onQuestionFocusOut">
         <!-- the dialog's leave transition still renders this after its question is gone, as when an
-          answer hides the questions after it (#152) -->
-        <template v-if="currentQuestion">
+          answer hides the questions after it (#152). Just after a move, a tap lands on nothing: a
+          second tap of the same finger would otherwise answer the new question unseen -->
+        <div v-if="currentQuestion" :class="{ 'pointer-events-none': isAdvancing }">
           <!-- the grid the question sits under stays at the top as the question scrolls (#140) -->
           <ParentGridCard :grid="parentGrid(currentQuestion, sectionGrids)" class="sticky top-0 z-20 shadow-sm" />
+          <!-- a matrix moves on only from Next or Enter in its last cell, never as its cells are typed (#170) -->
           <MatrixQuestionCard
             v-if="isMatrixQuestion(currentQuestion)"
             ref="questionCardRef"
@@ -62,7 +61,6 @@
             :modelValue="responses[currentQuestion.question_code]"
             :errorMessage="validationErrors[currentQuestion.question_code]"
             @update:modelValue="onQuestionInput"
-            @answered="onQuestionAnswered"
             @next="nextQuestion"
           />
           <QuestionCard
@@ -79,44 +77,28 @@
             :gpsAlert="gpsAlert"
             @capture-gps="$emit('capture-gps')"
           />
-        </template>
+        </div>
       </div>
 
-      <!-- Bottom Floating Navigation Bar: Tab sequence is Next (primary) -> Mode -> Previous -->
-      <div data-theme="dark" class="w-full bg-slate-900 border border-slate-800 rounded-2xl p-2.5 sm:p-3 flex items-center justify-between gap-2 shrink-0">
-        <!-- 1st in DOM (Focus 1): Next Question Button (Visual: Right) -->
+      <!-- Next comes first in the tab order, after the question; Previous sits on its left -->
+      <footer class="grid shrink-0 grid-cols-2 gap-2 border-t border-outline-gray-1 px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <Button
           variant="solid"
-          size="md"
+          size="xl"
           :label="currentIndex === questions.length - 1 ? __('Finish') : __('Next')"
           :iconRight="ArrowRight"
-          class="order-3 shrink-0"
+          class="order-2 w-full"
           @click="nextQuestion"
         />
-
-        <!-- 2nd in DOM (Focus 2): Survey Mode menu (Visual: Center); its Focus Form toggle exits -->
-        <SurveyModeMenu
-          class="order-2"
-          size="md"
-          :variant="autoAdvance || isFullForm ? 'subtle' : 'outline'"
-          :autoAdvance="autoAdvance"
-          :isFullForm="isFullForm"
-          :isFocusMode="true"
-          @toggle-auto-advance="emit('toggle-auto-advance')"
-          @toggle-full-form="emit('toggle-full-form')"
-          @toggle-focus-mode="emit('close')"
-        />
-
-        <!-- 3rd in DOM (Focus 3): Previous Question Button (Visual: Left) -->
         <Button
-          size="md"
+          size="xl"
           :label="__('Previous')"
           :iconLeft="ArrowLeft"
           :disabled="currentIndex === 0"
-          class="order-1 shrink-0"
+          class="order-1 w-full"
           @click="prevQuestion"
         />
-      </div>
+      </footer>
     </div>
     </template>
   </Dialog>
@@ -125,7 +107,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { useTimeoutFn } from "@vueuse/core";
-import { Button, Dialog } from "frappe-ui";
+import { Button, Dialog, Progress } from "frappe-ui";
 import { DialogDescription, DialogTitle } from "reka-ui";
 import { ArrowLeft, ArrowRight, X } from "lucide-vue-next";
 import { useTranslation } from "../../composables/useTranslation";
@@ -195,6 +177,8 @@ const emit = defineEmits([
 
 const { __ } = useTranslation();
 
+const ADVANCE_DELAY = 450;
+
 const questionCardRef = ref(null);
 const scrollAreaRef = ref(null);
 
@@ -221,9 +205,10 @@ function onQuestionInput(val) {
   emit("update-response", { code: currentQuestion.value.question_code, value: val });
 }
 
-// An answer moves on to the next question 220 ms later, and a move locks Next for 350 ms so a double
-// press skips no question. useTimeoutFn stops both timers when focus mode unmounts.
-const { start: scheduleAdvance, stop: cancelAdvance } = useTimeoutFn(advanceToNext, 220, { immediate: false });
+// An answer moves on to the next question ADVANCE_DELAY later, long enough to see the choice the
+// finger landed on (and tap another) on a phone. A move locks Next, and taps on the new question, for
+// 350 ms so a double tap skips no question. useTimeoutFn stops both timers when focus mode unmounts.
+const { start: scheduleAdvance, stop: cancelAdvance } = useTimeoutFn(advanceToNext, ADVANCE_DELAY, { immediate: false });
 const { isPending: isAdvancing, start: lockAdvance, stop: unlockAdvance } = useTimeoutFn(() => {}, 350, {
   immediate: false,
 });

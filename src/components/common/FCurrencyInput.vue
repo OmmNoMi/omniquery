@@ -47,6 +47,7 @@
         @update:modelValue="onTextInput"
         @keydown="onInputKeydown"
         @keydown.enter="$emit('enter')"
+        enterkeyhint="next"
         @keydown.esc.stop="$emit('esc')"
         :placeholder="__('Enter amount...')"
         class="block w-full min-h-[56px] rounded-2xl border-2 border-slate-300 dark:border-slate-700 py-3.5 pl-9 pr-4 text-xl sm:text-2xl font-black text-slate-900 dark:text-white bg-slate-50 dark:bg-slate-800 transition"

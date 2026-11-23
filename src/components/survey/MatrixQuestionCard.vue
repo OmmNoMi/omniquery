@@ -139,6 +139,7 @@
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
+                  enterkeyhint="next"
                   :placeholder="col.placeholder || '0'"
                   class="w-16 sm:w-20 text-center rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
                 />
@@ -163,6 +164,7 @@
                   :modelValue="getCellValue(row.id, col.key)"
                   @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                   @keydown="onCellKeydown($event, rIdx, cIdx)"
+                  enterkeyhint="next"
                   :placeholder="col.placeholder || '0'"
                   class="w-full text-right rounded-lg border border-slate-200 dark:border-slate-700 pl-6 pr-2.5 text-xs font-bold text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
                 />
@@ -190,6 +192,7 @@
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
+                enterkeyhint="next"
                 :placeholder="col.placeholder || __('Enter text')"
                 class="w-full rounded-lg border border-slate-200 dark:border-slate-700 px-2.5 text-xs font-medium text-slate-900 dark:text-white bg-slate-50/50 dark:bg-slate-800/60 transition"
               />
@@ -266,6 +269,7 @@
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
+                enterkeyhint="next"
                 :placeholder="col.placeholder || '0'"
                 class="w-14 text-center rounded-lg border border-slate-300 dark:border-slate-600 px-1.5 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900"
               />
@@ -290,6 +294,7 @@
                 :modelValue="getCellValue(row.id, col.key)"
                 @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
                 @keydown="onCellKeydown($event, rIdx, cIdx)"
+                enterkeyhint="next"
                 :placeholder="col.placeholder || '0'"
                 class="w-full text-right rounded-lg border border-slate-300 dark:border-slate-600 pl-5 pr-2 text-xs font-bold text-slate-900 dark:text-white bg-white dark:bg-slate-900"
               />
@@ -317,6 +322,7 @@
               :modelValue="getCellValue(row.id, col.key)"
               @update:modelValue="(val) => updateCellValue(row.id, col.key, val)"
               @keydown="onCellKeydown($event, rIdx, cIdx)"
+              enterkeyhint="next"
               :placeholder="col.placeholder || __('Enter text')"
               class="w-36 rounded-lg border border-slate-300 dark:border-slate-600 px-2 text-xs font-medium text-slate-900 dark:text-white bg-white dark:bg-slate-900 shrink-0"
             />
@@ -401,7 +407,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["update:modelValue", "answered", "next"]);
+const emit = defineEmits(["update:modelValue", "next"]);
 const { __, getDescription } = useTranslation();
 const questionDescription = computed(() => getDescription(props.question));
 
@@ -597,12 +603,11 @@ function stepCellValue(rowId, colKey, delta) {
   updateCellValue(rowId, colKey, next);
 }
 
+// No "answered" here: a grid is complete as soon as one cell of each row is filled, so it fired on
+// every keystroke after that and moved the surveyor on while they were still typing (#170). A grid
+// moves on only when they ask: Enter on its last cell (onCellKeydown) or the Next button.
 function emitData() {
-  const payload = { ...internalData };
-  emit("update:modelValue", payload);
-  if (isCompleted.value) {
-    emit("answered", { code: props.question.question_code, value: payload });
-  }
+  emit("update:modelValue", { ...internalData });
 }
 
 // Completion Checkers
