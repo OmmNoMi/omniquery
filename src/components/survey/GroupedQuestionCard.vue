@@ -36,7 +36,7 @@
             {{ parsedGroupMeta.text }}
           </h3>
           <p v-if="group.description" class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            {{ group.description }}
+            {{ __(group.description) }}
           </p>
         </div>
       </div>
@@ -114,7 +114,7 @@
                   : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-600 hover:bg-slate-100 hover:border-slate-300 dark:hover:bg-slate-600 focus:border-emerald-500'
               ]"
             >
-              {{ __(opt.label) }}
+              {{ getOptionLabel(opt) }}
             </Button>
           </div>
 
@@ -205,6 +205,7 @@ import { choiceGroupState } from "../../utils/choiceGroup";
 import { isAnswered } from "../../utils/responsePayload";
 import { isPhoneQuestion } from "../../utils/phone";
 import { errorText } from "../../utils/requiredMessage";
+import { splitQuestionNumber } from "../../utils/questionLayout";
 
 const props = defineProps({
   group: {
@@ -226,33 +227,18 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["update-response", "answered"]);
-const { __ } = useTranslation();
+const { __, getOptionLabel, getQuestionLabel } = useTranslation();
 
 const answeredCount = computed(() => props.group.questions.filter((q) => isAnswered(props.responses[q.question_code])).length);
 const isGroupCompleted = computed(() => props.group.questions.every((q) => isAnswered(props.responses[q.question_code])));
 
+// the group's title, which layoutQuestions gives in the surveyor's language, and its number
 const parsedGroupMeta = computed(() => {
   const full = props.group.title || "";
-  const match = full.match(/^(Q\d+[a-z]?\.?|\d+\.?|[A-Za-z]\.)\s*(.*)$/i);
-  if (match) {
-    const rawNum = match[1].replace(/\.$/, "").trim();
-    const cleanText = match[2].replace(/^[\s.:-]+\s*/, "").trim();
-    return {
-      number: rawNum,
-      text: cleanText,
-    };
-  }
+  const own = splitQuestionNumber(full);
+  if (own.number) return own;
   const num = props.group.number;
-  if (num && String(num).toUpperCase() !== "TABLE") {
-    return {
-      number: num,
-      text: full,
-    };
-  }
-  return {
-    number: null,
-    text: full,
-  };
+  return { number: num && String(num).toUpperCase() !== "TABLE" ? num : null, text: full };
 });
 
 const hasGroupError = computed(() => {
@@ -271,9 +257,9 @@ function subError(q) {
   return errorText(__, props.validationErrors[q.question_code], action, getCleanSubLabel(q));
 }
 
+// a sub-question's label in the surveyor's language, without its letter, which the badge shows
 function getCleanSubLabel(q) {
-  const label = q.label_en || q.label || "";
-  return label.replace(/^(Q\d+[a-z]?\.?|\d+\.?|[A-Za-z]\.)\s*/i, "").replace(/^[\s.:-]+\s*/, "").trim();
+  return splitQuestionNumber(getQuestionLabel(q)).text;
 }
 
 function isNumericQuestion(q) {

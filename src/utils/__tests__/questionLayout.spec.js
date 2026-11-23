@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { gridsByCode, groupHeading, isMatrixQuestion, layoutQuestions, parentGrid } from "../questionLayout";
+import { gridsByCode, groupHeading, isMatrixQuestion, layoutQuestions, parentGrid, splitQuestionNumber } from "../questionLayout";
 
 const q = (question_code, label_en, extra = {}) => ({ question_code, label_en, field_type: "Text", ...extra });
 
@@ -33,6 +33,21 @@ describe("groupHeading", () => {
   });
 });
 
+describe("splitQuestionNumber", () => {
+  it("splits a label into its number and its text", () => {
+    expect(splitQuestionNumber("Q3a. Cows")).toEqual({ number: "Q3a", text: "Cows" });
+    expect(splitQuestionNumber("Q3 Cows")).toEqual({ number: "Q3", text: "Cows" });
+    expect(splitQuestionNumber("12. Village")).toEqual({ number: "12", text: "Village" });
+    expect(splitQuestionNumber("b. - Age")).toEqual({ number: "b", text: "Age" });
+  });
+
+  it("gives a label with no number a null number, without its leading punctuation", () => {
+    expect(splitQuestionNumber("गाँव का नाम")).toEqual({ number: null, text: "गाँव का नाम" });
+    expect(splitQuestionNumber(": Village ")).toEqual({ number: null, text: "Village" });
+    expect(splitQuestionNumber(undefined)).toEqual({ number: null, text: "" });
+  });
+});
+
 describe("layoutQuestions", () => {
   it("titles a Q-number run from the template, with no invented description (#14)", () => {
     const [group] = layoutQuestions([
@@ -52,8 +67,19 @@ describe("layoutQuestions", () => {
     const run = [q("a_share", "a. Own share"), q("b_share", "b. Partner share")];
     const [, afterLead] = layoutQuestions([q("lead", "Who owns the shop?"), ...run]);
     expect(afterLead).toMatchObject({ type: "group", group_code: "group_a_share", title: "Who owns the shop?" });
-    const [alone] = layoutQuestions(run, (text) => `hi:${text}`);
+    const [alone] = layoutQuestions(run, { __: (text) => `hi:${text}` });
     expect(alone.title).toBe("hi:Breakdown table");
+  });
+
+  // #165: a heading is in the surveyor's language, while runs are still found by the authored label
+  it("titles a group in the surveyor's language", () => {
+    const t = { __: (text) => `hi:${text}`, getQuestionLabel: (x) => `label:${x.question_code}` };
+    const [titled] = layoutQuestions([q("cows", "Q3a. Cows", { group_title: "Herd size" }), q("buffaloes", "Q3b. Buffaloes")], t);
+    expect(titled.title).toBe("hi:Herd size");
+    const [numbered] = layoutQuestions([q("cows", "Q3a. Cows"), q("buffaloes", "Q3b. Buffaloes")], t);
+    expect(numbered.title).toBe("Q3");
+    const [, afterLead] = layoutQuestions([q("lead", "Who owns the shop?"), q("a_share", "a. Own share"), q("b_share", "b. Partner share")], t);
+    expect(afterLead.title).toBe("label:lead");
   });
 
   it("puts a matrix question on its own matrix card and the rest on single cards", () => {
