@@ -7,7 +7,7 @@ import FocusModeModal from "../survey/FocusModeModal.vue";
 import MatrixQuestionCard from "../survey/MatrixQuestionCard.vue";
 import QuestionCard from "../survey/QuestionCard.vue";
 import { useTranslation } from "../../composables/useTranslation.js";
-import { ruleDeclarations } from "../../../test/guards/sourceFiles.js";
+import { ruleDeclarations, utilityDeclarations } from "../../../test/guards/sourceFiles.js";
 
 // Field surveyors fill focus mode on a phone, one question at a time, with auto-advance on. The
 // advance waits long enough to see the choice the finger landed on, a second tap can't answer the
@@ -174,6 +174,28 @@ describe("Focus mode on a phone", () => {
     expect(at(".dialog-content:has(> [data-focus-mode]) > [data-focus-mode]", "max-height")).toBe("none");
     expect(at(".dialog-overlay > :has(> .dialog-content > [data-focus-mode])", "padding")).toBe("0");
     expect(at(".dialog-overlay > :has(> .dialog-content > [data-focus-mode])", "min-height")).toBe("100dvh");
+  });
+
+  it("shows only the survey mode's icon in the header on a phone, so the section title keeps the room", async () => {
+    mountFocusMode();
+    await openDialog();
+    const trigger = body().querySelector("header button[aria-haspopup='menu']");
+    const mode = trigger.getAttribute("aria-label");
+    expect(mode, "screen readers still hear the mode").toMatch(/\w/);
+    const label = [...trigger.querySelectorAll("span")].find((el) => el.textContent.trim() === mode && !el.querySelector("span"));
+    const chevron = trigger.querySelector("svg.lucide-chevron-down-icon");
+    const phoneOnly = [...trigger.classList, ...label.classList, ...chevron.classList].filter((c) => c.startsWith("max-sm:"));
+    expect(phoneOnly).toEqual(expect.arrayContaining(["max-sm:w-10", "max-sm:px-0", "max-sm:sr-only", "max-sm:hidden"]));
+    const built = await utilityDeclarations(phoneOnly);
+    expect(phoneOnly.filter((c) => !built.has(c)), "every phone class is one Tailwind builds").toEqual([]);
+  });
+
+  it("lets a long section title wrap to a second line in the header instead of cutting it off", async () => {
+    mountFocusMode();
+    await openDialog();
+    const title = body().querySelector("header p");
+    expect(title.classList.contains("truncate"), "one line cuts the title off on a phone").toBe(false);
+    expect([...title.classList]).toContain("line-clamp-2");
   });
 
   it("puts the [data-focus-mode] body straight inside frappe-ui's dialog content, where that rule looks", async () => {

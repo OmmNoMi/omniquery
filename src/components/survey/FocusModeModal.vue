@@ -14,14 +14,17 @@
       <header class="shrink-0 space-y-2.5 border-b border-outline-gray-1 px-4 pb-3 pt-3">
         <div class="flex items-start gap-2">
           <div class="min-w-0 flex-1">
-            <DialogDescription as="p" class="truncate text-base font-semibold text-ink-gray-9">{{ sectionTitle }}</DialogDescription>
+            <!-- a long section title wraps to a second line rather than being cut off -->
+            <DialogDescription as="p" class="line-clamp-2 break-words text-base font-semibold text-ink-gray-9">{{ sectionTitle }}</DialogDescription>
             <p class="flex flex-wrap gap-x-1.5 text-sm text-ink-gray-6">
               <DialogTitle as="span">{{ __("Focus mode") }}</DialogTitle>
               <span aria-hidden="true">/</span>
               <span>{{ __("Question {0} of {1}", [currentIndex + 1, questions.length]) }}</span>
             </p>
           </div>
+          <!-- icon only on a phone, so the section title keeps the room (compact) -->
           <SurveyModeMenu
+            compact
             size="lg"
             :variant="autoAdvance || isFullForm ? 'subtle' : 'outline'"
             :autoAdvance="autoAdvance"
