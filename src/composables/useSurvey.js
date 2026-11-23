@@ -8,6 +8,7 @@ import { gridsByCode, inDisplayOrder } from "../utils/questionLayout";
 import { useTranslation } from "./useTranslation";
 import { REQUIRED_ERROR } from "../utils/requiredMessage";
 import { uuidv4 } from "../utils/uuid";
+import { byQuestionCode } from "../utils/cascadingOptions";
 import { projectHelp } from "../utils/projectHelp";
 import { templatesOfProject } from "../utils/projectTemplates";
 
@@ -469,6 +470,10 @@ export function useSurvey() {
   // says which table it belongs to, and the template's questions are never written to (#140)
   const sectionGrids = computed(() => gridsByCode(sectionQuestions(activeSection.value)));
 
+  // every question of the template by code: a dependent question names its parent, which can sit in
+  // another section, so it can say which question to answer first
+  const questionsByCode = computed(() => byQuestionCode(activeTemplate.value && activeTemplate.value.questions));
+
   function isSectionComplete(section) {
     if (!section || !activeTemplate.value) return false;
     const questions = (activeTemplate.value.questions || []).filter(
@@ -578,6 +583,7 @@ export function useSurvey() {
     activeSection,
     activeQuestions,
     sectionGrids,
+    questionsByCode,
     responses,
     validationErrors,
     isSubmitting,

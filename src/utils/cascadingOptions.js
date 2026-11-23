@@ -2,6 +2,7 @@
 // depends_on_field names its parent's question_code, and its options are an object of parent
 // option -> that parent's choices. omniquery/services/cascading_options.py holds the same rules
 // for the server, which checks every submitted answer against them.
+import { splitQuestionNumber } from "./questionLayout";
 
 export function isGroupedOptions(options) {
   return Boolean(options) && typeof options === "object" && !Array.isArray(options);
@@ -21,6 +22,39 @@ export function optionsForParent(options, parentValue) {
   if (!isGroupedOptions(options)) return Array.isArray(options) ? options : [];
   if (isBlank(parentValue)) return [];
   return options[String(parentValue)] || [];
+}
+
+// the template's questions by question_code, for dependsOnQuestion
+export function byQuestionCode(questions) {
+  return new Map((questions || []).map((question) => [question.question_code, question]));
+}
+
+// the question a dependent question's choices come from (District for Block), wherever it sits
+export function dependsOnQuestion(question, questionsByCode) {
+  const code = question && question.depends_on_field;
+  return (code && questionsByCode && questionsByCode.get(code)) || null;
+}
+
+// why a dependent question has no choices to offer: "parent" until its parent is answered,
+// "none" when the parent's answer has no choices of its own, null when it has choices
+export function choicesWaitOn(question, parentValue) {
+  if (!question || !question.depends_on_field || !isGroupedOptions(question.options)) return null;
+  if (isBlank(parentValue)) return "parent";
+  return optionsForParent(question.options, parentValue).length ? null : "none";
+}
+
+// what a dependent question with nothing to offer says, in place of its choices: which question to
+// answer first ("Answer “District” (Q1) first"), or that the parent's answer has no choices. Never
+// "No matching options", which reads as a search that found nothing. `__` and getQuestionLabel are
+// useTranslation's, and parent is dependsOnQuestion's; "" when there are choices to show.
+export function choicesWaitMessage({ __, getQuestionLabel }, question, parentValue, parent) {
+  const waitsOn = choicesWaitOn(question, parentValue);
+  if (waitsOn === "none") return __("There are no choices for {0}.", [parentValue]);
+  if (waitsOn !== "parent") return "";
+  if (!parent) return __("Answer the question these choices depend on first.");
+  const { number, text } = splitQuestionNumber(getQuestionLabel(parent));
+  const name = number ? `“${text}” (${number})` : `“${text}”`;
+  return __("Answer {0} first. These choices depend on it.", [name]);
 }
 
 export function parentAnswer(question, responses) {

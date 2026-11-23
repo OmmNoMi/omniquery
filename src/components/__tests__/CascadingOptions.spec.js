@@ -56,8 +56,58 @@ describe("a dependent question's choices (#24)", () => {
     expect(text).not.toContain("Ratangarh");
   });
 
-  it("offers no blocks before a district is chosen", () => {
-    expect(card({}).findComponent(FCombobox).props("options")).toEqual([]);
+  // a question waiting on another one says which, not "No matching options found", which reads as a
+  // search that failed; in either layout
+  it("says which question to answer first before a district is chosen", () => {
+    useTranslation().setLanguage("en");
+    const parent = { ...district, label_en: "Q1. District" };
+    for (const control_variant of ["Combobox", "Radio"]) {
+      const wrapper = card({ question: { ...block, control_variant }, dependsOn: parent });
+      expect(wrapper.find("[data-choices-wait]").text()).toBe("Answer “District” (Q1) first. These choices depend on it.");
+      expect(wrapper.findComponent(FCombobox).exists()).toBe(false);
+      expect(wrapper.find('[role="radiogroup"]').exists()).toBe(false);
+      expect(wrapper.text()).not.toContain("No matching options found");
+    }
+  });
+
+  it("says so in Hindi, naming the question as the surveyor reads it", () => {
+    const wrapper = card({ dependsOn: { ...district, label_en: "Q1. District", label_hi: "Q1. ज़िला" } });
+    expect(wrapper.find("[data-choices-wait]").text()).toBe("पहले “ज़िला” (Q1) का उत्तर दें। ये विकल्प उसी पर निर्भर हैं।");
+  });
+
+  it("says a district has no blocks, rather than waiting on it, and still asks when the parent is unknown", () => {
+    useTranslation().setLanguage("en");
+    expect(card({ parentValue: "Jaipur", dependsOn: district }).find("[data-choices-wait]").text()).toBe("There are no choices for Jaipur.");
+    expect(card({}).find("[data-choices-wait]").text()).toBe("Answer the question these choices depend on first.");
+  });
+
+  it("shows no note once the district has blocks, or for a question that depends on nothing", () => {
+    expect(card({ parentValue: "Baran", dependsOn: district }).find("[data-choices-wait]").exists()).toBe(false);
+    const plain = card({ question: { ...district, control_variant: "Radio" } });
+    expect(plain.find("[data-choices-wait]").exists()).toBe(false);
+    expect(plain.findAll('[role="radio"]')).toHaveLength(2);
+  });
+
+  it("says which question to answer first in a grouped card", () => {
+    useTranslation().setLanguage("en");
+    const group = { group_code: "g", title: "Place", questions: [block] };
+    const byCode = new Map([["district", district]]);
+    const waiting = track(mount(GroupedQuestionCard, { props: { group, responses: {}, questionsByCode: byCode } }));
+    expect(waiting.find("[data-choices-wait]").text()).toBe("Answer “District” first. These choices depend on it.");
+    expect(waiting.find('[role="radiogroup"]').exists()).toBe(false);
+    const answered = track(mount(GroupedQuestionCard, { props: { group, responses: { district: "Baran" }, questionsByCode: byCode } }));
+    expect(answered.find("[data-choices-wait]").exists()).toBe(false);
+  });
+
+  it("says which question to answer first in focus mode, though District is in another section", async () => {
+    useTranslation().setLanguage("en");
+    track(mount(FocusModeModal, {
+      attachTo: document.body,
+      props: { isOpen: true, questions: [block], currentIndex: 0, responses: {}, autoAdvance: false,
+        sectionTitle: "Place", questionsByCode: new Map([["district", district], ["block", block]]) },
+    }));
+    await vi.waitFor(() => expect(document.querySelector("[role='dialog'] [data-choices-wait]")).not.toBeNull());
+    expect(document.querySelector("[data-choices-wait]").textContent.trim()).toBe("Answer “District” first. These choices depend on it.");
   });
 
   it("shows a Hindi label but keeps the authored value", () => {
@@ -121,6 +171,7 @@ describe("the survey view's answers (#24, #46)", () => {
       isSectionComplete: () => false, displayQuestionItems: items, responses: { district: "Baran" },
       validationErrors: {}, isQuestionVisible: () => true, setResponse: vi.fn(), onQuestionAnswered: vi.fn(),
       activeQuestions: [], focusQuestionIndex: 0, isFocusMode: false, gpsAlert: null,
+      questionsByCode: new Map([["district", district], ["block", block]]),
     });
     const wrapper = track(mount(Survey, { global: { provide: { [SURVEY_SESSION]: session } } }));
     return { wrapper, session };
@@ -137,6 +188,17 @@ describe("the survey view's answers (#24, #46)", () => {
     const { wrapper } = mountSurvey([{ type: "question", question: block }]);
     expect(wrapper.findComponent(QuestionCard).props("parentValue")).toBe("Baran");
   });
+
+  it("gives every card the question a dependent one waits on", () => {
+    const { wrapper } = mountSurvey([
+      { type: "question", question: block },
+      { type: "group", group_code: "g", title: "Place", questions: [block] },
+    ]);
+    // the session is reactive, so the card gets a proxy of the same question
+    expect(wrapper.findComponent(QuestionCard).props("dependsOn")).toEqual(district);
+    expect([...wrapper.findComponent(GroupedQuestionCard).props("questionsByCode").keys()]).toEqual(["district", "block"]);
+    expect([...wrapper.findComponent(FocusModeModal).props("questionsByCode").keys()]).toEqual(["district", "block"]);
+  });
 });
 
 describe("setResponse (#24)", () => {
@@ -152,6 +214,13 @@ describe("setResponse (#24)", () => {
     app.responses.value = responses;
     return app;
   }
+
+  it("finds a question by code in any section of the template", async () => {
+    const app = await session({});
+    app.activeTemplate.value = { name: "T", questions: [{ ...district, section_code: "S1" }, { ...block, section_code: "S2" }] };
+    expect(app.questionsByCode.value.get("district").section_code).toBe("S1");
+    expect([...app.questionsByCode.value.keys()]).toEqual(["district", "block"]);
+  });
 
   it("clears a block the new district does not offer", async () => {
     const app = await session({ district: "Baran", block: "Chhipabarod", blocks: ["Baran", "Chhipabarod"] });
